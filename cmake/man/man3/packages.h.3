@@ -1,0 +1,136 @@
+.TH "src/policy/packages.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/policy/packages.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <consensus/consensus\&.h>\fP
+.br
+\fR#include <consensus/validation\&.h>\fP
+.br
+\fR#include <policy/policy\&.h>\fP
+.br
+\fR#include <primitives/transaction\&.h>\fP
+.br
+\fR#include <util/hasher\&.h>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include <unordered_set>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBPackageValidationState\fP"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "using \fBPackage\fP = std::vector<\fBCTransactionRef\fP>"
+.br
+.in -1c
+.SS "Enumerations"
+
+.in +1c
+.ti -1c
+.RI "enum class \fBPackageValidationResult\fP { \fBPCKG_RESULT_UNSET\fP = 0, \fBPCKG_POLICY\fP, \fBPCKG_TX\fP, \fBPCKG_MEMPOOL_ERROR\fP }"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "bool \fBIsTopoSortedPackage\fP (const \fBPackage\fP &txns)"
+.br
+.ti -1c
+.RI "bool \fBIsConsistentPackage\fP (const \fBPackage\fP &txns)"
+.br
+.ti -1c
+.RI "bool \fBIsWellFormedPackage\fP (const \fBPackage\fP &txns, \fBPackageValidationState\fP &state, bool require_sorted)"
+.br
+.ti -1c
+.RI "bool \fBIsChildWithParents\fP (const \fBPackage\fP &package)"
+.br
+.ti -1c
+.RI "bool \fBIsChildWithParentsTree\fP (const \fBPackage\fP &package)"
+.br
+.ti -1c
+.RI "\fBuint256\fP \fBGetPackageHash\fP (const std::vector< \fBCTransactionRef\fP > &transactions)"
+.br
+.in -1c
+.SH "Typedef Documentation"
+.PP 
+.SS "using \fBPackage\fP = std::vector<\fBCTransactionRef\fP>"
+A package is an ordered list of transactions\&. The transactions cannot conflict with (spend the same inputs as) one another\&. 
+.SH "Enumeration Type Documentation"
+.PP 
+.SS "enum class \fBPackageValidationResult\fP\fR [strong]\fP"
+A "reason" why a package was invalid\&. It may be that one or more of the included transactions is invalid or the package itself violates our rules\&. We don't distinguish between consensus and policy violations right now\&. 
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BIPCKG_RESULT_UNSET \fP
+Initial value\&. The package has not yet been rejected\&. 
+.TP
+\f(BIPCKG_POLICY \fP
+The package itself is invalid (e\&.g\&. too many transactions)\&. 
+.TP
+\f(BIPCKG_TX \fP
+At least one tx is invalid\&. 
+.TP
+\f(BIPCKG_MEMPOOL_ERROR \fP
+Mempool logic error\&. 
+.SH "Function Documentation"
+.PP 
+.SS "\fBuint256\fP GetPackageHash (const std::vector< \fBCTransactionRef\fP > & transactions)"
+Get the hash of the concatenated wtxids of transactions, with wtxids treated as a little-endian numbers and sorted in ascending numeric order\&. 
+.SS "bool IsChildWithParents (const \fBPackage\fP & package)"
+Context-free check that a package is exactly one child and its parents; not all parents need to be present, but the package must not contain any transactions that are not the child's parents\&. It is expected to be sorted, which means the last transaction must be the child\&. 
+.SS "bool IsChildWithParentsTree (const \fBPackage\fP & package)"
+Context-free check that a package \fBIsChildWithParents()\fP and none of the parents depend on each other (the package is a "tree")\&. 
+.SS "bool IsConsistentPackage (const \fBPackage\fP & txns)"
+Checks that these transactions don't conflict, i\&.e\&., spend the same prevout\&. This includes checking that there are no duplicate transactions\&. Since these checks require looking at the inputs of a transaction, returns false immediately if any transactions have empty vin\&.
+
+.PP
+Does not check consistency of a transaction with oneself; does not check if a transaction spends the same prevout multiple times (see bad-txns-inputs-duplicate in \fBCheckTransaction()\fP)\&.
+
+.PP
+\fBReturns\fP
+.RS 4
+true if there are no conflicts\&. False if any two transactions spend the same prevout\&. 
+.RE
+.PP
+
+.SS "bool IsTopoSortedPackage (const \fBPackage\fP & txns)"
+If any direct dependencies exist between transactions (i\&.e\&. a child spending the output of a parent), checks that all parents appear somewhere in the list before their respective children\&. No other ordering is enforced\&. This function cannot detect indirect dependencies (e\&.g\&. a transaction's grandparent if its parent is not present)\&. 
+.PP
+\fBReturns\fP
+.RS 4
+true if sorted\&. False if any tx spends the output of a tx that appears later in txns\&. 
+.RE
+.PP
+
+.SS "bool IsWellFormedPackage (const \fBPackage\fP & txns, \fBPackageValidationState\fP & state, bool require_sorted)"
+Context-free package policy checks:
+.IP "1." 4
+The number of transactions cannot exceed MAX_PACKAGE_COUNT\&.
+.IP "2." 4
+The total weight cannot exceed MAX_PACKAGE_WEIGHT\&.
+.IP "3." 4
+If any dependencies exist between transactions, parents must appear before children\&.
+.IP "4." 4
+Transactions cannot conflict, i\&.e\&., spend the same inputs\&. 
+.PP
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

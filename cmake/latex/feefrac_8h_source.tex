@@ -1,0 +1,188 @@
+\doxysection{feefrac.\+h}
+\label{feefrac_8h_source}\index{src/util/feefrac.h@{src/util/feefrac.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_FEEFRAC\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_FEEFRAC\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <compare>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{struct\ }FeeFrac}
+\DoxyCodeLine{00040\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ std::pair<int64\_t,\ uint32\_t>\ MulFallback(int64\_t\ a,\ int32\_t\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00045\ \ \ \ \ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ int64\_t\ low\ =\ int64\_t\{\textcolor{keyword}{static\_cast<}uint32\_t\textcolor{keyword}{>}(a)\}\ *\ b;}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ int64\_t\ high\ =\ (a\ >>\ 32)\ *\ b;}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{high\ +\ (low\ >>\ 32),\ \textcolor{keyword}{static\_cast<}uint32\_t\textcolor{keyword}{>}(low)\};}
+\DoxyCodeLine{00049\ \ \ \ \ \}}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ int64\_t\ DivFallback(std::pair<int64\_t,\ uint32\_t>\ n,\ int32\_t\ d,\ \textcolor{keywordtype}{bool}\ round\_down)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00060\ \ \ \ \ \{}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ Assume(d\ >\ 0);}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Compute\ quot\_high\ =\ n.first\ /\ d,\ so\ the\ result\ becomes}}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ (n.second\ +\ (n.first\ -\/\ quot\_high\ *\ d)\ *\ 2**32)\ /\ d\ +\ (quot\_high\ *\ 2**32),\ or}}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ (n.second\ +\ (n.first\ \%\ d)\ *\ 2**32)\ /\ d\ +\ (quot\_high\ *\ 2**32).}}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ int64\_t\ quot\_high\ =\ n.first\ /\ d;}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Evaluate\ the\ parenthesized\ expression\ above,\ so\ the\ result\ becomes}}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ n\_low\ /\ d\ +\ (quot\_high\ *\ 2**32)}}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ int64\_t\ n\_low\ =\ ((n.first\ \%\ d)\ <<\ 32)\ +\ n.second;}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Evaluate\ the\ division\ so\ the\ result\ becomes\ quot\_low\ +\ quot\_high\ *\ 2**32.\ It\ is\ possible}}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ that\ the\ /\ operator\ here\ rounds\ in\ the\ wrong\ direction\ (if\ n\_low\ is\ not\ a\ multiple\ of}}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ size,\ and\ is\ (if\ round\_down)\ negative,\ or\ (if\ !round\_down)\ positive).\ If\ so,\ make\ a}}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ correction.}}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ int64\_t\ quot\_low\ =\ n\_low\ /\ d;}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ int32\_t\ mod\_low\ =\ n\_low\ \%\ d;}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ quot\_low\ +=\ (mod\_low\ >\ 0)\ -\/\ (mod\_low\ \&\&\ round\_down);}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Combine\ and\ return\ the\ result}}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (quot\_high\ <<\ 32)\ +\ quot\_low;}
+\DoxyCodeLine{00078\ \ \ \ \ \}}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \textcolor{preprocessor}{\#ifdef\ \_\_SIZEOF\_INT128\_\_}\textcolor{preprocessor}{}}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \_\_int128\ Mul(int64\_t\ a,\ int32\_t\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00084\ \ \ \ \ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_\_int128\{a\}\ *\ b;}
+\DoxyCodeLine{00086\ \ \ \ \ \}}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ int64\_t\ Div(\_\_int128\ n,\ int32\_t\ d,\ \textcolor{keywordtype}{bool}\ round\_down)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00094\ \ \ \ \ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ Assume(d\ >\ 0);}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Compute\ the\ division.}}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ int64\_t\ quot\ =\ n\ /\ d;}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ int32\_t\ mod\ =\ n\ \%\ d;}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Correct\ result\ if\ the\ /\ operator\ above\ rounded\ in\ the\ wrong\ direction.}}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ quot\ +\ ((mod\ >\ 0)\ -\/\ (mod\ \&\&\ round\_down));}
+\DoxyCodeLine{00101\ \ \ \ \ \}}
+\DoxyCodeLine{00102\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ Mul\ =\ MulFallback;}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ Div\ =\ DivFallback;}
+\DoxyCodeLine{00105\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \ \ \ \ int64\_t\ fee;}
+\DoxyCodeLine{00108\ \ \ \ \ int32\_t\ size;}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ FeeFrac()\ noexcept\ :\ fee\{0\},\ size\{0\}\ \{\}}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ FeeFrac(int64\_t\ f,\ int32\_t\ s)\ noexcept\ :\ fee\{f\},\ size\{s\}\ \{\}}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ FeeFrac(\textcolor{keyword}{const}\ FeeFrac\&)\ \textcolor{keyword}{noexcept}\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ FeeFrac\&\ operator=(\textcolor{keyword}{const}\ FeeFrac\&)\ \textcolor{keyword}{noexcept}\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keywordtype}{bool}\ \textcolor{keyword}{inline}\ IsEmpty()\ const\ noexcept\ \{}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ size\ ==\ 0;}
+\DoxyCodeLine{00122\ \ \ \ \ \}}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keywordtype}{void}\ \textcolor{keyword}{inline}\ operator+=(\textcolor{keyword}{const}\ FeeFrac\&\ other)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00126\ \ \ \ \ \{}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ fee\ +=\ other.fee;}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ size\ +=\ other.size;}
+\DoxyCodeLine{00129\ \ \ \ \ \}}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keywordtype}{void}\ \textcolor{keyword}{inline}\ operator-\/=(\textcolor{keyword}{const}\ FeeFrac\&\ other)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00133\ \ \ \ \ \{}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ fee\ -\/=\ other.fee;}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ size\ -\/=\ other.size;}
+\DoxyCodeLine{00136\ \ \ \ \ \}}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00139\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{inline}\ FeeFrac\ operator+(\textcolor{keyword}{const}\ FeeFrac\&\ a,\ \textcolor{keyword}{const}\ FeeFrac\&\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00140\ \ \ \ \ \{}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{a.fee\ +\ b.fee,\ a.size\ +\ b.size\};}
+\DoxyCodeLine{00142\ \ \ \ \ \}}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{inline}\ FeeFrac\ operator-\/(\textcolor{keyword}{const}\ FeeFrac\&\ a,\ \textcolor{keyword}{const}\ FeeFrac\&\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00146\ \ \ \ \ \{}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{a.fee\ -\/\ b.fee,\ a.size\ -\/\ b.size\};}
+\DoxyCodeLine{00148\ \ \ \ \ \}}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ FeeFrac\&\ a,\ \textcolor{keyword}{const}\ FeeFrac\&\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00152\ \ \ \ \ \{}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a.fee\ ==\ b.fee\ \&\&\ a.size\ ==\ b.size;}
+\DoxyCodeLine{00154\ \ \ \ \ \}}
+\DoxyCodeLine{00155\ }
+\DoxyCodeLine{00157\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{inline}\ std::weak\_ordering\ FeeRateCompare(\textcolor{keyword}{const}\ FeeFrac\&\ a,\ \textcolor{keyword}{const}\ FeeFrac\&\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00158\ \ \ \ \ \{}
+\DoxyCodeLine{00159\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ cross\_a\ =\ Mul(a.fee,\ b.size),\ cross\_b\ =\ Mul(b.fee,\ a.size);}
+\DoxyCodeLine{00160\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ cross\_a\ <=>\ cross\_b;}
+\DoxyCodeLine{00161\ \ \ \ \ \}}
+\DoxyCodeLine{00162\ }
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ operator<<(\textcolor{keyword}{const}\ FeeFrac\&\ a,\ \textcolor{keyword}{const}\ FeeFrac\&\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00165\ \ \ \ \ \{}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ cross\_a\ =\ Mul(a.fee,\ b.size),\ cross\_b\ =\ Mul(b.fee,\ a.size);}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ cross\_a\ <\ cross\_b;}
+\DoxyCodeLine{00168\ \ \ \ \ \}}
+\DoxyCodeLine{00169\ }
+\DoxyCodeLine{00171\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ operator>>(\textcolor{keyword}{const}\ FeeFrac\&\ a,\ \textcolor{keyword}{const}\ FeeFrac\&\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00172\ \ \ \ \ \{}
+\DoxyCodeLine{00173\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ cross\_a\ =\ Mul(a.fee,\ b.size),\ cross\_b\ =\ Mul(b.fee,\ a.size);}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ cross\_a\ >\ cross\_b;}
+\DoxyCodeLine{00175\ \ \ \ \ \}}
+\DoxyCodeLine{00176\ }
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{inline}\ std::strong\_ordering\ operator<=>(\textcolor{keyword}{const}\ FeeFrac\&\ a,\ \textcolor{keyword}{const}\ FeeFrac\&\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00179\ \ \ \ \ \{}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ cross\_a\ =\ Mul(a.fee,\ b.size),\ cross\_b\ =\ Mul(b.fee,\ a.size);}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cross\_a\ ==\ cross\_b)\ \textcolor{keywordflow}{return}\ b.size\ <=>\ a.size;}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ cross\_a\ <=>\ cross\_b;}
+\DoxyCodeLine{00183\ \ \ \ \ \}}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00186\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ swap(FeeFrac\&\ a,\ FeeFrac\&\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00187\ \ \ \ \ \{}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ std::swap(a.fee,\ b.fee);}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ std::swap(a.size,\ b.size);}
+\DoxyCodeLine{00190\ \ \ \ \ \}}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00201\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{bool}\ RoundDown>}
+\DoxyCodeLine{00202\ \ \ \ \ int64\_t\ EvaluateFee(int32\_t\ at\_size)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00203\ \ \ \ \ \{}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ Assume(size\ >\ 0);}
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ Assume(at\_size\ >=\ 0);}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fee\ >=\ 0\ \&\&\ fee\ <\ 0x200000000)\ [[likely]]\ \{}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Common\ case\ where\ (this-\/>fee\ *\ at\_size)\ is\ guaranteed\ to\ fit\ in\ a\ uint64\_t.}}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (RoundDown)\ \{}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (uint64\_t(fee)\ *\ at\_size)\ /\ uint32\_t(size);}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (uint64\_t(fee)\ *\ at\_size\ +\ size\ -\/\ 1U)\ /\ uint32\_t(size);}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Otherwise,\ use\ Mul\ and\ Div.}}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Div(Mul(fee,\ at\_size),\ size,\ RoundDown);}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00217\ \ \ \ \ \}}
+\DoxyCodeLine{00218\ }
+\DoxyCodeLine{00219\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00221\ \ \ \ \ int64\_t\ EvaluateFeeDown(int32\_t\ at\_size)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ EvaluateFee<true>(at\_size);\ \}}
+\DoxyCodeLine{00223\ \ \ \ \ int64\_t\ EvaluateFeeUp(int32\_t\ at\_size)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ EvaluateFee<false>(at\_size);\ \}}
+\DoxyCodeLine{00224\ \};}
+\DoxyCodeLine{00225\ }
+\DoxyCodeLine{00234\ std::partial\_ordering\ CompareChunks(std::span<const\ FeeFrac>\ chunks0,\ std::span<const\ FeeFrac>\ chunks1);}
+\DoxyCodeLine{00235\ }
+\DoxyCodeLine{00237\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Tag>}
+\DoxyCodeLine{00238\ \textcolor{keyword}{struct\ }FeePerUnit\ :\ \textcolor{keyword}{public}\ FeeFrac}
+\DoxyCodeLine{00239\ \{}
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{comment}{//\ Inherit\ FeeFrac\ constructors.}}
+\DoxyCodeLine{00241\ \ \ \ \ \textcolor{keyword}{using\ }FeeFrac::FeeFrac;}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keyword}{static}\ FeePerUnit\ FromFeeFrac(\textcolor{keyword}{const}\ FeeFrac\&\ feefrac)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00245\ \ \ \ \ \{}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{feefrac.fee,\ feefrac.size\};}
+\DoxyCodeLine{00247\ \ \ \ \ \}}
+\DoxyCodeLine{00248\ \};}
+\DoxyCodeLine{00249\ }
+\DoxyCodeLine{00250\ \textcolor{comment}{//\ FeePerUnit\ instance\ for\ satoshi\ /\ vbyte.}}
+\DoxyCodeLine{00251\ \textcolor{keyword}{struct\ }VSizeTag\ \{\};}
+\DoxyCodeLine{00252\ \textcolor{keyword}{using\ }FeePerVSize\ =\ FeePerUnit<VSizeTag>;}
+\DoxyCodeLine{00253\ }
+\DoxyCodeLine{00254\ \textcolor{comment}{//\ FeePerUnit\ instance\ for\ satoshi\ /\ WU.}}
+\DoxyCodeLine{00255\ \textcolor{keyword}{struct\ }WeightTag\ \{\};}
+\DoxyCodeLine{00256\ \textcolor{keyword}{using\ }FeePerWeight\ =\ FeePerUnit<WeightTag>;}
+\DoxyCodeLine{00257\ }
+\DoxyCodeLine{00258\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_FEEFRAC\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,133 @@
+\chapter{The mathematics of Minisketch sketches }
+\label{md_src_2minisketch_2doc_2math}\index{The mathematics of Minisketch sketches@{The mathematics of Minisketch sketches}}
+\label{md_src_2minisketch_2doc_2math_autotoc_md82}%
+
+
+This is an unconventional mathematical overview of the Pin\+Sketch algorithm without references to coding theory\textsuperscript{\doxyref{[1]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote1}}.\doxysection{Set sketches}\label{md_src_2minisketch_2doc_2math_autotoc_md83}
+A sketch, for the purpose of this description, can be seen as a "{}set checksum"{} with two peculiar properties\+:
+
+
+\begin{DoxyItemize}
+\item Sketches have a predetermined capacity, and when the number of elements in the set is not higher than the capacity, minisketch will always recover the entire set from the sketch. A sketch of {\itshape b}-\/bit elements with capacity {\itshape c} can be stored in {\itshape bc} bits.
+\item The sketches of two sets can be combined by adding them (XOR) to obtain a sketch of the {\texttt{symmetric difference}} between the two sets ({\itshape i.\+e.}, all elements that occur in one but not both input sets).
+\end{DoxyItemize}
+
+This overview explains how sets can be converted into a sketch and how a set can be recovered from a sketch.\doxysection{From field elements to sketches}\label{md_src_2minisketch_2doc_2math_autotoc_md84}
+{\bfseries{Data entries as field elements}}
+
+Every integer in the range $\ast$[1...2\textsuperscript{b}-\/1]$\ast$ (the acceptable data elements for a Minisketch sketch with field size {\itshape b}) can be mapped to a nonzero field element of $\ast$\+GF(2\textsuperscript{b})$\ast$. In this {\texttt{finite field}}, we can add and multiply elements together, with many of the expected properties for those operations. Addition (and subtraction!) of field elements corresponds to bitwise XOR of the integers they correspond to, though multiplication is more involved.
+
+{\bfseries{Sets as power series}}
+
+We define a function {\itshape S} which maps field elements {\itshape m} to the following {\texttt{formal power series}} (similar to a polynomial, except there can be an infinite number of terms, and we don\textquotesingle{}t care about concepts like convergence as we\textquotesingle{}re never going to actually evaluate it for a specific value of {\itshape x})\+:
+
+
+\begin{DoxyItemize}
+\item $\ast$S(m) = 1 + mx + m\textsuperscript{2}x\textsuperscript{2} + m\textsuperscript{3}x\textsuperscript{3} + ...$\ast$.
+\end{DoxyItemize}
+
+We then extend this function to operate on sets of field elements, by adding together the images of every set element. If $\ast$M = \{m\textsubscript{1}, m\textsubscript{2}, ... \}$\ast$\+:
+
+
+\begin{DoxyItemize}
+\item $\ast$S(M) = S(\{m\textsubscript{1},m\textsubscript{2},...\}) = S(m\textsubscript{1}) + S(m\textsubscript{2}) + ... = (1 + 1 + ...) + (m\textsubscript{1} + m\textsubscript{2} + ...)x + (m\textsubscript{1}\textsuperscript{2} + m\textsubscript{2}\textsuperscript{2} + ...)x\textsuperscript{2} + (m\textsubscript{1}\textsuperscript{3} + ...$\ast$
+\end{DoxyItemize}
+
+Because in our field addition corresponds to XOR of integers, it holds for every {\itshape a} that {\itshape a + a = 0}. This carries over to the {\itshape S} function, meaning that {\itshape \doxyref{S(a)}{p.}{precomputed__ecmult_8c_a36ad60f7189b5fdcb306d9b5f3998e2a} + \doxyref{S(a)}{p.}{precomputed__ecmult_8c_a36ad60f7189b5fdcb306d9b5f3998e2a} = 0} for every {\itshape a}. This means that the coefficients of these power series have the second of the properties we desire from a sketch, namely that an efficient operation exists to combine two sketches such that the result is a sketch of the symmetric difference of the sets. It holds that $\ast$S(\{m\textsubscript{1},m\textsubscript{2}\}) + S(\{m\textsubscript{2},m\textsubscript{3}\}) = S(m\textsubscript{1}) + (S(m\textsubscript{2}) + S(m\textsubscript{2})) + S(m\textsubscript{3}) = S(m\textsubscript{1}) + S(m\textsubscript{3}) = S(\{m\textsubscript{1},m\textsubscript{3}\})$\ast$. The question is whether we can also efficiently recover the elements from their power series\textquotesingle{} coefficients.
+
+{\bfseries{An infinity of coefficients is hard}}
+
+To make reasoning about these power series easier, notice that the series for a single element is in fact a {\texttt{geometric series}}. If we were working over real numbers rather than a finite field and $\ast$$\vert$mx$\vert$ $<$ 1$\ast$, it would converge to $\ast$(1 -\/ mx)\textsuperscript{-\/1}$\ast$. Convergence has no meaning in formal power series, however it is still the case that\+:
+
+
+\begin{DoxyItemize}
+\item {\itshape (1 -\/ mx) \doxyref{S(m)}{p.}{precomputed__ecmult_8c_a36ad60f7189b5fdcb306d9b5f3998e2a} = 1}
+\end{DoxyItemize}
+
+You can verify this by seeing that every coefficient except the constant one gets cancelled out by the multiplication. This can be generalized to the series for multiple set elements. For two elements we have\+:
+
+
+\begin{DoxyItemize}
+\item $\ast$(1 -\/ m\textsubscript{1}x) (1 -\/ m\textsubscript{2}x) S(\{m\textsubscript{1},m\textsubscript{2}\}) = (1 -\/ m\textsubscript{1}x) (1 -\/ m\textsubscript{2}x) (S(m\textsubscript{1}) + S(m\textsubscript{2})) = (1 -\/ m\textsubscript{2}x) + (1 -\/ m\textsubscript{1}x)$\ast$
+\end{DoxyItemize}
+
+And for three\+:
+
+
+\begin{DoxyItemize}
+\item $\ast$(1 -\/ m\textsubscript{1}x) (1 -\/ m\textsubscript{2}x) (1 -\/ m\textsubscript{3}x) S(\{m\textsubscript{1},m\textsubscript{2},m\textsubscript{3}\}) = (1 -\/ m\textsubscript{1}x) (1 -\/ m\textsubscript{2}x) (1 -\/ m\textsubscript{3}x) (S(m\textsubscript{1}) + S(m\textsubscript{2}) + S(m\textsubscript{3})) = (1 -\/ m\textsubscript{2}x)(1 -\/ m\textsubscript{3}x) + (1 -\/ m\textsubscript{1}x)(1 -\/ m\textsubscript{3}x) + (1 -\/ m\textsubscript{1}x)(1 -\/ m\textsubscript{2}x)$\ast$
+\end{DoxyItemize}
+
+In each case, we notice that multiplying {\itshape \doxyref{S(\+M)}{p.}{precomputed__ecmult_8c_a36ad60f7189b5fdcb306d9b5f3998e2a}} with $\ast$(1 -\/ m\textsubscript{i}x)$\ast$ for each element $\ast$m\textsubscript{i} {$\in$} M$\ast$ results in a polynomial of degree {\itshape n-\/1}.
+
+{\bfseries{Solving for the set elements}}
+
+The above insight lets us build a solver that extracts the set elements from the coefficients of a power series. If we can find a polynomial {\itshape L} that is the product of {\itshape n} different $\ast$(1 -\/ m\textsubscript{i}x)$\ast$ factors for various values of $\ast$m\textsubscript{i}{\itshape , such that $\ast$P = \doxyref{S(\+M)}{p.}{precomputed__ecmult_8c_a36ad60f7189b5fdcb306d9b5f3998e2a}L} is an {\itshape n-\/1} degree polynomial, then those values $\ast$m\textsubscript{i}$\ast$ are the elements of {\itshape M}.
+
+The coefficients of {\itshape P} are nontrivial expressions of the set elements themselves. However, we can just focus on the coefficients of degree {\itshape n} and higher in {\itshape P}, as those are all 0. Let $\ast$s\textsubscript{i}$\ast$ be the coefficients of {\itshape \doxyref{S(\+M)}{p.}{precomputed__ecmult_8c_a36ad60f7189b5fdcb306d9b5f3998e2a}}, and $\ast$l\textsubscript{i}$\ast$ the coefficients of L. In other words, $\ast$S(M) = s\textsubscript{0} + s\textsubscript{1}x + s\textsubscript{2}x\textsuperscript{2} + s\textsubscript{3}x\textsuperscript{3} + ...$\ast$ and $\ast$L = l\textsubscript{0} + l\textsubscript{1}x + l\textsubscript{2}x\textsuperscript{2} + l\textsubscript{3}x\textsuperscript{3} + ... + l\textsubscript{n}x\textsuperscript{n}$\ast$. Note that $\ast$l\textsubscript{0} = 1$\ast$, as it is the product of all the {\itshape 1} terms in the $\ast$(1 -\/ m\textsubscript{i}x)$\ast$ factors.
+
+Here are the equations for the coefficients of {\itshape \doxyref{S(\+M)}{p.}{precomputed__ecmult_8c_a36ad60f7189b5fdcb306d9b5f3998e2a}L} of degree {\itshape n+1} through {\itshape 2n}\+:
+\begin{DoxyItemize}
+\item $\ast$s\textsubscript{n+1} + s\textsubscript{n+0}l\textsubscript{1} + s\textsubscript{n-\/1}l\textsubscript{2} + s\textsubscript{n-\/2}l\textsubscript{3} + ... + s\textsubscript{1}l\textsubscript{n} = 0$\ast$
+\item $\ast$s\textsubscript{n+2} + s\textsubscript{n+1}l\textsubscript{1} + s\textsubscript{n+0}l\textsubscript{2} + s\textsubscript{n-\/1}l\textsubscript{3} + ... + s\textsubscript{2}l\textsubscript{n} = 0$\ast$
+\item $\ast$s\textsubscript{n+3} + s\textsubscript{n+2}l\textsubscript{1} + s\textsubscript{n+1}l\textsubscript{2} + s\textsubscript{n+0}l\textsubscript{3} + ... + s\textsubscript{3}l\textsubscript{n} = 0$\ast$
+\item ...
+\item $\ast$s\textsubscript{2n} + s\textsubscript{2n-\/1}l\textsubscript{1} + s\textsubscript{2n-\/2}l\textsubscript{2} + s\textsubscript{2n-\/3}l\textsubscript{3} + ... + s\textsubscript{n}l\textsubscript{n} = 0$\ast$
+\end{DoxyItemize}
+
+These are {\itshape n} linear equations with {\itshape n} unknowns (the {\itshape l\textsubscript{i\textsubscript{ values, for {\itshape i=1..n}), which can be solved using {\texttt{Gaussian elimination}}. After doing so, we have the coefficients of {\itshape L}, which can then be {\texttt{factored}} into first degree factors of the form $\ast$(1 -\/ m\textsubscript{i}x)$\ast$. The resulting {\itshape m} values are our set elements.}}}
+
+{\itshape \textsubscript{\textsubscript{{\bfseries{Putting it all together}}}}}
+
+{\itshape \textsubscript{\textsubscript{Interestingly, only {\itshape 2n} coefficients of {\itshape \doxyref{S(\+M)}{p.}{precomputed__ecmult_8c_a36ad60f7189b5fdcb306d9b5f3998e2a}} were needed for solving the set of equations above. This means we have our answer\+: the coefficients {\itshape 1} through {\itshape 2n} of {\itshape \doxyref{S(\+M)}{p.}{precomputed__ecmult_8c_a36ad60f7189b5fdcb306d9b5f3998e2a}}, or the list $\ast$[m\textsubscript{1} + m\textsubscript{2} + ..., m\textsubscript{1}\textsuperscript{2} + m\textsubscript{2}\textsuperscript{2} + ..., ..., m\textsubscript{1}\textsuperscript{2n} + m\textsubscript{2}\textsuperscript{2n} + ...]$\ast$ functions as a sketch, satisfying the two properties we want\+:}}}
+
+{\itshape \textsubscript{\textsubscript{
+\begin{DoxyItemize}
+\item Sketches can be combined to form the sketch of their symmetric difference, by simply pairwise adding the list elements together.
+\item With {\itshape 2n} list elements we can efficiently recover {\itshape n} elements from a sketch.
+\end{DoxyItemize}}}}
+
+{\itshape \textsubscript{\textsubscript{{\bfseries{Capacity and difference}}}}}
+
+{\itshape \textsubscript{\textsubscript{The approach above only works when the number of elements {\itshape n} in the sketch is known. Of course we want to support cases where only an upper bound on the number of elements in the sketch is known, the capacity {\itshape c}. Given that we can reconstruct a set of size {\itshape c} from a sketch with {\itshape 2c} terms, we should be able to reconstruct a set of size {\itshape n} too as long as {\itshape n {$\le$} c}. This is simply a matter of trying to solve the above set of equations assuming values of {\itshape n} that count down from {\itshape c} until a solution is found for one. This is known as the {\texttt{Peterson-\/\+Gorenstein-\/\+Zierler algorithm}}.}}}
+
+{\itshape \textsubscript{\textsubscript{}}}\doxysection{{\itshape \textsubscript{\textsubscript{Optimizations}}}}\label{md_src_2minisketch_2doc_2math_autotoc_md85}
+{\itshape \textsubscript{\textsubscript{}}}
+
+{\itshape \textsubscript{\textsubscript{{\bfseries{Halving the sketch size}}}}}
+
+{\itshape \textsubscript{\textsubscript{We can in fact only include the odd terms in the sketch, and reconstruct the even ones before solving the equation to find {\itshape L}. This means the size of a sketch becomes just {\itshape c} field elements, the same size as would be needed to send its contents naively.}}}
+
+{\itshape \textsubscript{\textsubscript{To see how this is possible, we need the {\texttt{Frobenius endomorphism}}, which in short states that in fields where {\itshape x + x = 0} it holds that $\ast$(x + y)\textsuperscript{2} = x\textsuperscript{2} + y\textsuperscript{2}$\ast$ for every {\itshape x} and {\itshape y} (the dream of every high school math student!). This means that\+:}}}
+
+{\itshape \textsubscript{\textsubscript{
+\begin{DoxyItemize}
+\item $\ast$s\textsubscript{2} = m\textsubscript{1}\textsuperscript{2} + m\textsubscript{2}\textsuperscript{2} + ... = (m\textsubscript{1} + m\textsubscript{2} + ...)\textsuperscript{2} = s\textsubscript{1}\textsuperscript{2}$\ast$.
+\item $\ast$s\textsubscript{4} = m\textsubscript{1}\textsuperscript{4} + m\textsubscript{2}\textsuperscript{4} + ... = (m\textsubscript{1}\textsuperscript{2} + m\textsubscript{2}\textsuperscript{2} + ...)\textsuperscript{2} = s\textsubscript{2}\textsuperscript{2}$\ast$.
+\item $\ast$s\textsubscript{6} = m\textsubscript{1}\textsuperscript{6} + m\textsubscript{2}\textsuperscript{6} + ... = (m\textsubscript{1}\textsuperscript{3} + m\textsubscript{2}\textsuperscript{3} + ...)\textsuperscript{2} = s\textsubscript{3}\textsuperscript{2}$\ast$.
+\item ...
+\end{DoxyItemize}}}}
+
+{\itshape \textsubscript{\textsubscript{In other words, we only need to send $\ast$s\textsubscript{1}, s\textsubscript{3}, s\textsubscript{5}, ..., s\textsubscript{2n-\/1}$\ast$ to recover all {\itshape 2n} $\ast$s\textsubscript{i}$\ast$ values, and proceed with reconstruction.}}}
+
+{\itshape \textsubscript{\textsubscript{{\bfseries{Quadratic performance rather than cubic}}}}}
+
+{\itshape \textsubscript{\textsubscript{Using Gaussian elimination to solve the set of equations above for the $\ast$l\textsubscript{i}$\ast$ values requires $\ast$O(n\textsuperscript{3})$\ast$ field operations. However, due to the special structure in the equations (look at the repeated $\ast$s\textsubscript{i}$\ast$ values), it can be solved in $\ast$O(n\textsuperscript{2})$\ast$ time using a number of techniques, including the {\texttt{Berlekamp-\/\+Massey algorithm}} (BM).}}}
+
+{\itshape \textsubscript{\textsubscript{{\bfseries{Roots instead of factorization}}}}}
+
+{\itshape \textsubscript{\textsubscript{As explained above, the polynomial {\itshape L} can be factored into $\ast$(1 -\/ m\textsubscript{i}x)$\ast$ factors, where the values $\ast$m\textsubscript{i}$\ast$ are the set elements. However, since we know that a decodable sketch must result in a polynomial that is fully factorizable into degree-\/$\ast$1$\ast$ factors, we can instead use a more efficient root-\/finding algorithm rather than a factorization algorithm. As the root of each $\ast$(1 -\/ m\textsubscript{i}x)$\ast$ factor is $\ast$m\textsubscript{i}\textsuperscript{-\/1}{\itshape , we conclude that the set elements are in fact the inverses of the roots of $\ast$L}.}}}
+
+{\itshape \textsubscript{\textsubscript{{\bfseries{Avoiding inversions}}}}}
+
+{\itshape \textsubscript{\textsubscript{As inversions are a relatively expensive operation, it would be useful to avoid them.}}}
+
+{\itshape \textsubscript{\textsubscript{Say that we\textquotesingle{}re trying to find the inverses of the roots of $\ast$L = 1 + l\textsubscript{1}x + l\textsubscript{2}x\textsuperscript{2} + ... + l\textsubscript{n}x\textsuperscript{n}{\itshape , then we\textquotesingle{}re really interested in the solutions $\ast$y} for $\ast$1 + l\textsubscript{1}y\textsuperscript{-\/1} + l\textsubscript{2}y\textsuperscript{-\/2} + ... + l\textsubscript{n}y\textsuperscript{-\/n} = 0$\ast$. By multiplying both sides in the equations with $\ast$y\textsuperscript{n}$\ast$, we find $\ast$l\textsubscript{n} + l\textsubscript{n-\/1}y + l\textsubscript{n-\/2}y\textsuperscript{2} + ... + y\textsuperscript{n} = 0$\ast$.}}}
+
+{\itshape \textsubscript{\textsubscript{In other words, we can find the inverses of the roots of {\itshape L} by instead factoring the polynomial with the coefficients of {\itshape L} in reverse order.}}}
+
+{\itshape \textsubscript{\textsubscript{
+\begin{DoxyItemize}
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote1}%
+[1] For those familiar with coding theory\+: Pin\+Sketch communicates a set difference by encoding the set members as errors in a binary {\texttt{BCH}} codeword 2\textsuperscript{bits} in size and sends the syndromes. The linearity of the syndromes provides all the properties needed for a sketch. \doxyref{Sketch}{p.}{class_sketch} decoding is simply finding the error locations. Decode is much faster than an ordinary BCH decoder for such a large codeword because the need to take a discrete log is avoided by storing the set in the roots directly instead of in an exponent (logically permuting the bits of the codeword). 
+\end{DoxyItemize}}}}

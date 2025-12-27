@@ -1,0 +1,134 @@
+.TH "src/policy/policy.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/policy/policy.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <policy/policy\&.h>\fP
+.br
+\fR#include <coins\&.h>\fP
+.br
+\fR#include <consensus/amount\&.h>\fP
+.br
+\fR#include <consensus/consensus\&.h>\fP
+.br
+\fR#include <consensus/validation\&.h>\fP
+.br
+\fR#include <policy/feerate\&.h>\fP
+.br
+\fR#include <primitives/transaction\&.h>\fP
+.br
+\fR#include <script/interpreter\&.h>\fP
+.br
+\fR#include <script/script\&.h>\fP
+.br
+\fR#include <script/solver\&.h>\fP
+.br
+\fR#include <serialize\&.h>\fP
+.br
+\fR#include <span\&.h>\fP
+.br
+\fR#include <algorithm>\fP
+.br
+\fR#include <cstddef>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBCAmount\fP \fBGetDustThreshold\fP (const \fBCTxOut\fP &txout, const \fBCFeeRate\fP &dustRelayFeeIn)"
+.br
+.ti -1c
+.RI "bool \fBIsDust\fP (const \fBCTxOut\fP &txout, const \fBCFeeRate\fP &dustRelayFeeIn)"
+.br
+.ti -1c
+.RI "std::vector< uint32_t > \fBGetDust\fP (const \fBCTransaction\fP &tx, \fBCFeeRate\fP dust_relay_rate)"
+.br
+.ti -1c
+.RI "bool \fBIsStandard\fP (const \fBCScript\fP &scriptPubKey, \fBTxoutType\fP &whichType)"
+.br
+.ti -1c
+.RI "bool \fBIsStandardTx\fP (const \fBCTransaction\fP &tx, const std::optional< unsigned > &max_datacarrier_bytes, bool permit_bare_multisig, const \fBCFeeRate\fP &dust_relay_fee, std::string &reason)"
+.br
+.ti -1c
+.RI "bool \fBAreInputsStandard\fP (const \fBCTransaction\fP &tx, const \fBCCoinsViewCache\fP &mapInputs)"
+.br
+.ti -1c
+.RI "bool \fBIsWitnessStandard\fP (const \fBCTransaction\fP &tx, const \fBCCoinsViewCache\fP &mapInputs)"
+.br
+.ti -1c
+.RI "bool \fBSpendsNonAnchorWitnessProg\fP (const \fBCTransaction\fP &tx, const \fBCCoinsViewCache\fP &prevouts)"
+.br
+.ti -1c
+.RI "int64_t \fBGetSigOpsAdjustedWeight\fP (int64_t weight, int64_t sigop_cost, unsigned int bytes_per_sigop)"
+.br
+.ti -1c
+.RI "int64_t \fBGetVirtualTransactionSize\fP (int64_t nWeight, int64_t nSigOpCost, unsigned int bytes_per_sigop)"
+.br
+.ti -1c
+.RI "int64_t \fBGetVirtualTransactionSize\fP (const \fBCTransaction\fP &tx, int64_t nSigOpCost, unsigned int bytes_per_sigop)"
+.br
+.ti -1c
+.RI "int64_t \fBGetVirtualTransactionInputSize\fP (const \fBCTxIn\fP &txin, int64_t nSigOpCost, unsigned int bytes_per_sigop)"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "bool AreInputsStandard (const \fBCTransaction\fP & tx, const \fBCCoinsViewCache\fP & mapInputs)"
+Check transaction inputs\&.
+
+.PP
+This does three things:
+.IP "\(bu" 2
+Prevents mempool acceptance of spends of future segwit versions we don't know how to validate
+.IP "\(bu" 2
+Mitigates a potential denial-of-service attack with P2SH scripts with a crazy number of expensive CHECKSIG/CHECKMULTISIG operations\&.
+.IP "\(bu" 2
+Prevents spends of unknown/irregular scriptPubKeys, which mitigates potential denial-of-service attacks involving expensive scripts and helps reserve them as potential new upgrade hooks\&.
+.PP
+
+.PP
+Note that only the non-witness portion of the transaction is checked here\&.
+
+.PP
+We also check the total number of non-witness sigops across the whole transaction, as per BIP54\&. 
+.SS "std::vector< uint32_t > GetDust (const \fBCTransaction\fP & tx, \fBCFeeRate\fP dust_relay_rate)"
+Get the vout index numbers of all dust outputs 
+.SS "\fBCAmount\fP GetDustThreshold (const \fBCTxOut\fP & txout, const \fBCFeeRate\fP & dustRelayFeeIn)"
+
+.SS "int64_t GetSigOpsAdjustedWeight (int64_t weight, int64_t sigop_cost, unsigned int bytes_per_sigop)"
+
+.SS "int64_t GetVirtualTransactionInputSize (const \fBCTxIn\fP & txin, int64_t nSigOpCost, unsigned int bytes_per_sigop)"
+
+.SS "int64_t GetVirtualTransactionSize (const \fBCTransaction\fP & tx, int64_t nSigOpCost, unsigned int bytes_per_sigop)"
+
+.SS "int64_t GetVirtualTransactionSize (int64_t nWeight, int64_t nSigOpCost, unsigned int bytes_per_sigop)"
+Compute the virtual transaction size (weight reinterpreted as bytes)\&. 
+.SS "bool IsDust (const \fBCTxOut\fP & txout, const \fBCFeeRate\fP & dustRelayFeeIn)"
+
+.SS "bool IsStandard (const \fBCScript\fP & scriptPubKey, \fBTxoutType\fP & whichType)"
+
+.SS "bool IsStandardTx (const \fBCTransaction\fP & tx, const std::optional< unsigned > & max_datacarrier_bytes, bool permit_bare_multisig, const \fBCFeeRate\fP & dust_relay_fee, std::string & reason)"
+Check for standard transaction types 
+.PP
+\fBReturns\fP
+.RS 4
+True if all outputs (scriptPubKeys) use only standard transaction forms 
+.RE
+.PP
+
+.SS "bool IsWitnessStandard (const \fBCTransaction\fP & tx, const \fBCCoinsViewCache\fP & mapInputs)"
+Check if the transaction is over standard P2WSH resources limit: 3600bytes witnessScript size, 80bytes per witness stack element, 100 witness stack elements These limits are adequate for multisignatures up to n-of-100 using OP_CHECKSIG, OP_ADD, and OP_EQUAL\&.
+
+.PP
+Also enforce a maximum stack item size limit and no annexes for tapscript spends\&. 
+.SS "bool SpendsNonAnchorWitnessProg (const \fBCTransaction\fP & tx, const \fBCCoinsViewCache\fP & prevouts)"
+Check whether this transaction spends any witness program but P2A, including not-yet-defined ones\&. May return \fRfalse\fP early for consensus-invalid transactions\&. 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

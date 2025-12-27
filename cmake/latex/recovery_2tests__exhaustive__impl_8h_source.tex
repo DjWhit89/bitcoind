@@ -1,0 +1,154 @@
+\doxysection{tests\+\_\+exhaustive\+\_\+impl.\+h}
+\label{recovery_2tests__exhaustive__impl_8h_source}\index{src/secp256k1/src/modules/recovery/tests\_exhaustive\_impl.h@{src/secp256k1/src/modules/recovery/tests\_exhaustive\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2016\ Andrew\ Poelstra\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_MODULE\_RECOVERY\_EXHAUSTIVE\_TESTS\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_MODULE\_RECOVERY\_EXHAUSTIVE\_TESTS\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}main\_impl.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1\_recovery.h"{}}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_exhaustive\_recovery\_sign(\textcolor{keyword}{const}\ secp256k1\_context\ *ctx,\ \textcolor{keyword}{const}\ secp256k1\_ge\ *group)\ \{}
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keywordtype}{int}\ i,\ j,\ k;}
+\DoxyCodeLine{00015\ \ \ \ \ uint64\_t\ iter\ =\ 0;}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{comment}{/*\ Loop\ */}}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 1;\ i\ <\ EXHAUSTIVE\_TEST\_ORDER;\ i++)\ \{\ \ \textcolor{comment}{/*\ message\ */}}
+\DoxyCodeLine{00019\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (j\ =\ 1;\ j\ <\ EXHAUSTIVE\_TEST\_ORDER;\ j++)\ \{\ \ \textcolor{comment}{/*\ key\ */}}
+\DoxyCodeLine{00020\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (skip\_section(\&iter))\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00021\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (k\ =\ 1;\ k\ <\ EXHAUSTIVE\_TEST\_ORDER;\ k++)\ \{\ \ \textcolor{comment}{/*\ nonce\ */}}
+\DoxyCodeLine{00022\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ starting\_k\ =\ k;}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_fe\ r\_dot\_y\_normalized;}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_recoverable\_signature\ rsig;}
+\DoxyCodeLine{00025\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_signature\ sig;}
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\ sk,\ msg,\ r,\ s,\ expected\_r;}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk32[32],\ msg32[32];}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ expected\_recid;}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ recid;}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ overflow;}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_int(\&msg,\ i);}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_int(\&sk,\ j);}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_get\_b32(sk32,\ \&sk);}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_get\_b32(msg32,\ \&msg);}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_sign\_recoverable(ctx,\ \&rsig,\ msg32,\ sk32,\ secp256k1\_nonce\_function\_smallint,\ \&k);}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ directly\ */}}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_recoverable\_signature\_load(ctx,\ \&r,\ \&s,\ \&recid,\ \&rsig);}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ r\_from\_k(\&expected\_r,\ group,\ k,\ \&overflow);}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(r\ ==\ expected\_r);}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CHECK((k\ *\ s)\ \%\ EXHAUSTIVE\_TEST\_ORDER\ ==\ (i\ +\ r\ *\ j)\ \%\ EXHAUSTIVE\_TEST\_ORDER\ ||}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (k\ *\ (EXHAUSTIVE\_TEST\_ORDER\ -\/\ s))\ \%\ EXHAUSTIVE\_TEST\_ORDER\ ==\ (i\ +\ r\ *\ j)\ \%\ EXHAUSTIVE\_TEST\_ORDER);}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ The\ recid's\ second\ bit\ is\ for\ conveying\ overflow\ (R.x\ value\ >=\ group\ order).}}
+\DoxyCodeLine{00045\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ In\ the\ actual\ secp256k1\ this\ is\ an\ astronomically\ unlikely\ event,\ but\ in\ the}}
+\DoxyCodeLine{00046\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ small\ group\ used\ here,\ it\ will\ almost\ certainly\ be\ the\ case\ for\ all\ points.}}
+\DoxyCodeLine{00047\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ Note\ that\ this\ isn't\ actually\ useful;\ full\ recovery\ would\ need\ to\ convey}}
+\DoxyCodeLine{00048\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ floor(R.x\ /\ group\_order),\ but\ only\ one\ bit\ is\ used\ as\ that\ is\ sufficient}}
+\DoxyCodeLine{00049\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ in\ the\ real\ group.\ */}}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ expected\_recid\ =\ overflow\ ?\ 2\ :\ 0;}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ r\_dot\_y\_normalized\ =\ group[k].y;}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_fe\_normalize(\&r\_dot\_y\_normalized);}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Also\ the\ recovery\ id\ is\ flipped\ depending\ if\ we\ hit\ the\ low-\/s\ branch\ */}}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((k\ *\ s)\ \%\ EXHAUSTIVE\_TEST\_ORDER\ ==\ (i\ +\ r\ *\ j)\ \%\ EXHAUSTIVE\_TEST\_ORDER)\ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ expected\_recid\ |=\ secp256k1\_fe\_is\_odd(\&r\_dot\_y\_normalized);}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ expected\_recid\ |=\ !secp256k1\_fe\_is\_odd(\&r\_dot\_y\_normalized);}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(recid\ ==\ expected\_recid);}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Convert\ to\ a\ standard\ sig\ then\ check\ */}}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_recoverable\_signature\_convert(ctx,\ \&sig,\ \&rsig);}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_signature\_load(ctx,\ \&r,\ \&s,\ \&sig);}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Note\ that\ we\ compute\ expected\_r\ *after*\ signing\ -\/-\/\ this\ is\ important}}
+\DoxyCodeLine{00065\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ because\ our\ nonce-\/computing\ function\ function\ might\ change\ k\ during}}
+\DoxyCodeLine{00066\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ signing.\ */}}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ r\_from\_k(\&expected\_r,\ group,\ k,\ NULL);}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(r\ ==\ expected\_r);}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CHECK((k\ *\ s)\ \%\ EXHAUSTIVE\_TEST\_ORDER\ ==\ (i\ +\ r\ *\ j)\ \%\ EXHAUSTIVE\_TEST\_ORDER\ ||}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (k\ *\ (EXHAUSTIVE\_TEST\_ORDER\ -\/\ s))\ \%\ EXHAUSTIVE\_TEST\_ORDER\ ==\ (i\ +\ r\ *\ j)\ \%\ EXHAUSTIVE\_TEST\_ORDER);}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Overflow\ means\ we've\ tried\ every\ possible\ nonce\ */}}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (k\ <\ starting\_k)\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00078\ \ \ \ \ \}}
+\DoxyCodeLine{00079\ \}}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_exhaustive\_recovery\_verify(\textcolor{keyword}{const}\ secp256k1\_context\ *ctx,\ \textcolor{keyword}{const}\ secp256k1\_ge\ *group)\ \{}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{comment}{/*\ This\ is\ essentially\ a\ copy\ of\ test\_exhaustive\_verify,\ with\ recovery\ added\ */}}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordtype}{int}\ s,\ r,\ msg,\ key;}
+\DoxyCodeLine{00084\ \ \ \ \ uint64\_t\ iter\ =\ 0;}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordflow}{for}\ (s\ =\ 1;\ s\ <\ EXHAUSTIVE\_TEST\_ORDER;\ s++)\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (r\ =\ 1;\ r\ <\ EXHAUSTIVE\_TEST\_ORDER;\ r++)\ \{}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (msg\ =\ 1;\ msg\ <\ EXHAUSTIVE\_TEST\_ORDER;\ msg++)\ \{}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (key\ =\ 1;\ key\ <\ EXHAUSTIVE\_TEST\_ORDER;\ key++)\ \{}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ge\ nonconst\_ge;}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_recoverable\_signature\ rsig;}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_signature\ sig;}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_pubkey\ pk;}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\ sk\_s,\ msg\_s,\ r\_s,\ s\_s;}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\ s\_times\_k\_s,\ msg\_plus\_r\_times\_sk\_s;}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ recid\ =\ 0;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ k,\ should\_verify;}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg32[32];}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (skip\_section(\&iter))\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_int(\&s\_s,\ s);}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_int(\&r\_s,\ r);}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_int(\&msg\_s,\ msg);}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_int(\&sk\_s,\ key);}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_get\_b32(msg32,\ \&msg\_s);}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Verify\ by\ hand\ */}}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Run\ through\ every\ k\ value\ that\ gives\ us\ this\ r\ and\ check\ that\ *one*\ works.}}
+\DoxyCodeLine{00109\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ Note\ there\ could\ be\ none,\ there\ could\ be\ multiple,\ ECDSA\ is\ weird.\ */}}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ should\_verify\ =\ 0;}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (k\ =\ 0;\ k\ <\ EXHAUSTIVE\_TEST\_ORDER;\ k++)\ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\ check\_x\_s;}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ r\_from\_k(\&check\_x\_s,\ group,\ k,\ NULL);}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (r\_s\ ==\ check\_x\_s)\ \{}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_int(\&s\_times\_k\_s,\ k);}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_mul(\&s\_times\_k\_s,\ \&s\_times\_k\_s,\ \&s\_s);}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_mul(\&msg\_plus\_r\_times\_sk\_s,\ \&r\_s,\ \&sk\_s);}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scalar\_add(\&msg\_plus\_r\_times\_sk\_s,\ \&msg\_plus\_r\_times\_sk\_s,\ \&msg\_s);}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ should\_verify\ |=\ secp256k1\_scalar\_eq(\&s\_times\_k\_s,\ \&msg\_plus\_r\_times\_sk\_s);}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ nb\ we\ have\ a\ "{}high\ s"{}\ rule\ */}}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ should\_verify\ \&=\ !secp256k1\_scalar\_is\_high(\&s\_s);}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ We\ would\ like\ to\ try\ recovering\ the\ pubkey\ and\ checking\ that\ it\ matches,}}
+\DoxyCodeLine{00126\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ but\ pubkey\ recovery\ is\ impossible\ in\ the\ exhaustive\ tests\ (the\ reason}}
+\DoxyCodeLine{00127\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ being\ that\ there\ are\ 12\ nonzero\ r\ values,\ 12\ nonzero\ points,\ and\ no}}
+\DoxyCodeLine{00128\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ overlap\ between\ the\ sets,\ so\ there\ are\ no\ valid\ signatures).\ */}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Verify\ by\ converting\ to\ a\ standard\ signature\ and\ calling\ verify\ */}}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_recoverable\_signature\_save(\&rsig,\ \&r\_s,\ \&s\_s,\ recid);}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_recoverable\_signature\_convert(ctx,\ \&sig,\ \&rsig);}
+\DoxyCodeLine{00133\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(\&nonconst\_ge,\ \&group[sk\_s],\ \textcolor{keyword}{sizeof}(nonconst\_ge));}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_pubkey\_save(\&pk,\ \&nonconst\_ge);}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(should\_verify\ ==}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_verify(ctx,\ \&sig,\ msg32,\ \&pk));}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00140\ \ \ \ \ \}}
+\DoxyCodeLine{00141\ \}}
+\DoxyCodeLine{00142\ }
+\DoxyCodeLine{00143\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_exhaustive\_recovery(\textcolor{keyword}{const}\ secp256k1\_context\ *ctx,\ \textcolor{keyword}{const}\ secp256k1\_ge\ *group)\ \{}
+\DoxyCodeLine{00144\ \ \ \ \ test\_exhaustive\_recovery\_sign(ctx,\ group);}
+\DoxyCodeLine{00145\ \ \ \ \ test\_exhaustive\_recovery\_verify(ctx,\ group);}
+\DoxyCodeLine{00146\ \}}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00148\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_MODULE\_RECOVERY\_EXHAUSTIVE\_TESTS\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

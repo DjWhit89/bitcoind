@@ -1,0 +1,175 @@
+\chapter{Elligator\+Swift for secp256k1 explained }
+\label{md_src_2secp256k1_2doc_2ellswift}\index{ElligatorSwift for secp256k1 explained@{ElligatorSwift for secp256k1 explained}}
+\label{md_src_2secp256k1_2doc_2ellswift_autotoc_md182}%
+
+
+In this document we explain how the {\ttfamily ellswift} module implementation is related to the construction in the {\texttt{"{}\+Swift\+EC\+: Shallue–van de Woestijne Indifferentiable Function To Elliptic Curves"{}}} paper by Jorge Chávez-\/\+Saab, Francisco Rodríguez-\/\+Henríquez, and Mehdi Tibouchi.
+
+
+\begin{DoxyItemize}
+\item 1. Introduction
+\item 2. The decoding function
+\begin{DoxyItemize}
+\item 2.1 Decoding for \`{}secp256k1\`{}
+\end{DoxyItemize}
+\item 3. The encoding function
+\begin{DoxyItemize}
+\item 3.1 Switching to $\ast$v, w$\ast$ coordinates
+\item 3.2 Avoiding computing all inverses
+\item 3.3 Finding the inverse
+\item 3.4 Dealing with special cases
+\item 3.5 Encoding for \`{}secp256k1\`{}
+\end{DoxyItemize}
+\item 4. Encoding and decoding full $\ast$(x, y)$\ast$ coordinates
+\begin{DoxyItemize}
+\item 4.1 Full $\ast$(x, y)$\ast$ coordinates for \`{}secp256k1\`{}
+\end{DoxyItemize}
+\end{DoxyItemize}\doxysection{1. Introduction}\label{md_src_2secp256k1_2doc_2ellswift_autotoc_md183}
+The {\ttfamily ellswift} module effectively introduces a new 64-\/byte public key format, with the property that (uniformly random) public keys can be encoded as 64-\/byte arrays which are computationally indistinguishable from uniform byte arrays. The module provides functions to convert public keys from and to this format, as well as convenience functions for key generation and ECDH that operate directly on ellswift-\/encoded keys.
+
+The encoding consists of the concatenation of two (32-\/byte big endian) encoded field elements \$u\$ and \$t.\$ Together they encode an x-\/coordinate on the curve \$x\$, or (see further) a full point \$(x, y)\$ on the curve.
+
+{\bfseries{Decoding}} consists of decoding the field elements \$u\$ and \$t\$ (values above the field size \$p\$ are taken modulo \$p\$), and then evaluating \$\+F\+\_\+u(t)\$, which for every \$u\$ and \$t\$ results in a valid x-\/coordinate on the curve. The functions \$\+F\+\_\+u\$ will be defined in Section 2.
+
+{\bfseries{Encoding}} a given \$x\$ coordinate is conceptually done as follows\+:
+\begin{DoxyItemize}
+\item Loop\+:
+\begin{DoxyItemize}
+\item Pick a uniformly random field element \$u.\$
+\item Compute the set \$L = F\+\_\+u$^\wedge$\{-\/1\}(x)\$ of \$t\$ values for which \$\+F\+\_\+u(t) = x\$, which may have up to {\itshape 8} elements.
+\item With probability \$1 -\/ \textbackslash{}dfrac\{\textbackslash{}\#L\}\{8\}\$, restart the loop.
+\item Select a uniformly random \$t \textbackslash{}in L\$ and return \$(u, t).\$
+\end{DoxyItemize}
+\end{DoxyItemize}
+
+This is the {\itshape Elligator\+Swift} algorithm, here given for just x-\/coordinates. An extension to full \$(x, y)\$ points will be given in Section 4. The algorithm finds a uniformly random \$(u, t)\$ among (almost all) those for which \$\+F\+\_\+u(t) = x.\$ \doxyref{Section}{p.}{struct_section} 3.\+2 in the paper proves that the number of such encodings for almost all x-\/coordinates on the curve (all but at most 39) is close to two times the field size (specifically, it lies in the range \$2q \textbackslash{}pm (22\textbackslash{}sqrt\{q\} + O(1))\$, where \$q\$ is the size of the field).\doxysection{2. The decoding function}\label{md_src_2secp256k1_2doc_2ellswift_autotoc_md184}
+First some definitions\+:
+\begin{DoxyItemize}
+\item \$\textbackslash{}mathbb\{F\}\$ is the finite field of size \$q\$, of characteristic 5 or more, and \$q \textbackslash{}equiv 1 \textbackslash{}mod 3.\$
+\begin{DoxyItemize}
+\item For {\ttfamily secp256k1}, \$q = 2$^\wedge$\{256\} -\/ 2$^\wedge$\{32\} -\/ 977\$, which satisfies that requirement.
+\end{DoxyItemize}
+\item Let \$\+E\$ be the elliptic curve of points \$(x, y) \textbackslash{}in \textbackslash{}mathbb\{F\}$^\wedge$2\$ for which \$y$^\wedge$2 = x$^\wedge$3 + ax + b\$, with \$a\$ and \$b\$ public constants, for which \$\textbackslash{}\+Delta\+\_\+E = -\/16(4a$^\wedge$3 + 27b$^\wedge$2)\$ is a square, and at least one of \$(-\/b \textbackslash{}pm \textbackslash{}sqrt\{-\/3 \textbackslash{}\+Delta\+\_\+E\} / 36)/2\$ is a square. This implies that the order of \$\+E\$ is either odd, or a multiple of {\itshape 4}. If \$a=0\$, this condition is always fulfilled.
+\begin{DoxyItemize}
+\item For {\ttfamily secp256k1}, \$a=0\$ and \$b=7.\$
+\end{DoxyItemize}
+\item Let the function \$g(x) = x$^\wedge$3 + ax + b\$, so the \$\+E\$ curve equation is also \$y$^\wedge$2 = g(x).\$
+\item Let the function \$h(x) = 3x$^\wedge$3 + 4a.\$
+\item Define \$\+V\$ as the set of solutions \$(x\+\_\+1, x\+\_\+2, x\+\_\+3, z)\$ to \$z$^\wedge$2 = g(x\+\_\+1)g(x\+\_\+2)g(x\+\_\+3).\$
+\item Define \$\+S\+\_\+u\$ as the set of solutions \$(\+X, Y)\$ to \$X$^\wedge$2 + h(u)Y$^\wedge$2 = -\/g(u)\$ and \$Y \textbackslash{}neq 0.\$
+\item \$\+P\+\_\+u\$ is a function from \$\textbackslash{}mathbb\{F\}\$ to \$\+S\+\_\+u\$ that will be defined below.
+\item \$\textbackslash{}psi\+\_\+u\$ is a function from \$\+S\+\_\+u\$ to \$\+V\$ that will be defined below.
+\end{DoxyItemize}
+
+{\bfseries{Note}}\+: In the paper\+:
+\begin{DoxyItemize}
+\item \$\+F\+\_\+u\$ corresponds to \$\+F\+\_\+\{0,u\}\$ there.
+\item \$\+P\+\_\+u(t)\$ is called \$\+P\$ there.
+\item All \$\+S\+\_\+u\$ sets together correspond to \$\+S\$ there.
+\item All \$\textbackslash{}psi\+\_\+u\$ functions together (operating on elements of \$\+S\$) correspond to \$\textbackslash{}psi\$ there.
+\end{DoxyItemize}
+
+Note that for \$\+V\$, the left hand side of the equation \$z$^\wedge$2\$ is square, and thus the right hand must also be square. As multiplying non-\/squares results in a square in \$\textbackslash{}mathbb\{F\}\$, out of the three right-\/hand side factors an even number must be non-\/squares. This implies that exactly {\itshape 1} or exactly {\itshape 3} out of \$\textbackslash{}\{g(x\+\_\+1), g(x\+\_\+2), g(x\+\_\+3)\textbackslash{}\}\$ must be square, and thus that for any \$(x\+\_\+1,x\+\_\+2,x\+\_\+3,z) \textbackslash{}in V\$, at least one of \$\textbackslash{}\{x\+\_\+1, x\+\_\+2, x\+\_\+3\textbackslash{}\}\$ must be a valid x-\/coordinate on \$\+E.\$ There is one exception to this, namely when \$z=0\$, but even then one of the three values is a valid x-\/coordinate.
+
+{\bfseries{Define}} the decoding function \$\+F\+\_\+u(t)\$ as\+:
+\begin{DoxyItemize}
+\item Let \$(x\+\_\+1, x\+\_\+2, x\+\_\+3, z) = \textbackslash{}psi\+\_\+u(P\+\_\+u(t)).\$
+\item Return the first element \$x\$ of \$(x\+\_\+3, x\+\_\+2, x\+\_\+1)\$ which is a valid x-\/coordinate on \$\+E\$ (i.\+e., \$g(x)\$ is square).
+\end{DoxyItemize}
+
+\$\+P\+\_\+u(t) = (\doxyref{X(u, t)}{p.}{net_8cpp_a826edd40636cbaa44266b97c8c6a4fa3}, Y(u, t))\$, where\+:
+
+\$\$ \textbackslash{}begin\{array\}\{lcl\} \doxyref{X(u, t)}{p.}{net_8cpp_a826edd40636cbaa44266b97c8c6a4fa3} \& = \& \textbackslash{}left\textbackslash{}\{\textbackslash{}begin\{array\}\{ll\} \textbackslash{}dfrac\{g(u) -\/ t$^\wedge$2\}\{2t\} \& a = 0 \textbackslash{} \textbackslash{}dfrac\{g(u) + h(u)(Y\+\_\+0(u) -\/ X\+\_\+0(u)t)$^\wedge$2\}\{X\+\_\+0(u)(1 + h(u)t$^\wedge$2)\} \& a \textbackslash{}neq 0 \textbackslash{}end\{array\}\textbackslash{}right. \textbackslash{} Y(u, t) \& = \& \textbackslash{}left\textbackslash{}\{\textbackslash{}begin\{array\}\{ll\} \textbackslash{}dfrac\{\doxyref{X(u, t)}{p.}{net_8cpp_a826edd40636cbaa44266b97c8c6a4fa3} + t\}\{u \textbackslash{}sqrt\{-\/3\}\} = \textbackslash{}dfrac\{g(u) + t$^\wedge$2\}\{2tu\textbackslash{}sqrt\{-\/3\}\} \& a = 0 \textbackslash{} Y\+\_\+0(u) + t(\doxyref{X(u, t)}{p.}{net_8cpp_a826edd40636cbaa44266b97c8c6a4fa3} -\/ X\+\_\+0(u)) \& a \textbackslash{}neq 0 \textbackslash{}end\{array\}\textbackslash{}right. \textbackslash{}end\{array\} \$\$
+
+\$\+P\+\_\+u(t)\$ is defined\+:
+\begin{DoxyItemize}
+\item For \$a=0\$, unless\+:
+\begin{DoxyItemize}
+\item \$u = 0\$ or \$t = 0\$ (division by zero)
+\item \$g(u) = -\/t$^\wedge$2\$ (would give \$Y=0\$).
+\end{DoxyItemize}
+\item For \$a \textbackslash{}neq 0\$, unless\+:
+\begin{DoxyItemize}
+\item \$\+X\+\_\+0(u) = 0\$ or \$h(u)t$^\wedge$2 = -\/1\$ (division by zero)
+\item \$\+Y\+\_\+0(u) (1 -\/ h(u)t$^\wedge$2) = 2X\+\_\+0(u)t\$ (would give \$Y=0\$).
+\end{DoxyItemize}
+\end{DoxyItemize}
+
+The functions \$\+X\+\_\+0(u)\$ and \$\+Y\+\_\+0(u)\$ are defined in Appendix A of the paper, and depend on various properties of \$\+E.\$
+
+The function \$\textbackslash{}psi\+\_\+u\$ is the same for all curves\+: \$\textbackslash{}psi\+\_\+u(X, Y) = (x\+\_\+1, x\+\_\+2, x\+\_\+3, z)\$, where\+:
+
+\$\$ \textbackslash{}begin\{array\}\{lcl\} x\+\_\+1 \& = \& \textbackslash{}dfrac\{X\}\{2Y\} -\/ \textbackslash{}dfrac\{u\}\{2\} \&\& \textbackslash{} x\+\_\+2 \& = \& -\/\textbackslash{}dfrac\{X\}\{2Y\} -\/ \textbackslash{}dfrac\{u\}\{2\} \&\& \textbackslash{} x\+\_\+3 \& = \& u + 4Y$^\wedge$2 \&\& \textbackslash{} z \& = \& \textbackslash{}dfrac\{g(x\+\_\+3)\}\{2Y\}(u$^\wedge$2 + ux\+\_\+1 + x\+\_\+1$^\wedge$2 + a) = \textbackslash{}dfrac\{-\/g(u)g(x\+\_\+3)\}\{8Y$^\wedge$3\} \textbackslash{}end\{array\} \$\$\doxysubsection{2.\+1 Decoding for {\ttfamily secp256k1}}\label{md_src_2secp256k1_2doc_2ellswift_autotoc_md185}
+Put together and specialized for \$a=0\$ curves, decoding \$(u, t)\$ to an x-\/coordinate is\+:
+
+{\bfseries{Define}} \$\+F\+\_\+u(t)\$ as\+:
+\begin{DoxyItemize}
+\item Let \$X = \textbackslash{}dfrac\{u$^\wedge$3 + b -\/ t$^\wedge$2\}\{2t\}.\$
+\item Let \$Y = \textbackslash{}dfrac\{X + t\}\{u\textbackslash{}sqrt\{-\/3\}\}.\$
+\item Return the first \$x\$ in \$(u + 4Y$^\wedge$2, \textbackslash{}dfrac\{-\/X\}\{2Y\} -\/ \textbackslash{}dfrac\{u\}\{2\}, \textbackslash{}dfrac\{X\}\{2Y\} -\/ \textbackslash{}dfrac\{u\}\{2\})\$ for which \$g(x)\$ is square.
+\end{DoxyItemize}
+
+To make sure that every input decodes to a valid x-\/coordinate, we remap the inputs in case \$\+P\+\_\+u\$ is not defined (when \$u=0\$, \$t=0\$, or \$g(u) = -\/t$^\wedge$2\$)\+:
+
+{\bfseries{Define}} \$\+F\+\_\+u(t)\$ as\+:
+\begin{DoxyItemize}
+\item Let \$u\textquotesingle{}=u\$ if \$u \textbackslash{}neq 0\$; \$1\$ otherwise (guaranteeing \$u\textquotesingle{} \textbackslash{}neq 0\$).
+\item Let \$t\textquotesingle{}=t\$ if \$t \textbackslash{}neq 0\$; \$1\$ otherwise (guaranteeing \$t\textquotesingle{} \textbackslash{}neq 0\$).
+\item Let \$t\textquotesingle{}\textquotesingle{}=t\textquotesingle{}\$ if \$g(u\textquotesingle{}) \textbackslash{}neq -\/t\textquotesingle{}$^\wedge$2\$; \$2t\textquotesingle{}\$ otherwise (guaranteeing \$t\textquotesingle{}\textquotesingle{} \textbackslash{}neq 0\$ and \$g(u\textquotesingle{}) \textbackslash{}neq -\/t\textquotesingle{}\textquotesingle{}$^\wedge$2\$).
+\item Let \$X = \textbackslash{}dfrac\{u\textquotesingle{}$^\wedge$3 + b -\/ t\textquotesingle{}\textquotesingle{}$^\wedge$2\}\{2t\textquotesingle{}\textquotesingle{}\}.\$
+\item Let \$Y = \textbackslash{}dfrac\{X + t\textquotesingle{}\textquotesingle{}\}\{u\textquotesingle{}\textbackslash{}sqrt\{-\/3\}\}.\$
+\item Return the first \$x\$ in \$(u\textquotesingle{} + 4Y$^\wedge$2, \textbackslash{}dfrac\{-\/X\}\{2Y\} -\/ \textbackslash{}dfrac\{u\textquotesingle{}\}\{2\}, \textbackslash{}dfrac\{X\}\{2Y\} -\/ \textbackslash{}dfrac\{u\textquotesingle{}\}\{2\})\$ for which \$x$^\wedge$3 + b\$ is square.
+\end{DoxyItemize}
+
+The choices here are not strictly necessary. Just returning a fixed constant in any of the undefined cases would suffice, but the approach here is simple enough and gives fairly uniform output even in these cases.
+
+{\bfseries{Note}}\+: in the paper these conditions result in \$\textbackslash{}infty\$ as output, due to the use of projective coordinates there. We wish to avoid the need for callers to deal with this special case.
+
+This is implemented in {\ttfamily secp256k1\+\_\+ellswift\+\_\+xswiftec\+\_\+frac\+\_\+var} (which decodes to an x-\/coordinate represented as a fraction), and in {\ttfamily secp256k1\+\_\+ellswift\+\_\+xswiftec\+\_\+var} (which outputs the actual x-\/coordinate).\doxysection{3. The encoding function}\label{md_src_2secp256k1_2doc_2ellswift_autotoc_md186}
+To implement \$\+F\+\_\+u$^\wedge$\{-\/1\}(x)\$, the function to find the set of inverses \$t\$ for which \$\+F\+\_\+u(t) = x\$, we have to reverse the process\+:
+\begin{DoxyItemize}
+\item Find all the \$(\+X, Y) \textbackslash{}in S\+\_\+u\$ that could have given rise to \$x\$, through the \$x\+\_\+1\$, \$x\+\_\+2\$, or \$x\+\_\+3\$ formulas in \$\textbackslash{}psi\+\_\+u.\$
+\item Map those \$(\+X, Y)\$ solutions to \$t\$ values using \$\+P\+\_\+u$^\wedge$\{-\/1\}(X, Y).\$
+\item For each of the found \$t\$ values, verify that \$\+F\+\_\+u(t) = x.\$
+\item Return the remaining \$t\$ values.
+\end{DoxyItemize}
+
+The function \$\+P\+\_\+u$^\wedge$\{-\/1\}\$, which finds \$t\$ given \$(\+X, Y) \textbackslash{}in S\+\_\+u\$, is significantly simpler than \$\+P\+\_\+u\+:\$
+
+\$\$ P\+\_\+u$^\wedge$\{-\/1\}(X, Y) = \textbackslash{}left\textbackslash{}\{\textbackslash{}begin\{array\}\{ll\} Yu\textbackslash{}sqrt\{-\/3\} -\/ X \& a = 0 \textbackslash{} \textbackslash{}dfrac\{Y-\/\+Y\+\_\+0(u)\}\{X-\/\+X\+\_\+0(u)\} \& a \textbackslash{}neq 0 \textbackslash{}land X \textbackslash{}neq X\+\_\+0(u) \textbackslash{} \textbackslash{}dfrac\{-\/X\+\_\+0(u)\}\{h(u)Y\+\_\+0(u)\} \& a \textbackslash{}neq 0 \textbackslash{}land X = X\+\_\+0(u) \textbackslash{}land Y = Y\+\_\+0(u) \textbackslash{}end\{array\}\textbackslash{}right. \$\$
+
+The third step above, verifying that \$\+F\+\_\+u(t) = x\$, is necessary because for the \$(\+X, Y)\$ values found through the \$x\+\_\+1\$ and \$x\+\_\+2\$ expressions, it is possible that decoding through \$\textbackslash{}psi\+\_\+u(X, Y)\$ yields a valid \$x\+\_\+3\$ on the curve, which would take precedence over the \$x\+\_\+1\$ or \$x\+\_\+2\$ decoding. These \$(\+X, Y)\$ solutions must be rejected.
+
+Since we know that exactly one or exactly three out of \$\textbackslash{}\{x\+\_\+1, x\+\_\+2, x\+\_\+3\textbackslash{}\}\$ are valid x-\/coordinates for any \$t\$, the case where either \$x\+\_\+1\$ or \$x\+\_\+2\$ is valid and in addition also \$x\+\_\+3\$ is valid must mean that all three are valid. This means that instead of checking whether \$x\+\_\+3\$ is on the curve, it is also possible to check whether the other one out of \$x\+\_\+1\$ and \$x\+\_\+2\$ is on the curve. This is significantly simpler, as it turns out.
+
+Observe that \$\textbackslash{}psi\+\_\+u\$ guarantees that \$x\+\_\+1 + x\+\_\+2 = -\/u.\$ So given either \$x = x\+\_\+1\$ or \$x = x\+\_\+2\$, the other one of the two can be computed as \$-\/u -\/ x.\$ Thus, when encoding \$x\$ through the \$x\+\_\+1\$ or \$x\+\_\+2\$ expressions, one can simply check whether \$g(-\/u-\/x)\$ is a square, and if so, not include the corresponding \$t\$ values in the returned set. As this does not need \$\+X\$, \$\+Y\$, or \$t\$, this condition can be determined before those values are computed.
+
+It is not possible that an encoding found through the \$x\+\_\+1\$ expression decodes to a different valid x-\/coordinate using \$x\+\_\+2\$ (which would take precedence), for the same reason\+: if both \$x\+\_\+1\$ and \$x\+\_\+2\$ decodings were valid, \$x\+\_\+3\$ would be valid as well, and thus take precedence over both. Because of this, the \$g(-\/u-\/x)\$ being square test for \$x\+\_\+1\$ and \$x\+\_\+2\$ is the only test necessary to guarantee the found \$t\$ values round-\/trip back to the input \$x\$ correctly. This is the reason for choosing the \$(x\+\_\+3, x\+\_\+2, x\+\_\+1)\$ precedence order in the decoder; any order which does not place \$x\+\_\+3\$ first requires more complicated round-\/trip checks in the encoder.\doxysubsection{3.\+1 Switching to {\itshape v, w} coordinates}\label{md_src_2secp256k1_2doc_2ellswift_autotoc_md187}
+Before working out the formulas for all this, we switch to different variables for \$\+S\+\_\+u.\$ Let \$v = (X/Y -\/ u)/2\$, and \$w = 2Y.\$ Or in the other direction, \$X = w(u/2 + v)\$ and \$Y = w/2\+:\$
+\begin{DoxyItemize}
+\item \$\+S\+\_\+u\textquotesingle{}\$ becomes the set of \$(v, w)\$ for which \$w$^\wedge$2 (u$^\wedge$2 + uv + v$^\wedge$2 + a) = -\/g(u)\$ and \$w \textbackslash{}neq 0.\$
+\item For \$a=0\$ curves, \$\+P\+\_\+u$^\wedge$\{-\/1\}\$ can be stated for \$(v,w)\$ as \$\+P\+\_\+u$^\wedge$\{\textquotesingle{}-\/1\}(v, w) = w\textbackslash{}left(\textbackslash{}frac\{\textbackslash{}sqrt\{-\/3\}-\/1\}\{2\}u -\/ v\textbackslash{}right).\$
+\item \$\textbackslash{}psi\+\_\+u\$ can be stated for \$(v, w)\$ as \$\textbackslash{}psi\+\_\+u\textquotesingle{}(v, w) = (x\+\_\+1, x\+\_\+2, x\+\_\+3, z)\$, where
+\end{DoxyItemize}
+
+\$\$ \textbackslash{}begin\{array\}\{lcl\} x\+\_\+1 \& = \& v \textbackslash{} x\+\_\+2 \& = \& -\/u -\/ v \textbackslash{} x\+\_\+3 \& = \& u + w$^\wedge$2 \textbackslash{} z \& = \& \textbackslash{}dfrac\{g(x\+\_\+3)\}\{w\}(u$^\wedge$2 + uv + v$^\wedge$2 + a) = \textbackslash{}dfrac\{-\/g(u)g(x\+\_\+3)\}\{w$^\wedge$3\} \textbackslash{}end\{array\} \$\$
+
+We can now write the expressions for finding \$(v, w)\$ given \$x\$ explicitly, by solving each of the \$\textbackslash{}\{x\+\_\+1, x\+\_\+2, x\+\_\+3\textbackslash{}\}\$ expressions for \$v\$ or \$w\$, and using the \$\+S\+\_\+u\textquotesingle{}\$ equation to find the other variable\+:
+\begin{DoxyItemize}
+\item Assuming \$x = x\+\_\+1\$, we find \$v = x\$ and \$w = \textbackslash{}pm\textbackslash{}sqrt\{-\/g(u)/(u$^\wedge$2 + uv + v$^\wedge$2 + a)\}\$ (two solutions).
+\item Assuming \$x = x\+\_\+2\$, we find \$v = -\/u-\/x\$ and \$w = \textbackslash{}pm\textbackslash{}sqrt\{-\/g(u)/(u$^\wedge$2 + uv + v$^\wedge$2 + a)\}\$ (two solutions).
+\item Assuming \$x = x\+\_\+3\$, we find \$w = \textbackslash{}pm\textbackslash{}sqrt\{x-\/u\}\$ and \$v = -\/u/2 \textbackslash{}pm \textbackslash{}sqrt\{-\/w$^\wedge$2(4g(u) + w$^\wedge$2h(u))\}/(2w$^\wedge$2)\$ (four solutions).
+\end{DoxyItemize}\doxysubsection{3.\+2 Avoiding computing all inverses}\label{md_src_2secp256k1_2doc_2ellswift_autotoc_md188}
+The {\itshape Elligator\+Swift} algorithm as stated in \doxyref{Section}{p.}{struct_section} 1 requires the computation of \$L = F\+\_\+u$^\wedge$\{-\/1\}(x)\$ (the set of all \$t\$ such that \$(u, t)\$ decode to \$x\$) in full. This is unnecessary.
+
+Observe that the procedure of restarting with probability \$(1 -\/ \textbackslash{}frac\{\textbackslash{}\#L\}\{8\})\$ and otherwise returning a uniformly random element from \$\+L\$ is actually equivalent to always padding \$\+L\$ with \$\textbackslash{}bot\$ values up to length 8, picking a uniformly random element from that, restarting whenever \$\textbackslash{}bot\$ is picked\+:
+
+{\bfseries{Define}} {\itshape Elligator\+Swift(x)} as\+:
+\begin{DoxyItemize}
+\item Loop\+:
+\begin{DoxyItemize}
+\item Pick a uniformly random field element \$u.\$
+\item Compute the set \$L = F\+\_\+u$^\wedge$\{-\/1\}(x).\$
+\item Let \$\+T\$ be the 8-\/element vector consisting of the elements of \$\+L\$, plus \$8 -\/ \textbackslash{}\#\+L\$ times \$\textbackslash{}\{\textbackslash{}bot\textbackslash{} 
+\end{DoxyItemize}
+\end{DoxyItemize}

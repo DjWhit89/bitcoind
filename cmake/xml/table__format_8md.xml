@@ -1,0 +1,120 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="table__format_8md" kind="file" language="Markdown">
+    <compoundname>table_format.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">leveldb<sp/>File<sp/>format</highlight></codeline>
+<codeline><highlight class="normal">===================</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&lt;beginning_of_file&gt;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[data<sp/>block<sp/>1]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[data<sp/>block<sp/>2]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[data<sp/>block<sp/>N]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[meta<sp/>block<sp/>1]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[meta<sp/>block<sp/>K]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[metaindex<sp/>block]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[index<sp/>block]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[Footer]<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>(fixed<sp/>size;<sp/>starts<sp/>at<sp/>file_size<sp/>-<sp/>sizeof(Footer))</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&lt;end_of_file&gt;</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>file<sp/>contains<sp/>internal<sp/>pointers.<sp/><sp/>Each<sp/>such<sp/>pointer<sp/>is<sp/>called</highlight></codeline>
+<codeline><highlight class="normal">a<sp/>BlockHandle<sp/>and<sp/>contains<sp/>the<sp/>following<sp/>information:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>offset:<sp/><sp/><sp/>varint64</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>size:<sp/><sp/><sp/><sp/><sp/>varint64</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">See<sp/>[varints](https://developers.google.com/protocol-buffers/docs/encoding#varints)</highlight></codeline>
+<codeline><highlight class="normal">for<sp/>an<sp/>explanation<sp/>of<sp/>varint64<sp/>format.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">1.<sp/><sp/>The<sp/>sequence<sp/>of<sp/>key/value<sp/>pairs<sp/>in<sp/>the<sp/>file<sp/>are<sp/>stored<sp/>in<sp/>sorted</highlight></codeline>
+<codeline><highlight class="normal">order<sp/>and<sp/>partitioned<sp/>into<sp/>a<sp/>sequence<sp/>of<sp/>data<sp/>blocks.<sp/><sp/>These<sp/>blocks</highlight></codeline>
+<codeline><highlight class="normal">come<sp/>one<sp/>after<sp/>another<sp/>at<sp/>the<sp/>beginning<sp/>of<sp/>the<sp/>file.<sp/><sp/>Each<sp/>data<sp/>block</highlight></codeline>
+<codeline><highlight class="normal">is<sp/>formatted<sp/>according<sp/>to<sp/>the<sp/>code<sp/>in<sp/>`block_builder.cc`,<sp/>and<sp/>then</highlight></codeline>
+<codeline><highlight class="normal">optionally<sp/>compressed.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">2.<sp/>After<sp/>the<sp/>data<sp/>blocks<sp/>we<sp/>store<sp/>a<sp/>bunch<sp/>of<sp/>meta<sp/>blocks.<sp/><sp/>The</highlight></codeline>
+<codeline><highlight class="normal">supported<sp/>meta<sp/>block<sp/>types<sp/>are<sp/>described<sp/>below.<sp/><sp/>More<sp/>meta<sp/>block<sp/>types</highlight></codeline>
+<codeline><highlight class="normal">may<sp/>be<sp/>added<sp/>in<sp/>the<sp/>future.<sp/><sp/>Each<sp/>meta<sp/>block<sp/>is<sp/>again<sp/>formatted<sp/>using</highlight></codeline>
+<codeline><highlight class="normal">`block_builder.cc`<sp/>and<sp/>then<sp/>optionally<sp/>compressed.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">3.<sp/>A<sp/>&quot;metaindex&quot;<sp/>block.<sp/><sp/>It<sp/>contains<sp/>one<sp/>entry<sp/>for<sp/>every<sp/>other<sp/>meta</highlight></codeline>
+<codeline><highlight class="normal">block<sp/>where<sp/>the<sp/>key<sp/>is<sp/>the<sp/>name<sp/>of<sp/>the<sp/>meta<sp/>block<sp/>and<sp/>the<sp/>value<sp/>is<sp/>a</highlight></codeline>
+<codeline><highlight class="normal">BlockHandle<sp/>pointing<sp/>to<sp/>that<sp/>meta<sp/>block.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">4.<sp/>An<sp/>&quot;index&quot;<sp/>block.<sp/><sp/>This<sp/>block<sp/>contains<sp/>one<sp/>entry<sp/>per<sp/>data<sp/>block,</highlight></codeline>
+<codeline><highlight class="normal">where<sp/>the<sp/>key<sp/>is<sp/>a<sp/>string<sp/>&gt;=<sp/>last<sp/>key<sp/>in<sp/>that<sp/>data<sp/>block<sp/>and<sp/>before</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>first<sp/>key<sp/>in<sp/>the<sp/>successive<sp/>data<sp/>block.<sp/><sp/>The<sp/>value<sp/>is<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">BlockHandle<sp/>for<sp/>the<sp/>data<sp/>block.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">5.<sp/>At<sp/>the<sp/>very<sp/>end<sp/>of<sp/>the<sp/>file<sp/>is<sp/>a<sp/>fixed<sp/>length<sp/>footer<sp/>that<sp/>contains</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>BlockHandle<sp/>of<sp/>the<sp/>metaindex<sp/>and<sp/>index<sp/>blocks<sp/>as<sp/>well<sp/>as<sp/>a<sp/>magic<sp/>number.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>metaindex_handle:<sp/>char[p];<sp/><sp/><sp/><sp/><sp/>//<sp/>Block<sp/>handle<sp/>for<sp/>metaindex</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>index_handle:<sp/><sp/><sp/><sp/><sp/>char[q];<sp/><sp/><sp/><sp/><sp/>//<sp/>Block<sp/>handle<sp/>for<sp/>index</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>padding:<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>char[40-p-q];//<sp/>zeroed<sp/>bytes<sp/>to<sp/>make<sp/>fixed<sp/>length</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/>(40==2*BlockHandle::kMaxEncodedLength)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>magic:<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>fixed64;<sp/><sp/><sp/><sp/><sp/>//<sp/>==<sp/>0xdb4775248b80fb57<sp/>(little-endian)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>&quot;filter&quot;<sp/>Meta<sp/>Block</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">If<sp/>a<sp/>`FilterPolicy`<sp/>was<sp/>specified<sp/>when<sp/>the<sp/>database<sp/>was<sp/>opened,<sp/>a</highlight></codeline>
+<codeline><highlight class="normal">filter<sp/>block<sp/>is<sp/>stored<sp/>in<sp/>each<sp/>table.<sp/><sp/>The<sp/>&quot;metaindex&quot;<sp/>block<sp/>contains</highlight></codeline>
+<codeline><highlight class="normal">an<sp/>entry<sp/>that<sp/>maps<sp/>from<sp/>`filter.&lt;N&gt;`<sp/>to<sp/>the<sp/>BlockHandle<sp/>for<sp/>the<sp/>filter</highlight></codeline>
+<codeline><highlight class="normal">block<sp/>where<sp/>`&lt;N&gt;`<sp/>is<sp/>the<sp/>string<sp/>returned<sp/>by<sp/>the<sp/>filter<sp/>policy&apos;s</highlight></codeline>
+<codeline><highlight class="normal">`Name()`<sp/>method.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>filter<sp/>block<sp/>stores<sp/>a<sp/>sequence<sp/>of<sp/>filters,<sp/>where<sp/>filter<sp/>i<sp/>contains</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>output<sp/>of<sp/>`FilterPolicy::CreateFilter()`<sp/>on<sp/>all<sp/>keys<sp/>that<sp/>are<sp/>stored</highlight></codeline>
+<codeline><highlight class="normal">in<sp/>a<sp/>block<sp/>whose<sp/>file<sp/>offset<sp/>falls<sp/>within<sp/>the<sp/>range</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[<sp/>i*base<sp/>...<sp/>(i+1)*base-1<sp/>]</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Currently,<sp/>&quot;base&quot;<sp/>is<sp/>2KB.<sp/><sp/>So<sp/>for<sp/>example,<sp/>if<sp/>blocks<sp/>X<sp/>and<sp/>Y<sp/>start<sp/>in</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>range<sp/>`[<sp/>0KB<sp/>..<sp/>2KB-1<sp/>]`,<sp/>all<sp/>of<sp/>the<sp/>keys<sp/>in<sp/>X<sp/>and<sp/>Y<sp/>will<sp/>be</highlight></codeline>
+<codeline><highlight class="normal">converted<sp/>to<sp/>a<sp/>filter<sp/>by<sp/>calling<sp/>`FilterPolicy::CreateFilter()`,<sp/>and<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">resulting<sp/>filter<sp/>will<sp/>be<sp/>stored<sp/>as<sp/>the<sp/>first<sp/>filter<sp/>in<sp/>the<sp/>filter</highlight></codeline>
+<codeline><highlight class="normal">block.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>filter<sp/>block<sp/>is<sp/>formatted<sp/>as<sp/>follows:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[filter<sp/>0]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[filter<sp/>1]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[filter<sp/>2]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[filter<sp/>N-1]</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[offset<sp/>of<sp/>filter<sp/>0]<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/>4<sp/>bytes</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[offset<sp/>of<sp/>filter<sp/>1]<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/>4<sp/>bytes</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[offset<sp/>of<sp/>filter<sp/>2]<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/>4<sp/>bytes</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[offset<sp/>of<sp/>filter<sp/>N-1]<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/>4<sp/>bytes</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>[offset<sp/>of<sp/>beginning<sp/>of<sp/>offset<sp/>array]<sp/>:<sp/>4<sp/>bytes</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>lg(base)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/>1<sp/>byte</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>offset<sp/>array<sp/>at<sp/>the<sp/>end<sp/>of<sp/>the<sp/>filter<sp/>block<sp/>allows<sp/>efficient</highlight></codeline>
+<codeline><highlight class="normal">mapping<sp/>from<sp/>a<sp/>data<sp/>block<sp/>offset<sp/>to<sp/>the<sp/>corresponding<sp/>filter.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>&quot;stats&quot;<sp/>Meta<sp/>Block</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>meta<sp/>block<sp/>contains<sp/>a<sp/>bunch<sp/>of<sp/>stats.<sp/><sp/>The<sp/>key<sp/>is<sp/>the<sp/>name</highlight></codeline>
+<codeline><highlight class="normal">of<sp/>the<sp/>statistic.<sp/><sp/>The<sp/>value<sp/>contains<sp/>the<sp/>statistic.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">TODO(postrelease):<sp/>record<sp/>following<sp/>stats.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>data<sp/>size</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>index<sp/>size</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>key<sp/>size<sp/>(uncompressed)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>value<sp/>size<sp/>(uncompressed)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>number<sp/>of<sp/>entries</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>number<sp/>of<sp/>data<sp/>blocks</highlight></codeline>
+    </programlisting>
+    <location file="src/leveldb/doc/table_format.md"/>
+  </compounddef>
+</doxygen>

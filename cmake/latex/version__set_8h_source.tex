@@ -1,0 +1,399 @@
+\doxysection{version\+\_\+set.\+h}
+\label{version__set_8h_source}\index{src/leveldb/db/version\_set.h@{src/leveldb/db/version\_set.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ The\ representation\ of\ a\ DBImpl\ consists\ of\ a\ set\ of\ Versions.\ \ The}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//\ newest\ version\ is\ called\ "{}current"{}.\ \ Older\ versions\ may\ be\ kept}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//\ around\ to\ provide\ a\ consistent\ view\ to\ live\ iterators.}}
+\DoxyCodeLine{00008\ \textcolor{comment}{//}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//\ Each\ Version\ keeps\ track\ of\ a\ set\ of\ Table\ files\ per\ level.\ \ The}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//\ entire\ set\ of\ versions\ is\ maintained\ in\ a\ VersionSet.}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//}}
+\DoxyCodeLine{00012\ \textcolor{comment}{//\ Version,VersionSet\ are\ thread-\/compatible,\ but\ require\ external}}
+\DoxyCodeLine{00013\ \textcolor{comment}{//\ synchronization\ on\ all\ accesses.}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_DB\_VERSION\_SET\_H\_}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_DB\_VERSION\_SET\_H\_}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ "{}db/dbformat.h"{}}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}db/version\_edit.h"{}}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ "{}port/port.h"{}}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ "{}port/thread\_annotations.h"{}}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{keyword}{namespace\ }log\ \{}
+\DoxyCodeLine{00030\ \textcolor{keyword}{class\ }Writer;}
+\DoxyCodeLine{00031\ \}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{class\ }Compaction;}
+\DoxyCodeLine{00034\ \textcolor{keyword}{class\ }Iterator;}
+\DoxyCodeLine{00035\ \textcolor{keyword}{class\ }MemTable;}
+\DoxyCodeLine{00036\ \textcolor{keyword}{class\ }TableBuilder;}
+\DoxyCodeLine{00037\ \textcolor{keyword}{class\ }TableCache;}
+\DoxyCodeLine{00038\ \textcolor{keyword}{class\ }Version;}
+\DoxyCodeLine{00039\ \textcolor{keyword}{class\ }VersionSet;}
+\DoxyCodeLine{00040\ \textcolor{keyword}{class\ }WritableFile;}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \textcolor{comment}{//\ Return\ the\ smallest\ index\ i\ such\ that\ files[i]-\/>largest\ >=\ key.}}
+\DoxyCodeLine{00043\ \textcolor{comment}{//\ Return\ files.size()\ if\ there\ is\ no\ such\ file.}}
+\DoxyCodeLine{00044\ \textcolor{comment}{//\ REQUIRES:\ "{}files"{}\ contains\ a\ sorted\ list\ of\ non-\/overlapping\ files.}}
+\DoxyCodeLine{00045\ \textcolor{keywordtype}{int}\ FindFile(\textcolor{keyword}{const}\ InternalKeyComparator\&\ icmp,}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<FileMetaData*>\&\ files,\ \textcolor{keyword}{const}\ Slice\&\ key);}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \textcolor{comment}{//\ Returns\ true\ iff\ some\ file\ in\ "{}files"{}\ overlaps\ the\ user\ key\ range}}
+\DoxyCodeLine{00049\ \textcolor{comment}{//\ [*smallest,*largest].}}
+\DoxyCodeLine{00050\ \textcolor{comment}{//\ smallest==nullptr\ represents\ a\ key\ smaller\ than\ all\ keys\ in\ the\ DB.}}
+\DoxyCodeLine{00051\ \textcolor{comment}{//\ largest==nullptr\ represents\ a\ key\ largest\ than\ all\ keys\ in\ the\ DB.}}
+\DoxyCodeLine{00052\ \textcolor{comment}{//\ REQUIRES:\ If\ disjoint\_sorted\_files,\ files[]\ contains\ disjoint\ ranges}}
+\DoxyCodeLine{00053\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ in\ sorted\ order.}}
+\DoxyCodeLine{00054\ \textcolor{keywordtype}{bool}\ SomeFileOverlapsRange(\textcolor{keyword}{const}\ InternalKeyComparator\&\ icmp,}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ disjoint\_sorted\_files,}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<FileMetaData*>\&\ files,}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Slice*\ smallest\_user\_key,}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Slice*\ largest\_user\_key);}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \textcolor{keyword}{class\ }Version\ \{}
+\DoxyCodeLine{00061\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00062\ \ \ \textcolor{comment}{//\ Lookup\ the\ value\ for\ key.\ \ If\ found,\ store\ it\ in\ *val\ and}}
+\DoxyCodeLine{00063\ \ \ \textcolor{comment}{//\ return\ OK.\ \ Else\ return\ a\ non-\/OK\ status.\ \ Fills\ *stats.}}
+\DoxyCodeLine{00064\ \ \ \textcolor{comment}{//\ REQUIRES:\ lock\ is\ not\ held}}
+\DoxyCodeLine{00065\ \ \ \textcolor{keyword}{struct\ }GetStats\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ FileMetaData*\ seek\_file;}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keywordtype}{int}\ seek\_file\_level;}
+\DoxyCodeLine{00068\ \ \ \};}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \ \ \textcolor{comment}{//\ Append\ to\ *iters\ a\ sequence\ of\ iterators\ that\ will}}
+\DoxyCodeLine{00071\ \ \ \textcolor{comment}{//\ yield\ the\ contents\ of\ this\ Version\ when\ merged\ together.}}
+\DoxyCodeLine{00072\ \ \ \textcolor{comment}{//\ REQUIRES:\ This\ version\ has\ been\ saved\ (see\ VersionSet::SaveTo)}}
+\DoxyCodeLine{00073\ \ \ \textcolor{keywordtype}{void}\ AddIterators(\textcolor{keyword}{const}\ ReadOptions\&,\ std::vector<Iterator*>*\ iters);}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ Status\ Get(\textcolor{keyword}{const}\ ReadOptions\&,\ \textcolor{keyword}{const}\ LookupKey\&\ key,\ std::string*\ val,}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ GetStats*\ stats);}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ \textcolor{comment}{//\ Adds\ "{}stats"{}\ into\ the\ current\ state.\ \ Returns\ true\ if\ a\ new}}
+\DoxyCodeLine{00079\ \ \ \textcolor{comment}{//\ compaction\ may\ need\ to\ be\ triggered,\ false\ otherwise.}}
+\DoxyCodeLine{00080\ \ \ \textcolor{comment}{//\ REQUIRES:\ lock\ is\ held}}
+\DoxyCodeLine{00081\ \ \ \textcolor{keywordtype}{bool}\ UpdateStats(\textcolor{keyword}{const}\ GetStats\&\ stats);}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \ \textcolor{comment}{//\ Record\ a\ sample\ of\ bytes\ read\ at\ the\ specified\ internal\ key.}}
+\DoxyCodeLine{00084\ \ \ \textcolor{comment}{//\ Samples\ are\ taken\ approximately\ once\ every\ config::kReadBytesPeriod}}
+\DoxyCodeLine{00085\ \ \ \textcolor{comment}{//\ bytes.\ \ Returns\ true\ if\ a\ new\ compaction\ may\ need\ to\ be\ triggered.}}
+\DoxyCodeLine{00086\ \ \ \textcolor{comment}{//\ REQUIRES:\ lock\ is\ held}}
+\DoxyCodeLine{00087\ \ \ \textcolor{keywordtype}{bool}\ RecordReadSample(Slice\ key);}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \ \ \textcolor{comment}{//\ Reference\ count\ management\ (so\ Versions\ do\ not\ disappear\ out\ from}}
+\DoxyCodeLine{00090\ \ \ \textcolor{comment}{//\ under\ live\ iterators)}}
+\DoxyCodeLine{00091\ \ \ \textcolor{keywordtype}{void}\ Ref();}
+\DoxyCodeLine{00092\ \ \ \textcolor{keywordtype}{void}\ Unref();}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00094\ \ \ \textcolor{keywordtype}{void}\ GetOverlappingInputs(}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ level,}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \textcolor{keyword}{const}\ InternalKey*\ begin,\ \ \textcolor{comment}{//\ nullptr\ means\ before\ all\ keys}}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \textcolor{keyword}{const}\ InternalKey*\ end,\ \ \ \ \textcolor{comment}{//\ nullptr\ means\ after\ all\ keys}}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ std::vector<FileMetaData*>*\ inputs);}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ some\ file\ in\ the\ specified\ level\ overlaps}}
+\DoxyCodeLine{00101\ \ \ \textcolor{comment}{//\ some\ part\ of\ [*smallest\_user\_key,*largest\_user\_key].}}
+\DoxyCodeLine{00102\ \ \ \textcolor{comment}{//\ smallest\_user\_key==nullptr\ represents\ a\ key\ smaller\ than\ all\ the\ DB's\ keys.}}
+\DoxyCodeLine{00103\ \ \ \textcolor{comment}{//\ largest\_user\_key==nullptr\ represents\ a\ key\ largest\ than\ all\ the\ DB's\ keys.}}
+\DoxyCodeLine{00104\ \ \ \textcolor{keywordtype}{bool}\ OverlapInLevel(\textcolor{keywordtype}{int}\ level,\ \textcolor{keyword}{const}\ Slice*\ smallest\_user\_key,}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Slice*\ largest\_user\_key);}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \ \ \textcolor{comment}{//\ Return\ the\ level\ at\ which\ we\ should\ place\ a\ new\ memtable\ compaction}}
+\DoxyCodeLine{00108\ \ \ \textcolor{comment}{//\ result\ that\ covers\ the\ range\ [smallest\_user\_key,largest\_user\_key].}}
+\DoxyCodeLine{00109\ \ \ \textcolor{keywordtype}{int}\ PickLevelForMemTableOutput(\textcolor{keyword}{const}\ Slice\&\ smallest\_user\_key,}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Slice\&\ largest\_user\_key);}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \ \ \textcolor{keywordtype}{int}\ NumFiles(\textcolor{keywordtype}{int}\ level)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ files\_[level].size();\ \}}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00114\ \ \ \textcolor{comment}{//\ Return\ a\ human\ readable\ string\ that\ describes\ this\ version's\ contents.}}
+\DoxyCodeLine{00115\ \ \ std::string\ DebugString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00118\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }Compaction;}
+\DoxyCodeLine{00119\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }VersionSet;}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \ \ \textcolor{keyword}{class\ }LevelFileNumIterator;}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \ \ \textcolor{keyword}{explicit}\ Version(VersionSet*\ vset)}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ :\ vset\_(vset),}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ next\_(this),}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ prev\_(this),}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ refs\_(0),}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ file\_to\_compact\_(nullptr),}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ file\_to\_compact\_level\_(-\/1),}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ compaction\_score\_(-\/1),}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ compaction\_level\_(-\/1)\ \{\}}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00133\ \ \ Version(\textcolor{keyword}{const}\ Version\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00134\ \ \ Version\&\ operator=(\textcolor{keyword}{const}\ Version\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00136\ \ \ \string~Version();}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \ \ Iterator*\ NewConcatenatingIterator(\textcolor{keyword}{const}\ ReadOptions\&,\ \textcolor{keywordtype}{int}\ level)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00140\ \ \ \textcolor{comment}{//\ Call\ func(arg,\ level,\ f)\ for\ every\ file\ that\ overlaps\ user\_key\ in}}
+\DoxyCodeLine{00141\ \ \ \textcolor{comment}{//\ order\ from\ newest\ to\ oldest.\ \ If\ an\ invocation\ of\ func\ returns}}
+\DoxyCodeLine{00142\ \ \ \textcolor{comment}{//\ false,\ makes\ no\ more\ calls.}}
+\DoxyCodeLine{00143\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00144\ \ \ \textcolor{comment}{//\ REQUIRES:\ user\ portion\ of\ internal\_key\ ==\ user\_key.}}
+\DoxyCodeLine{00145\ \ \ \textcolor{keywordtype}{void}\ ForEachOverlapping(Slice\ user\_key,\ Slice\ internal\_key,\ \textcolor{keywordtype}{void}*\ arg,}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ (*func)(\textcolor{keywordtype}{void}*,\ \textcolor{keywordtype}{int},\ FileMetaData*));}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00148\ \ \ VersionSet*\ vset\_;\ \ \textcolor{comment}{//\ VersionSet\ to\ which\ this\ Version\ belongs}}
+\DoxyCodeLine{00149\ \ \ Version*\ next\_;\ \ \ \ \ \textcolor{comment}{//\ Next\ version\ in\ linked\ list}}
+\DoxyCodeLine{00150\ \ \ Version*\ prev\_;\ \ \ \ \ \textcolor{comment}{//\ Previous\ version\ in\ linked\ list}}
+\DoxyCodeLine{00151\ \ \ \textcolor{keywordtype}{int}\ refs\_;\ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Number\ of\ live\ refs\ to\ this\ version}}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00153\ \ \ \textcolor{comment}{//\ List\ of\ files\ per\ level}}
+\DoxyCodeLine{00154\ \ \ std::vector<FileMetaData*>\ files\_[config::kNumLevels];}
+\DoxyCodeLine{00155\ }
+\DoxyCodeLine{00156\ \ \ \textcolor{comment}{//\ Next\ file\ to\ compact\ based\ on\ seek\ stats.}}
+\DoxyCodeLine{00157\ \ \ FileMetaData*\ file\_to\_compact\_;}
+\DoxyCodeLine{00158\ \ \ \textcolor{keywordtype}{int}\ file\_to\_compact\_level\_;}
+\DoxyCodeLine{00159\ }
+\DoxyCodeLine{00160\ \ \ \textcolor{comment}{//\ Level\ that\ should\ be\ compacted\ next\ and\ its\ compaction\ score.}}
+\DoxyCodeLine{00161\ \ \ \textcolor{comment}{//\ Score\ <\ 1\ means\ compaction\ is\ not\ strictly\ needed.\ \ These\ fields}}
+\DoxyCodeLine{00162\ \ \ \textcolor{comment}{//\ are\ initialized\ by\ Finalize().}}
+\DoxyCodeLine{00163\ \ \ \textcolor{keywordtype}{double}\ compaction\_score\_;}
+\DoxyCodeLine{00164\ \ \ \textcolor{keywordtype}{int}\ compaction\_level\_;}
+\DoxyCodeLine{00165\ \};}
+\DoxyCodeLine{00166\ }
+\DoxyCodeLine{00167\ \textcolor{keyword}{class\ }VersionSet\ \{}
+\DoxyCodeLine{00168\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00169\ \ \ VersionSet(\textcolor{keyword}{const}\ std::string\&\ dbname,\ \textcolor{keyword}{const}\ Options*\ options,}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \ \ \ \ \ TableCache*\ table\_cache,\ \textcolor{keyword}{const}\ InternalKeyComparator*);}
+\DoxyCodeLine{00171\ \ \ VersionSet(\textcolor{keyword}{const}\ VersionSet\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00172\ \ \ VersionSet\&\ operator=(\textcolor{keyword}{const}\ VersionSet\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00174\ \ \ \string~VersionSet();}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ \ \ \textcolor{comment}{//\ Apply\ *edit\ to\ the\ current\ version\ to\ form\ a\ new\ descriptor\ that}}
+\DoxyCodeLine{00177\ \ \ \textcolor{comment}{//\ is\ both\ saved\ to\ persistent\ state\ and\ installed\ as\ the\ new}}
+\DoxyCodeLine{00178\ \ \ \textcolor{comment}{//\ current\ version.\ \ Will\ release\ *mu\ while\ actually\ writing\ to\ the\ file.}}
+\DoxyCodeLine{00179\ \ \ \textcolor{comment}{//\ REQUIRES:\ *mu\ is\ held\ on\ entry.}}
+\DoxyCodeLine{00180\ \ \ \textcolor{comment}{//\ REQUIRES:\ no\ other\ thread\ concurrently\ calls\ LogAndApply()}}
+\DoxyCodeLine{00181\ \ \ Status\ LogAndApply(VersionEdit*\ edit,\ port::Mutex*\ mu)}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(mu);}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00184\ \ \ \textcolor{comment}{//\ Recover\ the\ last\ saved\ descriptor\ from\ persistent\ storage.}}
+\DoxyCodeLine{00185\ \ \ Status\ Recover(\textcolor{keywordtype}{bool}*\ save\_manifest);}
+\DoxyCodeLine{00186\ }
+\DoxyCodeLine{00187\ \ \ \textcolor{comment}{//\ Return\ the\ current\ version.}}
+\DoxyCodeLine{00188\ \ \ Version*\ current()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ current\_;\ \}}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00190\ \ \ \textcolor{comment}{//\ Return\ the\ current\ manifest\ file\ number}}
+\DoxyCodeLine{00191\ \ \ uint64\_t\ ManifestFileNumber()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ manifest\_file\_number\_;\ \}}
+\DoxyCodeLine{00192\ }
+\DoxyCodeLine{00193\ \ \ \textcolor{comment}{//\ Allocate\ and\ return\ a\ new\ file\ number}}
+\DoxyCodeLine{00194\ \ \ uint64\_t\ NewFileNumber()\ \{\ \textcolor{keywordflow}{return}\ next\_file\_number\_++;\ \}}
+\DoxyCodeLine{00195\ }
+\DoxyCodeLine{00196\ \ \ \textcolor{comment}{//\ Arrange\ to\ reuse\ "{}file\_number"{}\ unless\ a\ newer\ file\ number\ has}}
+\DoxyCodeLine{00197\ \ \ \textcolor{comment}{//\ already\ been\ allocated.}}
+\DoxyCodeLine{00198\ \ \ \textcolor{comment}{//\ REQUIRES:\ "{}file\_number"{}\ was\ returned\ by\ a\ call\ to\ NewFileNumber().}}
+\DoxyCodeLine{00199\ \ \ \textcolor{keywordtype}{void}\ ReuseFileNumber(uint64\_t\ file\_number)\ \{}
+\DoxyCodeLine{00200\ \ \ \ \ \textcolor{keywordflow}{if}\ (next\_file\_number\_\ ==\ file\_number\ +\ 1)\ \{}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ next\_file\_number\_\ =\ file\_number;}
+\DoxyCodeLine{00202\ \ \ \ \ \}}
+\DoxyCodeLine{00203\ \ \ \}}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \ \ \textcolor{comment}{//\ Return\ the\ number\ of\ Table\ files\ at\ the\ specified\ level.}}
+\DoxyCodeLine{00206\ \ \ \textcolor{keywordtype}{int}\ NumLevelFiles(\textcolor{keywordtype}{int}\ level)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00207\ }
+\DoxyCodeLine{00208\ \ \ \textcolor{comment}{//\ Return\ the\ combined\ file\ size\ of\ all\ files\ at\ the\ specified\ level.}}
+\DoxyCodeLine{00209\ \ \ int64\_t\ NumLevelBytes(\textcolor{keywordtype}{int}\ level)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00211\ \ \ \textcolor{comment}{//\ Return\ the\ last\ sequence\ number.}}
+\DoxyCodeLine{00212\ \ \ uint64\_t\ LastSequence()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ last\_sequence\_;\ \}}
+\DoxyCodeLine{00213\ }
+\DoxyCodeLine{00214\ \ \ \textcolor{comment}{//\ Set\ the\ last\ sequence\ number\ to\ s.}}
+\DoxyCodeLine{00215\ \ \ \textcolor{keywordtype}{void}\ SetLastSequence(uint64\_t\ s)\ \{}
+\DoxyCodeLine{00216\ \ \ \ \ assert(s\ >=\ last\_sequence\_);}
+\DoxyCodeLine{00217\ \ \ \ \ last\_sequence\_\ =\ s;}
+\DoxyCodeLine{00218\ \ \ \}}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00220\ \ \ \textcolor{comment}{//\ Mark\ the\ specified\ file\ number\ as\ used.}}
+\DoxyCodeLine{00221\ \ \ \textcolor{keywordtype}{void}\ MarkFileNumberUsed(uint64\_t\ number);}
+\DoxyCodeLine{00222\ }
+\DoxyCodeLine{00223\ \ \ \textcolor{comment}{//\ Return\ the\ current\ log\ file\ number.}}
+\DoxyCodeLine{00224\ \ \ uint64\_t\ LogNumber()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ log\_number\_;\ \}}
+\DoxyCodeLine{00225\ }
+\DoxyCodeLine{00226\ \ \ \textcolor{comment}{//\ Return\ the\ log\ file\ number\ for\ the\ log\ file\ that\ is\ currently}}
+\DoxyCodeLine{00227\ \ \ \textcolor{comment}{//\ being\ compacted,\ or\ zero\ if\ there\ is\ no\ such\ log\ file.}}
+\DoxyCodeLine{00228\ \ \ uint64\_t\ PrevLogNumber()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ prev\_log\_number\_;\ \}}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00230\ \ \ \textcolor{comment}{//\ Pick\ level\ and\ inputs\ for\ a\ new\ compaction.}}
+\DoxyCodeLine{00231\ \ \ \textcolor{comment}{//\ Returns\ nullptr\ if\ there\ is\ no\ compaction\ to\ be\ done.}}
+\DoxyCodeLine{00232\ \ \ \textcolor{comment}{//\ Otherwise\ returns\ a\ pointer\ to\ a\ heap-\/allocated\ object\ that}}
+\DoxyCodeLine{00233\ \ \ \textcolor{comment}{//\ describes\ the\ compaction.\ \ Caller\ should\ delete\ the\ result.}}
+\DoxyCodeLine{00234\ \ \ Compaction*\ PickCompaction();}
+\DoxyCodeLine{00235\ }
+\DoxyCodeLine{00236\ \ \ \textcolor{comment}{//\ Return\ a\ compaction\ object\ for\ compacting\ the\ range\ [begin,end]\ in}}
+\DoxyCodeLine{00237\ \ \ \textcolor{comment}{//\ the\ specified\ level.\ \ Returns\ nullptr\ if\ there\ is\ nothing\ in\ that}}
+\DoxyCodeLine{00238\ \ \ \textcolor{comment}{//\ level\ that\ overlaps\ the\ specified\ range.\ \ Caller\ should\ delete}}
+\DoxyCodeLine{00239\ \ \ \textcolor{comment}{//\ the\ result.}}
+\DoxyCodeLine{00240\ \ \ Compaction*\ CompactRange(\textcolor{keywordtype}{int}\ level,\ \textcolor{keyword}{const}\ InternalKey*\ begin,}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ InternalKey*\ end);}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00243\ \ \ \textcolor{comment}{//\ Return\ the\ maximum\ overlapping\ data\ (in\ bytes)\ at\ next\ level\ for\ any}}
+\DoxyCodeLine{00244\ \ \ \textcolor{comment}{//\ file\ at\ a\ level\ >=\ 1.}}
+\DoxyCodeLine{00245\ \ \ int64\_t\ MaxNextLevelOverlappingBytes();}
+\DoxyCodeLine{00246\ }
+\DoxyCodeLine{00247\ \ \ \textcolor{comment}{//\ Create\ an\ iterator\ that\ reads\ over\ the\ compaction\ inputs\ for\ "{}*c"{}.}}
+\DoxyCodeLine{00248\ \ \ \textcolor{comment}{//\ The\ caller\ should\ delete\ the\ iterator\ when\ no\ longer\ needed.}}
+\DoxyCodeLine{00249\ \ \ Iterator*\ MakeInputIterator(Compaction*\ c);}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00251\ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ some\ level\ needs\ a\ compaction.}}
+\DoxyCodeLine{00252\ \ \ \textcolor{keywordtype}{bool}\ NeedsCompaction()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00253\ \ \ \ \ Version*\ v\ =\ current\_;}
+\DoxyCodeLine{00254\ \ \ \ \ \textcolor{keywordflow}{return}\ (v-\/>compaction\_score\_\ >=\ 1)\ ||\ (v-\/>file\_to\_compact\_\ !=\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00255\ \ \ \}}
+\DoxyCodeLine{00256\ }
+\DoxyCodeLine{00257\ \ \ \textcolor{comment}{//\ Add\ all\ files\ listed\ in\ any\ live\ version\ to\ *live.}}
+\DoxyCodeLine{00258\ \ \ \textcolor{comment}{//\ May\ also\ mutate\ some\ internal\ state.}}
+\DoxyCodeLine{00259\ \ \ \textcolor{keywordtype}{void}\ AddLiveFiles(std::set<uint64\_t>*\ live);}
+\DoxyCodeLine{00260\ }
+\DoxyCodeLine{00261\ \ \ \textcolor{comment}{//\ Return\ the\ approximate\ offset\ in\ the\ database\ of\ the\ data\ for}}
+\DoxyCodeLine{00262\ \ \ \textcolor{comment}{//\ "{}key"{}\ as\ of\ version\ "{}v"{}.}}
+\DoxyCodeLine{00263\ \ \ uint64\_t\ ApproximateOffsetOf(Version*\ v,\ \textcolor{keyword}{const}\ InternalKey\&\ key);}
+\DoxyCodeLine{00264\ }
+\DoxyCodeLine{00265\ \ \ \textcolor{comment}{//\ Return\ a\ human-\/readable\ short\ (single-\/line)\ summary\ of\ the\ number}}
+\DoxyCodeLine{00266\ \ \ \textcolor{comment}{//\ of\ files\ per\ level.\ \ Uses\ *scratch\ as\ backing\ store.}}
+\DoxyCodeLine{00267\ \ \ \textcolor{keyword}{struct\ }LevelSummaryStorage\ \{}
+\DoxyCodeLine{00268\ \ \ \ \ \textcolor{keywordtype}{char}\ buffer[100];}
+\DoxyCodeLine{00269\ \ \ \};}
+\DoxyCodeLine{00270\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ LevelSummary(LevelSummaryStorage*\ scratch)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00271\ }
+\DoxyCodeLine{00272\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00273\ \ \ \textcolor{keyword}{class\ }Builder;}
+\DoxyCodeLine{00274\ }
+\DoxyCodeLine{00275\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }Compaction;}
+\DoxyCodeLine{00276\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }Version;}
+\DoxyCodeLine{00277\ }
+\DoxyCodeLine{00278\ \ \ \textcolor{keywordtype}{bool}\ ReuseManifest(\textcolor{keyword}{const}\ std::string\&\ dscname,\ \textcolor{keyword}{const}\ std::string\&\ dscbase);}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00280\ \ \ \textcolor{keywordtype}{void}\ Finalize(Version*\ v);}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00282\ \ \ \textcolor{keywordtype}{void}\ GetRange(\textcolor{keyword}{const}\ std::vector<FileMetaData*>\&\ inputs,\ InternalKey*\ smallest,}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ InternalKey*\ largest);}
+\DoxyCodeLine{00284\ }
+\DoxyCodeLine{00285\ \ \ \textcolor{keywordtype}{void}\ GetRange2(\textcolor{keyword}{const}\ std::vector<FileMetaData*>\&\ inputs1,}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<FileMetaData*>\&\ inputs2,}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ InternalKey*\ smallest,\ InternalKey*\ largest);}
+\DoxyCodeLine{00288\ }
+\DoxyCodeLine{00289\ \ \ \textcolor{keywordtype}{void}\ SetupOtherInputs(Compaction*\ c);}
+\DoxyCodeLine{00290\ }
+\DoxyCodeLine{00291\ \ \ \textcolor{comment}{//\ Save\ current\ contents\ to\ *log}}
+\DoxyCodeLine{00292\ \ \ Status\ WriteSnapshot(log::Writer*\ log);}
+\DoxyCodeLine{00293\ }
+\DoxyCodeLine{00294\ \ \ \textcolor{keywordtype}{void}\ AppendVersion(Version*\ v);}
+\DoxyCodeLine{00295\ }
+\DoxyCodeLine{00296\ \ \ Env*\ \textcolor{keyword}{const}\ env\_;}
+\DoxyCodeLine{00297\ \ \ \textcolor{keyword}{const}\ std::string\ dbname\_;}
+\DoxyCodeLine{00298\ \ \ \textcolor{keyword}{const}\ Options*\ \textcolor{keyword}{const}\ options\_;}
+\DoxyCodeLine{00299\ \ \ TableCache*\ \textcolor{keyword}{const}\ table\_cache\_;}
+\DoxyCodeLine{00300\ \ \ \textcolor{keyword}{const}\ InternalKeyComparator\ icmp\_;}
+\DoxyCodeLine{00301\ \ \ uint64\_t\ next\_file\_number\_;}
+\DoxyCodeLine{00302\ \ \ uint64\_t\ manifest\_file\_number\_;}
+\DoxyCodeLine{00303\ \ \ uint64\_t\ last\_sequence\_;}
+\DoxyCodeLine{00304\ \ \ uint64\_t\ log\_number\_;}
+\DoxyCodeLine{00305\ \ \ uint64\_t\ prev\_log\_number\_;\ \ \textcolor{comment}{//\ 0\ or\ backing\ store\ for\ memtable\ being\ compacted}}
+\DoxyCodeLine{00306\ }
+\DoxyCodeLine{00307\ \ \ \textcolor{comment}{//\ Opened\ lazily}}
+\DoxyCodeLine{00308\ \ \ WritableFile*\ descriptor\_file\_;}
+\DoxyCodeLine{00309\ \ \ log::Writer*\ descriptor\_log\_;}
+\DoxyCodeLine{00310\ \ \ Version\ dummy\_versions\_;\ \ \textcolor{comment}{//\ Head\ of\ circular\ doubly-\/linked\ list\ of\ versions.}}
+\DoxyCodeLine{00311\ \ \ Version*\ current\_;\ \ \ \ \ \ \ \ \textcolor{comment}{//\ ==\ dummy\_versions\_.prev\_}}
+\DoxyCodeLine{00312\ }
+\DoxyCodeLine{00313\ \ \ \textcolor{comment}{//\ Per-\/level\ key\ at\ which\ the\ next\ compaction\ at\ that\ level\ should\ start.}}
+\DoxyCodeLine{00314\ \ \ \textcolor{comment}{//\ Either\ an\ empty\ string,\ or\ a\ valid\ InternalKey.}}
+\DoxyCodeLine{00315\ \ \ std::string\ compact\_pointer\_[config::kNumLevels];}
+\DoxyCodeLine{00316\ \};}
+\DoxyCodeLine{00317\ }
+\DoxyCodeLine{00318\ \textcolor{comment}{//\ A\ Compaction\ encapsulates\ information\ about\ a\ compaction.}}
+\DoxyCodeLine{00319\ \textcolor{keyword}{class\ }Compaction\ \{}
+\DoxyCodeLine{00320\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00321\ \ \ \string~Compaction();}
+\DoxyCodeLine{00322\ }
+\DoxyCodeLine{00323\ \ \ \textcolor{comment}{//\ Return\ the\ level\ that\ is\ being\ compacted.\ \ Inputs\ from\ "{}level"{}}}
+\DoxyCodeLine{00324\ \ \ \textcolor{comment}{//\ and\ "{}level+1"{}\ will\ be\ merged\ to\ produce\ a\ set\ of\ "{}level+1"{}\ files.}}
+\DoxyCodeLine{00325\ \ \ \textcolor{keywordtype}{int}\ level()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ level\_;\ \}}
+\DoxyCodeLine{00326\ }
+\DoxyCodeLine{00327\ \ \ \textcolor{comment}{//\ Return\ the\ object\ that\ holds\ the\ edits\ to\ the\ descriptor\ done}}
+\DoxyCodeLine{00328\ \ \ \textcolor{comment}{//\ by\ this\ compaction.}}
+\DoxyCodeLine{00329\ \ \ VersionEdit*\ edit()\ \{\ \textcolor{keywordflow}{return}\ \&edit\_;\ \}}
+\DoxyCodeLine{00330\ }
+\DoxyCodeLine{00331\ \ \ \textcolor{comment}{//\ "{}which"{}\ must\ be\ either\ 0\ or\ 1}}
+\DoxyCodeLine{00332\ \ \ \textcolor{keywordtype}{int}\ num\_input\_files(\textcolor{keywordtype}{int}\ which)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ inputs\_[which].size();\ \}}
+\DoxyCodeLine{00333\ }
+\DoxyCodeLine{00334\ \ \ \textcolor{comment}{//\ Return\ the\ ith\ input\ file\ at\ "{}level()+which"{}\ ("{}which"{}\ must\ be\ 0\ or\ 1).}}
+\DoxyCodeLine{00335\ \ \ FileMetaData*\ input(\textcolor{keywordtype}{int}\ which,\ \textcolor{keywordtype}{int}\ i)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ inputs\_[which][i];\ \}}
+\DoxyCodeLine{00336\ }
+\DoxyCodeLine{00337\ \ \ \textcolor{comment}{//\ Maximum\ size\ of\ files\ to\ build\ during\ this\ compaction.}}
+\DoxyCodeLine{00338\ \ \ uint64\_t\ MaxOutputFileSize()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ max\_output\_file\_size\_;\ \}}
+\DoxyCodeLine{00339\ }
+\DoxyCodeLine{00340\ \ \ \textcolor{comment}{//\ Is\ this\ a\ trivial\ compaction\ that\ can\ be\ implemented\ by\ just}}
+\DoxyCodeLine{00341\ \ \ \textcolor{comment}{//\ moving\ a\ single\ input\ file\ to\ the\ next\ level\ (no\ merging\ or\ splitting)}}
+\DoxyCodeLine{00342\ \ \ \textcolor{keywordtype}{bool}\ IsTrivialMove()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00343\ }
+\DoxyCodeLine{00344\ \ \ \textcolor{comment}{//\ Add\ all\ inputs\ to\ this\ compaction\ as\ delete\ operations\ to\ *edit.}}
+\DoxyCodeLine{00345\ \ \ \textcolor{keywordtype}{void}\ AddInputDeletions(VersionEdit*\ edit);}
+\DoxyCodeLine{00346\ }
+\DoxyCodeLine{00347\ \ \ \textcolor{comment}{//\ Returns\ true\ if\ the\ information\ we\ have\ available\ guarantees\ that}}
+\DoxyCodeLine{00348\ \ \ \textcolor{comment}{//\ the\ compaction\ is\ producing\ data\ in\ "{}level+1"{}\ for\ which\ no\ data\ exists}}
+\DoxyCodeLine{00349\ \ \ \textcolor{comment}{//\ in\ levels\ greater\ than\ "{}level+1"{}.}}
+\DoxyCodeLine{00350\ \ \ \textcolor{keywordtype}{bool}\ IsBaseLevelForKey(\textcolor{keyword}{const}\ Slice\&\ user\_key);}
+\DoxyCodeLine{00351\ }
+\DoxyCodeLine{00352\ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ we\ should\ stop\ building\ the\ current\ output}}
+\DoxyCodeLine{00353\ \ \ \textcolor{comment}{//\ before\ processing\ "{}internal\_key"{}.}}
+\DoxyCodeLine{00354\ \ \ \textcolor{keywordtype}{bool}\ ShouldStopBefore(\textcolor{keyword}{const}\ Slice\&\ internal\_key);}
+\DoxyCodeLine{00355\ }
+\DoxyCodeLine{00356\ \ \ \textcolor{comment}{//\ Release\ the\ input\ version\ for\ the\ compaction,\ once\ the\ compaction}}
+\DoxyCodeLine{00357\ \ \ \textcolor{comment}{//\ is\ successful.}}
+\DoxyCodeLine{00358\ \ \ \textcolor{keywordtype}{void}\ ReleaseInputs();}
+\DoxyCodeLine{00359\ }
+\DoxyCodeLine{00360\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00361\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }Version;}
+\DoxyCodeLine{00362\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }VersionSet;}
+\DoxyCodeLine{00363\ }
+\DoxyCodeLine{00364\ \ \ Compaction(\textcolor{keyword}{const}\ Options*\ options,\ \textcolor{keywordtype}{int}\ level);}
+\DoxyCodeLine{00365\ }
+\DoxyCodeLine{00366\ \ \ \textcolor{keywordtype}{int}\ level\_;}
+\DoxyCodeLine{00367\ \ \ uint64\_t\ max\_output\_file\_size\_;}
+\DoxyCodeLine{00368\ \ \ Version*\ input\_version\_;}
+\DoxyCodeLine{00369\ \ \ VersionEdit\ edit\_;}
+\DoxyCodeLine{00370\ }
+\DoxyCodeLine{00371\ \ \ \textcolor{comment}{//\ Each\ compaction\ reads\ inputs\ from\ "{}level\_"{}\ and\ "{}level\_+1"{}}}
+\DoxyCodeLine{00372\ \ \ std::vector<FileMetaData*>\ inputs\_[2];\ \ \textcolor{comment}{//\ The\ two\ sets\ of\ inputs}}
+\DoxyCodeLine{00373\ }
+\DoxyCodeLine{00374\ \ \ \textcolor{comment}{//\ State\ used\ to\ check\ for\ number\ of\ overlapping\ grandparent\ files}}
+\DoxyCodeLine{00375\ \ \ \textcolor{comment}{//\ (parent\ ==\ level\_\ +\ 1,\ grandparent\ ==\ level\_\ +\ 2)}}
+\DoxyCodeLine{00376\ \ \ std::vector<FileMetaData*>\ grandparents\_;}
+\DoxyCodeLine{00377\ \ \ \textcolor{keywordtype}{size\_t}\ grandparent\_index\_;\ \ \textcolor{comment}{//\ Index\ in\ grandparent\_starts\_}}
+\DoxyCodeLine{00378\ \ \ \textcolor{keywordtype}{bool}\ seen\_key\_;\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Some\ output\ key\ has\ been\ seen}}
+\DoxyCodeLine{00379\ \ \ int64\_t\ overlapped\_bytes\_;\ \ \textcolor{comment}{//\ Bytes\ of\ overlap\ between\ current\ output}}
+\DoxyCodeLine{00380\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ and\ grandparent\ files}}
+\DoxyCodeLine{00381\ }
+\DoxyCodeLine{00382\ \ \ \textcolor{comment}{//\ State\ for\ implementing\ IsBaseLevelForKey}}
+\DoxyCodeLine{00383\ }
+\DoxyCodeLine{00384\ \ \ \textcolor{comment}{//\ level\_ptrs\_\ holds\ indices\ into\ input\_version\_-\/>levels\_:\ our\ state}}
+\DoxyCodeLine{00385\ \ \ \textcolor{comment}{//\ is\ that\ we\ are\ positioned\ at\ one\ of\ the\ file\ ranges\ for\ each}}
+\DoxyCodeLine{00386\ \ \ \textcolor{comment}{//\ higher\ level\ than\ the\ ones\ involved\ in\ this\ compaction\ (i.e.\ for}}
+\DoxyCodeLine{00387\ \ \ \textcolor{comment}{//\ all\ L\ >=\ level\_\ +\ 2).}}
+\DoxyCodeLine{00388\ \ \ \textcolor{keywordtype}{size\_t}\ level\_ptrs\_[config::kNumLevels];}
+\DoxyCodeLine{00389\ \};}
+\DoxyCodeLine{00390\ }
+\DoxyCodeLine{00391\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00392\ }
+\DoxyCodeLine{00393\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_DB\_VERSION\_SET\_H\_}}
+
+\end{DoxyCode}

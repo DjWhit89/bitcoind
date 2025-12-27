@@ -1,0 +1,241 @@
+.TH "cache< Element, Hash >" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+cache< Element, Hash >
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <cuckoocache\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBcache\fP ()"
+.br
+.ti -1c
+.RI "uint32_t \fBsetup\fP (uint32_t new_size)"
+.br
+.ti -1c
+.RI "std::pair< uint32_t, size_t > \fBsetup_bytes\fP (size_t bytes)"
+.br
+.ti -1c
+.RI "void \fBinsert\fP (Element e)"
+.br
+.ti -1c
+.RI "bool \fBcontains\fP (const Element &e, const bool erase) const"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+
+.SS "template<typename Element, typename \fBHash\fP>
+.br
+class CuckooCache::cache< Element, Hash >"\fBcache\fP implements a cache with properties similar to a cuckoo-set\&.
+
+.PP
+The cache is able to hold up to \fR(~(uint32_t)0) - 1\fP elements\&.
+
+.PP
+Read Operations:
+.IP "\(bu" 2
+\fBcontains()\fP for \fRerase=false\fP
+.PP
+
+.PP
+Read+Erase Operations:
+.IP "\(bu" 2
+\fBcontains()\fP for \fRerase=true\fP
+.PP
+
+.PP
+Erase Operations:
+.IP "\(bu" 2
+allow_erase()
+.PP
+
+.PP
+Write Operations:
+.IP "\(bu" 2
+\fBsetup()\fP
+.IP "\(bu" 2
+\fBsetup_bytes()\fP
+.IP "\(bu" 2
+\fBinsert()\fP
+.IP "\(bu" 2
+please_keep()
+.PP
+
+.PP
+Synchronization Free Operations:
+.IP "\(bu" 2
+invalid()
+.IP "\(bu" 2
+compute_hashes()
+.PP
+
+.PP
+User Must Guarantee:
+
+.PP
+.IP "1." 4
+Write requires synchronized access (e\&.g\&. a lock)
+.IP "2." 4
+Read requires no concurrent Write, synchronized with last insert\&.
+.IP "3." 4
+Erase requires no concurrent Write, synchronized with last insert\&.
+.IP "4." 4
+An Erase caller must release all memory before allowing a new Writer\&.
+.PP
+
+.PP
+Note on function names:
+.IP "\(bu" 2
+The name "allow_erase" is used because the real discard happens later\&.
+.IP "\(bu" 2
+The name "please_keep" is used because elements may be erased anyways on insert\&.
+.PP
+
+.PP
+\fBTemplate Parameters\fP
+.RS 4
+\fIElement\fP should be a movable and copyable type 
+.br
+\fIHash\fP should be a function/callable which takes a template parameter hash_select and an Element and extracts a hash from it\&. Should return high-entropy uint32_t hashes for \fR\fBHash\fP h; h<0>(e) \&.\&.\&. h<7>(e)\fP\&. 
+.RE
+.PP
+
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "template<typename Element, typename \fBHash\fP> cache ()\fR [inline]\fP"
+You must always construct a cache with some elements via a subsequent call to setup or setup_bytes, otherwise operations may segfault\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "template<typename Element, typename \fBHash\fP> bool contains (const Element & e, const bool erase) const\fR [inline]\fP"
+contains iterates through the hash locations for a given element and checks to see if it is present\&.
+
+.PP
+contains does not check garbage collected state (in other words, garbage is only collected when the space is needed), so:
+
+.PP
+.PP
+.nf
+insert(x);
+if (contains(x, true))
+    return contains(x, false);
+else
+    return true;
+.fi
+.PP
+
+.PP
+executed on a single thread will always return true!
+
+.PP
+This is a great property for re-org performance for example\&.
+
+.PP
+contains returns a bool set true if the element was found\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIe\fP the element to check 
+.br
+\fIerase\fP whether to attempt setting the garbage collect flag
+.RE
+.PP
+\fBPostcondition\fP
+.RS 4
+if erase is true and the element is found, then the garbage collect flag is set 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+true if the element is found, false otherwise 
+.RE
+.PP
+
+.SS "template<typename Element, typename \fBHash\fP> void insert (Element e)\fR [inline]\fP"
+insert loops at most depth_limit times trying to insert a hash at various locations in the table via a variant of the Cuckoo Algorithm with eight hash locations\&.
+
+.PP
+It drops the last tried element if it runs out of depth before encountering an open slot\&.
+
+.PP
+Thus:
+
+.PP
+.PP
+.nf
+insert(x);
+return contains(x, false);
+.fi
+.PP
+
+.PP
+is not guaranteed to return true\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIe\fP the element to insert 
+.RE
+.PP
+\fBPostcondition\fP
+.RS 4
+one of the following: All previously inserted elements and e are now in the table, one previously inserted element is evicted from the table, the entry attempted to be inserted is evicted\&. 
+.RE
+.PP
+Swap with the element at the location that was not the last one looked at\&. Example:
+
+.PP
+.IP "1." 4
+On first iteration, last_loc == invalid(), find returns last, so last_loc defaults to locs[0]\&.
+.IP "2." 4
+On further iterations, where last_loc == locs[k], last_loc will go to locs[k+1 % 8], i\&.e\&., next of the 8 indices wrapping around to 0 if needed\&.
+.PP
+
+.PP
+This prevents moving the element we just put in\&.
+
+.PP
+The swap is not a move -- we must switch onto the evicted element for the next iteration\&.
+.SS "template<typename Element, typename \fBHash\fP> uint32_t setup (uint32_t new_size)\fR [inline]\fP"
+setup initializes the container to store no more than new_size elements and no less than 2 elements\&.
+
+.PP
+setup should only be called once\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fInew_size\fP the desired number of elements to store 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+the maximum number of elements storable 
+.RE
+.PP
+
+.SS "template<typename Element, typename \fBHash\fP> std::pair< uint32_t, size_t > setup_bytes (size_t bytes)\fR [inline]\fP"
+setup_bytes is a convenience function which accounts for internal memory usage when deciding how many elements to store\&. It isn't perfect because it doesn't account for any overhead (struct size, MallocUsage, collection and epoch flags)\&. This was done to simplify selecting a power of two size\&. In the expected use case, an extra two bits per entry should be negligible compared to the size of the elements\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIbytes\fP the approximate number of bytes to use for this data structure 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A pair of the maximum number of elements storable (see \fBsetup()\fP documentation for more detail) and the approximate total size of these elements in bytes\&. 
+.RE
+.PP
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

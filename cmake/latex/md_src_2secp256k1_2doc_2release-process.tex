@@ -1,0 +1,116 @@
+\chapter{Release process }
+\label{md_src_2secp256k1_2doc_2release-process}\index{Release process@{Release process}}
+\label{md_src_2secp256k1_2doc_2release-process_autotoc_md198}%
+
+
+This document outlines the process for releasing versions of the form {\ttfamily \$MAJOR.\$MINOR.\$PATCH}.
+
+We distinguish between two types of releases\+: {\itshape regular} and {\itshape maintenance} releases. Regular releases are releases of a new major or minor version as well as patches of the most recent release. Maintenance releases, on the other hand, are required for patches of older releases.
+
+You should coordinate with the other maintainers on the release date, if possible. This date will be part of the release entry in \doxysectref{CHANGELOG.md}{p.}{md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g}{0} and it should match the dates of the remaining steps in the release process (including the date of the tag and the Git\+Hub release). It is best if the maintainers are present during the release, so they can help ensure that the process is followed correctly and, in the case of a regular release, they are aware that they should not modify the master branch between merging the PR in step 1 and the PR in step 3.
+
+This process also assumes that there will be no minor releases for old major releases.
+
+We aim to cut a regular release every 3-\/4 months, approximately twice as frequent as major Bitcoin Core releases. Every second release should be published one month before the feature freeze of the next major Bitcoin Core release, allowing sufficient time to update the library in Core.\doxysection{Sanity checks}\label{md_src_2secp256k1_2doc_2release-process_autotoc_md199}
+Perform these checks when reviewing the release PR (see below)\+:
+
+
+\begin{DoxyEnumerate}
+\item Ensure {\ttfamily make distcheck} doesn\textquotesingle{}t fail. 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{./autogen.sh\ \&\&\ ./configure\ -\/-\/enable-\/dev-\/mode\ \&\&\ make\ distcheck}
+
+\end{DoxyCode}
+
+\item Check installation with autotools\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{dir=\$(mktemp\ -\/d)}
+\DoxyCodeLine{./autogen.sh\ \&\&\ ./configure\ -\/-\/prefix=\$dir\ \&\&\ make\ clean\ \&\&\ make\ install\ \&\&\ ls\ -\/RlAh\ \$dir}
+\DoxyCodeLine{gcc\ -\/o\ ecdsa\ examples/ecdsa.c\ \$(PKG\_CONFIG\_PATH=\$dir/lib/pkgconfig\ pkg-\/config\ -\/-\/cflags\ -\/-\/libs\ libsecp256k1)\ -\/Wl,-\/rpath,"{}\$dir/lib"{}\ \&\&\ ./ecdsa}
+
+\end{DoxyCode}
+
+\item Check installation with CMake\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{dir=\$(mktemp\ -\/d)}
+\DoxyCodeLine{build=\$(mktemp\ -\/d)}
+\DoxyCodeLine{cmake\ -\/B\ \$build\ -\/DCMAKE\_INSTALL\_PREFIX=\$dir\ \&\&\ cmake\ -\/-\/build\ \$build\ \&\&\ cmake\ -\/-\/install\ \$build\ \&\&\ ls\ -\/RlAh\ \$dir}
+\DoxyCodeLine{gcc\ -\/o\ ecdsa\ examples/ecdsa.c\ -\/I\ \$dir/include\ -\/L\ \$dir/lib*/\ -\/l\ secp256k1\ -\/Wl,-\/rpath,"{}\$dir/lib"{},-\/rpath,"{}\$dir/lib64"{}\ \&\&\ ./ecdsa}
+
+\end{DoxyCode}
+
+\item Use the {\texttt{{\ttfamily check-\/abi.\+sh}}} tool to verify that there are no unexpected ABI incompatibilities and that the version number and the release notes accurately reflect all potential ABI changes. To run this tool, the {\ttfamily abi-\/dumper} and {\ttfamily abi-\/compliance-\/checker} packages are required. 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{tools/check-\/abi.sh}
+
+\end{DoxyCode}
+
+\end{DoxyEnumerate}\doxysection{Regular release}\label{md_src_2secp256k1_2doc_2release-process_autotoc_md200}
+
+\begin{DoxyEnumerate}
+\item Open a PR to the master branch with a commit (using message {\ttfamily "{}release\+: prepare \doxyref{for}{p.}{arith__uint256__tests_8cpp_aec8e239ec13a0a2253be548812b40c53} \$MAJOR.\$MINOR.\$PATCH"{}}, for example) that
+\begin{DoxyItemize}
+\item finalizes the release notes in \doxysectref{CHANGELOG.md}{p.}{md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g}{0} by
+\begin{DoxyItemize}
+\item adding a section for the release (make sure that the version number is a link to a diff between the previous and new version),
+\item removing the {\ttfamily [Unreleased]} section header,
+\item ensuring that the release notes are not missing entries (check the {\ttfamily needs-\/changelog} label on github), and
+\item including an entry for {\ttfamily \#\#\# ABI Compatibility} if it doesn\textquotesingle{}t exist,
+\end{DoxyItemize}
+\item sets {\ttfamily \+\_\+\+PKG\+\_\+\+VERSION\+\_\+\+IS\+\_\+\+RELEASE} to {\ttfamily true} in {\ttfamily configure.\+ac}, and,
+\item if this is not a patch release,
+\begin{DoxyItemize}
+\item updates {\ttfamily \+\_\+\+PKG\+\_\+\+VERSION\+\_\+$\ast$} and {\ttfamily \+\_\+\+LIB\+\_\+\+VERSION\+\_\+$\ast$} in {\ttfamily configure.\+ac}, and
+\item updates {\ttfamily project(libsecp256k1 VERSION ...)} and {\ttfamily \$\{PROJECT\+\_\+\+NAME\}\+\_\+\+LIB\+\_\+\+VERSION\+\_\+$\ast$} in {\ttfamily CMake\+Lists.\+txt}.
+\end{DoxyItemize}
+\end{DoxyItemize}
+\item Perform the sanity checks on the PR branch.
+\item After the PR is merged, tag the commit, and push the tag\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{RELEASE\_COMMIT=<merge\ commit\ of\ step\ 1>}
+\DoxyCodeLine{git\ tag\ -\/s\ v\$MAJOR.\$MINOR.\$PATCH\ -\/m\ "{}libsecp256k1\ \$MAJOR.\$MINOR.\$PATCH"{}\ \$RELEASE\_COMMIT}
+\DoxyCodeLine{git\ push\ git@github.com:bitcoin-\/core/secp256k1.git\ v\$MAJOR.\$MINOR.\$PATCH}
+
+\end{DoxyCode}
+
+\item Open a PR to the master branch with a commit (using message {\ttfamily "{}release cleanup\+: bump version after \$MAJOR.\$MINOR.\$PATCH"{}}, for example) that
+\begin{DoxyItemize}
+\item sets {\ttfamily \+\_\+\+PKG\+\_\+\+VERSION\+\_\+\+IS\+\_\+\+RELEASE} to {\ttfamily false} and increments {\ttfamily \+\_\+\+PKG\+\_\+\+VERSION\+\_\+\+PATCH} and {\ttfamily \+\_\+\+LIB\+\_\+\+VERSION\+\_\+\+REVISION} in {\ttfamily configure.\+ac},
+\item increments the {\ttfamily \$PATCH} component of {\ttfamily project(libsecp256k1 VERSION ...)} and {\ttfamily \$\{PROJECT\+\_\+\+NAME\}\+\_\+\+LIB\+\_\+\+VERSION\+\_\+\+REVISION} in {\ttfamily CMake\+Lists.\+txt}, and
+\item adds an {\ttfamily [Unreleased]} section header to the \doxysectref{CHANGELOG.md}{p.}{md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g}{0}.
+\end{DoxyItemize}
+
+If other maintainers are not present to approve the PR, it can be merged without ACKs.
+\item Create a new Git\+Hub release with a link to the corresponding entry in \doxysectref{CHANGELOG.md}{p.}{md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g}{0}.
+\item Send an announcement email to the bitcoin-\/dev mailing list.
+\end{DoxyEnumerate}\doxysection{Maintenance release}\label{md_src_2secp256k1_2doc_2release-process_autotoc_md201}
+Note that bug fixes need to be backported only to releases for which no compatible release without the bug exists.
+
+
+\begin{DoxyEnumerate}
+\item If there\textquotesingle{}s no maintenance branch {\ttfamily \$MAJOR.\$MINOR}, create one\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{git\ checkout\ -\/b\ \$MAJOR.\$MINOR\ v\$MAJOR.\$MINOR.\$((PATCH\ -\/\ 1))}
+\DoxyCodeLine{git\ push\ git@github.com:bitcoin-\/core/secp256k1.git\ \$MAJOR.\$MINOR}
+
+\end{DoxyCode}
+
+\item Open a pull request to the {\ttfamily \$MAJOR.\$MINOR} branch that
+\begin{DoxyItemize}
+\item includes the bug fixes,
+\item finalizes the release notes similar to a regular release,
+\item increments {\ttfamily \+\_\+\+PKG\+\_\+\+VERSION\+\_\+\+PATCH} and {\ttfamily \+\_\+\+LIB\+\_\+\+VERSION\+\_\+\+REVISION} in {\ttfamily configure.\+ac} and the {\ttfamily \$PATCH} component of {\ttfamily project(libsecp256k1 VERSION ...)} and {\ttfamily \$\{PROJECT\+\_\+\+NAME\}\+\_\+\+LIB\+\_\+\+VERSION\+\_\+\+REVISION} in {\ttfamily CMake\+Lists.\+txt} (with commit message {\ttfamily "{}release\+: bump versions \doxyref{for}{p.}{arith__uint256__tests_8cpp_aec8e239ec13a0a2253be548812b40c53} \$MAJOR.\$MINOR.\$PATCH"{}}, for example).
+\end{DoxyItemize}
+\item Perform the sanity checks on the PR branch.
+\item After the PRs are merged, update the release branch, tag the commit, and push the tag\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{git\ checkout\ \$MAJOR.\$MINOR\ \&\&\ git\ pull}
+\DoxyCodeLine{git\ tag\ -\/s\ v\$MAJOR.\$MINOR.\$PATCH\ -\/m\ "{}libsecp256k1\ \$MAJOR.\$MINOR.\$PATCH"{}}
+\DoxyCodeLine{git\ push\ git@github.com:bitcoin-\/core/secp256k1.git\ v\$MAJOR.\$MINOR.\$PATCH}
+
+\end{DoxyCode}
+
+\item Create a new Git\+Hub release with a link to the corresponding entry in \doxysectref{CHANGELOG.md}{p.}{md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g}{0}.
+\item Send an announcement email to the bitcoin-\/dev mailing list.
+\item Open PR to the master branch that includes a commit (with commit message {\ttfamily "{}release notes\+: add \$MAJOR.\$MINOR.\$PATCH"{}}, for example) that adds release notes to \doxysectref{CHANGELOG.md}{p.}{md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g}{0}. 
+\end{DoxyEnumerate}

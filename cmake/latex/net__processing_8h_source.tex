@@ -1,0 +1,120 @@
+\doxysection{net\+\_\+processing.\+h}
+\label{net__processing_8h_source}\index{src/net\_processing.h@{src/net\_processing.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_NET\_PROCESSING\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_NET\_PROCESSING\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <net.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <node/txorphanage.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <protocol.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <threadsafety.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/expected.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <validationinterface.h>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }AddrMan;}
+\DoxyCodeLine{00026\ \textcolor{keyword}{class\ }CTxMemPool;}
+\DoxyCodeLine{00027\ \textcolor{keyword}{class\ }ChainstateManager;}
+\DoxyCodeLine{00028\ \textcolor{keyword}{class\ }BanMan;}
+\DoxyCodeLine{00029\ \textcolor{keyword}{class\ }CBlockIndex;}
+\DoxyCodeLine{00030\ \textcolor{keyword}{class\ }CScheduler;}
+\DoxyCodeLine{00031\ \textcolor{keyword}{class\ }DataStream;}
+\DoxyCodeLine{00032\ \textcolor{keyword}{class\ }uint256;}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \textcolor{keyword}{namespace\ }node\ \{}
+\DoxyCodeLine{00035\ \textcolor{keyword}{class\ }Warnings;}
+\DoxyCodeLine{00036\ \}\ \textcolor{comment}{//\ namespace\ node}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ DEFAULT\_TXRECONCILIATION\_ENABLE\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00042\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint32\_t\ DEFAULT\_BLOCK\_RECONSTRUCTION\_EXTRA\_TXN\{100\};}
+\DoxyCodeLine{00043\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_PEERBLOOMFILTERS\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00044\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_PEERBLOCKFILTERS\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00046\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ MAX\_CMPCTBLOCKS\_INFLIGHT\_PER\_BLOCK\ =\ 3;}
+\DoxyCodeLine{00049\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ MAX\_HEADERS\_RESULTS\ =\ 2000;}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \textcolor{keyword}{struct\ }CNodeStateStats\ \{}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keywordtype}{int}\ nSyncHeight\ =\ -\/1;}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordtype}{int}\ nCommonHeight\ =\ -\/1;}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_starting\_height\ =\ -\/1;}
+\DoxyCodeLine{00055\ \ \ \ \ std::chrono::microseconds\ m\_ping\_wait;}
+\DoxyCodeLine{00056\ \ \ \ \ std::vector<int>\ vHeightInFlight;}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_relay\_txs;}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_inv\_to\_send\ =\ 0;}
+\DoxyCodeLine{00059\ \ \ \ \ uint64\_t\ m\_last\_inv\_seq\{0\};}
+\DoxyCodeLine{00060\ \ \ \ \ CAmount\ m\_fee\_filter\_received;}
+\DoxyCodeLine{00061\ \ \ \ \ uint64\_t\ m\_addr\_processed\ =\ 0;}
+\DoxyCodeLine{00062\ \ \ \ \ uint64\_t\ m\_addr\_rate\_limited\ =\ 0;}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_addr\_relay\_enabled\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00064\ \ \ \ \ ServiceFlags\ their\_services;}
+\DoxyCodeLine{00065\ \ \ \ \ int64\_t\ presync\_height\{-\/1\};}
+\DoxyCodeLine{00066\ \ \ \ \ std::chrono::seconds\ time\_offset\{0\};}
+\DoxyCodeLine{00067\ \};}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \textcolor{keyword}{struct\ }PeerManagerInfo\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ std::chrono::seconds\ median\_outbound\_time\_offset\{0s\};}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordtype}{bool}\ ignores\_incoming\_txs\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00072\ \};}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \textcolor{keyword}{class\ }PeerManager\ :\ \textcolor{keyword}{public}\ CValidationInterface,\ \textcolor{keyword}{public}\ NetEventsInterface}
+\DoxyCodeLine{00075\ \{}
+\DoxyCodeLine{00076\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keyword}{struct\ }Options\ \{}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ ignore\_incoming\_txs\{DEFAULT\_BLOCKSONLY\};}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ reconcile\_txs\{DEFAULT\_TXRECONCILIATION\_ENABLE\};}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ uint32\_t\ max\_extra\_txs\{DEFAULT\_BLOCK\_RECONSTRUCTION\_EXTRA\_TXN\};}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ capture\_messages\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ deterministic\_rng\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ uint32\_t\ max\_headers\_result\{MAX\_HEADERS\_RESULTS\};}
+\DoxyCodeLine{00093\ \ \ \ \ \};}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keyword}{static}\ std::unique\_ptr<PeerManager>\ make(CConnman\&\ connman,\ AddrMan\&\ addrman,}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ BanMan*\ banman,\ ChainstateManager\&\ chainman,}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CTxMemPool\&\ pool,\ node::Warnings\&\ warnings,\ Options\ opts);}
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~PeerManager()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{keyword}{virtual}\ util::Expected<void,\ std::string>\ FetchBlock(NodeId\ peer\_id,\ \textcolor{keyword}{const}\ CBlockIndex\&\ block\_index)\ =\ 0;}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ StartScheduledTasks(CScheduler\&\ scheduler)\ =\ 0;}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetNodeStateStats(NodeId\ nodeid,\ CNodeStateStats\&\ stats)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keyword}{virtual}\ std::vector<node::TxOrphanage::OrphanInfo>\ GetOrphanTransactions()\ =\ 0;}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{keyword}{virtual}\ PeerManagerInfo\ GetInfo()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ RelayTransaction(\textcolor{keyword}{const}\ Txid\&\ txid,\ \textcolor{keyword}{const}\ Wtxid\&\ wtxid)\ =\ 0;}
+\DoxyCodeLine{00121\ }
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ SendPings()\ =\ 0;}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ SetBestBlock(\textcolor{keywordtype}{int}\ height,\ std::chrono::seconds\ time)\ =\ 0;}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{comment}{/*\ Public\ for\ unit\ testing.\ */}}
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ UnitTestMisbehaving(NodeId\ peer\_id)\ =\ 0;}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ CheckForStaleTipAndEvictPeers()\ =\ 0;}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ ProcessMessage(CNode\&\ pfrom,\ \textcolor{keyword}{const}\ std::string\&\ msg\_type,\ DataStream\&\ vRecv,}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::chrono::microseconds\ time\_received,\ \textcolor{keyword}{const}\ std::atomic<bool>\&\ interruptMsgProc)\ EXCLUSIVE\_LOCKS\_REQUIRED(g\_msgproc\_mutex)\ =\ 0;}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ UpdateLastBlockAnnounceTime(NodeId\ node,\ int64\_t\ time\_in\_seconds)\ =\ 0;}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keyword}{virtual}\ ServiceFlags\ GetDesirableServiceFlags(ServiceFlags\ services)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00166\ \};}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_NET\_PROCESSING\_H}}
+
+\end{DoxyCode}

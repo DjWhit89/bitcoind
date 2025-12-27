@@ -1,0 +1,85 @@
+\doxysection{secure.\+h}
+\label{secure_8h_source}\index{src/support/allocators/secure.h@{src/support/allocators/secure.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_SUPPORT\_ALLOCATORS\_SECURE\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_SUPPORT\_ALLOCATORS\_SECURE\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <support/lockedpool.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <support/cleanse.h>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{comment}{//}}
+\DoxyCodeLine{00016\ \textcolor{comment}{//\ Allocator\ that\ locks\ its\ contents\ from\ being\ paged}}
+\DoxyCodeLine{00017\ \textcolor{comment}{//\ out\ of\ memory\ and\ clears\ its\ contents\ before\ deletion.}}
+\DoxyCodeLine{00018\ \textcolor{comment}{//}}
+\DoxyCodeLine{00019\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00020\ \textcolor{keyword}{struct\ }secure\_allocator\ \{}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keyword}{using\ }value\_type\ =\ T;}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \ \ \ \ secure\_allocator()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ U>}
+\DoxyCodeLine{00025\ \ \ \ \ secure\_allocator(\textcolor{keyword}{const}\ secure\_allocator<U>\&)\ \textcolor{keyword}{noexcept}\ \{\}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \ \ T*\ allocate(std::size\_t\ n)}
+\DoxyCodeLine{00028\ \ \ \ \ \{}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ T*\ allocation\ =\ \textcolor{keyword}{static\_cast<}T*\textcolor{keyword}{>}(LockedPoolManager::Instance().alloc(\textcolor{keyword}{sizeof}(T)\ *\ n));}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!allocation)\ \{}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::bad\_alloc();}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ allocation;}
+\DoxyCodeLine{00034\ \ \ \ \ \}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordtype}{void}\ deallocate(T*\ p,\ std::size\_t\ n)}
+\DoxyCodeLine{00037\ \ \ \ \ \{}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (p\ !=\ \textcolor{keyword}{nullptr})\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ memory\_cleanse(p,\ \textcolor{keyword}{sizeof}(T)\ *\ n);}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ LockedPoolManager::Instance().free(p);}
+\DoxyCodeLine{00042\ \ \ \ \ \}}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ U>}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ secure\_allocator\&,\ \textcolor{keyword}{const}\ secure\_allocator<U>\&)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00046\ \ \ \ \ \{}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00048\ \ \ \ \ \}}
+\DoxyCodeLine{00049\ \};}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \textcolor{comment}{//\ This\ is\ exactly\ like\ std::string,\ but\ with\ a\ custom\ allocator.}}
+\DoxyCodeLine{00052\ \textcolor{comment}{//\ TODO:\ Consider\ finding\ a\ way\ to\ make\ incoming\ RPC\ request.params[i]\ mlock()ed\ as\ well}}
+\DoxyCodeLine{00053\ \textcolor{keyword}{typedef}\ std::basic\_string<char,\ std::char\_traits<char>,\ secure\_allocator<char>\ >\ SecureString;}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00056\ \textcolor{keyword}{struct\ }SecureUniqueDeleter\ \{}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{void}\ operator()(T*\ t)\ \textcolor{keyword}{noexcept}\ \{}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ secure\_allocator<T>().deallocate(t,\ 1);}
+\DoxyCodeLine{00059\ \ \ \ \ \}}
+\DoxyCodeLine{00060\ \};}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00063\ \textcolor{keyword}{using\ }secure\_unique\_ptr\ =\ std::unique\_ptr<T,\ SecureUniqueDeleter<T>>;}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00066\ secure\_unique\_ptr<T>\ make\_secure\_unique(Args\&\&...\ as)}
+\DoxyCodeLine{00067\ \{}
+\DoxyCodeLine{00068\ \ \ \ \ T*\ p\ =\ secure\_allocator<T>().allocate(1);}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{comment}{//\ initialize\ in\ place,\ and\ return\ as\ secure\_unique\_ptr}}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ secure\_unique\_ptr<T>(\textcolor{keyword}{new}\ (p)\ T(std::forward<Args>(as)...));}
+\DoxyCodeLine{00073\ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (...)\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ secure\_allocator<T>().deallocate(p,\ 1);}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw};}
+\DoxyCodeLine{00076\ \ \ \ \ \}}
+\DoxyCodeLine{00077\ \}}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_SUPPORT\_ALLOCATORS\_SECURE\_H}}
+
+\end{DoxyCode}

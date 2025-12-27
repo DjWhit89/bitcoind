@@ -1,0 +1,64 @@
+.TH "DynSock::Pipe" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+DynSock::Pipe
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <net\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "ssize_t \fBGetBytes\fP (void *buf, size_t len, int \fBflags\fP=0) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!m_mutex)"
+.br
+.ti -1c
+.RI "std::optional< \fBCNetMessage\fP > \fBGetNetMsg\fP () \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!m_mutex)"
+.br
+.ti -1c
+.RI "void \fBPushBytes\fP (const void *buf, size_t len) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!m_mutex)"
+.br
+.ti -1c
+.RI "template<typename\&.\&.\&. Args> void \fBPushNetMsg\fP (const std::string &type, Args &&\&.\&.\&. payload) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!m_mutex)"
+.br
+.ti -1c
+.RI "void \fBEof\fP () \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!m_mutex)"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Unidirectional bytes or \fBCNetMessage\fP queue (FIFO)\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "void Eof ()"
+Signal end-of-file on the receiving end (\fR\fBGetBytes()\fP\fP or \fR\fBGetNetMsg()\fP\fP)\&. 
+.SS "ssize_t GetBytes (void * buf, size_t len, int flags = \fR0\fP)"
+Get bytes and remove them from the pipe\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIbuf\fP Destination to write bytes to\&. 
+.br
+\fIlen\fP Write up to this number of bytes\&. 
+.br
+\fIflags\fP Same as the flags of \fRrecv(2)\fP\&. Just \fRMSG_PEEK\fP is honored\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The number of bytes written to \fRbuf\fP\&. \fR0\fP if \fR\fBEof()\fP\fP has been called\&. If no bytes are available then \fR-1\fP is returned and \fRerrno\fP is set to \fREAGAIN\fP\&. 
+.RE
+.PP
+
+.SS "std::optional< \fBCNetMessage\fP > GetNetMsg ()"
+Deserialize a \fR\fBCNetMessage\fP\fP and remove it from the pipe\&. If not enough bytes are available then the function will wait\&. If parsing fails or EOF is signaled to the pipe, then \fRstd::nullopt\fP is returned\&. 
+.SS "void PushBytes (const void * buf, size_t len)"
+Push bytes to the pipe\&. 
+.SS "template<typename\&.\&.\&. Args> void PushNetMsg (const std::string & type, Args &&\&.\&.\&. payload)"
+Construct and push \fBCNetMessage\fP to the pipe\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

@@ -1,0 +1,84 @@
+.TH "src/test/main.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/test/main.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <boost/test/included/unit_test\&.hpp>\fP
+.br
+\fR#include <test/util/setup_common\&.h>\fP
+.br
+\fR#include <functional>\fP
+.br
+\fR#include <iostream>\fP
+.br
+
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBBOOST_TEST_MODULE\fP   Bitcoin Core Test Suite"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "const std::function< void(const std::string &)> \fBG_TEST_LOG_FUN\fP"
+.br
+.ti -1c
+.RI "const std::function< std::vector< const char * >()> \fBG_TEST_COMMAND_LINE_ARGUMENTS\fP"
+.br
+.ti -1c
+.RI "const std::function< std::string()> \fBG_TEST_GET_FULL_NAME\fP"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define BOOST_TEST_MODULE   Bitcoin Core Test Suite"
+See https://www.boost.org/doc/libs/1_78_0/libs/test/doc/html/boost_test/adv_scenarios/single_header_customizations/multiple_translation_units.html 
+.SH "Variable Documentation"
+.PP 
+.SS "const std::function<std::vector<const char*>()> G_TEST_COMMAND_LINE_ARGUMENTS"
+\fBInitial value:\fP
+.nf
+= []() {
+    std::vector<const char*> args;
+    for (int i = 1; i < boost::unit_test::framework::master_test_suite()\&.argc; ++i) {
+        args\&.push_back(boost::unit_test::framework::master_test_suite()\&.argv[i]);
+    }
+    return args;
+}
+.PP
+.fi
+Retrieve the command line arguments from boost\&. Allows usage like: \fRtest_bitcoin --run_test="net_tests/cnode_listen_port" -- -checkaddrman=1 -printtoconsole=1\fP which would return \fR["-checkaddrman=1", "-printtoconsole=1"]\fP\&. 
+.SS "const std::function<std::string()> G_TEST_GET_FULL_NAME"
+\fBInitial value:\fP
+.nf
+= []() {
+    return boost::unit_test::framework::current_test_case()\&.full_name();
+}
+.PP
+.fi
+Retrieve the boost unit test name\&. 
+.SS "const std::function<void(const std::string&)> G_TEST_LOG_FUN"
+\fBInitial value:\fP
+.nf
+= [](const std::string& s) {
+    static const bool should_log{std::any_of(
+        &boost::unit_test::framework::master_test_suite()\&.argv[1],
+        &boost::unit_test::framework::master_test_suite()\&.argv[boost::unit_test::framework::master_test_suite()\&.argc],
+        [](const char* arg) {
+            return std::string{"DEBUG_LOG_OUT"} == arg;
+        })};
+    if (!should_log) return;
+    std::cout << s;
+}
+.PP
+.fi
+Redirect debug log to unit_test\&.log files 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

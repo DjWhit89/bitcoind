@@ -1,0 +1,81 @@
+\doxysection{txrequest.\+h}
+\label{txrequest_8h_source}\index{src/txrequest.h@{src/txrequest.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2020-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_TXREQUEST\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_TXREQUEST\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <net.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00100\ \textcolor{keyword}{class\ }TxRequestTracker\ \{}
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{comment}{//\ Avoid\ littering\ this\ header\ file\ with\ implementation\ details.}}
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{keyword}{class\ }Impl;}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keyword}{const}\ std::unique\_ptr<Impl>\ m\_impl;}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keyword}{explicit}\ TxRequestTracker(\textcolor{keywordtype}{bool}\ deterministic\ =\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00108\ \ \ \ \ \string~TxRequestTracker();}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{comment}{//\ Conceptually,\ the\ data\ structure\ consists\ of\ a\ collection\ of\ "{}announcements"{},\ one\ for\ each\ peer/txhash}}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{comment}{//\ combination:}}
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{comment}{//\ -\/\ CANDIDATE\ announcements\ represent\ transactions\ that\ were\ announced\ by\ a\ peer,\ and\ that\ become\ available\ for}}
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{comment}{//\ \ \ download\ after\ their\ reqtime\ has\ passed.}}
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{comment}{//\ -\/\ REQUESTED\ announcements\ represent\ transactions\ that\ have\ been\ requested,\ and\ which\ we're\ awaiting\ a}}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{comment}{//\ \ \ response\ for\ from\ that\ peer.\ Their\ expiry\ value\ determines\ when\ the\ request\ times\ out.}}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{comment}{//\ -\/\ COMPLETED\ announcements\ represent\ transactions\ that\ have\ been\ requested\ from\ a\ peer,\ and\ a\ NOTFOUND\ or\ a}}
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{comment}{//\ \ \ transaction\ was\ received\ in\ response\ (valid\ or\ not),\ or\ they\ timed\ out.\ They're\ only\ kept\ around\ to}}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{comment}{//\ \ \ prevent\ requesting\ them\ again.\ If\ only\ COMPLETED\ announcements\ for\ a\ given\ txhash\ remain\ (so\ no\ CANDIDATE}}
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{comment}{//\ \ \ or\ REQUESTED\ ones),\ all\ of\ them\ are\ deleted\ (this\ is\ an\ invariant,\ and\ maintained\ by\ all\ operations\ below).}}
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{comment}{//\ The\ operations\ below\ manipulate\ the\ data\ structure.}}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{keywordtype}{void}\ ReceivedInv(NodeId\ peer,\ \textcolor{keyword}{const}\ GenTxid\&\ gtxid,\ \textcolor{keywordtype}{bool}\ preferred,}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::chrono::microseconds\ reqtime);}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keywordtype}{void}\ DisconnectedPeer(NodeId\ peer);}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keywordtype}{void}\ ForgetTxHash(\textcolor{keyword}{const}\ uint256\&\ txhash);}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00166\ \ \ \ \ std::vector<GenTxid>\ GetRequestable(NodeId\ peer,\ std::chrono::microseconds\ now,}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<std::pair<NodeId,\ GenTxid>>*\ expired\ =\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00177\ \ \ \ \ \textcolor{keywordtype}{void}\ RequestedTx(NodeId\ peer,\ \textcolor{keyword}{const}\ uint256\&\ txhash,\ std::chrono::microseconds\ expiry);}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00185\ \ \ \ \ \textcolor{keywordtype}{void}\ ReceivedResponse(NodeId\ peer,\ \textcolor{keyword}{const}\ uint256\&\ txhash);}
+\DoxyCodeLine{00186\ }
+\DoxyCodeLine{00187\ \ \ \ \ \textcolor{comment}{//\ The\ operations\ below\ inspect\ the\ data\ structure.}}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00190\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ CountInFlight(NodeId\ peer)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00193\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ CountCandidates(NodeId\ peer)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ Count(NodeId\ peer)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ Size()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00203\ \ \ \ \ \textcolor{keywordtype}{void}\ GetCandidatePeers(\textcolor{keyword}{const}\ uint256\&\ txhash,\ std::vector<NodeId>\&\ result\_peers)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00206\ \ \ \ \ uint64\_t\ ComputePriority(\textcolor{keyword}{const}\ uint256\&\ txhash,\ NodeId\ peer,\ \textcolor{keywordtype}{bool}\ preferred)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00207\ }
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{keywordtype}{void}\ SanityCheck()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00215\ \ \ \ \ \textcolor{keywordtype}{void}\ PostGetRequestableSanityCheck(std::chrono::microseconds\ now)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00216\ \};}
+\DoxyCodeLine{00217\ }
+\DoxyCodeLine{00218\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_TXREQUEST\_H}}
+
+\end{DoxyCode}

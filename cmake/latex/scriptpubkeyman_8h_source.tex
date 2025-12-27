@@ -1,0 +1,367 @@
+\doxysection{scriptpubkeyman.\+h}
+\label{scriptpubkeyman_8h_source}\index{src/wallet/scriptpubkeyman.h@{src/wallet/scriptpubkeyman.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2019-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_WALLET\_SCRIPTPUBKEYMAN\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_WALLET\_SCRIPTPUBKEYMAN\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <addresstype.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <common/messages.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <common/signmessage.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <common/types.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <logging.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <musig.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <node/types.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <psbt.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <script/descriptor.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <script/script.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <script/signingprovider.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <util/result.h>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <util/time.h>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <wallet/crypter.h>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <wallet/types.h>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <wallet/walletdb.h>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <wallet/walletutil.h>}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <boost/signals2/signal.hpp>}}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{enum\ class}\ OutputType;}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00035\ \textcolor{keyword}{struct\ }MigrationData;}
+\DoxyCodeLine{00036\ \textcolor{keyword}{class\ }ScriptPubKeyMan;}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{comment}{//\ Wallet\ storage\ things\ that\ ScriptPubKeyMans\ need\ in\ order\ to\ be\ able\ to\ store\ things\ to\ the\ wallet\ database.}}
+\DoxyCodeLine{00039\ \textcolor{comment}{//\ It\ provides\ access\ to\ things\ that\ are\ part\ of\ the\ entire\ wallet\ and\ not\ specific\ to\ a\ ScriptPubKeyMan\ such\ as}}
+\DoxyCodeLine{00040\ \textcolor{comment}{//\ wallet\ flags,\ wallet\ version,\ encryption\ keys,\ encryption\ status,\ and\ the\ database\ itself.\ This\ allows\ a}}
+\DoxyCodeLine{00041\ \textcolor{comment}{//\ ScriptPubKeyMan\ to\ have\ callbacks\ into\ CWallet\ without\ causing\ a\ circular\ dependency.}}
+\DoxyCodeLine{00042\ \textcolor{comment}{//\ WalletStorage\ should\ be\ the\ same\ for\ all\ ScriptPubKeyMans\ of\ a\ wallet.}}
+\DoxyCodeLine{00043\ \textcolor{keyword}{class\ }WalletStorage}
+\DoxyCodeLine{00044\ \{}
+\DoxyCodeLine{00045\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~WalletStorage()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keyword}{virtual}\ std::string\ LogName()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keyword}{virtual}\ WalletDatabase\&\ GetDatabase()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ IsWalletFlagSet(uint64\_t)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ UnsetBlankWalletFlag(WalletBatch\&)\ =\ 0;}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ WithEncryptionKey(std::function<\textcolor{keywordtype}{bool}\ (\textcolor{keyword}{const}\ CKeyingMaterial\&)>\ cb)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HasEncryptionKeys()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ IsLocked()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ TopUpCallback(\textcolor{keyword}{const}\ std::set<CScript>\&,\ ScriptPubKeyMan*)\ =\ 0;}
+\DoxyCodeLine{00057\ \};}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00060\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int64\_t\ UNKNOWN\_TIME\ =\ std::numeric\_limits<int64\_t>::max();}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00063\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ DEFAULT\_KEYPOOL\_SIZE\ =\ 1000;}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ std::vector<CKeyID>\ GetAffectedKeys(\textcolor{keyword}{const}\ CScript\&\ spk,\ \textcolor{keyword}{const}\ SigningProvider\&\ provider);}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \textcolor{keyword}{struct\ }WalletDestination}
+\DoxyCodeLine{00068\ \{}
+\DoxyCodeLine{00069\ \ \ \ \ CTxDestination\ dest;}
+\DoxyCodeLine{00070\ \ \ \ \ std::optional<bool>\ internal;}
+\DoxyCodeLine{00071\ \};}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \textcolor{comment}{/*}}
+\DoxyCodeLine{00074\ \textcolor{comment}{\ *\ A\ class\ implementing\ ScriptPubKeyMan\ manages\ some\ (or\ all)\ scriptPubKeys\ used\ in\ a\ wallet.}}
+\DoxyCodeLine{00075\ \textcolor{comment}{\ *\ It\ contains\ the\ scripts\ and\ keys\ related\ to\ the\ scriptPubKeys\ it\ manages.}}
+\DoxyCodeLine{00076\ \textcolor{comment}{\ *\ A\ ScriptPubKeyMan\ will\ be\ able\ to\ give\ out\ scriptPubKeys\ to\ be\ used,\ as\ well\ as\ marking}}
+\DoxyCodeLine{00077\ \textcolor{comment}{\ *\ when\ a\ scriptPubKey\ has\ been\ used.\ It\ also\ handles\ when\ and\ how\ to\ store\ a\ scriptPubKey}}
+\DoxyCodeLine{00078\ \textcolor{comment}{\ *\ and\ its\ related\ scripts\ and\ keys,\ including\ encryption.}}
+\DoxyCodeLine{00079\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00080\ \textcolor{keyword}{class\ }ScriptPubKeyMan}
+\DoxyCodeLine{00081\ \{}
+\DoxyCodeLine{00082\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00083\ \ \ \ \ WalletStorage\&\ m\_storage;}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keyword}{explicit}\ ScriptPubKeyMan(WalletStorage\&\ storage)\ :\ m\_storage(storage)\ \{\}}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~ScriptPubKeyMan()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keyword}{virtual}\ util::Result<CTxDestination>\ GetNewDestination(\textcolor{keyword}{const}\ OutputType\ type)\ \{\ \textcolor{keywordflow}{return}\ util::Error\{Untranslated(\textcolor{stringliteral}{"{}Not\ supported"{}})\};\ \}}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ IsMine(\textcolor{keyword}{const}\ CScript\&\ script)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ CheckDecryptionKey(\textcolor{keyword}{const}\ CKeyingMaterial\&\ master\_key)\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ Encrypt(\textcolor{keyword}{const}\ CKeyingMaterial\&\ master\_key,\ WalletBatch*\ batch)\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keyword}{virtual}\ util::Result<CTxDestination>\ GetReservedDestination(\textcolor{keyword}{const}\ OutputType\ type,\ \textcolor{keywordtype}{bool}\ internal,\ int64\_t\&\ index)\ \{\ \textcolor{keywordflow}{return}\ util::Error\{Untranslated(\textcolor{stringliteral}{"{}Not\ supported"{}})\};\ \}}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ KeepDestination(int64\_t\ index,\ \textcolor{keyword}{const}\ OutputType\&\ type)\ \{\}}
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ ReturnDestination(int64\_t\ index,\ \textcolor{keywordtype}{bool}\ internal,\ \textcolor{keyword}{const}\ CTxDestination\&\ addr)\ \{\}}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ TopUp(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ size\ =\ 0)\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{keyword}{virtual}\ std::vector<WalletDestination>\ MarkUnusedAddresses(\textcolor{keyword}{const}\ CScript\&\ script)\ \{\ \textcolor{keywordflow}{return}\ \{\};\ \}}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{comment}{/*\ Returns\ true\ if\ HD\ is\ enabled\ */}}
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ IsHDEnabled()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{comment}{/*\ Returns\ true\ if\ the\ wallet\ can\ give\ out\ new\ addresses.\ This\ means\ it\ has\ keys\ in\ the\ keypool\ or\ can\ generate\ new\ keys\ */}}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ CanGetAddresses(\textcolor{keywordtype}{bool}\ internal\ =\ \textcolor{keyword}{false})\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HavePrivateKeys()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HaveCryptedKeys()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ RewriteDB()\ \{\}}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ GetKeyPoolSize()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ 0;\ \}}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keyword}{virtual}\ int64\_t\ GetTimeFirstKey()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ 0;\ \}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keyword}{virtual}\ std::unique\_ptr<CKeyMetadata>\ GetMetadata(\textcolor{keyword}{const}\ CTxDestination\&\ dest)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{nullptr};\ \}}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keyword}{virtual}\ std::unique\_ptr<SigningProvider>\ GetSolvingProvider(\textcolor{keyword}{const}\ CScript\&\ script)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{nullptr};\ \}}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ CanProvide(\textcolor{keyword}{const}\ CScript\&\ script,\ SignatureData\&\ sigdata)\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00140\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ SignTransaction(CMutableTransaction\&\ tx,\ \textcolor{keyword}{const}\ std::map<COutPoint,\ Coin>\&\ coins,\ \textcolor{keywordtype}{int}\ sighash,\ std::map<int,\ bilingual\_str>\&\ input\_errors)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keyword}{virtual}\ SigningResult\ SignMessage(\textcolor{keyword}{const}\ std::string\&\ message,\ \textcolor{keyword}{const}\ PKHash\&\ pkhash,\ std::string\&\ str\_sig)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ SigningResult::SIGNING\_FAILED;\ \};}
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keyword}{virtual}\ std::optional<common::PSBTError>\ FillPSBT(PartiallySignedTransaction\&\ psbt,\ \textcolor{keyword}{const}\ PrecomputedTransactionData\&\ txdata,\ std::optional<int>\ sighash\_type\ =\ std::nullopt,\ \textcolor{keywordtype}{bool}\ sign\ =\ \textcolor{keyword}{true},\ \textcolor{keywordtype}{bool}\ bip32derivs\ =\ \textcolor{keyword}{false},\ \textcolor{keywordtype}{int}*\ n\_signed\ =\ \textcolor{keyword}{nullptr},\ \textcolor{keywordtype}{bool}\ finalize\ =\ \textcolor{keyword}{true})\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ common::PSBTError::UNSUPPORTED;\ \}}
+\DoxyCodeLine{00145\ }
+\DoxyCodeLine{00146\ \ \ \ \ \textcolor{keyword}{virtual}\ uint256\ GetID()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ uint256();\ \}}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keyword}{virtual}\ std::unordered\_set<CScript,\ SaltedSipHasher>\ GetScriptPubKeys()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \{\};\ \};}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00152\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Params>}
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keywordtype}{void}\ WalletLogPrintf(util::ConstevalFormatString<\textcolor{keyword}{sizeof}...(Params)>\ wallet\_fmt,\ \textcolor{keyword}{const}\ Params\&...\ params)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00154\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ LogInfo(\textcolor{stringliteral}{"{}[\%s]\ \%s"{}},\ m\_storage.LogName(),\ tfm::format(wallet\_fmt,\ params...));}
+\DoxyCodeLine{00156\ \ \ \ \ \};}
+\DoxyCodeLine{00157\ }
+\DoxyCodeLine{00159\ \ \ \ \ boost::signals2::signal<void\ ()>\ NotifyCanGetAddressesChanged;}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00162\ \ \ \ \ boost::signals2::signal<void\ (\textcolor{keyword}{const}\ ScriptPubKeyMan*\ spkm,\ int64\_t\ new\_birth\_time)>\ NotifyFirstKeyTimeChanged;}
+\DoxyCodeLine{00163\ \};}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00166\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ std::unordered\_set<OutputType>\ LEGACY\_OUTPUT\_TYPES\ \{}
+\DoxyCodeLine{00167\ \ \ \ \ OutputType::LEGACY,}
+\DoxyCodeLine{00168\ \ \ \ \ OutputType::P2SH\_SEGWIT,}
+\DoxyCodeLine{00169\ \ \ \ \ OutputType::BECH32,}
+\DoxyCodeLine{00170\ \};}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00172\ \textcolor{comment}{//\ Manages\ the\ data\ for\ a\ LegacyScriptPubKeyMan.}}
+\DoxyCodeLine{00173\ \textcolor{comment}{//\ This\ is\ the\ minimum\ necessary\ to\ load\ a\ legacy\ wallet\ so\ that\ it\ can\ be\ migrated.}}
+\DoxyCodeLine{00174\ \textcolor{keyword}{class\ }LegacyDataSPKM\ :\ \textcolor{keyword}{public}\ ScriptPubKeyMan,\ \textcolor{keyword}{public}\ FillableSigningProvider}
+\DoxyCodeLine{00175\ \{}
+\DoxyCodeLine{00176\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00177\ \ \ \ \ \textcolor{keyword}{using\ }WatchOnlySet\ =\ std::set<CScript>;}
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keyword}{using\ }WatchKeyMap\ =\ std::map<CKeyID,\ CPubKey>;}
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{keyword}{using\ }CryptedKeyMap\ =\ std::map<CKeyID,\ std::pair<CPubKey,\ std::vector<unsigned\ char>>>;}
+\DoxyCodeLine{00180\ }
+\DoxyCodeLine{00181\ \ \ \ \ CryptedKeyMap\ mapCryptedKeys\ GUARDED\_BY(cs\_KeyStore);}
+\DoxyCodeLine{00182\ \ \ \ \ WatchOnlySet\ setWatchOnly\ GUARDED\_BY(cs\_KeyStore);}
+\DoxyCodeLine{00183\ \ \ \ \ WatchKeyMap\ mapWatchKeys\ GUARDED\_BY(cs\_KeyStore);}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00185\ \ \ \ \ \textcolor{comment}{/*\ the\ HD\ chain\ data\ model\ (external\ chain\ counters)\ */}}
+\DoxyCodeLine{00186\ \ \ \ \ CHDChain\ m\_hd\_chain;}
+\DoxyCodeLine{00187\ \ \ \ \ std::unordered\_map<CKeyID,\ CHDChain,\ SaltedSipHasher>\ m\_inactive\_hd\_chains;}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00190\ \ \ \ \ \textcolor{keywordtype}{bool}\ fDecryptionThoroughlyChecked\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{keywordtype}{bool}\ AddWatchOnlyInMem(\textcolor{keyword}{const}\ CScript\ \&dest);}
+\DoxyCodeLine{00193\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ AddKeyPubKeyInner(\textcolor{keyword}{const}\ CKey\&\ key,\ \textcolor{keyword}{const}\ CPubKey\ \&pubkey);}
+\DoxyCodeLine{00194\ \ \ \ \ \textcolor{keywordtype}{bool}\ AddCryptedKeyInner(\textcolor{keyword}{const}\ CPubKey\ \&vchPubKey,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\ \&vchCryptedSecret);}
+\DoxyCodeLine{00195\ }
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{comment}{//\ Helper\ function\ to\ retrieve\ a\ conservative\ superset\ of\ all\ output\ scripts\ that\ may\ be\ relevant\ to\ this\ LegacyDataSPKM.}}
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{comment}{//\ It\ may\ include\ scripts\ that\ are\ invalid\ or\ not\ actually\ watched\ by\ this\ LegacyDataSPKM.}}
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{comment}{//\ Used\ only\ in\ migration.}}
+\DoxyCodeLine{00199\ \ \ \ \ std::unordered\_set<CScript,\ SaltedSipHasher>\ GetCandidateScriptPubKeys()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00201\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsMine(\textcolor{keyword}{const}\ CScript\&\ script)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keywordtype}{bool}\ CanProvide(\textcolor{keyword}{const}\ CScript\&\ script,\ SignatureData\&\ sigdata)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00203\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00204\ \ \ \ \ \textcolor{keyword}{using\ }ScriptPubKeyMan::ScriptPubKeyMan;}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{comment}{//\ Map\ from\ Key\ ID\ to\ key\ metadata.}}
+\DoxyCodeLine{00207\ \ \ \ \ std::map<CKeyID,\ CKeyMetadata>\ mapKeyMetadata\ GUARDED\_BY(cs\_KeyStore);}
+\DoxyCodeLine{00208\ }
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{comment}{//\ Map\ from\ Script\ ID\ to\ key\ metadata\ (for\ watch-\/only\ keys).}}
+\DoxyCodeLine{00210\ \ \ \ \ std::map<CScriptID,\ CKeyMetadata>\ m\_script\_metadata\ GUARDED\_BY(cs\_KeyStore);}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{comment}{//\ ScriptPubKeyMan\ overrides}}
+\DoxyCodeLine{00213\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckDecryptionKey(\textcolor{keyword}{const}\ CKeyingMaterial\&\ master\_key)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00214\ \ \ \ \ std::unordered\_set<CScript,\ SaltedSipHasher>\ GetScriptPubKeys()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00215\ \ \ \ \ std::unique\_ptr<SigningProvider>\ GetSolvingProvider(\textcolor{keyword}{const}\ CScript\&\ script)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00216\ \ \ \ \ uint256\ GetID()\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ uint256::ONE;\ \}}
+\DoxyCodeLine{00217\ }
+\DoxyCodeLine{00218\ \ \ \ \ \textcolor{comment}{//\ FillableSigningProvider\ overrides}}
+\DoxyCodeLine{00219\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveKey(\textcolor{keyword}{const}\ CKeyID\ \&address)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00220\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKey(\textcolor{keyword}{const}\ CKeyID\ \&address,\ CKey\&\ keyOut)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00221\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetPubKey(\textcolor{keyword}{const}\ CKeyID\ \&address,\ CPubKey\&\ vchPubKeyOut)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKeyOrigin(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ KeyOriginInfo\&\ info)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00223\ }
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ LoadKeyMetadata(\textcolor{keyword}{const}\ CKeyID\&\ keyID,\ \textcolor{keyword}{const}\ CKeyMetadata\ \&metadata);}
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ LoadScriptMetadata(\textcolor{keyword}{const}\ CScriptID\&\ script\_id,\ \textcolor{keyword}{const}\ CKeyMetadata\ \&metadata);}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00229\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadWatchOnly(\textcolor{keyword}{const}\ CScript\ \&dest);}
+\DoxyCodeLine{00231\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveWatchOnly(\textcolor{keyword}{const}\ CScript\ \&dest)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00233\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadKey(\textcolor{keyword}{const}\ CKey\&\ key,\ \textcolor{keyword}{const}\ CPubKey\ \&pubkey);}
+\DoxyCodeLine{00235\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadCryptedKey(\textcolor{keyword}{const}\ CPubKey\ \&vchPubKey,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\ \&vchCryptedSecret,\ \textcolor{keywordtype}{bool}\ checksum\_valid);}
+\DoxyCodeLine{00237\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadCScript(\textcolor{keyword}{const}\ CScript\&\ redeemScript);}
+\DoxyCodeLine{00239\ \ \ \ \ \textcolor{keywordtype}{void}\ LoadHDChain(\textcolor{keyword}{const}\ CHDChain\&\ chain);}
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{keywordtype}{void}\ AddInactiveHDChain(\textcolor{keyword}{const}\ CHDChain\&\ chain);}
+\DoxyCodeLine{00241\ \ \ \ \ \textcolor{keyword}{const}\ CHDChain\&\ GetHDChain()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_hd\_chain;\ \}}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetWatchPubKey(\textcolor{keyword}{const}\ CKeyID\ \&address,\ CPubKey\ \&pubkey\_out)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00245\ }
+\DoxyCodeLine{00250\ \ \ \ \ std::unordered\_set<CScript,\ SaltedSipHasher>\ GetNotMineScriptPubKeys()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00254\ \ \ \ \ std::optional<MigrationData>\ MigrateToDescriptor();}
+\DoxyCodeLine{00256\ \ \ \ \ \textcolor{keywordtype}{bool}\ DeleteRecordsWithDB(WalletBatch\&\ batch);}
+\DoxyCodeLine{00257\ \};}
+\DoxyCodeLine{00258\ }
+\DoxyCodeLine{00260\ \textcolor{keyword}{class\ }LegacySigningProvider\ :\ \textcolor{keyword}{public}\ SigningProvider}
+\DoxyCodeLine{00261\ \{}
+\DoxyCodeLine{00262\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00263\ \ \ \ \ \textcolor{keyword}{const}\ LegacyDataSPKM\&\ m\_spk\_man;}
+\DoxyCodeLine{00264\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00265\ \ \ \ \ \textcolor{keyword}{explicit}\ LegacySigningProvider(\textcolor{keyword}{const}\ LegacyDataSPKM\&\ spk\_man)\ :\ m\_spk\_man(spk\_man)\ \{\}}
+\DoxyCodeLine{00266\ }
+\DoxyCodeLine{00267\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetCScript(\textcolor{keyword}{const}\ CScriptID\ \&scriptid,\ CScript\&\ script)\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ m\_spk\_man.GetCScript(scriptid,\ script);\ \}}
+\DoxyCodeLine{00268\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveCScript(\textcolor{keyword}{const}\ CScriptID\ \&scriptid)\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ m\_spk\_man.HaveCScript(scriptid);\ \}}
+\DoxyCodeLine{00269\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetPubKey(\textcolor{keyword}{const}\ CKeyID\ \&address,\ CPubKey\&\ pubkey)\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ m\_spk\_man.GetPubKey(address,\ pubkey);\ \}}
+\DoxyCodeLine{00270\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKey(\textcolor{keyword}{const}\ CKeyID\ \&address,\ CKey\&\ key)\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00271\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveKey(\textcolor{keyword}{const}\ CKeyID\ \&address)\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKeyOrigin(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ KeyOriginInfo\&\ info)\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ m\_spk\_man.GetKeyOrigin(keyid,\ info);\ \}}
+\DoxyCodeLine{00273\ \};}
+\DoxyCodeLine{00274\ }
+\DoxyCodeLine{00275\ \textcolor{keyword}{class\ }DescriptorScriptPubKeyMan\ :\ \textcolor{keyword}{public}\ ScriptPubKeyMan}
+\DoxyCodeLine{00276\ \{}
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }LegacyDataSPKM;}
+\DoxyCodeLine{00278\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00279\ \ \ \ \ \textcolor{keyword}{using\ }ScriptPubKeyMap\ =\ std::map<CScript,\ int32\_t>;\ \textcolor{comment}{//\ Map\ of\ scripts\ to\ descriptor\ range\ index}}
+\DoxyCodeLine{00280\ \ \ \ \ \textcolor{keyword}{using\ }PubKeyMap\ =\ std::map<CPubKey,\ int32\_t>;\ \textcolor{comment}{//\ Map\ of\ pubkeys\ involved\ in\ scripts\ to\ descriptor\ range\ index}}
+\DoxyCodeLine{00281\ \ \ \ \ \textcolor{keyword}{using\ }CryptedKeyMap\ =\ std::map<CKeyID,\ std::pair<CPubKey,\ std::vector<unsigned\ char>>>;}
+\DoxyCodeLine{00282\ \ \ \ \ \textcolor{keyword}{using\ }KeyMap\ =\ std::map<CKeyID,\ CKey>;}
+\DoxyCodeLine{00283\ }
+\DoxyCodeLine{00284\ \ \ \ \ ScriptPubKeyMap\ m\_map\_script\_pub\_keys\ GUARDED\_BY(cs\_desc\_man);}
+\DoxyCodeLine{00285\ \ \ \ \ PubKeyMap\ m\_map\_pubkeys\ GUARDED\_BY(cs\_desc\_man);}
+\DoxyCodeLine{00286\ \ \ \ \ int32\_t\ m\_max\_cached\_index\ =\ -\/1;}
+\DoxyCodeLine{00287\ }
+\DoxyCodeLine{00288\ \ \ \ \ KeyMap\ m\_map\_keys\ GUARDED\_BY(cs\_desc\_man);}
+\DoxyCodeLine{00289\ \ \ \ \ CryptedKeyMap\ m\_map\_crypted\_keys\ GUARDED\_BY(cs\_desc\_man);}
+\DoxyCodeLine{00290\ }
+\DoxyCodeLine{00292\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_decryption\_thoroughly\_checked\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00293\ }
+\DoxyCodeLine{00295\ \ \ \ \ int64\_t\ m\_keypool\_size\ GUARDED\_BY(cs\_desc\_man)\{DEFAULT\_KEYPOOL\_SIZE\};}
+\DoxyCodeLine{00296\ }
+\DoxyCodeLine{00308\ \ \ \ \ \textcolor{keyword}{mutable}\ std::map<uint256,\ MuSig2SecNonce>\ m\_musig2\_secnonces;}
+\DoxyCodeLine{00309\ }
+\DoxyCodeLine{00310\ \ \ \ \ \textcolor{keywordtype}{bool}\ AddDescriptorKeyWithDB(WalletBatch\&\ batch,\ \textcolor{keyword}{const}\ CKey\&\ key,\ \textcolor{keyword}{const}\ CPubKey\ \&pubkey)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_desc\_man);}
+\DoxyCodeLine{00311\ }
+\DoxyCodeLine{00312\ \ \ \ \ KeyMap\ GetKeys()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_desc\_man);}
+\DoxyCodeLine{00313\ }
+\DoxyCodeLine{00314\ \ \ \ \ \textcolor{comment}{//\ Cached\ FlatSigningProviders\ to\ avoid\ regenerating\ them\ each\ time\ they\ are\ needed.}}
+\DoxyCodeLine{00315\ \ \ \ \ mutable\ std::map<int32\_t,\ FlatSigningProvider>\ m\_map\_signing\_providers;}
+\DoxyCodeLine{00316\ \ \ \ \ \textcolor{comment}{//\ Fetch\ the\ SigningProvider\ for\ the\ given\ script\ and\ optionally\ include\ private\ keys}}
+\DoxyCodeLine{00317\ \ \ \ \ std::unique\_ptr<FlatSigningProvider>\ GetSigningProvider(const\ CScript\&\ script,\ \textcolor{keywordtype}{bool}\ include\_private\ =\ false)\ const;}
+\DoxyCodeLine{00318\ \ \ \ \ \textcolor{comment}{//\ Fetch\ the\ SigningProvider\ for\ a\ given\ index\ and\ optionally\ include\ private\ keys.\ Called\ by\ the\ above\ functions.}}
+\DoxyCodeLine{00319\ \ \ \ \ std::unique\_ptr<FlatSigningProvider>\ GetSigningProvider(int32\_t\ index,\ \textcolor{keywordtype}{bool}\ include\_private\ =\ false)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_desc\_man);}
+\DoxyCodeLine{00320\ }
+\DoxyCodeLine{00321\ protected:}
+\DoxyCodeLine{00322\ \ \ \ \ WalletDescriptor\ m\_wallet\_descriptor\ GUARDED\_BY(cs\_desc\_man);}
+\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00325\ \ \ \ \ \textcolor{keywordtype}{bool}\ TopUpWithDB(WalletBatch\&\ batch,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ size\ =\ 0);}
+\DoxyCodeLine{00326\ }
+\DoxyCodeLine{00327\ public:}
+\DoxyCodeLine{00328\ \ \ \ \ DescriptorScriptPubKeyMan(WalletStorage\&\ storage,\ WalletDescriptor\&\ descriptor,\ int64\_t\ keypool\_size)}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ :\ \ \ ScriptPubKeyMan(storage),}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \ \ \ \ m\_keypool\_size(keypool\_size),}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ m\_wallet\_descriptor(descriptor)}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ \{\}}
+\DoxyCodeLine{00333\ \ \ \ \ DescriptorScriptPubKeyMan(WalletStorage\&\ storage,\ int64\_t\ keypool\_size)}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ :\ \ \ ScriptPubKeyMan(storage),}
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ \ \ \ \ m\_keypool\_size(keypool\_size)}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ \{\}}
+\DoxyCodeLine{00337\ }
+\DoxyCodeLine{00338\ \ \ \ \ \textcolor{keyword}{mutable}\ RecursiveMutex\ cs\_desc\_man;}
+\DoxyCodeLine{00339\ }
+\DoxyCodeLine{00340\ \ \ \ \ util::Result<CTxDestination>\ GetNewDestination(\textcolor{keyword}{const}\ OutputType\ type)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00341\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsMine(\textcolor{keyword}{const}\ CScript\&\ script)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00342\ }
+\DoxyCodeLine{00343\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckDecryptionKey(\textcolor{keyword}{const}\ CKeyingMaterial\&\ master\_key)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00344\ \ \ \ \ \textcolor{keywordtype}{bool}\ Encrypt(\textcolor{keyword}{const}\ CKeyingMaterial\&\ master\_key,\ WalletBatch*\ batch)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00345\ }
+\DoxyCodeLine{00346\ \ \ \ \ util::Result<CTxDestination>\ GetReservedDestination(\textcolor{keyword}{const}\ OutputType\ type,\ \textcolor{keywordtype}{bool}\ internal,\ int64\_t\&\ index)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00347\ \ \ \ \ \textcolor{keywordtype}{void}\ ReturnDestination(int64\_t\ index,\ \textcolor{keywordtype}{bool}\ internal,\ \textcolor{keyword}{const}\ CTxDestination\&\ addr)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00348\ }
+\DoxyCodeLine{00349\ \ \ \ \ \textcolor{comment}{//\ Tops\ up\ the\ descriptor\ cache\ and\ m\_map\_script\_pub\_keys.\ The\ cache\ is\ stored\ in\ the\ wallet\ file}}
+\DoxyCodeLine{00350\ \ \ \ \ \textcolor{comment}{//\ and\ is\ used\ to\ expand\ the\ descriptor\ in\ GetNewDestination.\ DescriptorScriptPubKeyMan\ relies}}
+\DoxyCodeLine{00351\ \ \ \ \ \textcolor{comment}{//\ more\ on\ ephemeral\ data\ than\ LegacyScriptPubKeyMan.\ For\ wallets\ using\ unhardened\ derivation}}
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{comment}{//\ (with\ or\ without\ private\ keys),\ the\ "{}keypool"{}\ is\ a\ single\ xpub.}}
+\DoxyCodeLine{00353\ \ \ \ \ \textcolor{keywordtype}{bool}\ TopUp(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ size\ =\ 0)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00354\ }
+\DoxyCodeLine{00355\ \ \ \ \ std::vector<WalletDestination>\ MarkUnusedAddresses(\textcolor{keyword}{const}\ CScript\&\ script)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00356\ }
+\DoxyCodeLine{00357\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsHDEnabled()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00358\ }
+\DoxyCodeLine{00360\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetupDescriptorGeneration(WalletBatch\&\ batch,\ \textcolor{keyword}{const}\ CExtKey\&\ master\_key,\ OutputType\ addr\_type,\ \textcolor{keywordtype}{bool}\ internal);}
+\DoxyCodeLine{00361\ }
+\DoxyCodeLine{00362\ \ \ \ \ \textcolor{keywordtype}{bool}\ HavePrivateKeys()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00363\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasPrivKey(\textcolor{keyword}{const}\ CKeyID\&\ keyid)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_desc\_man);}
+\DoxyCodeLine{00365\ \ \ \ \ std::optional<CKey>\ GetKey(\textcolor{keyword}{const}\ CKeyID\&\ keyid)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_desc\_man);}
+\DoxyCodeLine{00366\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveCryptedKeys()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00367\ }
+\DoxyCodeLine{00368\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ GetKeyPoolSize()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00369\ }
+\DoxyCodeLine{00370\ \ \ \ \ int64\_t\ GetTimeFirstKey()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00371\ }
+\DoxyCodeLine{00372\ \ \ \ \ std::unique\_ptr<CKeyMetadata>\ GetMetadata(\textcolor{keyword}{const}\ CTxDestination\&\ dest)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00373\ }
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keywordtype}{bool}\ CanGetAddresses(\textcolor{keywordtype}{bool}\ internal\ =\ \textcolor{keyword}{false})\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00375\ }
+\DoxyCodeLine{00376\ \ \ \ \ std::unique\_ptr<SigningProvider>\ GetSolvingProvider(\textcolor{keyword}{const}\ CScript\&\ script)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00377\ }
+\DoxyCodeLine{00378\ \ \ \ \ \textcolor{keywordtype}{bool}\ CanProvide(\textcolor{keyword}{const}\ CScript\&\ script,\ SignatureData\&\ sigdata)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00379\ }
+\DoxyCodeLine{00380\ \ \ \ \ \textcolor{comment}{//\ Fetch\ the\ SigningProvider\ for\ the\ given\ pubkey\ and\ always\ include\ private\ keys.\ This\ should\ only\ be\ called\ by\ signing\ code.}}
+\DoxyCodeLine{00381\ \ \ \ \ std::unique\_ptr<FlatSigningProvider>\ GetSigningProvider(\textcolor{keyword}{const}\ CPubKey\&\ pubkey)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00382\ }
+\DoxyCodeLine{00383\ \ \ \ \ \textcolor{keywordtype}{bool}\ SignTransaction(CMutableTransaction\&\ tx,\ \textcolor{keyword}{const}\ std::map<COutPoint,\ Coin>\&\ coins,\ \textcolor{keywordtype}{int}\ sighash,\ std::map<int,\ bilingual\_str>\&\ input\_errors)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00384\ \ \ \ \ SigningResult\ SignMessage(\textcolor{keyword}{const}\ std::string\&\ message,\ \textcolor{keyword}{const}\ PKHash\&\ pkhash,\ std::string\&\ str\_sig)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00385\ \ \ \ \ std::optional<common::PSBTError>\ FillPSBT(PartiallySignedTransaction\&\ psbt,\ \textcolor{keyword}{const}\ PrecomputedTransactionData\&\ txdata,\ std::optional<int>\ sighash\_type\ =\ std::nullopt,\ \textcolor{keywordtype}{bool}\ sign\ =\ \textcolor{keyword}{true},\ \textcolor{keywordtype}{bool}\ bip32derivs\ =\ \textcolor{keyword}{false},\ \textcolor{keywordtype}{int}*\ n\_signed\ =\ \textcolor{keyword}{nullptr},\ \textcolor{keywordtype}{bool}\ finalize\ =\ \textcolor{keyword}{true})\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00386\ }
+\DoxyCodeLine{00387\ \ \ \ \ uint256\ GetID()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00388\ }
+\DoxyCodeLine{00389\ \ \ \ \ \textcolor{keywordtype}{void}\ SetCache(\textcolor{keyword}{const}\ DescriptorCache\&\ cache);}
+\DoxyCodeLine{00390\ }
+\DoxyCodeLine{00391\ \ \ \ \ \textcolor{keywordtype}{bool}\ AddKey(\textcolor{keyword}{const}\ CKeyID\&\ key\_id,\ \textcolor{keyword}{const}\ CKey\&\ key);}
+\DoxyCodeLine{00392\ \ \ \ \ \textcolor{keywordtype}{bool}\ AddCryptedKey(\textcolor{keyword}{const}\ CKeyID\&\ key\_id,\ \textcolor{keyword}{const}\ CPubKey\&\ pubkey,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ crypted\_key);}
+\DoxyCodeLine{00393\ }
+\DoxyCodeLine{00394\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasWalletDescriptor(\textcolor{keyword}{const}\ WalletDescriptor\&\ desc)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00395\ \ \ \ \ util::Result<void>\ UpdateWalletDescriptor(WalletDescriptor\&\ descriptor);}
+\DoxyCodeLine{00396\ \ \ \ \ \textcolor{keywordtype}{bool}\ CanUpdateToWalletDescriptor(\textcolor{keyword}{const}\ WalletDescriptor\&\ descriptor,\ std::string\&\ error);}
+\DoxyCodeLine{00397\ \ \ \ \ \textcolor{keywordtype}{void}\ AddDescriptorKey(\textcolor{keyword}{const}\ CKey\&\ key,\ \textcolor{keyword}{const}\ CPubKey\ \&pubkey);}
+\DoxyCodeLine{00398\ \ \ \ \ \textcolor{keywordtype}{void}\ WriteDescriptor();}
+\DoxyCodeLine{00399\ }
+\DoxyCodeLine{00400\ \ \ \ \ WalletDescriptor\ GetWalletDescriptor()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_desc\_man);}
+\DoxyCodeLine{00401\ \ \ \ \ std::unordered\_set<CScript,\ SaltedSipHasher>\ GetScriptPubKeys()\ const\ override;}
+\DoxyCodeLine{00402\ \ \ \ \ std::unordered\_set<CScript,\ SaltedSipHasher>\ GetScriptPubKeys(int32\_t\ minimum\_index)\ const;}
+\DoxyCodeLine{00403\ \ \ \ \ int32\_t\ GetEndRange()\ const;}
+\DoxyCodeLine{00404\ }
+\DoxyCodeLine{00405\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ GetDescriptorString(std::\textcolor{keywordtype}{string}\&\ out,\ const\ \textcolor{keywordtype}{bool}\ priv)\ const;}
+\DoxyCodeLine{00406\ }
+\DoxyCodeLine{00407\ \ \ \ \ \textcolor{keywordtype}{void}\ UpgradeDescriptorCache();}
+\DoxyCodeLine{00408\ \};}
+\DoxyCodeLine{00409\ }
+\DoxyCodeLine{00411\ struct\ MigrationData}
+\DoxyCodeLine{00412\ \{}
+\DoxyCodeLine{00413\ \ \ \ \ CExtKey\ master\_key;}
+\DoxyCodeLine{00414\ \ \ \ \ std::vector<std::pair<std::string,\ int64\_t>>\ watch\_descs;}
+\DoxyCodeLine{00415\ \ \ \ \ std::vector<std::pair<std::string,\ int64\_t>>\ solvable\_descs;}
+\DoxyCodeLine{00416\ \ \ \ \ std::vector<std::unique\_ptr<DescriptorScriptPubKeyMan>>\ desc\_spkms;}
+\DoxyCodeLine{00417\ \ \ \ \ std::shared\_ptr<CWallet>\ watchonly\_wallet\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00418\ \ \ \ \ std::shared\_ptr<CWallet>\ solvable\_wallet\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00419\ \};}
+\DoxyCodeLine{00420\ }
+\DoxyCodeLine{00421\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{00422\ }
+\DoxyCodeLine{00423\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_WALLET\_SCRIPTPUBKEYMAN\_H}}
+
+\end{DoxyCode}

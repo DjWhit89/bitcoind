@@ -1,0 +1,342 @@
+\doxysection{transaction.\+h}
+\label{wallet_2transaction_8h_source}\index{src/wallet/transaction.h@{src/wallet/transaction.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2021-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_WALLET\_TRANSACTION\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_WALLET\_TRANSACTION\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <tinyformat.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/overloaded.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <util/strencodings.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <util/string.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <wallet/types.h>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <bitset>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <variant>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{keyword}{namespace\ }interfaces\ \{}
+\DoxyCodeLine{00027\ \textcolor{keyword}{class\ }Chain;}
+\DoxyCodeLine{00028\ \}\ \textcolor{comment}{//\ namespace\ interfaces}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00032\ \textcolor{keyword}{struct\ }TxStateConfirmed\ \{}
+\DoxyCodeLine{00033\ \ \ \ \ uint256\ confirmed\_block\_hash;}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keywordtype}{int}\ confirmed\_block\_height;}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordtype}{int}\ position\_in\_block;}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keyword}{explicit}\ TxStateConfirmed(\textcolor{keyword}{const}\ uint256\&\ block\_hash,\ \textcolor{keywordtype}{int}\ height,\ \textcolor{keywordtype}{int}\ index)\ :\ confirmed\_block\_hash(block\_hash),\ confirmed\_block\_height(height),\ position\_in\_block(index)\ \{\}}
+\DoxyCodeLine{00038\ \ \ \ \ std::string\ toString()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ strprintf(\textcolor{stringliteral}{"{}Confirmed\ (block=\%s,\ height=\%i,\ index=\%i)"{}},\ confirmed\_block\_hash.ToString(),\ confirmed\_block\_height,\ position\_in\_block);\ \}}
+\DoxyCodeLine{00039\ \};}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00042\ \textcolor{keyword}{struct\ }TxStateInMempool\ \{}
+\DoxyCodeLine{00043\ \ \ \ \ std::string\ toString()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ strprintf(\textcolor{stringliteral}{"{}InMempool"{}});\ \}}
+\DoxyCodeLine{00044\ \};}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00047\ \textcolor{keyword}{struct\ }TxStateBlockConflicted\ \{}
+\DoxyCodeLine{00048\ \ \ \ \ uint256\ conflicting\_block\_hash;}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordtype}{int}\ conflicting\_block\_height;}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keyword}{explicit}\ TxStateBlockConflicted(\textcolor{keyword}{const}\ uint256\&\ block\_hash,\ \textcolor{keywordtype}{int}\ height)\ :\ conflicting\_block\_hash(block\_hash),\ conflicting\_block\_height(height)\ \{\}}
+\DoxyCodeLine{00052\ \ \ \ \ std::string\ toString()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ strprintf(\textcolor{stringliteral}{"{}BlockConflicted\ (block=\%s,\ height=\%i)"{}},\ conflicting\_block\_hash.ToString(),\ conflicting\_block\_height);\ \}}
+\DoxyCodeLine{00053\ \};}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00059\ \textcolor{keyword}{struct\ }TxStateInactive\ \{}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keywordtype}{bool}\ abandoned;}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keyword}{explicit}\ TxStateInactive(\textcolor{keywordtype}{bool}\ abandoned\ =\ \textcolor{keyword}{false})\ :\ abandoned(abandoned)\ \{\}}
+\DoxyCodeLine{00063\ \ \ \ \ std::string\ toString()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ strprintf(\textcolor{stringliteral}{"{}Inactive\ (abandoned=\%i)"{}},\ abandoned);\ \}}
+\DoxyCodeLine{00064\ \};}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00070\ \textcolor{keyword}{struct\ }TxStateUnrecognized\ \{}
+\DoxyCodeLine{00071\ \ \ \ \ uint256\ block\_hash;}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keywordtype}{int}\ index;}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ \ \ TxStateUnrecognized(\textcolor{keyword}{const}\ uint256\&\ block\_hash,\ \textcolor{keywordtype}{int}\ index)\ :\ block\_hash(block\_hash),\ index(index)\ \{\}}
+\DoxyCodeLine{00075\ \ \ \ \ std::string\ toString()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ strprintf(\textcolor{stringliteral}{"{}Unrecognized\ (block=\%s,\ index=\%i)"{}},\ block\_hash.ToString(),\ index);\ \}}
+\DoxyCodeLine{00076\ \};}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00079\ \textcolor{keyword}{using\ }TxState\ =\ std::variant<TxStateConfirmed,\ TxStateInMempool,\ TxStateBlockConflicted,\ TxStateInactive,\ TxStateUnrecognized>;}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00082\ \textcolor{keyword}{using\ }SyncTxState\ =\ std::variant<TxStateConfirmed,\ TxStateInMempool,\ TxStateInactive>;}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00085\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ TxState\ TxStateInterpretSerialized(TxStateUnrecognized\ data)}
+\DoxyCodeLine{00086\ \{}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{keywordflow}{if}\ (data.block\_hash\ ==\ uint256::ZERO)\ \{}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (data.index\ ==\ 0)\ \textcolor{keywordflow}{return}\ TxStateInactive\{\};}
+\DoxyCodeLine{00089\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (data.block\_hash\ ==\ uint256::ONE)\ \{}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (data.index\ ==\ -\/1)\ \textcolor{keywordflow}{return}\ TxStateInactive\{\textcolor{comment}{/*abandoned=*/}\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00091\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (data.index\ >=\ 0)\ \{}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ TxStateConfirmed\{data.block\_hash,\ \textcolor{comment}{/*height=*/}-\/1,\ data.index\};}
+\DoxyCodeLine{00093\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (data.index\ ==\ -\/1)\ \{}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ TxStateBlockConflicted\{data.block\_hash,\ \textcolor{comment}{/*height=*/}-\/1\};}
+\DoxyCodeLine{00095\ \ \ \ \ \}}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordflow}{return}\ data;}
+\DoxyCodeLine{00097\ \}}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00100\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ uint256\ TxStateSerializedBlockHash(\textcolor{keyword}{const}\ TxState\&\ state)}
+\DoxyCodeLine{00101\ \{}
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{keywordflow}{return}\ std::visit(util::Overloaded\{}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ [](\textcolor{keyword}{const}\ TxStateInactive\&\ inactive)\ \{\ \textcolor{keywordflow}{return}\ inactive.abandoned\ ?\ uint256::ONE\ :\ uint256::ZERO;\ \},}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ [](\textcolor{keyword}{const}\ TxStateInMempool\&\ in\_mempool)\ \{\ \textcolor{keywordflow}{return}\ uint256::ZERO;\ \},}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ [](\textcolor{keyword}{const}\ TxStateConfirmed\&\ confirmed)\ \{\ \textcolor{keywordflow}{return}\ confirmed.confirmed\_block\_hash;\ \},}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ [](\textcolor{keyword}{const}\ TxStateBlockConflicted\&\ conflicted)\ \{\ \textcolor{keywordflow}{return}\ conflicted.conflicting\_block\_hash;\ \},}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ [](\textcolor{keyword}{const}\ TxStateUnrecognized\&\ unrecognized)\ \{\ \textcolor{keywordflow}{return}\ unrecognized.block\_hash;\ \}}
+\DoxyCodeLine{00108\ \ \ \ \ \},\ state);}
+\DoxyCodeLine{00109\ \}}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00112\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ TxStateSerializedIndex(\textcolor{keyword}{const}\ TxState\&\ state)}
+\DoxyCodeLine{00113\ \{}
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keywordflow}{return}\ std::visit(util::Overloaded\{}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ [](\textcolor{keyword}{const}\ TxStateInactive\&\ inactive)\ \{\ \textcolor{keywordflow}{return}\ inactive.abandoned\ ?\ -\/1\ :\ 0;\ \},}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ [](\textcolor{keyword}{const}\ TxStateInMempool\&\ in\_mempool)\ \{\ \textcolor{keywordflow}{return}\ 0;\ \},}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ [](\textcolor{keyword}{const}\ TxStateConfirmed\&\ confirmed)\ \{\ \textcolor{keywordflow}{return}\ confirmed.position\_in\_block;\ \},}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ [](\textcolor{keyword}{const}\ TxStateBlockConflicted\&\ conflicted)\ \{\ \textcolor{keywordflow}{return}\ -\/1;\ \},}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ [](\textcolor{keyword}{const}\ TxStateUnrecognized\&\ unrecognized)\ \{\ \textcolor{keywordflow}{return}\ unrecognized.index;\ \}}
+\DoxyCodeLine{00120\ \ \ \ \ \},\ state);}
+\DoxyCodeLine{00121\ \}}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00124\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00125\ std::string\ TxStateString(\textcolor{keyword}{const}\ T\&\ state)}
+\DoxyCodeLine{00126\ \{}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keywordflow}{return}\ std::visit([](\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ s)\ \{\ \textcolor{keywordflow}{return}\ s.toString();\ \},\ state);}
+\DoxyCodeLine{00128\ \}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00133\ \textcolor{keyword}{struct\ }CachableAmount}
+\DoxyCodeLine{00134\ \{}
+\DoxyCodeLine{00135\ \ \ \ \ std::optional<CAmount>\ m\_avoid\_reuse\_value;}
+\DoxyCodeLine{00136\ \ \ \ \ std::optional<CAmount>\ m\_all\_value;}
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Reset()}
+\DoxyCodeLine{00138\ \ \ \ \ \{}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ m\_avoid\_reuse\_value.reset();}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ m\_all\_value.reset();}
+\DoxyCodeLine{00141\ \ \ \ \ \}}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keywordtype}{void}\ Set(\textcolor{keywordtype}{bool}\ avoid\_reuse,\ CAmount\ value)}
+\DoxyCodeLine{00143\ \ \ \ \ \{}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (avoid\_reuse)\ \{}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ \ \ \ \ m\_avoid\_reuse\_value\ =\ value;}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ \ \ \ \ m\_all\_value\ =\ value;}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00149\ \ \ \ \ \}}
+\DoxyCodeLine{00150\ \ \ \ \ CAmount\ Get(\textcolor{keywordtype}{bool}\ avoid\_reuse)}
+\DoxyCodeLine{00151\ \ \ \ \ \{}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (avoid\_reuse)\ \{}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \ \ \ \ Assert(m\_avoid\_reuse\_value.has\_value());}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_avoid\_reuse\_value.value();}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ Assert(m\_all\_value.has\_value());}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_all\_value.value();}
+\DoxyCodeLine{00158\ \ \ \ \ \}}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsCached(\textcolor{keywordtype}{bool}\ avoid\_reuse)}
+\DoxyCodeLine{00160\ \ \ \ \ \{}
+\DoxyCodeLine{00161\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (avoid\_reuse)\ \textcolor{keywordflow}{return}\ m\_avoid\_reuse\_value.has\_value();}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_all\_value.has\_value();}
+\DoxyCodeLine{00163\ \ \ \ \ \}}
+\DoxyCodeLine{00164\ \};}
+\DoxyCodeLine{00165\ }
+\DoxyCodeLine{00166\ }
+\DoxyCodeLine{00167\ \textcolor{keyword}{typedef}\ std::map<std::string,\ std::string>\ mapValue\_t;}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00169\ }
+\DoxyCodeLine{00175\ \textcolor{keyword}{class\ }CMerkleTx}
+\DoxyCodeLine{00176\ \{}
+\DoxyCodeLine{00177\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)}
+\DoxyCodeLine{00180\ \ \ \ \ \{}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ CTransactionRef\ tx;}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ uint256\ hashBlock;}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ std::vector<uint256>\ vMerkleBranch;}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ nIndex;}
+\DoxyCodeLine{00185\ }
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ s\ >>\ TX\_WITH\_WITNESS(tx)\ >>\ hashBlock\ >>\ vMerkleBranch\ >>\ nIndex;}
+\DoxyCodeLine{00187\ \ \ \ \ \}}
+\DoxyCodeLine{00188\ \};}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00194\ \textcolor{keyword}{class\ }CWalletTx}
+\DoxyCodeLine{00195\ \{}
+\DoxyCodeLine{00196\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00222\ \ \ \ \ mapValue\_t\ mapValue;}
+\DoxyCodeLine{00223\ \ \ \ \ std::vector<std::pair<std::string,\ std::string>\ >\ vOrderForm;}
+\DoxyCodeLine{00224\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nTimeReceived;\ }
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nTimeSmart;}
+\DoxyCodeLine{00235\ \ \ \ \ \textcolor{comment}{//\ Cached\ value\ for\ whether\ the\ transaction\ spends\ any\ inputs\ known\ to\ the\ wallet}}
+\DoxyCodeLine{00236\ \ \ \ \ \textcolor{keyword}{mutable}\ std::optional<bool>\ m\_cached\_from\_me\{std::nullopt\};}
+\DoxyCodeLine{00237\ \ \ \ \ int64\_t\ nOrderPos;\ }
+\DoxyCodeLine{00238\ \ \ \ \ std::multimap<int64\_t,\ CWalletTx*>::const\_iterator\ m\_it\_wtxOrdered;}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{comment}{//\ memory\ only}}
+\DoxyCodeLine{00241\ \ \ \ \ \textcolor{keyword}{enum}\ AmountType\ \{\ DEBIT,\ CREDIT,\ AMOUNTTYPE\_ENUM\_ELEMENTS\ \};}
+\DoxyCodeLine{00242\ \ \ \ \ \textcolor{keyword}{mutable}\ CachableAmount\ m\_amounts[AMOUNTTYPE\_ENUM\_ELEMENTS];}
+\DoxyCodeLine{00249\ \ \ \ \ \textcolor{keyword}{mutable}\ \textcolor{keywordtype}{bool}\ m\_is\_cache\_empty\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00250\ \ \ \ \ \textcolor{keyword}{mutable}\ \textcolor{keywordtype}{bool}\ fChangeCached;}
+\DoxyCodeLine{00251\ \ \ \ \ \textcolor{keyword}{mutable}\ CAmount\ nChangeCached;}
+\DoxyCodeLine{00252\ }
+\DoxyCodeLine{00253\ \ \ \ \ CWalletTx(CTransactionRef\ tx,\ \textcolor{keyword}{const}\ TxState\&\ state)\ :\ tx(std::move(tx)),\ m\_state(state)}
+\DoxyCodeLine{00254\ \ \ \ \ \{}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ Init();}
+\DoxyCodeLine{00256\ \ \ \ \ \}}
+\DoxyCodeLine{00257\ }
+\DoxyCodeLine{00258\ \ \ \ \ \textcolor{keywordtype}{void}\ Init()}
+\DoxyCodeLine{00259\ \ \ \ \ \{}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ mapValue.clear();}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ vOrderForm.clear();}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ nTimeReceived\ =\ 0;}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ nTimeSmart\ =\ 0;}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ fChangeCached\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ nChangeCached\ =\ 0;}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ nOrderPos\ =\ -\/1;}
+\DoxyCodeLine{00267\ \ \ \ \ \}}
+\DoxyCodeLine{00268\ }
+\DoxyCodeLine{00269\ \ \ \ \ CTransactionRef\ tx;}
+\DoxyCodeLine{00270\ \ \ \ \ TxState\ m\_state;}
+\DoxyCodeLine{00271\ }
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{comment}{//\ Set\ of\ mempool\ transactions\ that\ conflict}}
+\DoxyCodeLine{00273\ \ \ \ \ \textcolor{comment}{//\ directly\ with\ the\ transaction,\ or\ that\ conflict}}
+\DoxyCodeLine{00274\ \ \ \ \ \textcolor{comment}{//\ with\ an\ ancestor\ transaction.\ This\ set\ will\ be}}
+\DoxyCodeLine{00275\ \ \ \ \ \textcolor{comment}{//\ empty\ if\ state\ is\ InMempool\ or\ Confirmed,\ but}}
+\DoxyCodeLine{00276\ \ \ \ \ \textcolor{comment}{//\ can\ be\ nonempty\ if\ state\ is\ Inactive\ or}}
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{comment}{//\ BlockConflicted.}}
+\DoxyCodeLine{00278\ \ \ \ \ std::set<Txid>\ mempool\_conflicts;}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00280\ \ \ \ \ \textcolor{comment}{//\ Track\ v3\ mempool\ tx\ that\ spends\ from\ this\ tx}}
+\DoxyCodeLine{00281\ \ \ \ \ \textcolor{comment}{//\ so\ that\ we\ don't\ try\ to\ create\ another\ unconfirmed\ child}}
+\DoxyCodeLine{00282\ \ \ \ \ std::optional<Txid>\ truc\_child\_in\_mempool;}
+\DoxyCodeLine{00283\ }
+\DoxyCodeLine{00284\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00285\ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00286\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ mapValue\_t\ mapValueCopy\ =\ mapValue;}
+\DoxyCodeLine{00288\ }
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ mapValueCopy[\textcolor{stringliteral}{"{}fromaccount"{}}]\ =\ \textcolor{stringliteral}{"{}"{}};}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nOrderPos\ !=\ -\/1)\ \{}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \ \ \ \ mapValueCopy[\textcolor{stringliteral}{"{}n"{}}]\ =\ util::ToString(nOrderPos);}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nTimeSmart)\ \{}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \ \ \ \ mapValueCopy[\textcolor{stringliteral}{"{}timesmart"{}}]\ =\ strprintf(\textcolor{stringliteral}{"{}\%u"{}},\ nTimeSmart);}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00296\ }
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \ \ std::vector<uint8\_t>\ dummy\_vector1;\ }
+\DoxyCodeLine{00298\ \ \ \ \ \ \ \ \ std::vector<uint8\_t>\ dummy\_vector2;\ }
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ dummy\_bool\ =\ \textcolor{keyword}{false};\ }
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ uint32\_t\ dummy\_int\ =\ 0;\ \textcolor{comment}{//\ Used\ to\ be\ fTimeReceivedIsTxTime}}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ uint256\ serializedHash\ =\ TxStateSerializedBlockHash(m\_state);}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ serializedIndex\ =\ TxStateSerializedIndex(m\_state);}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ s\ <<\ TX\_WITH\_WITNESS(tx)\ <<\ serializedHash\ <<\ dummy\_vector1\ <<\ serializedIndex\ <<\ dummy\_vector2\ <<\ mapValueCopy\ <<\ vOrderForm\ <<\ dummy\_int\ <<\ nTimeReceived\ <<\ dummy\_bool\ <<\ dummy\_bool;}
+\DoxyCodeLine{00304\ \ \ \ \ \}}
+\DoxyCodeLine{00305\ }
+\DoxyCodeLine{00306\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00307\ \ \ \ \ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)}
+\DoxyCodeLine{00308\ \ \ \ \ \{}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ Init();}
+\DoxyCodeLine{00310\ }
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ std::vector<uint256>\ dummy\_vector1;\ }
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ std::vector<CMerkleTx>\ dummy\_vector2;\ }
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ dummy\_bool;\ }
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ uint32\_t\ dummy\_int;\ \textcolor{comment}{//\ Used\ to\ be\ fTimeReceivedIsTxTime}}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ uint256\ serialized\_block\_hash;}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ serializedIndex;}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ s\ >>\ TX\_WITH\_WITNESS(tx)\ >>\ serialized\_block\_hash\ >>\ dummy\_vector1\ >>\ serializedIndex\ >>\ dummy\_vector2\ >>\ mapValue\ >>\ vOrderForm\ >>\ dummy\_int\ >>\ nTimeReceived\ >>\ dummy\_bool\ >>\ dummy\_bool;}
+\DoxyCodeLine{00318\ }
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ m\_state\ =\ TxStateInterpretSerialized(\{serialized\_block\_hash,\ serializedIndex\});}
+\DoxyCodeLine{00320\ }
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ it\_op\ =\ mapValue.find(\textcolor{stringliteral}{"{}n"{}});}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ nOrderPos\ =\ (it\_op\ !=\ mapValue.end())\ ?\ LocaleIndependentAtoi<int64\_t>(it\_op-\/>second)\ :\ -\/1;}
+\DoxyCodeLine{00323\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ it\_ts\ =\ mapValue.find(\textcolor{stringliteral}{"{}timesmart"{}});}
+\DoxyCodeLine{00324\ \ \ \ \ \ \ \ \ nTimeSmart\ =\ (it\_ts\ !=\ mapValue.end())\ ?\ \textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\textcolor{keyword}{>}(LocaleIndependentAtoi<int64\_t>(it\_ts-\/>second))\ :\ 0;}
+\DoxyCodeLine{00325\ }
+\DoxyCodeLine{00326\ \ \ \ \ \ \ \ \ mapValue.erase(\textcolor{stringliteral}{"{}fromaccount"{}});}
+\DoxyCodeLine{00327\ \ \ \ \ \ \ \ \ mapValue.erase(\textcolor{stringliteral}{"{}spent"{}});}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ mapValue.erase(\textcolor{stringliteral}{"{}n"{}});}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ mapValue.erase(\textcolor{stringliteral}{"{}timesmart"{}});}
+\DoxyCodeLine{00330\ \ \ \ \ \}}
+\DoxyCodeLine{00331\ }
+\DoxyCodeLine{00332\ \ \ \ \ \textcolor{keywordtype}{void}\ SetTx(CTransactionRef\ arg)}
+\DoxyCodeLine{00333\ \ \ \ \ \{}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ tx\ =\ std::move(arg);}
+\DoxyCodeLine{00335\ \ \ \ \ \}}
+\DoxyCodeLine{00336\ }
+\DoxyCodeLine{00338\ \ \ \ \ \textcolor{keywordtype}{void}\ MarkDirty()}
+\DoxyCodeLine{00339\ \ \ \ \ \{}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ m\_amounts[DEBIT].Reset();}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ m\_amounts[CREDIT].Reset();}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ fChangeCached\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ m\_is\_cache\_empty\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ m\_cached\_from\_me\ =\ std::nullopt;}
+\DoxyCodeLine{00345\ \ \ \ \ \}}
+\DoxyCodeLine{00346\ }
+\DoxyCodeLine{00348\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsEquivalentTo(\textcolor{keyword}{const}\ CWalletTx\&\ tx)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00349\ }
+\DoxyCodeLine{00350\ \ \ \ \ \textcolor{keywordtype}{bool}\ InMempool()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00351\ }
+\DoxyCodeLine{00352\ \ \ \ \ int64\_t\ GetTxTime()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00353\ }
+\DoxyCodeLine{00354\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>\ \textcolor{keyword}{const}\ T*\ state()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ std::get\_if<T>(\&m\_state);\ \}}
+\DoxyCodeLine{00355\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>\ T*\ state()\ \{\ \textcolor{keywordflow}{return}\ std::get\_if<T>(\&m\_state);\ \}}
+\DoxyCodeLine{00356\ }
+\DoxyCodeLine{00359\ \ \ \ \ \textcolor{keywordtype}{void}\ updateState(interfaces::Chain\&\ chain);}
+\DoxyCodeLine{00360\ }
+\DoxyCodeLine{00361\ \ \ \ \ \textcolor{keywordtype}{bool}\ isAbandoned()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ state<TxStateInactive>()\ \&\&\ state<TxStateInactive>()-\/>abandoned;\ \}}
+\DoxyCodeLine{00362\ \ \ \ \ \textcolor{keywordtype}{bool}\ isMempoolConflicted()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ !mempool\_conflicts.empty();\ \}}
+\DoxyCodeLine{00363\ \ \ \ \ \textcolor{keywordtype}{bool}\ isBlockConflicted()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ state<TxStateBlockConflicted>();\ \}}
+\DoxyCodeLine{00364\ \ \ \ \ \textcolor{keywordtype}{bool}\ isInactive()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ state<TxStateInactive>();\ \}}
+\DoxyCodeLine{00365\ \ \ \ \ \textcolor{keywordtype}{bool}\ isUnconfirmed()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ !isAbandoned()\ \&\&\ !isBlockConflicted()\ \&\&\ !isMempoolConflicted()\ \&\&\ !isConfirmed();\ \}}
+\DoxyCodeLine{00366\ \ \ \ \ \textcolor{keywordtype}{bool}\ isConfirmed()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ state<TxStateConfirmed>();\ \}}
+\DoxyCodeLine{00367\ \ \ \ \ \textcolor{keyword}{const}\ Txid\&\ GetHash()\ const\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ tx-\/>GetHash();\ \}}
+\DoxyCodeLine{00368\ \ \ \ \ \textcolor{keyword}{const}\ Wtxid\&\ GetWitnessHash()\ const\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ tx-\/>GetWitnessHash();\ \}}
+\DoxyCodeLine{00369\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsCoinBase()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ tx-\/>IsCoinBase();\ \}}
+\DoxyCodeLine{00370\ }
+\DoxyCodeLine{00371\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00372\ \ \ \ \ \textcolor{comment}{//\ Disable\ copying\ of\ CWalletTx\ objects\ to\ prevent\ bugs\ where\ instances\ get}}
+\DoxyCodeLine{00373\ \ \ \ \ \textcolor{comment}{//\ copied\ in\ and\ out\ of\ the\ mapWallet\ map,\ and\ fields\ are\ updated\ in\ the}}
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{comment}{//\ wrong\ copy.}}
+\DoxyCodeLine{00375\ \ \ \ \ CWalletTx(\textcolor{keyword}{const}\ CWalletTx\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00376\ \ \ \ \ CWalletTx\&\ operator=(\textcolor{keyword}{const}\ CWalletTx\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00377\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00378\ \ \ \ \ \textcolor{comment}{//\ Instead\ have\ an\ explicit\ copy\ function}}
+\DoxyCodeLine{00379\ \ \ \ \ \textcolor{keywordtype}{void}\ CopyFrom(\textcolor{keyword}{const}\ CWalletTx\&);}
+\DoxyCodeLine{00380\ \};}
+\DoxyCodeLine{00381\ }
+\DoxyCodeLine{00382\ \textcolor{keyword}{struct\ }WalletTxOrderComparator\ \{}
+\DoxyCodeLine{00383\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator()(\textcolor{keyword}{const}\ CWalletTx*\ a,\ \textcolor{keyword}{const}\ CWalletTx*\ b)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00384\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00385\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a-\/>nOrderPos\ <\ b-\/>nOrderPos;}
+\DoxyCodeLine{00386\ \ \ \ \ \}}
+\DoxyCodeLine{00387\ \};}
+\DoxyCodeLine{00388\ }
+\DoxyCodeLine{00389\ \textcolor{keyword}{class\ }WalletTXO}
+\DoxyCodeLine{00390\ \{}
+\DoxyCodeLine{00391\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00392\ \ \ \ \ \textcolor{keyword}{const}\ CWalletTx\&\ m\_wtx;}
+\DoxyCodeLine{00393\ \ \ \ \ \textcolor{keyword}{const}\ CTxOut\&\ m\_output;}
+\DoxyCodeLine{00394\ }
+\DoxyCodeLine{00395\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00396\ \ \ \ \ WalletTXO(\textcolor{keyword}{const}\ CWalletTx\&\ wtx,\ \textcolor{keyword}{const}\ CTxOut\&\ output)}
+\DoxyCodeLine{00397\ \ \ \ \ :\ m\_wtx(wtx),}
+\DoxyCodeLine{00398\ \ \ \ \ m\_output(output)}
+\DoxyCodeLine{00399\ \ \ \ \ \{}
+\DoxyCodeLine{00400\ \ \ \ \ \ \ \ \ Assume(std::ranges::find(wtx.tx-\/>vout,\ output)\ !=\ wtx.tx-\/>vout.end());}
+\DoxyCodeLine{00401\ \ \ \ \ \}}
+\DoxyCodeLine{00402\ }
+\DoxyCodeLine{00403\ \ \ \ \ \textcolor{keyword}{const}\ CWalletTx\&\ GetWalletTx()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_wtx;\ \}}
+\DoxyCodeLine{00404\ }
+\DoxyCodeLine{00405\ \ \ \ \ \textcolor{keyword}{const}\ CTxOut\&\ GetTxOut()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_output;\ \}}
+\DoxyCodeLine{00406\ \};}
+\DoxyCodeLine{00407\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{00408\ }
+\DoxyCodeLine{00409\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_WALLET\_TRANSACTION\_H}}
+
+\end{DoxyCode}

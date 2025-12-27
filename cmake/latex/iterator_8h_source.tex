@@ -1,0 +1,118 @@
+\doxysection{iterator.\+h}
+\label{iterator_8h_source}\index{src/leveldb/include/leveldb/iterator.h@{src/leveldb/include/leveldb/iterator.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ An\ iterator\ yields\ a\ sequence\ of\ key/value\ pairs\ from\ a\ source.}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//\ The\ following\ class\ defines\ the\ interface.\ \ Multiple\ implementations}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//\ are\ provided\ by\ this\ library.\ \ In\ particular,\ iterators\ are\ provided}}
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ to\ access\ the\ contents\ of\ a\ Table\ or\ a\ DB.}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//\ Multiple\ threads\ can\ invoke\ const\ methods\ on\ an\ Iterator\ without}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//\ external\ synchronization,\ but\ if\ any\ of\ the\ threads\ may\ call\ a}}
+\DoxyCodeLine{00012\ \textcolor{comment}{//\ non-\/const\ method,\ all\ threads\ accessing\ the\ same\ Iterator\ must\ use}}
+\DoxyCodeLine{00013\ \textcolor{comment}{//\ external\ synchronization.}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_ITERATOR\_H\_}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_ITERATOR\_H\_}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ "{}leveldb/slice.h"{}}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ "{}leveldb/status.h"{}}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ Iterator\ \{}
+\DoxyCodeLine{00025\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00026\ \ \ Iterator();}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \ \ Iterator(\textcolor{keyword}{const}\ Iterator\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00029\ \ \ Iterator\&\ operator=(\textcolor{keyword}{const}\ Iterator\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \ \ \textcolor{keyword}{virtual}\ \string~Iterator();}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \ \ \textcolor{comment}{//\ An\ iterator\ is\ either\ positioned\ at\ a\ key/value\ pair,\ or}}
+\DoxyCodeLine{00034\ \ \ \textcolor{comment}{//\ not\ valid.\ \ This\ method\ returns\ true\ iff\ the\ iterator\ is\ valid.}}
+\DoxyCodeLine{00035\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ Valid()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \textcolor{comment}{//\ Position\ at\ the\ first\ key\ in\ the\ source.\ \ The\ iterator\ is\ Valid()}}
+\DoxyCodeLine{00038\ \ \ \textcolor{comment}{//\ after\ this\ call\ iff\ the\ source\ is\ not\ empty.}}
+\DoxyCodeLine{00039\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ SeekToFirst()\ =\ 0;}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \textcolor{comment}{//\ Position\ at\ the\ last\ key\ in\ the\ source.\ \ The\ iterator\ is}}
+\DoxyCodeLine{00042\ \ \ \textcolor{comment}{//\ Valid()\ after\ this\ call\ iff\ the\ source\ is\ not\ empty.}}
+\DoxyCodeLine{00043\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ SeekToLast()\ =\ 0;}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \ \ \textcolor{comment}{//\ Position\ at\ the\ first\ key\ in\ the\ source\ that\ is\ at\ or\ past\ target.}}
+\DoxyCodeLine{00046\ \ \ \textcolor{comment}{//\ The\ iterator\ is\ Valid()\ after\ this\ call\ iff\ the\ source\ contains}}
+\DoxyCodeLine{00047\ \ \ \textcolor{comment}{//\ an\ entry\ that\ comes\ at\ or\ past\ target.}}
+\DoxyCodeLine{00048\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Seek(\textcolor{keyword}{const}\ Slice\&\ target)\ =\ 0;}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \ \ \textcolor{comment}{//\ Moves\ to\ the\ next\ entry\ in\ the\ source.\ \ After\ this\ call,\ Valid()\ is}}
+\DoxyCodeLine{00051\ \ \ \textcolor{comment}{//\ true\ iff\ the\ iterator\ was\ not\ positioned\ at\ the\ last\ entry\ in\ the\ source.}}
+\DoxyCodeLine{00052\ \ \ \textcolor{comment}{//\ REQUIRES:\ Valid()}}
+\DoxyCodeLine{00053\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Next()\ =\ 0;}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \textcolor{comment}{//\ Moves\ to\ the\ previous\ entry\ in\ the\ source.\ \ After\ this\ call,\ Valid()\ is}}
+\DoxyCodeLine{00056\ \ \ \textcolor{comment}{//\ true\ iff\ the\ iterator\ was\ not\ positioned\ at\ the\ first\ entry\ in\ source.}}
+\DoxyCodeLine{00057\ \ \ \textcolor{comment}{//\ REQUIRES:\ Valid()}}
+\DoxyCodeLine{00058\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Prev()\ =\ 0;}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \textcolor{comment}{//\ Return\ the\ key\ for\ the\ current\ entry.\ \ The\ underlying\ storage\ for}}
+\DoxyCodeLine{00061\ \ \ \textcolor{comment}{//\ the\ returned\ slice\ is\ valid\ only\ until\ the\ next\ modification\ of}}
+\DoxyCodeLine{00062\ \ \ \textcolor{comment}{//\ the\ iterator.}}
+\DoxyCodeLine{00063\ \ \ \textcolor{comment}{//\ REQUIRES:\ Valid()}}
+\DoxyCodeLine{00064\ \ \ \textcolor{keyword}{virtual}\ Slice\ key()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \ \ \textcolor{comment}{//\ Return\ the\ value\ for\ the\ current\ entry.\ \ The\ underlying\ storage\ for}}
+\DoxyCodeLine{00067\ \ \ \textcolor{comment}{//\ the\ returned\ slice\ is\ valid\ only\ until\ the\ next\ modification\ of}}
+\DoxyCodeLine{00068\ \ \ \textcolor{comment}{//\ the\ iterator.}}
+\DoxyCodeLine{00069\ \ \ \textcolor{comment}{//\ REQUIRES:\ Valid()}}
+\DoxyCodeLine{00070\ \ \ \textcolor{keyword}{virtual}\ Slice\ value()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \textcolor{comment}{//\ If\ an\ error\ has\ occurred,\ return\ it.\ \ Else\ return\ an\ ok\ status.}}
+\DoxyCodeLine{00073\ \ \ \textcolor{keyword}{virtual}\ Status\ status()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ \textcolor{comment}{//\ Clients\ are\ allowed\ to\ register\ function/arg1/arg2\ triples\ that}}
+\DoxyCodeLine{00076\ \ \ \textcolor{comment}{//\ will\ be\ invoked\ when\ this\ iterator\ is\ destroyed.}}
+\DoxyCodeLine{00077\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00078\ \ \ \textcolor{comment}{//\ Note\ that\ unlike\ all\ of\ the\ preceding\ methods,\ this\ method\ is}}
+\DoxyCodeLine{00079\ \ \ \textcolor{comment}{//\ not\ abstract\ and\ therefore\ clients\ should\ not\ override\ it.}}
+\DoxyCodeLine{00080\ \ \ \textcolor{keyword}{using\ }CleanupFunction\ =\ void\ (*)(\textcolor{keywordtype}{void}*\ arg1,\ \textcolor{keywordtype}{void}*\ arg2);}
+\DoxyCodeLine{00081\ \ \ \textcolor{keywordtype}{void}\ RegisterCleanup(CleanupFunction\ function,\ \textcolor{keywordtype}{void}*\ arg1,\ \textcolor{keywordtype}{void}*\ arg2);}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00084\ \ \ \textcolor{comment}{//\ Cleanup\ functions\ are\ stored\ in\ a\ single-\/linked\ list.}}
+\DoxyCodeLine{00085\ \ \ \textcolor{comment}{//\ The\ list's\ head\ node\ is\ inlined\ in\ the\ iterator.}}
+\DoxyCodeLine{00086\ \ \ \textcolor{keyword}{struct\ }CleanupNode\ \{}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{comment}{//\ True\ if\ the\ node\ is\ not\ used.\ Only\ head\ nodes\ might\ be\ unused.}}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsEmpty()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ function\ ==\ \textcolor{keyword}{nullptr};\ \}}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{comment}{//\ Invokes\ the\ cleanup\ function.}}
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{keywordtype}{void}\ Run()\ \{}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ assert(function\ !=\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ (*function)(arg1,\ arg2);}
+\DoxyCodeLine{00093\ \ \ \ \ \}}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{comment}{//\ The\ head\ node\ is\ used\ if\ the\ function\ pointer\ is\ not\ null.}}
+\DoxyCodeLine{00096\ \ \ \ \ CleanupFunction\ function;}
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keywordtype}{void}*\ arg1;}
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keywordtype}{void}*\ arg2;}
+\DoxyCodeLine{00099\ \ \ \ \ CleanupNode*\ next;}
+\DoxyCodeLine{00100\ \ \ \};}
+\DoxyCodeLine{00101\ \ \ CleanupNode\ cleanup\_head\_;}
+\DoxyCodeLine{00102\ \};}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \textcolor{comment}{//\ Return\ an\ empty\ iterator\ (yields\ nothing).}}
+\DoxyCodeLine{00105\ LEVELDB\_EXPORT\ Iterator*\ NewEmptyIterator();}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \textcolor{comment}{//\ Return\ an\ empty\ iterator\ with\ the\ specified\ status.}}
+\DoxyCodeLine{00108\ LEVELDB\_EXPORT\ Iterator*\ NewErrorIterator(\textcolor{keyword}{const}\ Status\&\ status);}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_INCLUDE\_ITERATOR\_H\_}}
+
+\end{DoxyCode}

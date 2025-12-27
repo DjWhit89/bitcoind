@@ -1,0 +1,112 @@
+\doxysection{version\+\_\+edit.\+h}
+\label{version__edit_8h_source}\index{src/leveldb/db/version\_edit.h@{src/leveldb/db/version\_edit.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_DB\_VERSION\_EDIT\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_DB\_VERSION\_EDIT\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}db/dbformat.h"{}}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{keyword}{class\ }VersionSet;}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{keyword}{struct\ }FileMetaData\ \{}
+\DoxyCodeLine{00019\ \ \ FileMetaData()\ :\ refs(0),\ allowed\_seeks(1\ <<\ 30),\ file\_size(0)\ \{\}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \ \ \textcolor{keywordtype}{int}\ refs;}
+\DoxyCodeLine{00022\ \ \ \textcolor{keywordtype}{int}\ allowed\_seeks;\ \ \textcolor{comment}{//\ Seeks\ allowed\ until\ compaction}}
+\DoxyCodeLine{00023\ \ \ uint64\_t\ number;}
+\DoxyCodeLine{00024\ \ \ uint64\_t\ file\_size;\ \ \ \ \textcolor{comment}{//\ File\ size\ in\ bytes}}
+\DoxyCodeLine{00025\ \ \ InternalKey\ smallest;\ \ \textcolor{comment}{//\ Smallest\ internal\ key\ served\ by\ table}}
+\DoxyCodeLine{00026\ \ \ InternalKey\ largest;\ \ \ \textcolor{comment}{//\ Largest\ internal\ key\ served\ by\ table}}
+\DoxyCodeLine{00027\ \};}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{keyword}{class\ }VersionEdit\ \{}
+\DoxyCodeLine{00030\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00031\ \ \ VersionEdit()\ \{\ Clear();\ \}}
+\DoxyCodeLine{00032\ \ \ \string~VersionEdit()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \ \ \textcolor{keywordtype}{void}\ Clear();}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \textcolor{keywordtype}{void}\ SetComparatorName(\textcolor{keyword}{const}\ Slice\&\ name)\ \{}
+\DoxyCodeLine{00037\ \ \ \ \ has\_comparator\_\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00038\ \ \ \ \ comparator\_\ =\ name.ToString();}
+\DoxyCodeLine{00039\ \ \ \}}
+\DoxyCodeLine{00040\ \ \ \textcolor{keywordtype}{void}\ SetLogNumber(uint64\_t\ num)\ \{}
+\DoxyCodeLine{00041\ \ \ \ \ has\_log\_number\_\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00042\ \ \ \ \ log\_number\_\ =\ num;}
+\DoxyCodeLine{00043\ \ \ \}}
+\DoxyCodeLine{00044\ \ \ \textcolor{keywordtype}{void}\ SetPrevLogNumber(uint64\_t\ num)\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ has\_prev\_log\_number\_\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00046\ \ \ \ \ prev\_log\_number\_\ =\ num;}
+\DoxyCodeLine{00047\ \ \ \}}
+\DoxyCodeLine{00048\ \ \ \textcolor{keywordtype}{void}\ SetNextFile(uint64\_t\ num)\ \{}
+\DoxyCodeLine{00049\ \ \ \ \ has\_next\_file\_number\_\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00050\ \ \ \ \ next\_file\_number\_\ =\ num;}
+\DoxyCodeLine{00051\ \ \ \}}
+\DoxyCodeLine{00052\ \ \ \textcolor{keywordtype}{void}\ SetLastSequence(SequenceNumber\ seq)\ \{}
+\DoxyCodeLine{00053\ \ \ \ \ has\_last\_sequence\_\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00054\ \ \ \ \ last\_sequence\_\ =\ seq;}
+\DoxyCodeLine{00055\ \ \ \}}
+\DoxyCodeLine{00056\ \ \ \textcolor{keywordtype}{void}\ SetCompactPointer(\textcolor{keywordtype}{int}\ level,\ \textcolor{keyword}{const}\ InternalKey\&\ key)\ \{}
+\DoxyCodeLine{00057\ \ \ \ \ compact\_pointers\_.push\_back(std::make\_pair(level,\ key));}
+\DoxyCodeLine{00058\ \ \ \}}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \textcolor{comment}{//\ Add\ the\ specified\ file\ at\ the\ specified\ number.}}
+\DoxyCodeLine{00061\ \ \ \textcolor{comment}{//\ REQUIRES:\ This\ version\ has\ not\ been\ saved\ (see\ VersionSet::SaveTo)}}
+\DoxyCodeLine{00062\ \ \ \textcolor{comment}{//\ REQUIRES:\ "{}smallest"{}\ and\ "{}largest"{}\ are\ smallest\ and\ largest\ keys\ in\ file}}
+\DoxyCodeLine{00063\ \ \ \textcolor{keywordtype}{void}\ AddFile(\textcolor{keywordtype}{int}\ level,\ uint64\_t\ file,\ uint64\_t\ file\_size,}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ InternalKey\&\ smallest,\ \textcolor{keyword}{const}\ InternalKey\&\ largest)\ \{}
+\DoxyCodeLine{00065\ \ \ \ \ FileMetaData\ f;}
+\DoxyCodeLine{00066\ \ \ \ \ f.number\ =\ file;}
+\DoxyCodeLine{00067\ \ \ \ \ f.file\_size\ =\ file\_size;}
+\DoxyCodeLine{00068\ \ \ \ \ f.smallest\ =\ smallest;}
+\DoxyCodeLine{00069\ \ \ \ \ f.largest\ =\ largest;}
+\DoxyCodeLine{00070\ \ \ \ \ new\_files\_.push\_back(std::make\_pair(level,\ f));}
+\DoxyCodeLine{00071\ \ \ \}}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \ \ \textcolor{comment}{//\ Delete\ the\ specified\ "{}file"{}\ from\ the\ specified\ "{}level"{}.}}
+\DoxyCodeLine{00074\ \ \ \textcolor{keywordtype}{void}\ DeleteFile(\textcolor{keywordtype}{int}\ level,\ uint64\_t\ file)\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ deleted\_files\_.insert(std::make\_pair(level,\ file));}
+\DoxyCodeLine{00076\ \ \ \}}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ \textcolor{keywordtype}{void}\ EncodeTo(std::string*\ dst)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00079\ \ \ Status\ DecodeFrom(\textcolor{keyword}{const}\ Slice\&\ src);}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ std::string\ DebugString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00084\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }VersionSet;}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \ \ \textcolor{keyword}{typedef}\ std::set<std::pair<int,\ uint64\_t>>\ DeletedFileSet;}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ std::string\ comparator\_;}
+\DoxyCodeLine{00089\ \ \ uint64\_t\ log\_number\_;}
+\DoxyCodeLine{00090\ \ \ uint64\_t\ prev\_log\_number\_;}
+\DoxyCodeLine{00091\ \ \ uint64\_t\ next\_file\_number\_;}
+\DoxyCodeLine{00092\ \ \ SequenceNumber\ last\_sequence\_;}
+\DoxyCodeLine{00093\ \ \ \textcolor{keywordtype}{bool}\ has\_comparator\_;}
+\DoxyCodeLine{00094\ \ \ \textcolor{keywordtype}{bool}\ has\_log\_number\_;}
+\DoxyCodeLine{00095\ \ \ \textcolor{keywordtype}{bool}\ has\_prev\_log\_number\_;}
+\DoxyCodeLine{00096\ \ \ \textcolor{keywordtype}{bool}\ has\_next\_file\_number\_;}
+\DoxyCodeLine{00097\ \ \ \textcolor{keywordtype}{bool}\ has\_last\_sequence\_;}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ std::vector<std::pair<int,\ InternalKey>>\ compact\_pointers\_;}
+\DoxyCodeLine{00100\ \ \ DeletedFileSet\ deleted\_files\_;}
+\DoxyCodeLine{00101\ \ \ std::vector<std::pair<int,\ FileMetaData>>\ new\_files\_;}
+\DoxyCodeLine{00102\ \};}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_DB\_VERSION\_EDIT\_H\_}}
+
+\end{DoxyCode}

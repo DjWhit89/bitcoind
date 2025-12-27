@@ -1,0 +1,248 @@
+.TH "src/wallet/wallet.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/wallet/wallet.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <addresstype\&.h>\fP
+.br
+\fR#include <consensus/amount\&.h>\fP
+.br
+\fR#include <interfaces/chain\&.h>\fP
+.br
+\fR#include <interfaces/handler\&.h>\fP
+.br
+\fR#include <kernel/cs_main\&.h>\fP
+.br
+\fR#include <logging\&.h>\fP
+.br
+\fR#include <node/types\&.h>\fP
+.br
+\fR#include <outputtype\&.h>\fP
+.br
+\fR#include <policy/feerate\&.h>\fP
+.br
+\fR#include <primitives/transaction\&.h>\fP
+.br
+\fR#include <primitives/transaction_identifier\&.h>\fP
+.br
+\fR#include <script/interpreter\&.h>\fP
+.br
+\fR#include <script/script\&.h>\fP
+.br
+\fR#include <support/allocators/secure\&.h>\fP
+.br
+\fR#include <sync\&.h>\fP
+.br
+\fR#include <tinyformat\&.h>\fP
+.br
+\fR#include <uint256\&.h>\fP
+.br
+\fR#include <util/fs\&.h>\fP
+.br
+\fR#include <util/hasher\&.h>\fP
+.br
+\fR#include <util/result\&.h>\fP
+.br
+\fR#include <util/string\&.h>\fP
+.br
+\fR#include <util/time\&.h>\fP
+.br
+\fR#include <util/ui_change_type\&.h>\fP
+.br
+\fR#include <wallet/crypter\&.h>\fP
+.br
+\fR#include <wallet/db\&.h>\fP
+.br
+\fR#include <wallet/scriptpubkeyman\&.h>\fP
+.br
+\fR#include <wallet/transaction\&.h>\fP
+.br
+\fR#include <wallet/types\&.h>\fP
+.br
+\fR#include <wallet/walletutil\&.h>\fP
+.br
+\fR#include <atomic>\fP
+.br
+\fR#include <cassert>\fP
+.br
+\fR#include <cstddef>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include <functional>\fP
+.br
+\fR#include <limits>\fP
+.br
+\fR#include <map>\fP
+.br
+\fR#include <memory>\fP
+.br
+\fR#include <optional>\fP
+.br
+\fR#include <set>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <unordered_map>\fP
+.br
+\fR#include <utility>\fP
+.br
+\fR#include <vector>\fP
+.br
+\fR#include <boost/signals2/signal\&.hpp>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBReserveDestination\fP"
+.br
+.ti -1c
+.RI "struct \fBCAddressBookData\fP"
+.br
+.ti -1c
+.RI "struct \fBCRecipient\fP"
+.br
+.ti -1c
+.RI "class \fBCWallet\fP"
+.br
+.ti -1c
+.RI "struct \fBCWallet::ScanResult\fP"
+.br
+.ti -1c
+.RI "struct \fBCWallet::AddrBookFilter\fP"
+.br
+.ti -1c
+.RI "class \fBWalletRescanReserver\fP"
+.br
+.ti -1c
+.RI "struct \fBMigrationResult\fP"
+.br
+.in -1c
+.SS "Namespaces"
+
+.in +1c
+.ti -1c
+.RI "namespace \fBcommon\fP"
+.br
+.ti -1c
+.RI "namespace \fBinterfaces\fP"
+.br
+.ti -1c
+.RI "namespace \fBwallet\fP"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "using \fBLoadWalletFn\fP = std::function<void(std::unique_ptr<\fBinterfaces::Wallet\fP> \fBwallet\fP)>"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "void \fBWaitForDeleteWallet\fP (std::shared_ptr< \fBCWallet\fP > &&\fBwallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBAddWallet\fP (\fBWalletContext\fP &context, const std::shared_ptr< \fBCWallet\fP > &\fBwallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBRemoveWallet\fP (\fBWalletContext\fP &context, const std::shared_ptr< \fBCWallet\fP > &\fBwallet\fP, std::optional< bool > load_on_start, std::vector< \fBbilingual_str\fP > &warnings)"
+.br
+.ti -1c
+.RI "bool \fBRemoveWallet\fP (\fBWalletContext\fP &context, const std::shared_ptr< \fBCWallet\fP > &\fBwallet\fP, std::optional< bool > load_on_start)"
+.br
+.ti -1c
+.RI "std::vector< std::shared_ptr< \fBCWallet\fP > > \fBGetWallets\fP (\fBWalletContext\fP &context)"
+.br
+.ti -1c
+.RI "std::shared_ptr< \fBCWallet\fP > \fBGetDefaultWallet\fP (\fBWalletContext\fP &context, size_t &count)"
+.br
+.ti -1c
+.RI "std::shared_ptr< \fBCWallet\fP > \fBGetWallet\fP (\fBWalletContext\fP &context, const std::string &\fBname\fP)"
+.br
+.ti -1c
+.RI "std::shared_ptr< \fBCWallet\fP > \fBLoadWallet\fP (\fBWalletContext\fP &context, const std::string &\fBname\fP, std::optional< bool > load_on_start, const \fBDatabaseOptions\fP &options, \fBDatabaseStatus\fP &status, \fBbilingual_str\fP &error, std::vector< \fBbilingual_str\fP > &warnings)"
+.br
+.ti -1c
+.RI "std::shared_ptr< \fBCWallet\fP > \fBCreateWallet\fP (\fBWalletContext\fP &context, const std::string &\fBname\fP, std::optional< bool > load_on_start, \fBDatabaseOptions\fP &options, \fBDatabaseStatus\fP &status, \fBbilingual_str\fP &error, std::vector< \fBbilingual_str\fP > &warnings)"
+.br
+.ti -1c
+.RI "std::shared_ptr< \fBCWallet\fP > \fBRestoreWallet\fP (\fBWalletContext\fP &context, const \fBfs::path\fP &backup_file, const std::string &wallet_name, std::optional< bool > load_on_start, \fBDatabaseStatus\fP &status, \fBbilingual_str\fP &error, std::vector< \fBbilingual_str\fP > &warnings, bool load_after_restore)"
+.br
+.ti -1c
+.RI "std::unique_ptr< \fBinterfaces::Handler\fP > \fBHandleLoadWallet\fP (\fBWalletContext\fP &context, \fBLoadWalletFn\fP load_wallet)"
+.br
+.ti -1c
+.RI "void \fBNotifyWalletLoaded\fP (\fBWalletContext\fP &context, const std::shared_ptr< \fBCWallet\fP > &\fBwallet\fP)"
+.br
+.ti -1c
+.RI "std::unique_ptr< \fBWalletDatabase\fP > \fBMakeWalletDatabase\fP (const std::string &\fBname\fP, const \fBDatabaseOptions\fP &options, \fBDatabaseStatus\fP &status, \fBbilingual_str\fP &error_string)"
+.br
+.ti -1c
+.RI "std::string \fBPurposeToString\fP (\fBAddressPurpose\fP p)"
+.br
+.ti -1c
+.RI "std::optional< \fBAddressPurpose\fP > \fBPurposeFromString\fP (std::string_view s)"
+.br
+.ti -1c
+.RI "void \fBMaybeResendWalletTxs\fP (\fBWalletContext\fP &context)"
+.br
+.ti -1c
+.RI "bool \fBAddWalletSetting\fP (\fBinterfaces::Chain\fP &chain, const std::string &wallet_name)"
+.br
+.RI "Add wallet name to persistent configuration so it will be loaded on startup\&. "
+.ti -1c
+.RI "bool \fBRemoveWalletSetting\fP (\fBinterfaces::Chain\fP &chain, const std::string &wallet_name)"
+.br
+.RI "Remove wallet name from persistent configuration so it will not be loaded on startup\&. "
+.ti -1c
+.RI "\fButil::Result\fP< \fBMigrationResult\fP > \fBMigrateLegacyToDescriptor\fP (const std::string &wallet_name, const \fBSecureString\fP &passphrase, \fBWalletContext\fP &context)"
+.br
+.RI "Do all steps to migrate a legacy wallet to a descriptor wallet\&. "
+.ti -1c
+.RI "\fButil::Result\fP< \fBMigrationResult\fP > \fBMigrateLegacyToDescriptor\fP (std::shared_ptr< \fBCWallet\fP > local_wallet, const \fBSecureString\fP &passphrase, \fBWalletContext\fP &context)"
+.br
+.RI "Requirement: The wallet provided to this function must be isolated, with no attachment to the node's context\&. "
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "constexpr \fBCAmount\fP \fBDEFAULT_PAY_TX_FEE\fP = 0"
+.br
+.RI "-paytxfee default "
+.ti -1c
+.RI "constexpr \fBCAmount\fP \fBHIGH_APS_FEE\fP {COIN / 10000}"
+.br
+.RI "discourage APS fee higher than this amount "
+.ti -1c
+.RI "constexpr \fBCAmount\fP \fBDEFAULT_TRANSACTION_MAXFEE\fP {COIN / 10}"
+.br
+.RI "-maxtxfee default "
+.ti -1c
+.RI "constexpr \fBCAmount\fP \fBHIGH_TX_FEE_PER_KB\fP {COIN / 100}"
+.br
+.RI "Discourage users to set fees higher than this amount (in satoshis) per kB\&. "
+.ti -1c
+.RI "constexpr \fBCAmount\fP \fBHIGH_MAX_TX_FEE\fP {100 * \fBHIGH_TX_FEE_PER_KB\fP}"
+.br
+.RI "-maxtxfee will warn if called with a higher fee than this amount (in satoshis) "
+.ti -1c
+.RI "constexpr \fBOutputType\fP \fBDEFAULT_ADDRESS_TYPE\fP {\fBOutputType::BECH32\fP}"
+.br
+.RI "Default for -addresstype\&. "
+.in -1c
+.SH "Typedef Documentation"
+.PP 
+.SS "using \fBLoadWalletFn\fP = std::function<void(std::unique_ptr<\fBinterfaces::Wallet\fP> \fBwallet\fP)>"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

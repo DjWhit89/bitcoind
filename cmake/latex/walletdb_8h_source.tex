@@ -1,0 +1,287 @@
+\doxysection{walletdb.\+h}
+\label{walletdb_8h_source}\index{src/wallet/walletdb.h@{src/wallet/walletdb.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_WALLET\_WALLETDB\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_WALLET\_WALLETDB\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <key.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <primitives/transaction\_identifier.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <script/sign.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <wallet/db.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <wallet/walletutil.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }CScript;}
+\DoxyCodeLine{00020\ \textcolor{keyword}{class\ }uint160;}
+\DoxyCodeLine{00021\ \textcolor{keyword}{class\ }uint256;}
+\DoxyCodeLine{00022\ \textcolor{keyword}{struct\ }CBlockLocator;}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }CMasterKey;}
+\DoxyCodeLine{00026\ \textcolor{keyword}{class\ }CWallet;}
+\DoxyCodeLine{00027\ \textcolor{keyword}{class\ }CWalletTx;}
+\DoxyCodeLine{00028\ \textcolor{keyword}{struct\ }WalletContext;}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{comment}{//\ Logs\ information\ about\ the\ database,\ including\ available\ engines,\ features,\ and\ other\ capabilities}}
+\DoxyCodeLine{00031\ \textcolor{keywordtype}{void}\ LogDBInfo();}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00043\ \textcolor{keyword}{enum\ class}\ DBErrors\ :\ \textcolor{keywordtype}{int}}
+\DoxyCodeLine{00044\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ LOAD\_OK\ =\ 0,}
+\DoxyCodeLine{00046\ \ \ \ \ NEED\_RESCAN\ =\ 1,}
+\DoxyCodeLine{00047\ \ \ \ \ NEED\_REWRITE\ =\ 2,}
+\DoxyCodeLine{00048\ \ \ \ \ EXTERNAL\_SIGNER\_SUPPORT\_REQUIRED\ =\ 3,}
+\DoxyCodeLine{00049\ \ \ \ \ NONCRITICAL\_ERROR\ =\ 4,}
+\DoxyCodeLine{00050\ \ \ \ \ TOO\_NEW\ =\ 5,}
+\DoxyCodeLine{00051\ \ \ \ \ UNKNOWN\_DESCRIPTOR\ =\ 6,}
+\DoxyCodeLine{00052\ \ \ \ \ LOAD\_FAIL\ =\ 7,}
+\DoxyCodeLine{00053\ \ \ \ \ UNEXPECTED\_LEGACY\_ENTRY\ =\ 8,}
+\DoxyCodeLine{00054\ \ \ \ \ LEGACY\_WALLET\ =\ 9,}
+\DoxyCodeLine{00055\ \ \ \ \ CORRUPT\ =\ 10,}
+\DoxyCodeLine{00056\ \};}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \textcolor{keyword}{namespace\ }DBKeys\ \{}
+\DoxyCodeLine{00059\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ ACENTRY;}
+\DoxyCodeLine{00060\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ ACTIVEEXTERNALSPK;}
+\DoxyCodeLine{00061\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ ACTIVEINTERNALSPK;}
+\DoxyCodeLine{00062\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ BESTBLOCK;}
+\DoxyCodeLine{00063\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ BESTBLOCK\_NOMERKLE;}
+\DoxyCodeLine{00064\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ CRYPTED\_KEY;}
+\DoxyCodeLine{00065\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ CSCRIPT;}
+\DoxyCodeLine{00066\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ DEFAULTKEY;}
+\DoxyCodeLine{00067\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ DESTDATA;}
+\DoxyCodeLine{00068\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ FLAGS;}
+\DoxyCodeLine{00069\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ HDCHAIN;}
+\DoxyCodeLine{00070\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ KEY;}
+\DoxyCodeLine{00071\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ KEYMETA;}
+\DoxyCodeLine{00072\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ LOCKED\_UTXO;}
+\DoxyCodeLine{00073\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ MASTER\_KEY;}
+\DoxyCodeLine{00074\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ MINVERSION;}
+\DoxyCodeLine{00075\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ NAME;}
+\DoxyCodeLine{00076\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ OLD\_KEY;}
+\DoxyCodeLine{00077\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ ORDERPOSNEXT;}
+\DoxyCodeLine{00078\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ POOL;}
+\DoxyCodeLine{00079\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ PURPOSE;}
+\DoxyCodeLine{00080\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ SETTINGS;}
+\DoxyCodeLine{00081\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ TX;}
+\DoxyCodeLine{00082\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ VERSION;}
+\DoxyCodeLine{00083\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ WALLETDESCRIPTOR;}
+\DoxyCodeLine{00084\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ WALLETDESCRIPTORCKEY;}
+\DoxyCodeLine{00085\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ WALLETDESCRIPTORKEY;}
+\DoxyCodeLine{00086\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ WATCHMETA;}
+\DoxyCodeLine{00087\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ WATCHS;}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \textcolor{comment}{//\ Keys\ in\ this\ set\ pertain\ only\ to\ the\ legacy\ wallet\ (LegacyScriptPubKeyMan)\ and\ are\ removed\ during\ migration\ from\ legacy\ to\ descriptors.}}
+\DoxyCodeLine{00090\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::unordered\_set<std::string>\ LEGACY\_TYPES;}
+\DoxyCodeLine{00091\ \}\ \textcolor{comment}{//\ namespace\ DBKeys}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \textcolor{comment}{/*\ simple\ HD\ chain\ data\ model\ */}}
+\DoxyCodeLine{00094\ \textcolor{keyword}{class\ }CHDChain}
+\DoxyCodeLine{00095\ \{}
+\DoxyCodeLine{00096\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00097\ \ \ \ \ uint32\_t\ nExternalChainCounter;}
+\DoxyCodeLine{00098\ \ \ \ \ uint32\_t\ nInternalChainCounter;}
+\DoxyCodeLine{00099\ \ \ \ \ CKeyID\ seed\_id;\ }
+\DoxyCodeLine{00100\ \ \ \ \ int64\_t\ m\_next\_external\_index\{0\};\ \textcolor{comment}{//\ Next\ index\ in\ the\ keypool\ to\ be\ used.\ Memory\ only.}}
+\DoxyCodeLine{00101\ \ \ \ \ int64\_t\ m\_next\_internal\_index\{0\};\ \textcolor{comment}{//\ Next\ index\ in\ the\ keypool\ to\ be\ used.\ Memory\ only.}}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ VERSION\_HD\_BASE\ \ \ \ \ \ \ \ =\ 1;}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ VERSION\_HD\_CHAIN\_SPLIT\ =\ 2;}
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ CURRENT\_VERSION\ \ \ \ \ \ \ \ =\ VERSION\_HD\_CHAIN\_SPLIT;}
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{keywordtype}{int}\ nVersion;}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ \ \ CHDChain()\ \{\ SetNull();\ \}}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \ \ \ \ SERIALIZE\_METHODS(CHDChain,\ obj)}
+\DoxyCodeLine{00111\ \ \ \ \ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ READWRITE(obj.nVersion,\ obj.nExternalChainCounter,\ obj.seed\_id);}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (obj.nVersion\ >=\ VERSION\_HD\_CHAIN\_SPLIT)\ \{}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \ \ \ \ READWRITE(obj.nInternalChainCounter);}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00116\ \ \ \ \ \}}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keywordtype}{void}\ SetNull()}
+\DoxyCodeLine{00119\ \ \ \ \ \{}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ nVersion\ =\ CHDChain::CURRENT\_VERSION;}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ nExternalChainCounter\ =\ 0;}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ nInternalChainCounter\ =\ 0;}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ seed\_id.SetNull();}
+\DoxyCodeLine{00124\ \ \ \ \ \}}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ CHDChain\&\ chain)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00127\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ seed\_id\ ==\ chain.seed\_id;}
+\DoxyCodeLine{00129\ \ \ \ \ \}}
+\DoxyCodeLine{00130\ \};}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \textcolor{keyword}{class\ }CKeyMetadata}
+\DoxyCodeLine{00133\ \{}
+\DoxyCodeLine{00134\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ VERSION\_BASIC=1;}
+\DoxyCodeLine{00136\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ VERSION\_WITH\_HDDATA=10;}
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ VERSION\_WITH\_KEY\_ORIGIN\ =\ 12;}
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ CURRENT\_VERSION=VERSION\_WITH\_KEY\_ORIGIN;}
+\DoxyCodeLine{00139\ \ \ \ \ \textcolor{keywordtype}{int}\ nVersion;}
+\DoxyCodeLine{00140\ \ \ \ \ int64\_t\ nCreateTime;\ \textcolor{comment}{//\ 0\ means\ unknown}}
+\DoxyCodeLine{00141\ \ \ \ \ std::string\ hdKeypath;\ \textcolor{comment}{//optional\ HD/bip32\ keypath.\ Still\ used\ to\ determine\ whether\ a\ key\ is\ a\ seed.\ Also\ kept\ for\ backwards\ compatibility}}
+\DoxyCodeLine{00142\ \ \ \ \ CKeyID\ hd\_seed\_id;\ \textcolor{comment}{//id\ of\ the\ HD\ seed\ used\ to\ derive\ this\ key}}
+\DoxyCodeLine{00143\ \ \ \ \ KeyOriginInfo\ key\_origin;\ \textcolor{comment}{//\ Key\ origin\ info\ with\ path\ and\ fingerprint}}
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keywordtype}{bool}\ has\_key\_origin\ =\ \textcolor{keyword}{false};\ }
+\DoxyCodeLine{00145\ }
+\DoxyCodeLine{00146\ \ \ \ \ CKeyMetadata()}
+\DoxyCodeLine{00147\ \ \ \ \ \{}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ SetNull();}
+\DoxyCodeLine{00149\ \ \ \ \ \}}
+\DoxyCodeLine{00150\ \ \ \ \ \textcolor{keyword}{explicit}\ CKeyMetadata(int64\_t\ nCreateTime\_)}
+\DoxyCodeLine{00151\ \ \ \ \ \{}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ SetNull();}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ nCreateTime\ =\ nCreateTime\_;}
+\DoxyCodeLine{00154\ \ \ \ \ \}}
+\DoxyCodeLine{00155\ }
+\DoxyCodeLine{00156\ \ \ \ \ SERIALIZE\_METHODS(CKeyMetadata,\ obj)}
+\DoxyCodeLine{00157\ \ \ \ \ \{}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ READWRITE(obj.nVersion,\ obj.nCreateTime);}
+\DoxyCodeLine{00159\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (obj.nVersion\ >=\ VERSION\_WITH\_HDDATA)\ \{}
+\DoxyCodeLine{00160\ \ \ \ \ \ \ \ \ \ \ \ \ READWRITE(obj.hdKeypath,\ obj.hd\_seed\_id);}
+\DoxyCodeLine{00161\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (obj.nVersion\ >=\ VERSION\_WITH\_KEY\_ORIGIN)}
+\DoxyCodeLine{00163\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00164\ \ \ \ \ \ \ \ \ \ \ \ \ READWRITE(obj.key\_origin);}
+\DoxyCodeLine{00165\ \ \ \ \ \ \ \ \ \ \ \ \ READWRITE(obj.has\_key\_origin);}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00167\ \ \ \ \ \}}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{keywordtype}{void}\ SetNull()}
+\DoxyCodeLine{00170\ \ \ \ \ \{}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ nVersion\ =\ CKeyMetadata::CURRENT\_VERSION;}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ nCreateTime\ =\ 0;}
+\DoxyCodeLine{00173\ \ \ \ \ \ \ \ \ hdKeypath.clear();}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ hd\_seed\_id.SetNull();}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ key\_origin.clear();}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ has\_key\_origin\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00177\ \ \ \ \ \}}
+\DoxyCodeLine{00178\ \};}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00180\ \textcolor{keyword}{struct\ }DbTxnListener}
+\DoxyCodeLine{00181\ \{}
+\DoxyCodeLine{00182\ \ \ \ \ std::function<void()>\ on\_commit,\ on\_abort;}
+\DoxyCodeLine{00183\ \};}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00192\ \textcolor{keyword}{class\ }WalletBatch}
+\DoxyCodeLine{00193\ \{}
+\DoxyCodeLine{00194\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00195\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteIC(\textcolor{keyword}{const}\ K\&\ key,\ \textcolor{keyword}{const}\ T\&\ value,\ \textcolor{keywordtype}{bool}\ fOverwrite\ =\ \textcolor{keyword}{true})}
+\DoxyCodeLine{00197\ \ \ \ \ \{}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_batch-\/>Write(key,\ value,\ fOverwrite))\ \{}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00202\ \ \ \ \ \}}
+\DoxyCodeLine{00203\ }
+\DoxyCodeLine{00204\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K>}
+\DoxyCodeLine{00205\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseIC(\textcolor{keyword}{const}\ K\&\ key)}
+\DoxyCodeLine{00206\ \ \ \ \ \{}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_batch-\/>Erase(key))\ \{}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00211\ \ \ \ \ \}}
+\DoxyCodeLine{00212\ }
+\DoxyCodeLine{00213\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00214\ \ \ \ \ \textcolor{keyword}{explicit}\ WalletBatch(WalletDatabase\ \&database)\ :}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ m\_batch(database.MakeBatch())}
+\DoxyCodeLine{00216\ \ \ \ \ \{}
+\DoxyCodeLine{00217\ \ \ \ \ \}}
+\DoxyCodeLine{00218\ \ \ \ \ WalletBatch(\textcolor{keyword}{const}\ WalletBatch\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00219\ \ \ \ \ WalletBatch\&\ operator=(\textcolor{keyword}{const}\ WalletBatch\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00220\ }
+\DoxyCodeLine{00221\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteName(\textcolor{keyword}{const}\ std::string\&\ strAddress,\ \textcolor{keyword}{const}\ std::string\&\ strName);}
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseName(\textcolor{keyword}{const}\ std::string\&\ strAddress);}
+\DoxyCodeLine{00223\ }
+\DoxyCodeLine{00224\ \ \ \ \ \textcolor{keywordtype}{bool}\ WritePurpose(\textcolor{keyword}{const}\ std::string\&\ strAddress,\ \textcolor{keyword}{const}\ std::string\&\ purpose);}
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keywordtype}{bool}\ ErasePurpose(\textcolor{keyword}{const}\ std::string\&\ strAddress);}
+\DoxyCodeLine{00226\ }
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteTx(\textcolor{keyword}{const}\ CWalletTx\&\ wtx);}
+\DoxyCodeLine{00228\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseTx(Txid\ hash);}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00230\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteKeyMetadata(\textcolor{keyword}{const}\ CKeyMetadata\&\ meta,\ \textcolor{keyword}{const}\ CPubKey\&\ pubkey,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ overwrite);}
+\DoxyCodeLine{00231\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteKey(\textcolor{keyword}{const}\ CPubKey\&\ vchPubKey,\ \textcolor{keyword}{const}\ CPrivKey\&\ vchPrivKey,\ \textcolor{keyword}{const}\ CKeyMetadata\ \&keyMeta);}
+\DoxyCodeLine{00232\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteCryptedKey(\textcolor{keyword}{const}\ CPubKey\&\ vchPubKey,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ vchCryptedSecret,\ \textcolor{keyword}{const}\ CKeyMetadata\ \&keyMeta);}
+\DoxyCodeLine{00233\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteMasterKey(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nID,\ \textcolor{keyword}{const}\ CMasterKey\&\ kMasterKey);}
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseMasterKey(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ \textcolor{keywordtype}{id});}
+\DoxyCodeLine{00235\ }
+\DoxyCodeLine{00236\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteWatchOnly(\textcolor{keyword}{const}\ CScript\ \&script,\ \textcolor{keyword}{const}\ CKeyMetadata\ \&keymeta);}
+\DoxyCodeLine{00237\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseWatchOnly(\textcolor{keyword}{const}\ CScript\ \&script);}
+\DoxyCodeLine{00238\ }
+\DoxyCodeLine{00239\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteBestBlock(\textcolor{keyword}{const}\ CBlockLocator\&\ locator);}
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReadBestBlock(CBlockLocator\&\ locator);}
+\DoxyCodeLine{00241\ }
+\DoxyCodeLine{00242\ \ \ \ \ \textcolor{comment}{//\ Returns\ true\ if\ wallet\ stores\ encryption\ keys}}
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsEncrypted();}
+\DoxyCodeLine{00244\ }
+\DoxyCodeLine{00245\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteOrderPosNext(int64\_t\ nOrderPosNext);}
+\DoxyCodeLine{00246\ }
+\DoxyCodeLine{00247\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteDescriptorKey(\textcolor{keyword}{const}\ uint256\&\ desc\_id,\ \textcolor{keyword}{const}\ CPubKey\&\ pubkey,\ \textcolor{keyword}{const}\ CPrivKey\&\ privkey);}
+\DoxyCodeLine{00248\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteCryptedDescriptorKey(\textcolor{keyword}{const}\ uint256\&\ desc\_id,\ \textcolor{keyword}{const}\ CPubKey\&\ pubkey,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ secret);}
+\DoxyCodeLine{00249\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteDescriptor(\textcolor{keyword}{const}\ uint256\&\ desc\_id,\ \textcolor{keyword}{const}\ WalletDescriptor\&\ descriptor);}
+\DoxyCodeLine{00250\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteDescriptorDerivedCache(\textcolor{keyword}{const}\ CExtPubKey\&\ xpub,\ \textcolor{keyword}{const}\ uint256\&\ desc\_id,\ uint32\_t\ key\_exp\_index,\ uint32\_t\ der\_index);}
+\DoxyCodeLine{00251\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteDescriptorParentCache(\textcolor{keyword}{const}\ CExtPubKey\&\ xpub,\ \textcolor{keyword}{const}\ uint256\&\ desc\_id,\ uint32\_t\ key\_exp\_index);}
+\DoxyCodeLine{00252\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteDescriptorLastHardenedCache(\textcolor{keyword}{const}\ CExtPubKey\&\ xpub,\ \textcolor{keyword}{const}\ uint256\&\ desc\_id,\ uint32\_t\ key\_exp\_index);}
+\DoxyCodeLine{00253\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteDescriptorCacheItems(\textcolor{keyword}{const}\ uint256\&\ desc\_id,\ \textcolor{keyword}{const}\ DescriptorCache\&\ cache);}
+\DoxyCodeLine{00254\ }
+\DoxyCodeLine{00255\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteLockedUTXO(\textcolor{keyword}{const}\ COutPoint\&\ output);}
+\DoxyCodeLine{00256\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseLockedUTXO(\textcolor{keyword}{const}\ COutPoint\&\ output);}
+\DoxyCodeLine{00257\ }
+\DoxyCodeLine{00258\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteAddressPreviouslySpent(\textcolor{keyword}{const}\ CTxDestination\&\ dest,\ \textcolor{keywordtype}{bool}\ previously\_spent);}
+\DoxyCodeLine{00259\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteAddressReceiveRequest(\textcolor{keyword}{const}\ CTxDestination\&\ dest,\ \textcolor{keyword}{const}\ std::string\&\ \textcolor{keywordtype}{id},\ \textcolor{keyword}{const}\ std::string\&\ receive\_request);}
+\DoxyCodeLine{00260\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseAddressReceiveRequest(\textcolor{keyword}{const}\ CTxDestination\&\ dest,\ \textcolor{keyword}{const}\ std::string\&\ \textcolor{keywordtype}{id});}
+\DoxyCodeLine{00261\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseAddressData(\textcolor{keyword}{const}\ CTxDestination\&\ dest);}
+\DoxyCodeLine{00262\ }
+\DoxyCodeLine{00263\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteActiveScriptPubKeyMan(uint8\_t\ type,\ \textcolor{keyword}{const}\ uint256\&\ \textcolor{keywordtype}{id},\ \textcolor{keywordtype}{bool}\ internal);}
+\DoxyCodeLine{00264\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseActiveScriptPubKeyMan(uint8\_t\ type,\ \textcolor{keywordtype}{bool}\ internal);}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00266\ \ \ \ \ DBErrors\ LoadWallet(CWallet*\ pwallet);}
+\DoxyCodeLine{00267\ }
+\DoxyCodeLine{00269\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseRecords(\textcolor{keyword}{const}\ std::unordered\_set<std::string>\&\ types);}
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00271\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteWalletFlags(\textcolor{keyword}{const}\ uint64\_t\ flags);}
+\DoxyCodeLine{00273\ \ \ \ \ \textcolor{keywordtype}{bool}\ TxnBegin();}
+\DoxyCodeLine{00275\ \ \ \ \ \textcolor{keywordtype}{bool}\ TxnCommit();}
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{keywordtype}{bool}\ TxnAbort();}
+\DoxyCodeLine{00278\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasActiveTxn()\ \{\ \textcolor{keywordflow}{return}\ m\_batch-\/>HasActiveTxn();\ \}}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00281\ \ \ \ \ \textcolor{keywordtype}{void}\ RegisterTxnListener(\textcolor{keyword}{const}\ DbTxnListener\&\ l);}
+\DoxyCodeLine{00282\ }
+\DoxyCodeLine{00283\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00284\ \ \ \ \ std::unique\_ptr<DatabaseBatch>\ m\_batch;}
+\DoxyCodeLine{00285\ }
+\DoxyCodeLine{00286\ \ \ \ \ \textcolor{comment}{//\ External\ functions\ listening\ to\ the\ current\ db\ txn\ outcome.}}
+\DoxyCodeLine{00287\ \ \ \ \ \textcolor{comment}{//\ Listeners\ are\ cleared\ at\ the\ end\ of\ the\ transaction.}}
+\DoxyCodeLine{00288\ \ \ \ \ std::vector<DbTxnListener>\ m\_txn\_listeners;}
+\DoxyCodeLine{00289\ \};}
+\DoxyCodeLine{00290\ }
+\DoxyCodeLine{00303\ \textcolor{keywordtype}{bool}\ RunWithinTxn(WalletDatabase\&\ database,\ std::string\_view\ process\_desc,\ \textcolor{keyword}{const}\ std::function<\textcolor{keywordtype}{bool}(WalletBatch\&)>\&\ func);}
+\DoxyCodeLine{00304\ }
+\DoxyCodeLine{00305\ \textcolor{keywordtype}{bool}\ LoadKey(CWallet*\ pwallet,\ DataStream\&\ ssKey,\ DataStream\&\ ssValue,\ std::string\&\ strErr);}
+\DoxyCodeLine{00306\ \textcolor{keywordtype}{bool}\ LoadCryptedKey(CWallet*\ pwallet,\ DataStream\&\ ssKey,\ DataStream\&\ ssValue,\ std::string\&\ strErr);}
+\DoxyCodeLine{00307\ \textcolor{keywordtype}{bool}\ LoadEncryptionKey(CWallet*\ pwallet,\ DataStream\&\ ssKey,\ DataStream\&\ ssValue,\ std::string\&\ strErr);}
+\DoxyCodeLine{00308\ \textcolor{keywordtype}{bool}\ LoadHDChain(CWallet*\ pwallet,\ DataStream\&\ ssValue,\ std::string\&\ strErr);}
+\DoxyCodeLine{00309\ }
+\DoxyCodeLine{00311\ \textcolor{keywordtype}{bool}\ HasLegacyRecords(CWallet\&\ wallet);}
+\DoxyCodeLine{00312\ \textcolor{keywordtype}{bool}\ HasLegacyRecords(CWallet\&\ wallet,\ DatabaseBatch\&\ batch);}
+\DoxyCodeLine{00313\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{00314\ }
+\DoxyCodeLine{00315\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_WALLET\_WALLETDB\_H}}
+
+\end{DoxyCode}

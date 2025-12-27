@@ -1,0 +1,1631 @@
+\doxysection{src/kernel/bitcoinkernel.cpp File Reference}
+\label{bitcoinkernel_8cpp}\index{src/kernel/bitcoinkernel.cpp@{src/kernel/bitcoinkernel.cpp}}
+{\ttfamily \#include $<$kernel/bitcoinkernel.\+h$>$}\newline
+{\ttfamily \#include $<$chain.\+h$>$}\newline
+{\ttfamily \#include $<$coins.\+h$>$}\newline
+{\ttfamily \#include $<$consensus/amount.\+h$>$}\newline
+{\ttfamily \#include $<$consensus/validation.\+h$>$}\newline
+{\ttfamily \#include $<$kernel/caches.\+h$>$}\newline
+{\ttfamily \#include $<$kernel/chainparams.\+h$>$}\newline
+{\ttfamily \#include $<$kernel/checks.\+h$>$}\newline
+{\ttfamily \#include $<$kernel/context.\+h$>$}\newline
+{\ttfamily \#include $<$kernel/cs\+\_\+main.\+h$>$}\newline
+{\ttfamily \#include $<$kernel/notifications\+\_\+interface.\+h$>$}\newline
+{\ttfamily \#include $<$kernel/warning.\+h$>$}\newline
+{\ttfamily \#include $<$logging.\+h$>$}\newline
+{\ttfamily \#include $<$node/blockstorage.\+h$>$}\newline
+{\ttfamily \#include $<$node/chainstate.\+h$>$}\newline
+{\ttfamily \#include $<$primitives/block.\+h$>$}\newline
+{\ttfamily \#include $<$primitives/transaction.\+h$>$}\newline
+{\ttfamily \#include $<$script/interpreter.\+h$>$}\newline
+{\ttfamily \#include $<$script/script.\+h$>$}\newline
+{\ttfamily \#include $<$serialize.\+h$>$}\newline
+{\ttfamily \#include $<$streams.\+h$>$}\newline
+{\ttfamily \#include $<$sync.\+h$>$}\newline
+{\ttfamily \#include $<$tinyformat.\+h$>$}\newline
+{\ttfamily \#include $<$uint256.\+h$>$}\newline
+{\ttfamily \#include $<$undo.\+h$>$}\newline
+{\ttfamily \#include $<$util/fs.\+h$>$}\newline
+{\ttfamily \#include $<$util/result.\+h$>$}\newline
+{\ttfamily \#include $<$util/signalinterrupt.\+h$>$}\newline
+{\ttfamily \#include $<$util/task\+\_\+runner.\+h$>$}\newline
+{\ttfamily \#include $<$util/translation.\+h$>$}\newline
+{\ttfamily \#include $<$validation.\+h$>$}\newline
+{\ttfamily \#include $<$validationinterface.\+h$>$}\newline
+{\ttfamily \#include $<$cassert$>$}\newline
+{\ttfamily \#include $<$cstddef$>$}\newline
+{\ttfamily \#include $<$cstring$>$}\newline
+{\ttfamily \#include $<$exception$>$}\newline
+{\ttfamily \#include $<$functional$>$}\newline
+{\ttfamily \#include $<$list$>$}\newline
+{\ttfamily \#include $<$memory$>$}\newline
+{\ttfamily \#include $<$span$>$}\newline
+{\ttfamily \#include $<$string$>$}\newline
+{\ttfamily \#include $<$tuple$>$}\newline
+{\ttfamily \#include $<$utility$>$}\newline
+{\ttfamily \#include $<$vector$>$}\newline
+\doxysubsubsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+struct \textbf{ btck\+\_\+\+Block\+Tree\+Entry}
+\item 
+struct \textbf{ btck\+\_\+\+Block}
+\item 
+struct \textbf{ btck\+\_\+\+Block\+Validation\+State}
+\item 
+struct \textbf{ btck\+\_\+\+Transaction}
+\item 
+struct \textbf{ btck\+\_\+\+Transaction\+Output}
+\item 
+struct \textbf{ btck\+\_\+\+Script\+Pubkey}
+\item 
+struct \textbf{ btck\+\_\+\+Logging\+Connection}
+\item 
+struct \textbf{ btck\+\_\+\+Context\+Options}
+\item 
+struct \textbf{ btck\+\_\+\+Context}
+\item 
+struct \textbf{ btck\+\_\+\+Chain\+Parameters}
+\item 
+struct \textbf{ btck\+\_\+\+Chainstate\+Manager\+Options}
+\item 
+struct \textbf{ btck\+\_\+\+Chainstate\+Manager}
+\item 
+struct \textbf{ btck\+\_\+\+Chain}
+\item 
+struct \textbf{ btck\+\_\+\+Block\+Spent\+Outputs}
+\item 
+struct \textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs}
+\item 
+struct \textbf{ btck\+\_\+\+Coin}
+\item 
+struct \textbf{ btck\+\_\+\+Block\+Hash}
+\item 
+struct \textbf{ btck\+\_\+\+Transaction\+Input}
+\item 
+struct \textbf{ btck\+\_\+\+Transaction\+Out\+Point}
+\item 
+struct \textbf{ btck\+\_\+\+Txid}
+\item 
+class \textbf{ Immediate\+Task\+Runner}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define \textbf{ BITCOINKERNEL\+\_\+\+BUILD}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ btck\+\_\+\+Transaction} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+create} (const void $\ast$raw\+\_\+transaction, size\+\_\+t raw\+\_\+transaction\+\_\+len)
+\begin{DoxyCompactList}\small\item\em Create a new transaction from the serialized data. \end{DoxyCompactList}\item 
+size\+\_\+t \textbf{ btck\+\_\+transaction\+\_\+count\+\_\+outputs} (const \textbf{ btck\+\_\+\+Transaction} $\ast$transaction)
+\begin{DoxyCompactList}\small\item\em Get the number of outputs of a transaction. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+get\+\_\+output\+\_\+at} (const \textbf{ btck\+\_\+\+Transaction} $\ast$transaction, size\+\_\+t output\+\_\+index)
+\begin{DoxyCompactList}\small\item\em Get the transaction outputs at the provided index. The returned transaction output is not owned and depends on the lifetime of the transaction. \end{DoxyCompactList}\item 
+size\+\_\+t \textbf{ btck\+\_\+transaction\+\_\+count\+\_\+inputs} (const \textbf{ btck\+\_\+\+Transaction} $\ast$transaction)
+\begin{DoxyCompactList}\small\item\em Get the number of inputs of a transaction. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Transaction\+Input} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+get\+\_\+input\+\_\+at} (const \textbf{ btck\+\_\+\+Transaction} $\ast$transaction, size\+\_\+t input\+\_\+index)
+\begin{DoxyCompactList}\small\item\em Get the transaction input at the provided index. The returned transaction input is not owned and depends on the lifetime of the transaction. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Txid} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+get\+\_\+txid} (const \textbf{ btck\+\_\+\+Transaction} $\ast$transaction)
+\begin{DoxyCompactList}\small\item\em Get the txid of a transaction. The returned txid is not owned and depends on the lifetime of the transaction. \end{DoxyCompactList}\item 
+\textbf{ btck\+\_\+\+Transaction} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+copy} (const \textbf{ btck\+\_\+\+Transaction} $\ast$transaction)
+\begin{DoxyCompactList}\small\item\em Copy a transaction. Transactions are reference counted, so this just increments the reference count. \end{DoxyCompactList}\item 
+int \textbf{ btck\+\_\+transaction\+\_\+to\+\_\+bytes} (const \textbf{ btck\+\_\+\+Transaction} $\ast$transaction, \textbf{ btck\+\_\+\+Write\+Bytes} writer, void $\ast$user\+\_\+data)
+\item 
+void \textbf{ btck\+\_\+transaction\+\_\+destroy} (\textbf{ btck\+\_\+\+Transaction} $\ast$transaction)
+\item 
+\textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$ \textbf{ btck\+\_\+script\+\_\+pubkey\+\_\+create} (const void $\ast$script\+\_\+pubkey, size\+\_\+t script\+\_\+pubkey\+\_\+len)
+\begin{DoxyCompactList}\small\item\em Create a script pubkey from serialized data. \end{DoxyCompactList}\item 
+int \textbf{ btck\+\_\+script\+\_\+pubkey\+\_\+to\+\_\+bytes} (const \textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$script\+\_\+pubkey\+\_\+, \textbf{ btck\+\_\+\+Write\+Bytes} writer, void $\ast$user\+\_\+data)
+\item 
+\textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$ \textbf{ btck\+\_\+script\+\_\+pubkey\+\_\+copy} (const \textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$script\+\_\+pubkey)
+\begin{DoxyCompactList}\small\item\em Copy a script pubkey. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+script\+\_\+pubkey\+\_\+destroy} (\textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$script\+\_\+pubkey)
+\item 
+\textbf{ btck\+\_\+\+Transaction\+Output} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+output\+\_\+create} (const \textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$script\+\_\+pubkey, int64\+\_\+t amount)
+\begin{DoxyCompactList}\small\item\em Create a transaction output from a script pubkey and an amount. \end{DoxyCompactList}\item 
+\textbf{ btck\+\_\+\+Transaction\+Output} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+output\+\_\+copy} (const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$output)
+\begin{DoxyCompactList}\small\item\em Copy a transaction output. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+output\+\_\+get\+\_\+script\+\_\+pubkey} (const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$output)
+\begin{DoxyCompactList}\small\item\em Get the script pubkey of the output. The returned script pubkey is not owned and depends on the lifetime of the transaction output. \end{DoxyCompactList}\item 
+int64\+\_\+t \textbf{ btck\+\_\+transaction\+\_\+output\+\_\+get\+\_\+amount} (const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$output)
+\begin{DoxyCompactList}\small\item\em Get the amount in the output. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+transaction\+\_\+output\+\_\+destroy} (\textbf{ btck\+\_\+\+Transaction\+Output} $\ast$output)
+\item 
+int \textbf{ btck\+\_\+script\+\_\+pubkey\+\_\+verify} (const \textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$script\+\_\+pubkey, const int64\+\_\+t amount, const \textbf{ btck\+\_\+\+Transaction} $\ast$tx\+\_\+to, const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$$\ast$spent\+\_\+outputs\+\_\+, size\+\_\+t spent\+\_\+outputs\+\_\+len, const unsigned int input\+\_\+index, const \textbf{ btck\+\_\+\+Script\+Verification\+Flags} \textbf{ flags}, \textbf{ btck\+\_\+\+Script\+Verify\+Status} $\ast$status)
+\item 
+\textbf{ btck\+\_\+\+Transaction\+Input} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+input\+\_\+copy} (const \textbf{ btck\+\_\+\+Transaction\+Input} $\ast$input)
+\begin{DoxyCompactList}\small\item\em Copy a transaction input. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+input\+\_\+get\+\_\+out\+\_\+point} (const \textbf{ btck\+\_\+\+Transaction\+Input} $\ast$input)
+\begin{DoxyCompactList}\small\item\em Get the transaction out point. The returned transaction out point is not owned and depends on the lifetime of the transaction. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+transaction\+\_\+input\+\_\+destroy} (\textbf{ btck\+\_\+\+Transaction\+Input} $\ast$input)
+\item 
+\textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+out\+\_\+point\+\_\+copy} (const \textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$out\+\_\+point)
+\begin{DoxyCompactList}\small\item\em Copy a transaction out point. \end{DoxyCompactList}\item 
+uint32\+\_\+t \textbf{ btck\+\_\+transaction\+\_\+out\+\_\+point\+\_\+get\+\_\+index} (const \textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$out\+\_\+point)
+\begin{DoxyCompactList}\small\item\em Get the output position from the transaction out point. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Txid} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+out\+\_\+point\+\_\+get\+\_\+txid} (const \textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$out\+\_\+point)
+\begin{DoxyCompactList}\small\item\em Get the txid from the transaction out point. The returned txid is not owned and depends on the lifetime of the transaction out point. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+transaction\+\_\+out\+\_\+point\+\_\+destroy} (\textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$out\+\_\+point)
+\item 
+\textbf{ btck\+\_\+\+Txid} $\ast$ \textbf{ btck\+\_\+txid\+\_\+copy} (const \textbf{ btck\+\_\+\+Txid} $\ast$txid)
+\begin{DoxyCompactList}\small\item\em Copy a txid. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+txid\+\_\+to\+\_\+bytes} (const \textbf{ btck\+\_\+\+Txid} $\ast$txid, unsigned char output[32])
+\item 
+int \textbf{ btck\+\_\+txid\+\_\+equals} (const \textbf{ btck\+\_\+\+Txid} $\ast$txid1, const \textbf{ btck\+\_\+\+Txid} $\ast$txid2)
+\item 
+void \textbf{ btck\+\_\+txid\+\_\+destroy} (\textbf{ btck\+\_\+\+Txid} $\ast$txid)
+\item 
+void \textbf{ btck\+\_\+logging\+\_\+set\+\_\+options} (const \textbf{ btck\+\_\+\+Logging\+Options} options)
+\begin{DoxyCompactList}\small\item\em Set some options for the global internal logger. This changes global settings and will override settings for all existing \doxyref{btck\+\_\+\+Logging\+Connection}{p.}{structbtck___logging_connection} instances. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+logging\+\_\+set\+\_\+level\+\_\+category} (\textbf{ btck\+\_\+\+Log\+Category} category, \textbf{ btck\+\_\+\+Log\+Level} level)
+\begin{DoxyCompactList}\small\item\em Set the log level of the global internal logger. This does not enable the selected categories. Use \doxyref{btck\+\_\+logging\+\_\+enable\+\_\+category}{p.}{bitcoinkernel_8cpp_a0e8e8d47f1548575aca310e532ffe15a} to start logging from a specific, or all categories. This changes a global setting and will override settings for all existing \doxyref{btck\+\_\+\+Logging\+Connection}{p.}{structbtck___logging_connection} instances. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+logging\+\_\+enable\+\_\+category} (\textbf{ btck\+\_\+\+Log\+Category} category)
+\begin{DoxyCompactList}\small\item\em Enable a specific log category for the global internal logger. This changes a global setting and will override settings for all existing \doxyref{btck\+\_\+\+Logging\+Connection}{p.}{structbtck___logging_connection} instances. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+logging\+\_\+disable\+\_\+category} (\textbf{ btck\+\_\+\+Log\+Category} category)
+\begin{DoxyCompactList}\small\item\em Disable a specific log category for the global internal logger. This changes a global setting and will override settings for all existing \doxyref{btck\+\_\+\+Logging\+Connection}{p.}{structbtck___logging_connection} instances. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+logging\+\_\+disable} ()
+\begin{DoxyCompactList}\small\item\em This disables the global internal logger. No log messages will be buffered internally anymore once this is called and the buffer is cleared. This function should only be called once and is not thread or re-\/entry safe. Log messages will be buffered until this function is called, or a logging connection is created. This must not be called while a logging connection already exists. \end{DoxyCompactList}\item 
+\textbf{ btck\+\_\+\+Logging\+Connection} $\ast$ \textbf{ btck\+\_\+logging\+\_\+connection\+\_\+create} (\textbf{ btck\+\_\+\+Log\+Callback} callback, void $\ast$user\+\_\+data, \textbf{ btck\+\_\+\+Destroy\+Callback} user\+\_\+data\+\_\+destroy\+\_\+callback)
+\begin{DoxyCompactList}\small\item\em Start logging messages through the provided callback. Log messages produced before this function is first called are buffered and on calling this function are logged immediately. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+logging\+\_\+connection\+\_\+destroy} (\textbf{ btck\+\_\+\+Logging\+Connection} $\ast$connection)
+\item 
+\textbf{ btck\+\_\+\+Chain\+Parameters} $\ast$ \textbf{ btck\+\_\+chain\+\_\+parameters\+\_\+create} (const \textbf{ btck\+\_\+\+Chain\+Type} chain\+\_\+type)
+\begin{DoxyCompactList}\small\item\em Creates a chain parameters struct with default parameters based on the passed in chain type. \end{DoxyCompactList}\item 
+\textbf{ btck\+\_\+\+Chain\+Parameters} $\ast$ \textbf{ btck\+\_\+chain\+\_\+parameters\+\_\+copy} (const \textbf{ btck\+\_\+\+Chain\+Parameters} $\ast$chain\+\_\+parameters)
+\item 
+void \textbf{ btck\+\_\+chain\+\_\+parameters\+\_\+destroy} (\textbf{ btck\+\_\+\+Chain\+Parameters} $\ast$chain\+\_\+parameters)
+\item 
+\textbf{ btck\+\_\+\+Context\+Options} $\ast$ \textbf{ btck\+\_\+context\+\_\+options\+\_\+create} ()
+\item 
+void \textbf{ btck\+\_\+context\+\_\+options\+\_\+set\+\_\+chainparams} (\textbf{ btck\+\_\+\+Context\+Options} $\ast$options, const \textbf{ btck\+\_\+\+Chain\+Parameters} $\ast$chain\+\_\+parameters)
+\item 
+void \textbf{ btck\+\_\+context\+\_\+options\+\_\+set\+\_\+notifications} (\textbf{ btck\+\_\+\+Context\+Options} $\ast$options, \textbf{ btck\+\_\+\+Notification\+Interface\+Callbacks} notifications)
+\begin{DoxyCompactList}\small\item\em Set the kernel notifications for the context options. The context created with the options will be configured with these notifications. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+context\+\_\+options\+\_\+set\+\_\+validation\+\_\+interface} (\textbf{ btck\+\_\+\+Context\+Options} $\ast$options, \textbf{ btck\+\_\+\+Validation\+Interface\+Callbacks} vi\+\_\+cbs)
+\begin{DoxyCompactList}\small\item\em Set the validation interface callbacks for the context options. The context created with the options will be configured for these validation interface callbacks. The callbacks will then be triggered from validation events issued by the chainstate manager created from the same context. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+context\+\_\+options\+\_\+destroy} (\textbf{ btck\+\_\+\+Context\+Options} $\ast$options)
+\item 
+\textbf{ btck\+\_\+\+Context} $\ast$ \textbf{ btck\+\_\+context\+\_\+create} (const \textbf{ btck\+\_\+\+Context\+Options} $\ast$options)
+\begin{DoxyCompactList}\small\item\em Create a new kernel context. If the options have not been previously set, their corresponding fields will be initialized to default values; the context will assume mainnet chain parameters and won\textquotesingle{}t attempt to call the kernel notification callbacks. \end{DoxyCompactList}\item 
+\textbf{ btck\+\_\+\+Context} $\ast$ \textbf{ btck\+\_\+context\+\_\+copy} (const \textbf{ btck\+\_\+\+Context} $\ast$context)
+\item 
+int \textbf{ btck\+\_\+context\+\_\+interrupt} (\textbf{ btck\+\_\+\+Context} $\ast$context)
+\begin{DoxyCompactList}\small\item\em Interrupt can be used to halt long-\/running validation functions like when reindexing, importing or processing blocks. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+context\+\_\+destroy} (\textbf{ btck\+\_\+\+Context} $\ast$context)
+\item 
+const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$ \textbf{ btck\+\_\+block\+\_\+tree\+\_\+entry\+\_\+get\+\_\+previous} (const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$entry)
+\begin{DoxyCompactList}\small\item\em Returns the previous block tree entry in the tree, or null if the current block tree entry is the genesis block. \end{DoxyCompactList}\item 
+\textbf{ btck\+\_\+\+Validation\+Mode} \textbf{ btck\+\_\+block\+\_\+validation\+\_\+state\+\_\+get\+\_\+validation\+\_\+mode} (const \textbf{ btck\+\_\+\+Block\+Validation\+State} $\ast$block\+\_\+validation\+\_\+state\+\_\+)
+\item 
+\textbf{ btck\+\_\+\+Block\+Validation\+Result} \textbf{ btck\+\_\+block\+\_\+validation\+\_\+state\+\_\+get\+\_\+block\+\_\+validation\+\_\+result} (const \textbf{ btck\+\_\+\+Block\+Validation\+State} $\ast$block\+\_\+validation\+\_\+state\+\_\+)
+\item 
+\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$ \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+create} (const \textbf{ btck\+\_\+\+Context} $\ast$context, const char $\ast$data\+\_\+dir, size\+\_\+t data\+\_\+dir\+\_\+len, const char $\ast$blocks\+\_\+dir, size\+\_\+t blocks\+\_\+dir\+\_\+len)
+\begin{DoxyCompactList}\small\item\em Create options for the chainstate manager. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+set\+\_\+worker\+\_\+threads\+\_\+num} (\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$opts, int worker\+\_\+threads)
+\begin{DoxyCompactList}\small\item\em Set the number of available worker threads used during validation. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+destroy} (\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$options)
+\item 
+int \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+set\+\_\+wipe\+\_\+dbs} (\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$chainman\+\_\+opts, int wipe\+\_\+block\+\_\+tree\+\_\+db, int wipe\+\_\+chainstate\+\_\+db)
+\begin{DoxyCompactList}\small\item\em Sets wipe db in the options. In combination with calling \doxyref{btck\+\_\+chainstate\+\_\+manager\+\_\+import\+\_\+blocks}{p.}{bitcoinkernel_8cpp_a0cca58f061620dc6db1cd45c3f80275f} this triggers either a full reindex, or a reindex of just the chainstate database. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+update\+\_\+block\+\_\+tree\+\_\+db\+\_\+in\+\_\+memory} (\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$chainman\+\_\+opts, int block\+\_\+tree\+\_\+db\+\_\+in\+\_\+memory)
+\begin{DoxyCompactList}\small\item\em Sets block tree db in memory in the options. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+update\+\_\+chainstate\+\_\+db\+\_\+in\+\_\+memory} (\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$chainman\+\_\+opts, int chainstate\+\_\+db\+\_\+in\+\_\+memory)
+\begin{DoxyCompactList}\small\item\em Sets chainstate db in memory in the options. \end{DoxyCompactList}\item 
+\textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$ \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+create} (const \textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$chainman\+\_\+opts)
+\begin{DoxyCompactList}\small\item\em Create a chainstate manager. This is the main object for many validation tasks as well as for retrieving data from the chain and interacting with its chainstate and indexes. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$ \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+get\+\_\+block\+\_\+tree\+\_\+entry\+\_\+by\+\_\+hash} (const \textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$chainman, const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$block\+\_\+hash)
+\item 
+void \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+destroy} (\textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$chainman)
+\item 
+int \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+import\+\_\+blocks} (\textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$chainman, const char $\ast$$\ast$block\+\_\+file\+\_\+paths\+\_\+data, size\+\_\+t $\ast$block\+\_\+file\+\_\+paths\+\_\+lens, size\+\_\+t block\+\_\+file\+\_\+paths\+\_\+data\+\_\+len)
+\begin{DoxyCompactList}\small\item\em Triggers the start of a reindex if the wipe options were previously set for the chainstate manager. Can also import an array of existing block files selected by the user. \end{DoxyCompactList}\item 
+\textbf{ btck\+\_\+\+Block} $\ast$ \textbf{ btck\+\_\+block\+\_\+create} (const void $\ast$raw\+\_\+block, size\+\_\+t raw\+\_\+block\+\_\+length)
+\begin{DoxyCompactList}\small\item\em Parse a serialized raw block into a new block object. \end{DoxyCompactList}\item 
+\textbf{ btck\+\_\+\+Block} $\ast$ \textbf{ btck\+\_\+block\+\_\+copy} (const \textbf{ btck\+\_\+\+Block} $\ast$block)
+\begin{DoxyCompactList}\small\item\em Copy a block. Blocks are reference counted, so this just increments the reference count. \end{DoxyCompactList}\item 
+size\+\_\+t \textbf{ btck\+\_\+block\+\_\+count\+\_\+transactions} (const \textbf{ btck\+\_\+\+Block} $\ast$block)
+\begin{DoxyCompactList}\small\item\em Count the number of transactions contained in a block. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Transaction} $\ast$ \textbf{ btck\+\_\+block\+\_\+get\+\_\+transaction\+\_\+at} (const \textbf{ btck\+\_\+\+Block} $\ast$block, size\+\_\+t index)
+\begin{DoxyCompactList}\small\item\em Get the transaction at the provided index. The returned transaction is not owned and depends on the lifetime of the block. \end{DoxyCompactList}\item 
+int \textbf{ btck\+\_\+block\+\_\+to\+\_\+bytes} (const \textbf{ btck\+\_\+\+Block} $\ast$block, \textbf{ btck\+\_\+\+Write\+Bytes} writer, void $\ast$user\+\_\+data)
+\item 
+\textbf{ btck\+\_\+\+Block\+Hash} $\ast$ \textbf{ btck\+\_\+block\+\_\+get\+\_\+hash} (const \textbf{ btck\+\_\+\+Block} $\ast$block)
+\begin{DoxyCompactList}\small\item\em Calculate and return the hash of a block. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+block\+\_\+destroy} (\textbf{ btck\+\_\+\+Block} $\ast$block)
+\item 
+\textbf{ btck\+\_\+\+Block} $\ast$ \textbf{ btck\+\_\+block\+\_\+read} (const \textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$chainman, const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$entry)
+\item 
+int32\+\_\+t \textbf{ btck\+\_\+block\+\_\+tree\+\_\+entry\+\_\+get\+\_\+height} (const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$entry)
+\begin{DoxyCompactList}\small\item\em Return the height of a certain block tree entry. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$ \textbf{ btck\+\_\+block\+\_\+tree\+\_\+entry\+\_\+get\+\_\+block\+\_\+hash} (const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$entry)
+\begin{DoxyCompactList}\small\item\em Return the block hash associated with a block tree entry. \end{DoxyCompactList}\item 
+int \textbf{ btck\+\_\+block\+\_\+tree\+\_\+entry\+\_\+equals} (const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$entry1, const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$entry2)
+\item 
+\textbf{ btck\+\_\+\+Block\+Hash} $\ast$ \textbf{ btck\+\_\+block\+\_\+hash\+\_\+create} (const unsigned char block\+\_\+hash[32])
+\begin{DoxyCompactList}\small\item\em Create a block hash from its raw data. \end{DoxyCompactList}\item 
+\textbf{ btck\+\_\+\+Block\+Hash} $\ast$ \textbf{ btck\+\_\+block\+\_\+hash\+\_\+copy} (const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$block\+\_\+hash)
+\begin{DoxyCompactList}\small\item\em Copy a block hash. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+block\+\_\+hash\+\_\+to\+\_\+bytes} (const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$block\+\_\+hash, unsigned char output[32])
+\item 
+int \textbf{ btck\+\_\+block\+\_\+hash\+\_\+equals} (const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$hash1, const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$hash2)
+\item 
+void \textbf{ btck\+\_\+block\+\_\+hash\+\_\+destroy} (\textbf{ btck\+\_\+\+Block\+Hash} $\ast$hash)
+\item 
+\textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$ \textbf{ btck\+\_\+block\+\_\+spent\+\_\+outputs\+\_\+read} (const \textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$chainman, const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$entry)
+\item 
+\textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$ \textbf{ btck\+\_\+block\+\_\+spent\+\_\+outputs\+\_\+copy} (const \textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$block\+\_\+spent\+\_\+outputs)
+\begin{DoxyCompactList}\small\item\em Copy a block\textquotesingle{}s spent outputs. \end{DoxyCompactList}\item 
+size\+\_\+t \textbf{ btck\+\_\+block\+\_\+spent\+\_\+outputs\+\_\+count} (const \textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$block\+\_\+spent\+\_\+outputs)
+\begin{DoxyCompactList}\small\item\em Returns the number of transaction spent outputs whose data is contained in block spent outputs. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$ \textbf{ btck\+\_\+block\+\_\+spent\+\_\+outputs\+\_\+get\+\_\+transaction\+\_\+spent\+\_\+outputs\+\_\+at} (const \textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$block\+\_\+spent\+\_\+outputs, size\+\_\+t transaction\+\_\+index)
+\begin{DoxyCompactList}\small\item\em Returns a transaction spent outputs contained in the block spent outputs at a certain index. The returned pointer is unowned and only valid for the lifetime of block\+\_\+spent\+\_\+outputs. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+block\+\_\+spent\+\_\+outputs\+\_\+destroy} (\textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$block\+\_\+spent\+\_\+outputs)
+\item 
+\textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+spent\+\_\+outputs\+\_\+copy} (const \textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$transaction\+\_\+spent\+\_\+outputs)
+\begin{DoxyCompactList}\small\item\em Copy a transaction\textquotesingle{}s spent outputs. \end{DoxyCompactList}\item 
+size\+\_\+t \textbf{ btck\+\_\+transaction\+\_\+spent\+\_\+outputs\+\_\+count} (const \textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$transaction\+\_\+spent\+\_\+outputs)
+\begin{DoxyCompactList}\small\item\em Returns the number of previous transaction outputs contained in the transaction spent outputs data. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+transaction\+\_\+spent\+\_\+outputs\+\_\+destroy} (\textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$transaction\+\_\+spent\+\_\+outputs)
+\item 
+const \textbf{ btck\+\_\+\+Coin} $\ast$ \textbf{ btck\+\_\+transaction\+\_\+spent\+\_\+outputs\+\_\+get\+\_\+coin\+\_\+at} (const \textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$transaction\+\_\+spent\+\_\+outputs, size\+\_\+t coin\+\_\+index)
+\begin{DoxyCompactList}\small\item\em Returns a coin contained in the transaction spent outputs at a certain index. The returned pointer is unowned and only valid for the lifetime of transaction\+\_\+spent\+\_\+outputs. \end{DoxyCompactList}\item 
+\textbf{ btck\+\_\+\+Coin} $\ast$ \textbf{ btck\+\_\+coin\+\_\+copy} (const \textbf{ btck\+\_\+\+Coin} $\ast$coin)
+\begin{DoxyCompactList}\small\item\em Copy a coin. \end{DoxyCompactList}\item 
+uint32\+\_\+t \textbf{ btck\+\_\+coin\+\_\+confirmation\+\_\+height} (const \textbf{ btck\+\_\+\+Coin} $\ast$coin)
+\begin{DoxyCompactList}\small\item\em Returns the block height where the transaction that created this coin was included in. \end{DoxyCompactList}\item 
+int \textbf{ btck\+\_\+coin\+\_\+is\+\_\+coinbase} (const \textbf{ btck\+\_\+\+Coin} $\ast$coin)
+\begin{DoxyCompactList}\small\item\em Returns whether the containing transaction was a coinbase. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$ \textbf{ btck\+\_\+coin\+\_\+get\+\_\+output} (const \textbf{ btck\+\_\+\+Coin} $\ast$coin)
+\begin{DoxyCompactList}\small\item\em Return the transaction output of a coin. The returned pointer is unowned and only valid for the lifetime of the coin. \end{DoxyCompactList}\item 
+void \textbf{ btck\+\_\+coin\+\_\+destroy} (\textbf{ btck\+\_\+\+Coin} $\ast$coin)
+\item 
+int \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+process\+\_\+block} (\textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$chainman, const \textbf{ btck\+\_\+\+Block} $\ast$block, int $\ast$\+\_\+new\+\_\+block)
+\item 
+const \textbf{ btck\+\_\+\+Chain} $\ast$ \textbf{ btck\+\_\+chainstate\+\_\+manager\+\_\+get\+\_\+active\+\_\+chain} (const \textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$chainman)
+\begin{DoxyCompactList}\small\item\em Returns the best known currently active chain. Its lifetime is dependent on the chainstate manager. It can be thought of as a view on a vector of block tree entries that form the best chain. The returned chain reference always points to the currently active best chain. However, state transitions within the chainstate manager (e.\+g., processing blocks) will update the chain\textquotesingle{}s contents. Data retrieved from this chain is only consistent up to the point when new data is processed in the chainstate manager. It is the user\textquotesingle{}s responsibility to guard against these inconsistencies. \end{DoxyCompactList}\item 
+int \textbf{ btck\+\_\+chain\+\_\+get\+\_\+height} (const \textbf{ btck\+\_\+\+Chain} $\ast$chain)
+\begin{DoxyCompactList}\small\item\em Return the height of the tip of the chain. \end{DoxyCompactList}\item 
+const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$ \textbf{ btck\+\_\+chain\+\_\+get\+\_\+by\+\_\+height} (const \textbf{ btck\+\_\+\+Chain} $\ast$chain, int height)
+\begin{DoxyCompactList}\small\item\em Retrieve a block tree entry by its height in the currently active chain. Once retrieved there is no guarantee that it remains in the active chain. \end{DoxyCompactList}\item 
+int \textbf{ btck\+\_\+chain\+\_\+contains} (const \textbf{ btck\+\_\+\+Chain} $\ast$chain, const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$entry)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+const std\+::function$<$ std\+::string(const char $\ast$)$>$ \textbf{ G\+\_\+\+TRANSLATION\+\_\+\+FUN} \{nullptr\}
+\end{DoxyCompactItemize}
+
+
+\label{doc-define-members}
+\doxysubsection{Macro Definition Documentation}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!BITCOINKERNEL\_BUILD@{BITCOINKERNEL\_BUILD}}
+\index{BITCOINKERNEL\_BUILD@{BITCOINKERNEL\_BUILD}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{BITCOINKERNEL\_BUILD}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a44b79d932871ed8fcc2c33bd9dfac372} 
+\#define BITCOINKERNEL\+\_\+\+BUILD}
+
+
+
+\label{doc-func-members}
+\doxysubsection{Function Documentation}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_copy@{btck\_block\_copy}}
+\index{btck\_block\_copy@{btck\_block\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ada16660a120ee4d0a56ddf53018d3de0} 
+\textbf{ btck\+\_\+\+Block} $\ast$ btck\+\_\+block\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block} $\ast$}]{block}{}\end{DoxyParamCaption})}
+
+
+
+Copy a block. Blocks are reference counted, so this just increments the reference count. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em block} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The copied block. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_count\_transactions@{btck\_block\_count\_transactions}}
+\index{btck\_block\_count\_transactions@{btck\_block\_count\_transactions}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_count\_transactions()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a48138019787f18d0a0e54fced0dd84eb} 
+size\+\_\+t btck\+\_\+block\+\_\+count\+\_\+transactions (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block} $\ast$}]{block}{}\end{DoxyParamCaption})}
+
+
+
+Count the number of transactions contained in a block. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em block} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The number of transactions in the block. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_create@{btck\_block\_create}}
+\index{btck\_block\_create@{btck\_block\_create}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_create()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a3a333df2328085e70f8d04ac3ef84398} 
+\textbf{ btck\+\_\+\+Block} $\ast$ btck\+\_\+block\+\_\+create (\begin{DoxyParamCaption}\item[{const void $\ast$}]{raw\+\_\+block}{, }\item[{size\+\_\+t}]{raw\+\_\+block\+\_\+len}{}\end{DoxyParamCaption})}
+
+
+
+Parse a serialized raw block into a new block object. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em raw\+\_\+block} & Serialized block. \\
+\hline
+\mbox{\texttt{in}}  & {\em raw\+\_\+block\+\_\+len} & Length of the serialized block. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The allocated block, or null on error. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_destroy@{btck\_block\_destroy}}
+\index{btck\_block\_destroy@{btck\_block\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a2b6053ae8eb9c473361f67d14f8b15a5} 
+void btck\+\_\+block\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Block} $\ast$}]{block}{}\end{DoxyParamCaption})}
+
+Destroy the block. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_get\_hash@{btck\_block\_get\_hash}}
+\index{btck\_block\_get\_hash@{btck\_block\_get\_hash}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_get\_hash()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a6a73754107d2f3890f6aee0d82654c13} 
+\textbf{ btck\+\_\+\+Block\+Hash} $\ast$ btck\+\_\+block\+\_\+get\+\_\+hash (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block} $\ast$}]{block}{}\end{DoxyParamCaption})}
+
+
+
+Calculate and return the hash of a block. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em block} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The block hash. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_get\_transaction\_at@{btck\_block\_get\_transaction\_at}}
+\index{btck\_block\_get\_transaction\_at@{btck\_block\_get\_transaction\_at}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_get\_transaction\_at()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_aea90ba76177b9d7fa605a2cade882669} 
+const \textbf{ btck\+\_\+\+Transaction} $\ast$ btck\+\_\+block\+\_\+get\+\_\+transaction\+\_\+at (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block} $\ast$}]{block}{, }\item[{size\+\_\+t}]{transaction\+\_\+index}{}\end{DoxyParamCaption})}
+
+
+
+Get the transaction at the provided index. The returned transaction is not owned and depends on the lifetime of the block. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em block} & Non-\/null. \\
+\hline
+\mbox{\texttt{in}}  & {\em transaction\+\_\+index} & The index of the transaction to be retrieved. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The transaction. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_hash\_copy@{btck\_block\_hash\_copy}}
+\index{btck\_block\_hash\_copy@{btck\_block\_hash\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_hash\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a019df01a13b93fb06fb3d35fdf7fdf9a} 
+\textbf{ btck\+\_\+\+Block\+Hash} $\ast$ btck\+\_\+block\+\_\+hash\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$}]{block\+\_\+hash}{}\end{DoxyParamCaption})}
+
+
+
+Copy a block hash. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em block\+\_\+hash} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The copied block hash. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_hash\_create@{btck\_block\_hash\_create}}
+\index{btck\_block\_hash\_create@{btck\_block\_hash\_create}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_hash\_create()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_aa32423bb12e56bfcfa79f59fe1ff646f} 
+\textbf{ btck\+\_\+\+Block\+Hash} $\ast$ btck\+\_\+block\+\_\+hash\+\_\+create (\begin{DoxyParamCaption}\item[{const unsigned char}]{block\+\_\+hash}{[32]}\end{DoxyParamCaption})}
+
+
+
+Create a block hash from its raw data. 
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_hash\_destroy@{btck\_block\_hash\_destroy}}
+\index{btck\_block\_hash\_destroy@{btck\_block\_hash\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_hash\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a7b9e0e7414932f03ab95ae0a0aa68cb3} 
+void btck\+\_\+block\+\_\+hash\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Block\+Hash} $\ast$}]{block\+\_\+hash}{}\end{DoxyParamCaption})}
+
+Destroy the block hash. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_hash\_equals@{btck\_block\_hash\_equals}}
+\index{btck\_block\_hash\_equals@{btck\_block\_hash\_equals}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_hash\_equals()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_abfa78ded897eedd6a2e5a9e6b74f0032} 
+int btck\+\_\+block\+\_\+hash\+\_\+equals (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$}]{hash1}{, }\item[{const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$}]{hash2}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_hash\_to\_bytes@{btck\_block\_hash\_to\_bytes}}
+\index{btck\_block\_hash\_to\_bytes@{btck\_block\_hash\_to\_bytes}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_hash\_to\_bytes()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_af0bc67b0ffac66ed3e897b8e06579706} 
+void btck\+\_\+block\+\_\+hash\+\_\+to\+\_\+bytes (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$}]{block\+\_\+hash}{, }\item[{unsigned char}]{output}{[32]}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_read@{btck\_block\_read}}
+\index{btck\_block\_read@{btck\_block\_read}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_read()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ab2f23da0f5c9af0fad61de2c179ab3f0} 
+\textbf{ btck\+\_\+\+Block} $\ast$ btck\+\_\+block\+\_\+read (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$}]{chainman}{, }\item[{const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$}]{entry}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_spent\_outputs\_copy@{btck\_block\_spent\_outputs\_copy}}
+\index{btck\_block\_spent\_outputs\_copy@{btck\_block\_spent\_outputs\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_spent\_outputs\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a5d73efd6beb555251ff413bb4968cd5a} 
+\textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$ btck\+\_\+block\+\_\+spent\+\_\+outputs\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$}]{block\+\_\+spent\+\_\+outputs}{}\end{DoxyParamCaption})}
+
+
+
+Copy a block\textquotesingle{}s spent outputs. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em block\+\_\+spent\+\_\+outputs} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The copied block spent outputs. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_spent\_outputs\_count@{btck\_block\_spent\_outputs\_count}}
+\index{btck\_block\_spent\_outputs\_count@{btck\_block\_spent\_outputs\_count}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_spent\_outputs\_count()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_abd876d68995bbe2243b011951784d83e} 
+size\+\_\+t btck\+\_\+block\+\_\+spent\+\_\+outputs\+\_\+count (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$}]{block\+\_\+spent\+\_\+outputs}{}\end{DoxyParamCaption})}
+
+
+
+Returns the number of transaction spent outputs whose data is contained in block spent outputs. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em block\+\_\+spent\+\_\+outputs} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The number of transaction spent outputs data in the block spent outputs. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_spent\_outputs\_destroy@{btck\_block\_spent\_outputs\_destroy}}
+\index{btck\_block\_spent\_outputs\_destroy@{btck\_block\_spent\_outputs\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_spent\_outputs\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_aca1dd28ecba0dbd50787984626d65391} 
+void btck\+\_\+block\+\_\+spent\+\_\+outputs\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$}]{block\+\_\+spent\+\_\+outputs}{}\end{DoxyParamCaption})}
+
+Destroy the block spent outputs. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_spent\_outputs\_get\_transaction\_spent\_outputs\_at@{btck\_block\_spent\_outputs\_get\_transaction\_spent\_outputs\_at}}
+\index{btck\_block\_spent\_outputs\_get\_transaction\_spent\_outputs\_at@{btck\_block\_spent\_outputs\_get\_transaction\_spent\_outputs\_at}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_spent\_outputs\_get\_transaction\_spent\_outputs\_at()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a6e247410f137fb44d1cea050f5aa22b0} 
+const \textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$ btck\+\_\+block\+\_\+spent\+\_\+outputs\+\_\+get\+\_\+transaction\+\_\+spent\+\_\+outputs\+\_\+at (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$}]{block\+\_\+spent\+\_\+outputs}{, }\item[{size\+\_\+t}]{transaction\+\_\+spent\+\_\+outputs\+\_\+index}{}\end{DoxyParamCaption})}
+
+
+
+Returns a transaction spent outputs contained in the block spent outputs at a certain index. The returned pointer is unowned and only valid for the lifetime of block\+\_\+spent\+\_\+outputs. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em block\+\_\+spent\+\_\+outputs} & Non-\/null. \\
+\hline
+\mbox{\texttt{in}}  & {\em transaction\+\_\+spent\+\_\+outputs\+\_\+index} & The index of the transaction spent outputs within the block spent outputs. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A transaction spent outputs pointer. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_spent\_outputs\_read@{btck\_block\_spent\_outputs\_read}}
+\index{btck\_block\_spent\_outputs\_read@{btck\_block\_spent\_outputs\_read}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_spent\_outputs\_read()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a63300fab75067c297bc69e65d9e13cac} 
+\textbf{ btck\+\_\+\+Block\+Spent\+Outputs} $\ast$ btck\+\_\+block\+\_\+spent\+\_\+outputs\+\_\+read (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$}]{chainman}{, }\item[{const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$}]{entry}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_to\_bytes@{btck\_block\_to\_bytes}}
+\index{btck\_block\_to\_bytes@{btck\_block\_to\_bytes}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_to\_bytes()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a002c617470d4440c0cf5f1335a9033d2} 
+int btck\+\_\+block\+\_\+to\+\_\+bytes (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block} $\ast$}]{block}{, }\item[{\textbf{ btck\+\_\+\+Write\+Bytes}}]{writer}{, }\item[{void $\ast$}]{user\+\_\+data}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_tree\_entry\_equals@{btck\_block\_tree\_entry\_equals}}
+\index{btck\_block\_tree\_entry\_equals@{btck\_block\_tree\_entry\_equals}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_tree\_entry\_equals()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a41c406a00ec6c38a26a2b01b502150ec} 
+int btck\+\_\+block\+\_\+tree\+\_\+entry\+\_\+equals (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$}]{entry1}{, }\item[{const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$}]{entry2}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_tree\_entry\_get\_block\_hash@{btck\_block\_tree\_entry\_get\_block\_hash}}
+\index{btck\_block\_tree\_entry\_get\_block\_hash@{btck\_block\_tree\_entry\_get\_block\_hash}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_tree\_entry\_get\_block\_hash()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ae38d0888b0c1104b5e0f5c04e72ec5eb} 
+const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$ btck\+\_\+block\+\_\+tree\+\_\+entry\+\_\+get\+\_\+block\+\_\+hash (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$}]{block\+\_\+tree\+\_\+entry}{}\end{DoxyParamCaption})}
+
+
+
+Return the block hash associated with a block tree entry. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em block\+\_\+tree\+\_\+entry} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The block hash. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_tree\_entry\_get\_height@{btck\_block\_tree\_entry\_get\_height}}
+\index{btck\_block\_tree\_entry\_get\_height@{btck\_block\_tree\_entry\_get\_height}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_tree\_entry\_get\_height()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ac9fd995c66454789461c4cd600149999} 
+int32\+\_\+t btck\+\_\+block\+\_\+tree\+\_\+entry\+\_\+get\+\_\+height (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$}]{block\+\_\+tree\+\_\+entry}{}\end{DoxyParamCaption})}
+
+
+
+Return the height of a certain block tree entry. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em block\+\_\+tree\+\_\+entry} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The block height. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_tree\_entry\_get\_previous@{btck\_block\_tree\_entry\_get\_previous}}
+\index{btck\_block\_tree\_entry\_get\_previous@{btck\_block\_tree\_entry\_get\_previous}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_tree\_entry\_get\_previous()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a22eeb03040c406296e9d34de640d60e2} 
+const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$ btck\+\_\+block\+\_\+tree\+\_\+entry\+\_\+get\+\_\+previous (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$}]{block\+\_\+tree\+\_\+entry}{}\end{DoxyParamCaption})}
+
+
+
+Returns the previous block tree entry in the tree, or null if the current block tree entry is the genesis block. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em block\+\_\+tree\+\_\+entry} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The previous block tree entry, or null on error or if the current block tree entry is the genesis block. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_validation\_state\_get\_block\_validation\_result@{btck\_block\_validation\_state\_get\_block\_validation\_result}}
+\index{btck\_block\_validation\_state\_get\_block\_validation\_result@{btck\_block\_validation\_state\_get\_block\_validation\_result}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_validation\_state\_get\_block\_validation\_result()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_aeffc799ea76d7bcf01512dbf2eced64c} 
+\textbf{ btck\+\_\+\+Block\+Validation\+Result} btck\+\_\+block\+\_\+validation\+\_\+state\+\_\+get\+\_\+block\+\_\+validation\+\_\+result (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Validation\+State} $\ast$}]{block\+\_\+validation\+\_\+state}{}\end{DoxyParamCaption})}
+
+Returns the validation result from an opaque block validation state pointer. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_block\_validation\_state\_get\_validation\_mode@{btck\_block\_validation\_state\_get\_validation\_mode}}
+\index{btck\_block\_validation\_state\_get\_validation\_mode@{btck\_block\_validation\_state\_get\_validation\_mode}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_block\_validation\_state\_get\_validation\_mode()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a3828538f84e64a899d9cbe887980f9d7} 
+\textbf{ btck\+\_\+\+Validation\+Mode} btck\+\_\+block\+\_\+validation\+\_\+state\+\_\+get\+\_\+validation\+\_\+mode (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Block\+Validation\+State} $\ast$}]{block\+\_\+validation\+\_\+state}{}\end{DoxyParamCaption})}
+
+Returns the validation mode from an opaque block validation state pointer. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chain\_contains@{btck\_chain\_contains}}
+\index{btck\_chain\_contains@{btck\_chain\_contains}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chain\_contains()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ab9cd579cbded6eee5056841f68c43911} 
+int btck\+\_\+chain\+\_\+contains (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Chain} $\ast$}]{chain}{, }\item[{const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$}]{entry}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chain\_get\_by\_height@{btck\_chain\_get\_by\_height}}
+\index{btck\_chain\_get\_by\_height@{btck\_chain\_get\_by\_height}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chain\_get\_by\_height()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_abefa509c5a6a398ba3be2878dc5b0f3b} 
+const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$ btck\+\_\+chain\+\_\+get\+\_\+by\+\_\+height (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Chain} $\ast$}]{chain}{, }\item[{int}]{block\+\_\+height}{}\end{DoxyParamCaption})}
+
+
+
+Retrieve a block tree entry by its height in the currently active chain. Once retrieved there is no guarantee that it remains in the active chain. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em chain} & Non-\/null. \\
+\hline
+\mbox{\texttt{in}}  & {\em block\+\_\+height} & Height in the chain of the to be retrieved block tree entry. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The block tree entry at a certain height in the currently active chain, or null if the height is out of bounds. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chain\_get\_height@{btck\_chain\_get\_height}}
+\index{btck\_chain\_get\_height@{btck\_chain\_get\_height}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chain\_get\_height()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ad4b4beb7ddf252d4708bc1047adcf076} 
+int btck\+\_\+chain\+\_\+get\+\_\+height (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Chain} $\ast$}]{chain}{}\end{DoxyParamCaption})}
+
+
+
+Return the height of the tip of the chain. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em chain} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The current height. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chain\_parameters\_copy@{btck\_chain\_parameters\_copy}}
+\index{btck\_chain\_parameters\_copy@{btck\_chain\_parameters\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chain\_parameters\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a40a2a3e522ecd6696b524dfda4a393c8} 
+\textbf{ btck\+\_\+\+Chain\+Parameters} $\ast$ btck\+\_\+chain\+\_\+parameters\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Chain\+Parameters} $\ast$}]{chain\+\_\+parameters}{}\end{DoxyParamCaption})}
+
+Copy the chain parameters. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chain\_parameters\_create@{btck\_chain\_parameters\_create}}
+\index{btck\_chain\_parameters\_create@{btck\_chain\_parameters\_create}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chain\_parameters\_create()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a335edc0b5f4641c2f7865baf3a8d35a8} 
+\textbf{ btck\+\_\+\+Chain\+Parameters} $\ast$ btck\+\_\+chain\+\_\+parameters\+\_\+create (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Chain\+Type}}]{chain\+\_\+type}{}\end{DoxyParamCaption})}
+
+
+
+Creates a chain parameters struct with default parameters based on the passed in chain type. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em chain\+\_\+type} & Controls the chain parameters type created. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+An allocated chain parameters opaque struct. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chain\_parameters\_destroy@{btck\_chain\_parameters\_destroy}}
+\index{btck\_chain\_parameters\_destroy@{btck\_chain\_parameters\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chain\_parameters\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a233852b8d5d445200657eaebbfea048b} 
+void btck\+\_\+chain\+\_\+parameters\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Chain\+Parameters} $\ast$}]{chain\+\_\+parameters}{}\end{DoxyParamCaption})}
+
+Destroy the chain parameters. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_create@{btck\_chainstate\_manager\_create}}
+\index{btck\_chainstate\_manager\_create@{btck\_chainstate\_manager\_create}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_create()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a64b0714aeb95c089b10b23c15f2f9172} 
+\textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$ btck\+\_\+chainstate\+\_\+manager\+\_\+create (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$}]{chainstate\+\_\+manager\+\_\+options}{}\end{DoxyParamCaption})}
+
+
+
+Create a chainstate manager. This is the main object for many validation tasks as well as for retrieving data from the chain and interacting with its chainstate and indexes. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em chainstate\+\_\+manager\+\_\+options} & Non-\/null, created by \doxyref{btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+create}{p.}{bitcoinkernel_8cpp_aed7732d975e5063e94dc5da7ad5c8e2d}. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The allocated chainstate manager, or null on error. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_destroy@{btck\_chainstate\_manager\_destroy}}
+\index{btck\_chainstate\_manager\_destroy@{btck\_chainstate\_manager\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_adc359db4a835a7aca8986f8ffe026a70} 
+void btck\+\_\+chainstate\+\_\+manager\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$}]{chainstate\+\_\+manager}{}\end{DoxyParamCaption})}
+
+Destroy the chainstate manager. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_get\_active\_chain@{btck\_chainstate\_manager\_get\_active\_chain}}
+\index{btck\_chainstate\_manager\_get\_active\_chain@{btck\_chainstate\_manager\_get\_active\_chain}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_get\_active\_chain()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_aec17db21b9810f392aef1201fc431b81} 
+const \textbf{ btck\+\_\+\+Chain} $\ast$ btck\+\_\+chainstate\+\_\+manager\+\_\+get\+\_\+active\+\_\+chain (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$}]{chainstate\+\_\+manager}{}\end{DoxyParamCaption})}
+
+
+
+Returns the best known currently active chain. Its lifetime is dependent on the chainstate manager. It can be thought of as a view on a vector of block tree entries that form the best chain. The returned chain reference always points to the currently active best chain. However, state transitions within the chainstate manager (e.\+g., processing blocks) will update the chain\textquotesingle{}s contents. Data retrieved from this chain is only consistent up to the point when new data is processed in the chainstate manager. It is the user\textquotesingle{}s responsibility to guard against these inconsistencies. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em chainstate\+\_\+manager} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The chain. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_get\_block\_tree\_entry\_by\_hash@{btck\_chainstate\_manager\_get\_block\_tree\_entry\_by\_hash}}
+\index{btck\_chainstate\_manager\_get\_block\_tree\_entry\_by\_hash@{btck\_chainstate\_manager\_get\_block\_tree\_entry\_by\_hash}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_get\_block\_tree\_entry\_by\_hash()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_aba1078358bafa199fd022c12e4a8028b} 
+const \textbf{ btck\+\_\+\+Block\+Tree\+Entry} $\ast$ btck\+\_\+chainstate\+\_\+manager\+\_\+get\+\_\+block\+\_\+tree\+\_\+entry\+\_\+by\+\_\+hash (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$}]{chainman}{, }\item[{const \textbf{ btck\+\_\+\+Block\+Hash} $\ast$}]{block\+\_\+hash}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_import\_blocks@{btck\_chainstate\_manager\_import\_blocks}}
+\index{btck\_chainstate\_manager\_import\_blocks@{btck\_chainstate\_manager\_import\_blocks}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_import\_blocks()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a0cca58f061620dc6db1cd45c3f80275f} 
+int btck\+\_\+chainstate\+\_\+manager\+\_\+import\+\_\+blocks (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$}]{chainstate\+\_\+manager}{, }\item[{const char $\ast$$\ast$}]{block\+\_\+file\+\_\+paths\+\_\+data}{, }\item[{size\+\_\+t $\ast$}]{block\+\_\+file\+\_\+paths\+\_\+lens}{, }\item[{size\+\_\+t}]{block\+\_\+file\+\_\+paths\+\_\+data\+\_\+len}{}\end{DoxyParamCaption})}
+
+
+
+Triggers the start of a reindex if the wipe options were previously set for the chainstate manager. Can also import an array of existing block files selected by the user. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em chainstate\+\_\+manager} & Non-\/null. \\
+\hline
+\mbox{\texttt{in}}  & {\em block\+\_\+file\+\_\+paths\+\_\+data} & Nullable, array of block files described by their full filesystem paths. \\
+\hline
+\mbox{\texttt{in}}  & {\em block\+\_\+file\+\_\+paths\+\_\+lens} & Nullable, array containing the lengths of each of the paths. \\
+\hline
+\mbox{\texttt{in}}  & {\em block\+\_\+file\+\_\+paths\+\_\+data\+\_\+len} & Length of the block\+\_\+file\+\_\+paths\+\_\+data and block\+\_\+file\+\_\+paths\+\_\+len arrays. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if the import blocks call was completed successfully, non-\/zero otherwise. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_options\_create@{btck\_chainstate\_manager\_options\_create}}
+\index{btck\_chainstate\_manager\_options\_create@{btck\_chainstate\_manager\_options\_create}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_options\_create()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_aed7732d975e5063e94dc5da7ad5c8e2d} 
+\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$ btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+create (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Context} $\ast$}]{context}{, }\item[{const char $\ast$}]{data\+\_\+directory}{, }\item[{size\+\_\+t}]{data\+\_\+directory\+\_\+len}{, }\item[{const char $\ast$}]{blocks\+\_\+directory}{, }\item[{size\+\_\+t}]{blocks\+\_\+directory\+\_\+len}{}\end{DoxyParamCaption})}
+
+
+
+Create options for the chainstate manager. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em context} & Non-\/null, the created options and through it the chainstate manager will associate with this kernel context for the duration of their lifetimes. \\
+\hline
+\mbox{\texttt{in}}  & {\em data\+\_\+directory} & Non-\/null, non-\/empty path string of the directory containing the chainstate data. If the directory does not exist yet, it will be created. \\
+\hline
+\mbox{\texttt{in}}  & {\em blocks\+\_\+directory} & Non-\/null, non-\/empty path string of the directory containing the block data. If the directory does not exist yet, it will be created. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The allocated chainstate manager options, or null on error. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_options\_destroy@{btck\_chainstate\_manager\_options\_destroy}}
+\index{btck\_chainstate\_manager\_options\_destroy@{btck\_chainstate\_manager\_options\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_options\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_adcb84351e43dab1b2b775dd92b3ccbe2} 
+void btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$}]{chainstate\+\_\+manager\+\_\+options}{}\end{DoxyParamCaption})}
+
+Destroy the chainstate manager options. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_options\_set\_wipe\_dbs@{btck\_chainstate\_manager\_options\_set\_wipe\_dbs}}
+\index{btck\_chainstate\_manager\_options\_set\_wipe\_dbs@{btck\_chainstate\_manager\_options\_set\_wipe\_dbs}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_options\_set\_wipe\_dbs()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a7c9acdfdb6c687d0ad99d39fdd665733} 
+int btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+set\+\_\+wipe\+\_\+dbs (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$}]{chainstate\+\_\+manager\+\_\+options}{, }\item[{int}]{wipe\+\_\+block\+\_\+tree\+\_\+db}{, }\item[{int}]{wipe\+\_\+chainstate\+\_\+db}{}\end{DoxyParamCaption})}
+
+
+
+Sets wipe db in the options. In combination with calling \doxyref{btck\+\_\+chainstate\+\_\+manager\+\_\+import\+\_\+blocks}{p.}{bitcoinkernel_8cpp_a0cca58f061620dc6db1cd45c3f80275f} this triggers either a full reindex, or a reindex of just the chainstate database. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em chainstate\+\_\+manager\+\_\+options} & Non-\/null, created by \doxyref{btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+create}{p.}{bitcoinkernel_8cpp_aed7732d975e5063e94dc5da7ad5c8e2d}. \\
+\hline
+\mbox{\texttt{in}}  & {\em wipe\+\_\+block\+\_\+tree\+\_\+db} & Set wipe block tree db. Should only be 1 if wipe\+\_\+chainstate\+\_\+db is 1 too. \\
+\hline
+\mbox{\texttt{in}}  & {\em wipe\+\_\+chainstate\+\_\+db} & Set wipe chainstate db. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if the set was successful, non-\/zero if the set failed. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_options\_set\_worker\_threads\_num@{btck\_chainstate\_manager\_options\_set\_worker\_threads\_num}}
+\index{btck\_chainstate\_manager\_options\_set\_worker\_threads\_num@{btck\_chainstate\_manager\_options\_set\_worker\_threads\_num}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_options\_set\_worker\_threads\_num()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ae50c9f1e86aff3cd3809cf32c276762c} 
+void btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+set\+\_\+worker\+\_\+threads\+\_\+num (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$}]{chainstate\+\_\+manager\+\_\+options}{, }\item[{int}]{worker\+\_\+threads}{}\end{DoxyParamCaption})}
+
+
+
+Set the number of available worker threads used during validation. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em chainstate\+\_\+manager\+\_\+options} & Non-\/null, options to be set. \\
+\hline
+\mbox{\texttt{in}}  & {\em worker\+\_\+threads} & The number of worker threads that should be spawned in the thread pool used for validation. When set to 0 no parallel verification is done. The value range is clamped internally between 0 and 15. \\
+\hline
+\end{DoxyParams}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_options\_update\_block\_tree\_db\_in\_memory@{btck\_chainstate\_manager\_options\_update\_block\_tree\_db\_in\_memory}}
+\index{btck\_chainstate\_manager\_options\_update\_block\_tree\_db\_in\_memory@{btck\_chainstate\_manager\_options\_update\_block\_tree\_db\_in\_memory}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_options\_update\_block\_tree\_db\_in\_memory()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a3a38f969b42e4f6094fb95c0adefe7c7} 
+void btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+update\+\_\+block\+\_\+tree\+\_\+db\+\_\+in\+\_\+memory (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$}]{chainstate\+\_\+manager\+\_\+options}{, }\item[{int}]{block\+\_\+tree\+\_\+db\+\_\+in\+\_\+memory}{}\end{DoxyParamCaption})}
+
+
+
+Sets block tree db in memory in the options. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em chainstate\+\_\+manager\+\_\+options} & Non-\/null, created by \doxyref{btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+create}{p.}{bitcoinkernel_8cpp_aed7732d975e5063e94dc5da7ad5c8e2d}. \\
+\hline
+\mbox{\texttt{in}}  & {\em block\+\_\+tree\+\_\+db\+\_\+in\+\_\+memory} & Set block tree db in memory. \\
+\hline
+\end{DoxyParams}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_options\_update\_chainstate\_db\_in\_memory@{btck\_chainstate\_manager\_options\_update\_chainstate\_db\_in\_memory}}
+\index{btck\_chainstate\_manager\_options\_update\_chainstate\_db\_in\_memory@{btck\_chainstate\_manager\_options\_update\_chainstate\_db\_in\_memory}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_options\_update\_chainstate\_db\_in\_memory()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a18713ab39e0a43180c1d4c88cd25552e} 
+void btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+update\+\_\+chainstate\+\_\+db\+\_\+in\+\_\+memory (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Chainstate\+Manager\+Options} $\ast$}]{chainstate\+\_\+manager\+\_\+options}{, }\item[{int}]{chainstate\+\_\+db\+\_\+in\+\_\+memory}{}\end{DoxyParamCaption})}
+
+
+
+Sets chainstate db in memory in the options. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em chainstate\+\_\+manager\+\_\+options} & Non-\/null, created by \doxyref{btck\+\_\+chainstate\+\_\+manager\+\_\+options\+\_\+create}{p.}{bitcoinkernel_8cpp_aed7732d975e5063e94dc5da7ad5c8e2d}. \\
+\hline
+\mbox{\texttt{in}}  & {\em chainstate\+\_\+db\+\_\+in\+\_\+memory} & Set chainstate db in memory. \\
+\hline
+\end{DoxyParams}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_chainstate\_manager\_process\_block@{btck\_chainstate\_manager\_process\_block}}
+\index{btck\_chainstate\_manager\_process\_block@{btck\_chainstate\_manager\_process\_block}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_chainstate\_manager\_process\_block()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ad09658ae575faf11d6fe3367d00ff542} 
+int btck\+\_\+chainstate\+\_\+manager\+\_\+process\+\_\+block (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Chainstate\+Manager} $\ast$}]{chainman}{, }\item[{const \textbf{ btck\+\_\+\+Block} $\ast$}]{block}{, }\item[{int $\ast$}]{\+\_\+new\+\_\+block}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_coin\_confirmation\_height@{btck\_coin\_confirmation\_height}}
+\index{btck\_coin\_confirmation\_height@{btck\_coin\_confirmation\_height}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_coin\_confirmation\_height()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a0ee6c394cbee80c89f37bef1eeceefc8} 
+uint32\+\_\+t btck\+\_\+coin\+\_\+confirmation\+\_\+height (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Coin} $\ast$}]{coin}{}\end{DoxyParamCaption})}
+
+
+
+Returns the block height where the transaction that created this coin was included in. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em coin} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The block height of the coin. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_coin\_copy@{btck\_coin\_copy}}
+\index{btck\_coin\_copy@{btck\_coin\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_coin\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ae2777f805a748d82a1708cb5bc2effa0} 
+\textbf{ btck\+\_\+\+Coin} $\ast$ btck\+\_\+coin\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Coin} $\ast$}]{coin}{}\end{DoxyParamCaption})}
+
+
+
+Copy a coin. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em coin} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The copied coin. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_coin\_destroy@{btck\_coin\_destroy}}
+\index{btck\_coin\_destroy@{btck\_coin\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_coin\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a8a1fc1828b5f48df6a133fa96d0215dc} 
+void btck\+\_\+coin\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Coin} $\ast$}]{coin}{}\end{DoxyParamCaption})}
+
+Destroy the coin. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_coin\_get\_output@{btck\_coin\_get\_output}}
+\index{btck\_coin\_get\_output@{btck\_coin\_get\_output}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_coin\_get\_output()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a701e2699657f7d2866b611aa4c23db77} 
+const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$ btck\+\_\+coin\+\_\+get\+\_\+output (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Coin} $\ast$}]{coin}{}\end{DoxyParamCaption})}
+
+
+
+Return the transaction output of a coin. The returned pointer is unowned and only valid for the lifetime of the coin. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em coin} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A transaction output pointer. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_coin\_is\_coinbase@{btck\_coin\_is\_coinbase}}
+\index{btck\_coin\_is\_coinbase@{btck\_coin\_is\_coinbase}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_coin\_is\_coinbase()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a753a9fb41d47ab0edb518cc7e4624827} 
+int btck\+\_\+coin\+\_\+is\+\_\+coinbase (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Coin} $\ast$}]{coin}{}\end{DoxyParamCaption})}
+
+
+
+Returns whether the containing transaction was a coinbase. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em coin} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+1 if the coin is a coinbase coin, 0 otherwise. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_context\_copy@{btck\_context\_copy}}
+\index{btck\_context\_copy@{btck\_context\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_context\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a319653257872e0971a86e7455e8ce823} 
+\textbf{ btck\+\_\+\+Context} $\ast$ btck\+\_\+context\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Context} $\ast$}]{context}{}\end{DoxyParamCaption})}
+
+Copy the context. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_context\_create@{btck\_context\_create}}
+\index{btck\_context\_create@{btck\_context\_create}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_context\_create()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a6e29ce4fc1b644f8c00b278ef4371d69} 
+\textbf{ btck\+\_\+\+Context} $\ast$ btck\+\_\+context\+\_\+create (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Context\+Options} $\ast$}]{context\+\_\+options}{}\end{DoxyParamCaption})}
+
+
+
+Create a new kernel context. If the options have not been previously set, their corresponding fields will be initialized to default values; the context will assume mainnet chain parameters and won\textquotesingle{}t attempt to call the kernel notification callbacks. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em context\+\_\+options} & Nullable, created by \doxyref{btck\+\_\+context\+\_\+options\+\_\+create}{p.}{bitcoinkernel_8cpp_a12d13d5129b239a9d7bd0d204df9c8a4}. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The allocated context, or null on error. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_context\_destroy@{btck\_context\_destroy}}
+\index{btck\_context\_destroy@{btck\_context\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_context\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a114797944ba1e31464bef03702fb7799} 
+void btck\+\_\+context\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Context} $\ast$}]{context}{}\end{DoxyParamCaption})}
+
+Destroy the context. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_context\_interrupt@{btck\_context\_interrupt}}
+\index{btck\_context\_interrupt@{btck\_context\_interrupt}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_context\_interrupt()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a7ef26a7445cabc09e59dd522502fb99d} 
+int btck\+\_\+context\+\_\+interrupt (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Context} $\ast$}]{context}{}\end{DoxyParamCaption})}
+
+
+
+Interrupt can be used to halt long-\/running validation functions like when reindexing, importing or processing blocks. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em context} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if the interrupt was successful, non-\/zero otherwise. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_context\_options\_create@{btck\_context\_options\_create}}
+\index{btck\_context\_options\_create@{btck\_context\_options\_create}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_context\_options\_create()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a12d13d5129b239a9d7bd0d204df9c8a4} 
+\textbf{ btck\+\_\+\+Context\+Options} $\ast$ btck\+\_\+context\+\_\+options\+\_\+create (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Creates an empty context options. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_context\_options\_destroy@{btck\_context\_options\_destroy}}
+\index{btck\_context\_options\_destroy@{btck\_context\_options\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_context\_options\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a4b42bba63ba67cbd58ad16cabdbe7e13} 
+void btck\+\_\+context\+\_\+options\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Context\+Options} $\ast$}]{context\+\_\+options}{}\end{DoxyParamCaption})}
+
+Destroy the context options. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_context\_options\_set\_chainparams@{btck\_context\_options\_set\_chainparams}}
+\index{btck\_context\_options\_set\_chainparams@{btck\_context\_options\_set\_chainparams}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_context\_options\_set\_chainparams()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a8cdd00798e68700887769c6e7d40b92f} 
+void btck\+\_\+context\+\_\+options\+\_\+set\+\_\+chainparams (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Context\+Options} $\ast$}]{options}{, }\item[{const \textbf{ btck\+\_\+\+Chain\+Parameters} $\ast$}]{chain\+\_\+parameters}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_context\_options\_set\_notifications@{btck\_context\_options\_set\_notifications}}
+\index{btck\_context\_options\_set\_notifications@{btck\_context\_options\_set\_notifications}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_context\_options\_set\_notifications()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a1157262771b3dfe327c919423944fdbd} 
+void btck\+\_\+context\+\_\+options\+\_\+set\+\_\+notifications (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Context\+Options} $\ast$}]{context\+\_\+options}{, }\item[{\textbf{ btck\+\_\+\+Notification\+Interface\+Callbacks}}]{notifications}{}\end{DoxyParamCaption})}
+
+
+
+Set the kernel notifications for the context options. The context created with the options will be configured with these notifications. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em context\+\_\+options} & Non-\/null, previously created by \doxyref{btck\+\_\+context\+\_\+options\+\_\+create}{p.}{bitcoinkernel_8cpp_a12d13d5129b239a9d7bd0d204df9c8a4}. \\
+\hline
+\mbox{\texttt{in}}  & {\em notifications} & Is set to the context options. \\
+\hline
+\end{DoxyParams}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_context\_options\_set\_validation\_interface@{btck\_context\_options\_set\_validation\_interface}}
+\index{btck\_context\_options\_set\_validation\_interface@{btck\_context\_options\_set\_validation\_interface}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_context\_options\_set\_validation\_interface()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_aad67c9ef730ea226f211b23103e55eb1} 
+void btck\+\_\+context\+\_\+options\+\_\+set\+\_\+validation\+\_\+interface (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Context\+Options} $\ast$}]{context\+\_\+options}{, }\item[{\textbf{ btck\+\_\+\+Validation\+Interface\+Callbacks}}]{validation\+\_\+interface\+\_\+callbacks}{}\end{DoxyParamCaption})}
+
+
+
+Set the validation interface callbacks for the context options. The context created with the options will be configured for these validation interface callbacks. The callbacks will then be triggered from validation events issued by the chainstate manager created from the same context. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em context\+\_\+options} & Non-\/null, previously created with btck\+\_\+context\+\_\+options\+\_\+create. \\
+\hline
+\mbox{\texttt{in}}  & {\em validation\+\_\+interface\+\_\+callbacks} & The callbacks used for passing validation information to the user. \\
+\hline
+\end{DoxyParams}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_logging\_connection\_create@{btck\_logging\_connection\_create}}
+\index{btck\_logging\_connection\_create@{btck\_logging\_connection\_create}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_logging\_connection\_create()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a52608b2cbf28b6207987a06f5b5918e2} 
+\textbf{ btck\+\_\+\+Logging\+Connection} $\ast$ btck\+\_\+logging\+\_\+connection\+\_\+create (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Log\+Callback}}]{log\+\_\+callback}{, }\item[{void $\ast$}]{user\+\_\+data}{, }\item[{\textbf{ btck\+\_\+\+Destroy\+Callback}}]{user\+\_\+data\+\_\+destroy\+\_\+callback}{}\end{DoxyParamCaption})}
+
+
+
+Start logging messages through the provided callback. Log messages produced before this function is first called are buffered and on calling this function are logged immediately. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em log\+\_\+callback} & Non-\/null, function through which messages will be logged. \\
+\hline
+\mbox{\texttt{in}}  & {\em user\+\_\+data} & Nullable, holds a user-\/defined opaque structure. Is passed back to the user through the callback. If the user\+\_\+data\+\_\+destroy\+\_\+callback is also defined it is assumed that ownership of the user\+\_\+data is passed to the created logging connection. \\
+\hline
+\mbox{\texttt{in}}  & {\em user\+\_\+data\+\_\+destroy\+\_\+callback} & Nullable, function for freeing the user data. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A new kernel logging connection, or null on error. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_logging\_connection\_destroy@{btck\_logging\_connection\_destroy}}
+\index{btck\_logging\_connection\_destroy@{btck\_logging\_connection\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_logging\_connection\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ac059d598942c20bd0c91ebf6bdf6a093} 
+void btck\+\_\+logging\+\_\+connection\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Logging\+Connection} $\ast$}]{logging\+\_\+connection}{}\end{DoxyParamCaption})}
+
+Stop logging and destroy the logging connection. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_logging\_disable@{btck\_logging\_disable}}
+\index{btck\_logging\_disable@{btck\_logging\_disable}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_logging\_disable()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a00ec09d7672ce1319831056aa980b24e} 
+void btck\+\_\+logging\+\_\+disable (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+This disables the global internal logger. No log messages will be buffered internally anymore once this is called and the buffer is cleared. This function should only be called once and is not thread or re-\/entry safe. Log messages will be buffered until this function is called, or a logging connection is created. This must not be called while a logging connection already exists. 
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_logging\_disable\_category@{btck\_logging\_disable\_category}}
+\index{btck\_logging\_disable\_category@{btck\_logging\_disable\_category}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_logging\_disable\_category()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a202da381becbb509ea0f646496eeb4ed} 
+void btck\+\_\+logging\+\_\+disable\+\_\+category (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Log\+Category}}]{category}{}\end{DoxyParamCaption})}
+
+
+
+Disable a specific log category for the global internal logger. This changes a global setting and will override settings for all existing \doxyref{btck\+\_\+\+Logging\+Connection}{p.}{structbtck___logging_connection} instances. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em category} & If btck\+\_\+\+Log\+Category\+\_\+\+ALL is chosen, all categories will be disabled. \\
+\hline
+\end{DoxyParams}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_logging\_enable\_category@{btck\_logging\_enable\_category}}
+\index{btck\_logging\_enable\_category@{btck\_logging\_enable\_category}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_logging\_enable\_category()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a0e8e8d47f1548575aca310e532ffe15a} 
+void btck\+\_\+logging\+\_\+enable\+\_\+category (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Log\+Category}}]{category}{}\end{DoxyParamCaption})}
+
+
+
+Enable a specific log category for the global internal logger. This changes a global setting and will override settings for all existing \doxyref{btck\+\_\+\+Logging\+Connection}{p.}{structbtck___logging_connection} instances. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em category} & If btck\+\_\+\+Log\+Category\+\_\+\+ALL is chosen, all categories will be enabled. \\
+\hline
+\end{DoxyParams}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_logging\_set\_level\_category@{btck\_logging\_set\_level\_category}}
+\index{btck\_logging\_set\_level\_category@{btck\_logging\_set\_level\_category}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_logging\_set\_level\_category()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a86fb894fe2c1cabb8c380ef06a39b463} 
+void btck\+\_\+logging\+\_\+set\+\_\+level\+\_\+category (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Log\+Category}}]{category}{, }\item[{\textbf{ btck\+\_\+\+Log\+Level}}]{level}{}\end{DoxyParamCaption})}
+
+
+
+Set the log level of the global internal logger. This does not enable the selected categories. Use \doxyref{btck\+\_\+logging\+\_\+enable\+\_\+category}{p.}{bitcoinkernel_8cpp_a0e8e8d47f1548575aca310e532ffe15a} to start logging from a specific, or all categories. This changes a global setting and will override settings for all existing \doxyref{btck\+\_\+\+Logging\+Connection}{p.}{structbtck___logging_connection} instances. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em category} & If btck\+\_\+\+Log\+Category\+\_\+\+ALL is chosen, sets both the global fallback log level used by all categories that don\textquotesingle{}t have a specific level set, and also sets the log level for messages logged with the btck\+\_\+\+Log\+Category\+\_\+\+ALL category itself. For any other category, sets a category-\/specific log level that overrides the global fallback for that category only.\\
+\hline
+\mbox{\texttt{in}}  & {\em level} & Log level at which the log category is set. \\
+\hline
+\end{DoxyParams}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_logging\_set\_options@{btck\_logging\_set\_options}}
+\index{btck\_logging\_set\_options@{btck\_logging\_set\_options}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_logging\_set\_options()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ae467c1a5977063c70a7e8633b71af5e2} 
+void btck\+\_\+logging\+\_\+set\+\_\+options (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Logging\+Options}}]{options}{}\end{DoxyParamCaption})}
+
+
+
+Set some options for the global internal logger. This changes global settings and will override settings for all existing \doxyref{btck\+\_\+\+Logging\+Connection}{p.}{structbtck___logging_connection} instances. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em options} & Sets formatting options of the log messages. \\
+\hline
+\end{DoxyParams}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_script\_pubkey\_copy@{btck\_script\_pubkey\_copy}}
+\index{btck\_script\_pubkey\_copy@{btck\_script\_pubkey\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_script\_pubkey\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a00a59eaec28813caa1b63488af995f01} 
+\textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$ btck\+\_\+script\+\_\+pubkey\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$}]{script\+\_\+pubkey}{}\end{DoxyParamCaption})}
+
+
+
+Copy a script pubkey. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em script\+\_\+pubkey} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The copied script pubkey. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_script\_pubkey\_create@{btck\_script\_pubkey\_create}}
+\index{btck\_script\_pubkey\_create@{btck\_script\_pubkey\_create}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_script\_pubkey\_create()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a2f2197674fd477e7c2584f1f84f0a2c8} 
+\textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$ btck\+\_\+script\+\_\+pubkey\+\_\+create (\begin{DoxyParamCaption}\item[{const void $\ast$}]{script\+\_\+pubkey}{, }\item[{size\+\_\+t}]{script\+\_\+pubkey\+\_\+len}{}\end{DoxyParamCaption})}
+
+
+
+Create a script pubkey from serialized data. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em script\+\_\+pubkey} & Serialized script pubkey. \\
+\hline
+\mbox{\texttt{in}}  & {\em script\+\_\+pubkey\+\_\+len} & Length of the script pubkey data. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The script pubkey. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_script\_pubkey\_destroy@{btck\_script\_pubkey\_destroy}}
+\index{btck\_script\_pubkey\_destroy@{btck\_script\_pubkey\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_script\_pubkey\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a088ae07775f3030e300bedf5de55e5e6} 
+void btck\+\_\+script\+\_\+pubkey\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$}]{script\+\_\+pubkey}{}\end{DoxyParamCaption})}
+
+Destroy the script pubkey. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_script\_pubkey\_to\_bytes@{btck\_script\_pubkey\_to\_bytes}}
+\index{btck\_script\_pubkey\_to\_bytes@{btck\_script\_pubkey\_to\_bytes}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_script\_pubkey\_to\_bytes()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a058f864618cb58a81cfab70595f0a6e8} 
+int btck\+\_\+script\+\_\+pubkey\+\_\+to\+\_\+bytes (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$}]{script\+\_\+pubkey\+\_\+}{, }\item[{\textbf{ btck\+\_\+\+Write\+Bytes}}]{writer}{, }\item[{void $\ast$}]{user\+\_\+data}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_script\_pubkey\_verify@{btck\_script\_pubkey\_verify}}
+\index{btck\_script\_pubkey\_verify@{btck\_script\_pubkey\_verify}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_script\_pubkey\_verify()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a7c4141fd61a8543642bb3c4834bffba1} 
+int btck\+\_\+script\+\_\+pubkey\+\_\+verify (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$}]{script\+\_\+pubkey}{, }\item[{const int64\+\_\+t}]{amount}{, }\item[{const \textbf{ btck\+\_\+\+Transaction} $\ast$}]{tx\+\_\+to}{, }\item[{const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$$\ast$}]{spent\+\_\+outputs\+\_\+}{, }\item[{size\+\_\+t}]{spent\+\_\+outputs\+\_\+len}{, }\item[{const unsigned int}]{input\+\_\+index}{, }\item[{const \textbf{ btck\+\_\+\+Script\+Verification\+Flags}}]{flags}{, }\item[{\textbf{ btck\+\_\+\+Script\+Verify\+Status} $\ast$}]{status}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_copy@{btck\_transaction\_copy}}
+\index{btck\_transaction\_copy@{btck\_transaction\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ae7a659442a1c839e72c2915bdb326f6b} 
+\textbf{ btck\+\_\+\+Transaction} $\ast$ btck\+\_\+transaction\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction} $\ast$}]{transaction}{}\end{DoxyParamCaption})}
+
+
+
+Copy a transaction. Transactions are reference counted, so this just increments the reference count. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The copied transaction. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_count\_inputs@{btck\_transaction\_count\_inputs}}
+\index{btck\_transaction\_count\_inputs@{btck\_transaction\_count\_inputs}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_count\_inputs()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ad3dcf919541ad0823246f6e85224a35f} 
+size\+\_\+t btck\+\_\+transaction\+\_\+count\+\_\+inputs (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction} $\ast$}]{transaction}{}\end{DoxyParamCaption})}
+
+
+
+Get the number of inputs of a transaction. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The number of inputs. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_count\_outputs@{btck\_transaction\_count\_outputs}}
+\index{btck\_transaction\_count\_outputs@{btck\_transaction\_count\_outputs}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_count\_outputs()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a2657faff8f244232667e3355dc62d27f} 
+size\+\_\+t btck\+\_\+transaction\+\_\+count\+\_\+outputs (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction} $\ast$}]{transaction}{}\end{DoxyParamCaption})}
+
+
+
+Get the number of outputs of a transaction. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The number of outputs. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_create@{btck\_transaction\_create}}
+\index{btck\_transaction\_create@{btck\_transaction\_create}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_create()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ae02dfbd6affb0c97aa8f8324a00de1b0} 
+\textbf{ btck\+\_\+\+Transaction} $\ast$ btck\+\_\+transaction\+\_\+create (\begin{DoxyParamCaption}\item[{const void $\ast$}]{raw\+\_\+transaction}{, }\item[{size\+\_\+t}]{raw\+\_\+transaction\+\_\+len}{}\end{DoxyParamCaption})}
+
+
+
+Create a new transaction from the serialized data. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em raw\+\_\+transaction} & Serialized transaction. \\
+\hline
+\mbox{\texttt{in}}  & {\em raw\+\_\+transaction\+\_\+len} & Length of the serialized transaction. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The transaction, or null on error. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_destroy@{btck\_transaction\_destroy}}
+\index{btck\_transaction\_destroy@{btck\_transaction\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a1480e64578f2a4fc90b6079bc755de83} 
+void btck\+\_\+transaction\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Transaction} $\ast$}]{transaction}{}\end{DoxyParamCaption})}
+
+Destroy the transaction. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_get\_input\_at@{btck\_transaction\_get\_input\_at}}
+\index{btck\_transaction\_get\_input\_at@{btck\_transaction\_get\_input\_at}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_get\_input\_at()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a0e173760553cc5740fe5875a04c70e37} 
+const \textbf{ btck\+\_\+\+Transaction\+Input} $\ast$ btck\+\_\+transaction\+\_\+get\+\_\+input\+\_\+at (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction} $\ast$}]{transaction}{, }\item[{size\+\_\+t}]{input\+\_\+index}{}\end{DoxyParamCaption})}
+
+
+
+Get the transaction input at the provided index. The returned transaction input is not owned and depends on the lifetime of the transaction. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction} & Non-\/null. \\
+\hline
+\mbox{\texttt{in}}  & {\em input\+\_\+index} & The index of the transaction input to be retrieved. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The transaction input 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_get\_output\_at@{btck\_transaction\_get\_output\_at}}
+\index{btck\_transaction\_get\_output\_at@{btck\_transaction\_get\_output\_at}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_get\_output\_at()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a821bc08b16eb64b8c8b3863bdfa645a2} 
+const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$ btck\+\_\+transaction\+\_\+get\+\_\+output\+\_\+at (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction} $\ast$}]{transaction}{, }\item[{size\+\_\+t}]{output\+\_\+index}{}\end{DoxyParamCaption})}
+
+
+
+Get the transaction outputs at the provided index. The returned transaction output is not owned and depends on the lifetime of the transaction. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction} & Non-\/null. \\
+\hline
+\mbox{\texttt{in}}  & {\em output\+\_\+index} & The index of the transaction output to be retrieved. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The transaction output 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_get\_txid@{btck\_transaction\_get\_txid}}
+\index{btck\_transaction\_get\_txid@{btck\_transaction\_get\_txid}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_get\_txid()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ab394ef17b6074a295865cd4a6784d19f} 
+const \textbf{ btck\+\_\+\+Txid} $\ast$ btck\+\_\+transaction\+\_\+get\+\_\+txid (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction} $\ast$}]{transaction}{}\end{DoxyParamCaption})}
+
+
+
+Get the txid of a transaction. The returned txid is not owned and depends on the lifetime of the transaction. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The txid. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_input\_copy@{btck\_transaction\_input\_copy}}
+\index{btck\_transaction\_input\_copy@{btck\_transaction\_input\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_input\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ab999c9482f5e0ea06a2429b5856094fb} 
+\textbf{ btck\+\_\+\+Transaction\+Input} $\ast$ btck\+\_\+transaction\+\_\+input\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction\+Input} $\ast$}]{transaction\+\_\+input}{}\end{DoxyParamCaption})}
+
+
+
+Copy a transaction input. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction\+\_\+input} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The copied transaction input. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_input\_destroy@{btck\_transaction\_input\_destroy}}
+\index{btck\_transaction\_input\_destroy@{btck\_transaction\_input\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_input\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a812b6946699226f35e85df38b457e4be} 
+void btck\+\_\+transaction\+\_\+input\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Transaction\+Input} $\ast$}]{transaction\+\_\+input}{}\end{DoxyParamCaption})}
+
+Destroy the transaction input. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_input\_get\_out\_point@{btck\_transaction\_input\_get\_out\_point}}
+\index{btck\_transaction\_input\_get\_out\_point@{btck\_transaction\_input\_get\_out\_point}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_input\_get\_out\_point()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a6121219b6a104cfe9465a4394fb6297f} 
+const \textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$ btck\+\_\+transaction\+\_\+input\+\_\+get\+\_\+out\+\_\+point (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction\+Input} $\ast$}]{transaction\+\_\+input}{}\end{DoxyParamCaption})}
+
+
+
+Get the transaction out point. The returned transaction out point is not owned and depends on the lifetime of the transaction. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction\+\_\+input} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The transaction out point. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_out\_point\_copy@{btck\_transaction\_out\_point\_copy}}
+\index{btck\_transaction\_out\_point\_copy@{btck\_transaction\_out\_point\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_out\_point\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ab5f57ad171c6853e018506cf1ba51285} 
+\textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$ btck\+\_\+transaction\+\_\+out\+\_\+point\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$}]{transaction\+\_\+out\+\_\+point}{}\end{DoxyParamCaption})}
+
+
+
+Copy a transaction out point. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction\+\_\+out\+\_\+point} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The copied transaction out point. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_out\_point\_destroy@{btck\_transaction\_out\_point\_destroy}}
+\index{btck\_transaction\_out\_point\_destroy@{btck\_transaction\_out\_point\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_out\_point\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a7182b72a22c772fe5a606c7f8166f99d} 
+void btck\+\_\+transaction\+\_\+out\+\_\+point\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$}]{transaction\+\_\+out\+\_\+point}{}\end{DoxyParamCaption})}
+
+Destroy the transaction out point. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_out\_point\_get\_index@{btck\_transaction\_out\_point\_get\_index}}
+\index{btck\_transaction\_out\_point\_get\_index@{btck\_transaction\_out\_point\_get\_index}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_out\_point\_get\_index()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ab0b883980267313c644b7f1bcdb10912} 
+uint32\+\_\+t btck\+\_\+transaction\+\_\+out\+\_\+point\+\_\+get\+\_\+index (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$}]{transaction\+\_\+out\+\_\+point}{}\end{DoxyParamCaption})}
+
+
+
+Get the output position from the transaction out point. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction\+\_\+out\+\_\+point} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The output index. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_out\_point\_get\_txid@{btck\_transaction\_out\_point\_get\_txid}}
+\index{btck\_transaction\_out\_point\_get\_txid@{btck\_transaction\_out\_point\_get\_txid}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_out\_point\_get\_txid()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a1dbe75b6bc1e8b35a210fe4aa0a01c2a} 
+const \textbf{ btck\+\_\+\+Txid} $\ast$ btck\+\_\+transaction\+\_\+out\+\_\+point\+\_\+get\+\_\+txid (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction\+Out\+Point} $\ast$}]{transaction\+\_\+out\+\_\+point}{}\end{DoxyParamCaption})}
+
+
+
+Get the txid from the transaction out point. The returned txid is not owned and depends on the lifetime of the transaction out point. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction\+\_\+out\+\_\+point} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The txid. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_output\_copy@{btck\_transaction\_output\_copy}}
+\index{btck\_transaction\_output\_copy@{btck\_transaction\_output\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_output\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_abf6a67be9f292d0efb3af33f6b6a1fb9} 
+\textbf{ btck\+\_\+\+Transaction\+Output} $\ast$ btck\+\_\+transaction\+\_\+output\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$}]{transaction\+\_\+output}{}\end{DoxyParamCaption})}
+
+
+
+Copy a transaction output. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction\+\_\+output} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The copied transaction output. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_output\_create@{btck\_transaction\_output\_create}}
+\index{btck\_transaction\_output\_create@{btck\_transaction\_output\_create}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_output\_create()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ae752113b8b4c80a09fa21efcb1103eda} 
+\textbf{ btck\+\_\+\+Transaction\+Output} $\ast$ btck\+\_\+transaction\+\_\+output\+\_\+create (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$}]{script\+\_\+pubkey}{, }\item[{int64\+\_\+t}]{amount}{}\end{DoxyParamCaption})}
+
+
+
+Create a transaction output from a script pubkey and an amount. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em script\+\_\+pubkey} & Non-\/null. \\
+\hline
+\mbox{\texttt{in}}  & {\em amount} & The amount associated with the script pubkey for this output. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The transaction output. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_output\_destroy@{btck\_transaction\_output\_destroy}}
+\index{btck\_transaction\_output\_destroy@{btck\_transaction\_output\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_output\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_af13648a7061ed4c6f9e93e15dc1079cc} 
+void btck\+\_\+transaction\+\_\+output\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Transaction\+Output} $\ast$}]{transaction\+\_\+output}{}\end{DoxyParamCaption})}
+
+Destroy the transaction output. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_output\_get\_amount@{btck\_transaction\_output\_get\_amount}}
+\index{btck\_transaction\_output\_get\_amount@{btck\_transaction\_output\_get\_amount}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_output\_get\_amount()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a18666bdcfb7fde11464a0a95c4cff9f3} 
+int64\+\_\+t btck\+\_\+transaction\+\_\+output\+\_\+get\+\_\+amount (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$}]{transaction\+\_\+output}{}\end{DoxyParamCaption})}
+
+
+
+Get the amount in the output. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction\+\_\+output} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The amount. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_output\_get\_script\_pubkey@{btck\_transaction\_output\_get\_script\_pubkey}}
+\index{btck\_transaction\_output\_get\_script\_pubkey@{btck\_transaction\_output\_get\_script\_pubkey}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_output\_get\_script\_pubkey()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_acb8339d0b108a31a81878cd81d9abea8} 
+const \textbf{ btck\+\_\+\+Script\+Pubkey} $\ast$ btck\+\_\+transaction\+\_\+output\+\_\+get\+\_\+script\+\_\+pubkey (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction\+Output} $\ast$}]{transaction\+\_\+output}{}\end{DoxyParamCaption})}
+
+
+
+Get the script pubkey of the output. The returned script pubkey is not owned and depends on the lifetime of the transaction output. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction\+\_\+output} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The script pubkey. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_spent\_outputs\_copy@{btck\_transaction\_spent\_outputs\_copy}}
+\index{btck\_transaction\_spent\_outputs\_copy@{btck\_transaction\_spent\_outputs\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_spent\_outputs\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ac0fbd958dd48cbb38c7610123fecb799} 
+\textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$ btck\+\_\+transaction\+\_\+spent\+\_\+outputs\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$}]{transaction\+\_\+spent\+\_\+outputs}{}\end{DoxyParamCaption})}
+
+
+
+Copy a transaction\textquotesingle{}s spent outputs. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction\+\_\+spent\+\_\+outputs} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The copied transaction spent outputs. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_spent\_outputs\_count@{btck\_transaction\_spent\_outputs\_count}}
+\index{btck\_transaction\_spent\_outputs\_count@{btck\_transaction\_spent\_outputs\_count}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_spent\_outputs\_count()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_afad243ce22767349634da09802b10259} 
+size\+\_\+t btck\+\_\+transaction\+\_\+spent\+\_\+outputs\+\_\+count (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$}]{transaction\+\_\+spent\+\_\+outputs}{}\end{DoxyParamCaption})}
+
+
+
+Returns the number of previous transaction outputs contained in the transaction spent outputs data. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction\+\_\+spent\+\_\+outputs} & Non-\/null \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The number of spent transaction outputs for the transaction. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_spent\_outputs\_destroy@{btck\_transaction\_spent\_outputs\_destroy}}
+\index{btck\_transaction\_spent\_outputs\_destroy@{btck\_transaction\_spent\_outputs\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_spent\_outputs\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a215fcf2ac21299b43672e69834701363} 
+void btck\+\_\+transaction\+\_\+spent\+\_\+outputs\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$}]{transaction\+\_\+spent\+\_\+outputs}{}\end{DoxyParamCaption})}
+
+Destroy the transaction spent outputs. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_spent\_outputs\_get\_coin\_at@{btck\_transaction\_spent\_outputs\_get\_coin\_at}}
+\index{btck\_transaction\_spent\_outputs\_get\_coin\_at@{btck\_transaction\_spent\_outputs\_get\_coin\_at}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_spent\_outputs\_get\_coin\_at()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a0dceaf7372ae6493a906ab120b543866} 
+const \textbf{ btck\+\_\+\+Coin} $\ast$ btck\+\_\+transaction\+\_\+spent\+\_\+outputs\+\_\+get\+\_\+coin\+\_\+at (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction\+Spent\+Outputs} $\ast$}]{transaction\+\_\+spent\+\_\+outputs}{, }\item[{size\+\_\+t}]{coin\+\_\+index}{}\end{DoxyParamCaption})}
+
+
+
+Returns a coin contained in the transaction spent outputs at a certain index. The returned pointer is unowned and only valid for the lifetime of transaction\+\_\+spent\+\_\+outputs. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em transaction\+\_\+spent\+\_\+outputs} & Non-\/null. \\
+\hline
+\mbox{\texttt{in}}  & {\em coin\+\_\+index} & The index of the to be retrieved coin within the transaction spent outputs. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A coin pointer. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_transaction\_to\_bytes@{btck\_transaction\_to\_bytes}}
+\index{btck\_transaction\_to\_bytes@{btck\_transaction\_to\_bytes}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_transaction\_to\_bytes()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ae732eb94fd20656427ece53d97088884} 
+int btck\+\_\+transaction\+\_\+to\+\_\+bytes (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Transaction} $\ast$}]{transaction}{, }\item[{\textbf{ btck\+\_\+\+Write\+Bytes}}]{writer}{, }\item[{void $\ast$}]{user\+\_\+data}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_txid\_copy@{btck\_txid\_copy}}
+\index{btck\_txid\_copy@{btck\_txid\_copy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_txid\_copy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a6d2d62160c57f2b8e330487d5cfcaa3f} 
+\textbf{ btck\+\_\+\+Txid} $\ast$ btck\+\_\+txid\+\_\+copy (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Txid} $\ast$}]{txid}{}\end{DoxyParamCaption})}
+
+
+
+Copy a txid. 
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em txid} & Non-\/null. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The copied txid. 
+\end{DoxyReturn}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_txid\_destroy@{btck\_txid\_destroy}}
+\index{btck\_txid\_destroy@{btck\_txid\_destroy}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_txid\_destroy()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a0375ab6ce02d9b6234c53322b554fd72} 
+void btck\+\_\+txid\+\_\+destroy (\begin{DoxyParamCaption}\item[{\textbf{ btck\+\_\+\+Txid} $\ast$}]{txid}{}\end{DoxyParamCaption})}
+
+Destroy the txid. \index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_txid\_equals@{btck\_txid\_equals}}
+\index{btck\_txid\_equals@{btck\_txid\_equals}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_txid\_equals()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_ad7f71e05dfb8b743b392e93193ffb687} 
+int btck\+\_\+txid\+\_\+equals (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Txid} $\ast$}]{txid1}{, }\item[{const \textbf{ btck\+\_\+\+Txid} $\ast$}]{txid2}{}\end{DoxyParamCaption})}
+
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!btck\_txid\_to\_bytes@{btck\_txid\_to\_bytes}}
+\index{btck\_txid\_to\_bytes@{btck\_txid\_to\_bytes}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{btck\_txid\_to\_bytes()}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a7b3a8264a2d88ac1ab374b1acb0f7aea} 
+void btck\+\_\+txid\+\_\+to\+\_\+bytes (\begin{DoxyParamCaption}\item[{const \textbf{ btck\+\_\+\+Txid} $\ast$}]{txid}{, }\item[{unsigned char}]{output}{[32]}\end{DoxyParamCaption})}
+
+
+
+\label{doc-var-members}
+\doxysubsection{Variable Documentation}
+\index{bitcoinkernel.cpp@{bitcoinkernel.cpp}!G\_TRANSLATION\_FUN@{G\_TRANSLATION\_FUN}}
+\index{G\_TRANSLATION\_FUN@{G\_TRANSLATION\_FUN}!bitcoinkernel.cpp@{bitcoinkernel.cpp}}
+\doxysubsubsection{G\_TRANSLATION\_FUN}
+{\footnotesize\ttfamily \label{bitcoinkernel_8cpp_a659d6c65d03695a999e4eb59382b3222} 
+const std\+::function$<$std\+::string(const char$\ast$)$>$ G\+\_\+\+TRANSLATION\+\_\+\+FUN \{nullptr\}\hspace{0.3cm}{\ttfamily [extern]}}
+

@@ -1,0 +1,1561 @@
+.TH "src/kernel/bitcoinkernel.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/kernel/bitcoinkernel.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <kernel/bitcoinkernel\&.h>\fP
+.br
+\fR#include <chain\&.h>\fP
+.br
+\fR#include <coins\&.h>\fP
+.br
+\fR#include <consensus/amount\&.h>\fP
+.br
+\fR#include <consensus/validation\&.h>\fP
+.br
+\fR#include <kernel/caches\&.h>\fP
+.br
+\fR#include <kernel/chainparams\&.h>\fP
+.br
+\fR#include <kernel/checks\&.h>\fP
+.br
+\fR#include <kernel/context\&.h>\fP
+.br
+\fR#include <kernel/cs_main\&.h>\fP
+.br
+\fR#include <kernel/notifications_interface\&.h>\fP
+.br
+\fR#include <kernel/warning\&.h>\fP
+.br
+\fR#include <logging\&.h>\fP
+.br
+\fR#include <node/blockstorage\&.h>\fP
+.br
+\fR#include <node/chainstate\&.h>\fP
+.br
+\fR#include <primitives/block\&.h>\fP
+.br
+\fR#include <primitives/transaction\&.h>\fP
+.br
+\fR#include <script/interpreter\&.h>\fP
+.br
+\fR#include <script/script\&.h>\fP
+.br
+\fR#include <serialize\&.h>\fP
+.br
+\fR#include <streams\&.h>\fP
+.br
+\fR#include <sync\&.h>\fP
+.br
+\fR#include <tinyformat\&.h>\fP
+.br
+\fR#include <uint256\&.h>\fP
+.br
+\fR#include <undo\&.h>\fP
+.br
+\fR#include <util/fs\&.h>\fP
+.br
+\fR#include <util/result\&.h>\fP
+.br
+\fR#include <util/signalinterrupt\&.h>\fP
+.br
+\fR#include <util/task_runner\&.h>\fP
+.br
+\fR#include <util/translation\&.h>\fP
+.br
+\fR#include <validation\&.h>\fP
+.br
+\fR#include <validationinterface\&.h>\fP
+.br
+\fR#include <cassert>\fP
+.br
+\fR#include <cstddef>\fP
+.br
+\fR#include <cstring>\fP
+.br
+\fR#include <exception>\fP
+.br
+\fR#include <functional>\fP
+.br
+\fR#include <list>\fP
+.br
+\fR#include <memory>\fP
+.br
+\fR#include <span>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <tuple>\fP
+.br
+\fR#include <utility>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBbtck_BlockTreeEntry\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_Block\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_BlockValidationState\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_Transaction\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_TransactionOutput\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_ScriptPubkey\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_LoggingConnection\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_ContextOptions\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_Context\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_ChainParameters\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_ChainstateManagerOptions\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_ChainstateManager\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_Chain\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_BlockSpentOutputs\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_TransactionSpentOutputs\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_Coin\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_BlockHash\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_TransactionInput\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_TransactionOutPoint\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_Txid\fP"
+.br
+.ti -1c
+.RI "class \fBImmediateTaskRunner\fP"
+.br
+.in -1c
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBBITCOINKERNEL_BUILD\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBbtck_Transaction\fP * \fBbtck_transaction_create\fP (const void *raw_transaction, size_t raw_transaction_len)"
+.br
+.RI "Create a new transaction from the serialized data\&. "
+.ti -1c
+.RI "size_t \fBbtck_transaction_count_outputs\fP (const \fBbtck_Transaction\fP *transaction)"
+.br
+.RI "Get the number of outputs of a transaction\&. "
+.ti -1c
+.RI "const \fBbtck_TransactionOutput\fP * \fBbtck_transaction_get_output_at\fP (const \fBbtck_Transaction\fP *transaction, size_t output_index)"
+.br
+.RI "Get the transaction outputs at the provided index\&. The returned transaction output is not owned and depends on the lifetime of the transaction\&. "
+.ti -1c
+.RI "size_t \fBbtck_transaction_count_inputs\fP (const \fBbtck_Transaction\fP *transaction)"
+.br
+.RI "Get the number of inputs of a transaction\&. "
+.ti -1c
+.RI "const \fBbtck_TransactionInput\fP * \fBbtck_transaction_get_input_at\fP (const \fBbtck_Transaction\fP *transaction, size_t input_index)"
+.br
+.RI "Get the transaction input at the provided index\&. The returned transaction input is not owned and depends on the lifetime of the transaction\&. "
+.ti -1c
+.RI "const \fBbtck_Txid\fP * \fBbtck_transaction_get_txid\fP (const \fBbtck_Transaction\fP *transaction)"
+.br
+.RI "Get the txid of a transaction\&. The returned txid is not owned and depends on the lifetime of the transaction\&. "
+.ti -1c
+.RI "\fBbtck_Transaction\fP * \fBbtck_transaction_copy\fP (const \fBbtck_Transaction\fP *transaction)"
+.br
+.RI "Copy a transaction\&. Transactions are reference counted, so this just increments the reference count\&. "
+.ti -1c
+.RI "int \fBbtck_transaction_to_bytes\fP (const \fBbtck_Transaction\fP *transaction, \fBbtck_WriteBytes\fP writer, void *user_data)"
+.br
+.ti -1c
+.RI "void \fBbtck_transaction_destroy\fP (\fBbtck_Transaction\fP *transaction)"
+.br
+.ti -1c
+.RI "\fBbtck_ScriptPubkey\fP * \fBbtck_script_pubkey_create\fP (const void *script_pubkey, size_t script_pubkey_len)"
+.br
+.RI "Create a script pubkey from serialized data\&. "
+.ti -1c
+.RI "int \fBbtck_script_pubkey_to_bytes\fP (const \fBbtck_ScriptPubkey\fP *script_pubkey_, \fBbtck_WriteBytes\fP writer, void *user_data)"
+.br
+.ti -1c
+.RI "\fBbtck_ScriptPubkey\fP * \fBbtck_script_pubkey_copy\fP (const \fBbtck_ScriptPubkey\fP *script_pubkey)"
+.br
+.RI "Copy a script pubkey\&. "
+.ti -1c
+.RI "void \fBbtck_script_pubkey_destroy\fP (\fBbtck_ScriptPubkey\fP *script_pubkey)"
+.br
+.ti -1c
+.RI "\fBbtck_TransactionOutput\fP * \fBbtck_transaction_output_create\fP (const \fBbtck_ScriptPubkey\fP *script_pubkey, int64_t amount)"
+.br
+.RI "Create a transaction output from a script pubkey and an amount\&. "
+.ti -1c
+.RI "\fBbtck_TransactionOutput\fP * \fBbtck_transaction_output_copy\fP (const \fBbtck_TransactionOutput\fP *output)"
+.br
+.RI "Copy a transaction output\&. "
+.ti -1c
+.RI "const \fBbtck_ScriptPubkey\fP * \fBbtck_transaction_output_get_script_pubkey\fP (const \fBbtck_TransactionOutput\fP *output)"
+.br
+.RI "Get the script pubkey of the output\&. The returned script pubkey is not owned and depends on the lifetime of the transaction output\&. "
+.ti -1c
+.RI "int64_t \fBbtck_transaction_output_get_amount\fP (const \fBbtck_TransactionOutput\fP *output)"
+.br
+.RI "Get the amount in the output\&. "
+.ti -1c
+.RI "void \fBbtck_transaction_output_destroy\fP (\fBbtck_TransactionOutput\fP *output)"
+.br
+.ti -1c
+.RI "int \fBbtck_script_pubkey_verify\fP (const \fBbtck_ScriptPubkey\fP *script_pubkey, const int64_t amount, const \fBbtck_Transaction\fP *tx_to, const \fBbtck_TransactionOutput\fP **spent_outputs_, size_t spent_outputs_len, const unsigned int input_index, const \fBbtck_ScriptVerificationFlags\fP \fBflags\fP, \fBbtck_ScriptVerifyStatus\fP *status)"
+.br
+.ti -1c
+.RI "\fBbtck_TransactionInput\fP * \fBbtck_transaction_input_copy\fP (const \fBbtck_TransactionInput\fP *input)"
+.br
+.RI "Copy a transaction input\&. "
+.ti -1c
+.RI "const \fBbtck_TransactionOutPoint\fP * \fBbtck_transaction_input_get_out_point\fP (const \fBbtck_TransactionInput\fP *input)"
+.br
+.RI "Get the transaction out point\&. The returned transaction out point is not owned and depends on the lifetime of the transaction\&. "
+.ti -1c
+.RI "void \fBbtck_transaction_input_destroy\fP (\fBbtck_TransactionInput\fP *input)"
+.br
+.ti -1c
+.RI "\fBbtck_TransactionOutPoint\fP * \fBbtck_transaction_out_point_copy\fP (const \fBbtck_TransactionOutPoint\fP *out_point)"
+.br
+.RI "Copy a transaction out point\&. "
+.ti -1c
+.RI "uint32_t \fBbtck_transaction_out_point_get_index\fP (const \fBbtck_TransactionOutPoint\fP *out_point)"
+.br
+.RI "Get the output position from the transaction out point\&. "
+.ti -1c
+.RI "const \fBbtck_Txid\fP * \fBbtck_transaction_out_point_get_txid\fP (const \fBbtck_TransactionOutPoint\fP *out_point)"
+.br
+.RI "Get the txid from the transaction out point\&. The returned txid is not owned and depends on the lifetime of the transaction out point\&. "
+.ti -1c
+.RI "void \fBbtck_transaction_out_point_destroy\fP (\fBbtck_TransactionOutPoint\fP *out_point)"
+.br
+.ti -1c
+.RI "\fBbtck_Txid\fP * \fBbtck_txid_copy\fP (const \fBbtck_Txid\fP *txid)"
+.br
+.RI "Copy a txid\&. "
+.ti -1c
+.RI "void \fBbtck_txid_to_bytes\fP (const \fBbtck_Txid\fP *txid, unsigned char output[32])"
+.br
+.ti -1c
+.RI "int \fBbtck_txid_equals\fP (const \fBbtck_Txid\fP *txid1, const \fBbtck_Txid\fP *txid2)"
+.br
+.ti -1c
+.RI "void \fBbtck_txid_destroy\fP (\fBbtck_Txid\fP *txid)"
+.br
+.ti -1c
+.RI "void \fBbtck_logging_set_options\fP (const \fBbtck_LoggingOptions\fP options)"
+.br
+.RI "Set some options for the global internal logger\&. This changes global settings and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. "
+.ti -1c
+.RI "void \fBbtck_logging_set_level_category\fP (\fBbtck_LogCategory\fP category, \fBbtck_LogLevel\fP level)"
+.br
+.RI "Set the log level of the global internal logger\&. This does not enable the selected categories\&. Use \fBbtck_logging_enable_category\fP to start logging from a specific, or all categories\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. "
+.ti -1c
+.RI "void \fBbtck_logging_enable_category\fP (\fBbtck_LogCategory\fP category)"
+.br
+.RI "Enable a specific log category for the global internal logger\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. "
+.ti -1c
+.RI "void \fBbtck_logging_disable_category\fP (\fBbtck_LogCategory\fP category)"
+.br
+.RI "Disable a specific log category for the global internal logger\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. "
+.ti -1c
+.RI "void \fBbtck_logging_disable\fP ()"
+.br
+.RI "This disables the global internal logger\&. No log messages will be buffered internally anymore once this is called and the buffer is cleared\&. This function should only be called once and is not thread or re-entry safe\&. Log messages will be buffered until this function is called, or a logging connection is created\&. This must not be called while a logging connection already exists\&. "
+.ti -1c
+.RI "\fBbtck_LoggingConnection\fP * \fBbtck_logging_connection_create\fP (\fBbtck_LogCallback\fP callback, void *user_data, \fBbtck_DestroyCallback\fP user_data_destroy_callback)"
+.br
+.RI "Start logging messages through the provided callback\&. Log messages produced before this function is first called are buffered and on calling this function are logged immediately\&. "
+.ti -1c
+.RI "void \fBbtck_logging_connection_destroy\fP (\fBbtck_LoggingConnection\fP *connection)"
+.br
+.ti -1c
+.RI "\fBbtck_ChainParameters\fP * \fBbtck_chain_parameters_create\fP (const \fBbtck_ChainType\fP chain_type)"
+.br
+.RI "Creates a chain parameters struct with default parameters based on the passed in chain type\&. "
+.ti -1c
+.RI "\fBbtck_ChainParameters\fP * \fBbtck_chain_parameters_copy\fP (const \fBbtck_ChainParameters\fP *chain_parameters)"
+.br
+.ti -1c
+.RI "void \fBbtck_chain_parameters_destroy\fP (\fBbtck_ChainParameters\fP *chain_parameters)"
+.br
+.ti -1c
+.RI "\fBbtck_ContextOptions\fP * \fBbtck_context_options_create\fP ()"
+.br
+.ti -1c
+.RI "void \fBbtck_context_options_set_chainparams\fP (\fBbtck_ContextOptions\fP *options, const \fBbtck_ChainParameters\fP *chain_parameters)"
+.br
+.ti -1c
+.RI "void \fBbtck_context_options_set_notifications\fP (\fBbtck_ContextOptions\fP *options, \fBbtck_NotificationInterfaceCallbacks\fP notifications)"
+.br
+.RI "Set the kernel notifications for the context options\&. The context created with the options will be configured with these notifications\&. "
+.ti -1c
+.RI "void \fBbtck_context_options_set_validation_interface\fP (\fBbtck_ContextOptions\fP *options, \fBbtck_ValidationInterfaceCallbacks\fP vi_cbs)"
+.br
+.RI "Set the validation interface callbacks for the context options\&. The context created with the options will be configured for these validation interface callbacks\&. The callbacks will then be triggered from validation events issued by the chainstate manager created from the same context\&. "
+.ti -1c
+.RI "void \fBbtck_context_options_destroy\fP (\fBbtck_ContextOptions\fP *options)"
+.br
+.ti -1c
+.RI "\fBbtck_Context\fP * \fBbtck_context_create\fP (const \fBbtck_ContextOptions\fP *options)"
+.br
+.RI "Create a new kernel context\&. If the options have not been previously set, their corresponding fields will be initialized to default values; the context will assume mainnet chain parameters and won't attempt to call the kernel notification callbacks\&. "
+.ti -1c
+.RI "\fBbtck_Context\fP * \fBbtck_context_copy\fP (const \fBbtck_Context\fP *context)"
+.br
+.ti -1c
+.RI "int \fBbtck_context_interrupt\fP (\fBbtck_Context\fP *context)"
+.br
+.RI "Interrupt can be used to halt long-running validation functions like when reindexing, importing or processing blocks\&. "
+.ti -1c
+.RI "void \fBbtck_context_destroy\fP (\fBbtck_Context\fP *context)"
+.br
+.ti -1c
+.RI "const \fBbtck_BlockTreeEntry\fP * \fBbtck_block_tree_entry_get_previous\fP (const \fBbtck_BlockTreeEntry\fP *entry)"
+.br
+.RI "Returns the previous block tree entry in the tree, or null if the current block tree entry is the genesis block\&. "
+.ti -1c
+.RI "\fBbtck_ValidationMode\fP \fBbtck_block_validation_state_get_validation_mode\fP (const \fBbtck_BlockValidationState\fP *block_validation_state_)"
+.br
+.ti -1c
+.RI "\fBbtck_BlockValidationResult\fP \fBbtck_block_validation_state_get_block_validation_result\fP (const \fBbtck_BlockValidationState\fP *block_validation_state_)"
+.br
+.ti -1c
+.RI "\fBbtck_ChainstateManagerOptions\fP * \fBbtck_chainstate_manager_options_create\fP (const \fBbtck_Context\fP *context, const char *data_dir, size_t data_dir_len, const char *blocks_dir, size_t blocks_dir_len)"
+.br
+.RI "Create options for the chainstate manager\&. "
+.ti -1c
+.RI "void \fBbtck_chainstate_manager_options_set_worker_threads_num\fP (\fBbtck_ChainstateManagerOptions\fP *opts, int worker_threads)"
+.br
+.RI "Set the number of available worker threads used during validation\&. "
+.ti -1c
+.RI "void \fBbtck_chainstate_manager_options_destroy\fP (\fBbtck_ChainstateManagerOptions\fP *options)"
+.br
+.ti -1c
+.RI "int \fBbtck_chainstate_manager_options_set_wipe_dbs\fP (\fBbtck_ChainstateManagerOptions\fP *chainman_opts, int wipe_block_tree_db, int wipe_chainstate_db)"
+.br
+.RI "Sets wipe db in the options\&. In combination with calling \fBbtck_chainstate_manager_import_blocks\fP this triggers either a full reindex, or a reindex of just the chainstate database\&. "
+.ti -1c
+.RI "void \fBbtck_chainstate_manager_options_update_block_tree_db_in_memory\fP (\fBbtck_ChainstateManagerOptions\fP *chainman_opts, int block_tree_db_in_memory)"
+.br
+.RI "Sets block tree db in memory in the options\&. "
+.ti -1c
+.RI "void \fBbtck_chainstate_manager_options_update_chainstate_db_in_memory\fP (\fBbtck_ChainstateManagerOptions\fP *chainman_opts, int chainstate_db_in_memory)"
+.br
+.RI "Sets chainstate db in memory in the options\&. "
+.ti -1c
+.RI "\fBbtck_ChainstateManager\fP * \fBbtck_chainstate_manager_create\fP (const \fBbtck_ChainstateManagerOptions\fP *chainman_opts)"
+.br
+.RI "Create a chainstate manager\&. This is the main object for many validation tasks as well as for retrieving data from the chain and interacting with its chainstate and indexes\&. "
+.ti -1c
+.RI "const \fBbtck_BlockTreeEntry\fP * \fBbtck_chainstate_manager_get_block_tree_entry_by_hash\fP (const \fBbtck_ChainstateManager\fP *chainman, const \fBbtck_BlockHash\fP *block_hash)"
+.br
+.ti -1c
+.RI "void \fBbtck_chainstate_manager_destroy\fP (\fBbtck_ChainstateManager\fP *chainman)"
+.br
+.ti -1c
+.RI "int \fBbtck_chainstate_manager_import_blocks\fP (\fBbtck_ChainstateManager\fP *chainman, const char **block_file_paths_data, size_t *block_file_paths_lens, size_t block_file_paths_data_len)"
+.br
+.RI "Triggers the start of a reindex if the wipe options were previously set for the chainstate manager\&. Can also import an array of existing block files selected by the user\&. "
+.ti -1c
+.RI "\fBbtck_Block\fP * \fBbtck_block_create\fP (const void *raw_block, size_t raw_block_length)"
+.br
+.RI "Parse a serialized raw block into a new block object\&. "
+.ti -1c
+.RI "\fBbtck_Block\fP * \fBbtck_block_copy\fP (const \fBbtck_Block\fP *block)"
+.br
+.RI "Copy a block\&. Blocks are reference counted, so this just increments the reference count\&. "
+.ti -1c
+.RI "size_t \fBbtck_block_count_transactions\fP (const \fBbtck_Block\fP *block)"
+.br
+.RI "Count the number of transactions contained in a block\&. "
+.ti -1c
+.RI "const \fBbtck_Transaction\fP * \fBbtck_block_get_transaction_at\fP (const \fBbtck_Block\fP *block, size_t index)"
+.br
+.RI "Get the transaction at the provided index\&. The returned transaction is not owned and depends on the lifetime of the block\&. "
+.ti -1c
+.RI "int \fBbtck_block_to_bytes\fP (const \fBbtck_Block\fP *block, \fBbtck_WriteBytes\fP writer, void *user_data)"
+.br
+.ti -1c
+.RI "\fBbtck_BlockHash\fP * \fBbtck_block_get_hash\fP (const \fBbtck_Block\fP *block)"
+.br
+.RI "Calculate and return the hash of a block\&. "
+.ti -1c
+.RI "void \fBbtck_block_destroy\fP (\fBbtck_Block\fP *block)"
+.br
+.ti -1c
+.RI "\fBbtck_Block\fP * \fBbtck_block_read\fP (const \fBbtck_ChainstateManager\fP *chainman, const \fBbtck_BlockTreeEntry\fP *entry)"
+.br
+.ti -1c
+.RI "int32_t \fBbtck_block_tree_entry_get_height\fP (const \fBbtck_BlockTreeEntry\fP *entry)"
+.br
+.RI "Return the height of a certain block tree entry\&. "
+.ti -1c
+.RI "const \fBbtck_BlockHash\fP * \fBbtck_block_tree_entry_get_block_hash\fP (const \fBbtck_BlockTreeEntry\fP *entry)"
+.br
+.RI "Return the block hash associated with a block tree entry\&. "
+.ti -1c
+.RI "int \fBbtck_block_tree_entry_equals\fP (const \fBbtck_BlockTreeEntry\fP *entry1, const \fBbtck_BlockTreeEntry\fP *entry2)"
+.br
+.ti -1c
+.RI "\fBbtck_BlockHash\fP * \fBbtck_block_hash_create\fP (const unsigned char block_hash[32])"
+.br
+.RI "Create a block hash from its raw data\&. "
+.ti -1c
+.RI "\fBbtck_BlockHash\fP * \fBbtck_block_hash_copy\fP (const \fBbtck_BlockHash\fP *block_hash)"
+.br
+.RI "Copy a block hash\&. "
+.ti -1c
+.RI "void \fBbtck_block_hash_to_bytes\fP (const \fBbtck_BlockHash\fP *block_hash, unsigned char output[32])"
+.br
+.ti -1c
+.RI "int \fBbtck_block_hash_equals\fP (const \fBbtck_BlockHash\fP *hash1, const \fBbtck_BlockHash\fP *hash2)"
+.br
+.ti -1c
+.RI "void \fBbtck_block_hash_destroy\fP (\fBbtck_BlockHash\fP *hash)"
+.br
+.ti -1c
+.RI "\fBbtck_BlockSpentOutputs\fP * \fBbtck_block_spent_outputs_read\fP (const \fBbtck_ChainstateManager\fP *chainman, const \fBbtck_BlockTreeEntry\fP *entry)"
+.br
+.ti -1c
+.RI "\fBbtck_BlockSpentOutputs\fP * \fBbtck_block_spent_outputs_copy\fP (const \fBbtck_BlockSpentOutputs\fP *block_spent_outputs)"
+.br
+.RI "Copy a block's spent outputs\&. "
+.ti -1c
+.RI "size_t \fBbtck_block_spent_outputs_count\fP (const \fBbtck_BlockSpentOutputs\fP *block_spent_outputs)"
+.br
+.RI "Returns the number of transaction spent outputs whose data is contained in block spent outputs\&. "
+.ti -1c
+.RI "const \fBbtck_TransactionSpentOutputs\fP * \fBbtck_block_spent_outputs_get_transaction_spent_outputs_at\fP (const \fBbtck_BlockSpentOutputs\fP *block_spent_outputs, size_t transaction_index)"
+.br
+.RI "Returns a transaction spent outputs contained in the block spent outputs at a certain index\&. The returned pointer is unowned and only valid for the lifetime of block_spent_outputs\&. "
+.ti -1c
+.RI "void \fBbtck_block_spent_outputs_destroy\fP (\fBbtck_BlockSpentOutputs\fP *block_spent_outputs)"
+.br
+.ti -1c
+.RI "\fBbtck_TransactionSpentOutputs\fP * \fBbtck_transaction_spent_outputs_copy\fP (const \fBbtck_TransactionSpentOutputs\fP *transaction_spent_outputs)"
+.br
+.RI "Copy a transaction's spent outputs\&. "
+.ti -1c
+.RI "size_t \fBbtck_transaction_spent_outputs_count\fP (const \fBbtck_TransactionSpentOutputs\fP *transaction_spent_outputs)"
+.br
+.RI "Returns the number of previous transaction outputs contained in the transaction spent outputs data\&. "
+.ti -1c
+.RI "void \fBbtck_transaction_spent_outputs_destroy\fP (\fBbtck_TransactionSpentOutputs\fP *transaction_spent_outputs)"
+.br
+.ti -1c
+.RI "const \fBbtck_Coin\fP * \fBbtck_transaction_spent_outputs_get_coin_at\fP (const \fBbtck_TransactionSpentOutputs\fP *transaction_spent_outputs, size_t coin_index)"
+.br
+.RI "Returns a coin contained in the transaction spent outputs at a certain index\&. The returned pointer is unowned and only valid for the lifetime of transaction_spent_outputs\&. "
+.ti -1c
+.RI "\fBbtck_Coin\fP * \fBbtck_coin_copy\fP (const \fBbtck_Coin\fP *coin)"
+.br
+.RI "Copy a coin\&. "
+.ti -1c
+.RI "uint32_t \fBbtck_coin_confirmation_height\fP (const \fBbtck_Coin\fP *coin)"
+.br
+.RI "Returns the block height where the transaction that created this coin was included in\&. "
+.ti -1c
+.RI "int \fBbtck_coin_is_coinbase\fP (const \fBbtck_Coin\fP *coin)"
+.br
+.RI "Returns whether the containing transaction was a coinbase\&. "
+.ti -1c
+.RI "const \fBbtck_TransactionOutput\fP * \fBbtck_coin_get_output\fP (const \fBbtck_Coin\fP *coin)"
+.br
+.RI "Return the transaction output of a coin\&. The returned pointer is unowned and only valid for the lifetime of the coin\&. "
+.ti -1c
+.RI "void \fBbtck_coin_destroy\fP (\fBbtck_Coin\fP *coin)"
+.br
+.ti -1c
+.RI "int \fBbtck_chainstate_manager_process_block\fP (\fBbtck_ChainstateManager\fP *chainman, const \fBbtck_Block\fP *block, int *_new_block)"
+.br
+.ti -1c
+.RI "const \fBbtck_Chain\fP * \fBbtck_chainstate_manager_get_active_chain\fP (const \fBbtck_ChainstateManager\fP *chainman)"
+.br
+.RI "Returns the best known currently active chain\&. Its lifetime is dependent on the chainstate manager\&. It can be thought of as a view on a vector of block tree entries that form the best chain\&. The returned chain reference always points to the currently active best chain\&. However, state transitions within the chainstate manager (e\&.g\&., processing blocks) will update the chain's contents\&. Data retrieved from this chain is only consistent up to the point when new data is processed in the chainstate manager\&. It is the user's responsibility to guard against these inconsistencies\&. "
+.ti -1c
+.RI "int \fBbtck_chain_get_height\fP (const \fBbtck_Chain\fP *chain)"
+.br
+.RI "Return the height of the tip of the chain\&. "
+.ti -1c
+.RI "const \fBbtck_BlockTreeEntry\fP * \fBbtck_chain_get_by_height\fP (const \fBbtck_Chain\fP *chain, int height)"
+.br
+.RI "Retrieve a block tree entry by its height in the currently active chain\&. Once retrieved there is no guarantee that it remains in the active chain\&. "
+.ti -1c
+.RI "int \fBbtck_chain_contains\fP (const \fBbtck_Chain\fP *chain, const \fBbtck_BlockTreeEntry\fP *entry)"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "const std::function< std::string(const char *)> \fBG_TRANSLATION_FUN\fP {nullptr}"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define BITCOINKERNEL_BUILD"
+
+.SH "Function Documentation"
+.PP 
+.SS "\fBbtck_Block\fP * btck_block_copy (const \fBbtck_Block\fP * block)"
+
+.PP
+Copy a block\&. Blocks are reference counted, so this just increments the reference count\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied block\&. 
+.RE
+.PP
+
+.SS "size_t btck_block_count_transactions (const \fBbtck_Block\fP * block)"
+
+.PP
+Count the number of transactions contained in a block\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The number of transactions in the block\&. 
+.RE
+.PP
+
+.SS "\fBbtck_Block\fP * btck_block_create (const void * raw_block, size_t raw_block_len)"
+
+.PP
+Parse a serialized raw block into a new block object\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIraw_block\fP Serialized block\&. 
+.br
+\fIraw_block_len\fP Length of the serialized block\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The allocated block, or null on error\&. 
+.RE
+.PP
+
+.SS "void btck_block_destroy (\fBbtck_Block\fP * block)"
+Destroy the block\&. 
+.SS "\fBbtck_BlockHash\fP * btck_block_get_hash (const \fBbtck_Block\fP * block)"
+
+.PP
+Calculate and return the hash of a block\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The block hash\&. 
+.RE
+.PP
+
+.SS "const \fBbtck_Transaction\fP * btck_block_get_transaction_at (const \fBbtck_Block\fP * block, size_t transaction_index)"
+
+.PP
+Get the transaction at the provided index\&. The returned transaction is not owned and depends on the lifetime of the block\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock\fP Non-null\&. 
+.br
+\fItransaction_index\fP The index of the transaction to be retrieved\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction\&. 
+.RE
+.PP
+
+.SS "\fBbtck_BlockHash\fP * btck_block_hash_copy (const \fBbtck_BlockHash\fP * block_hash)"
+
+.PP
+Copy a block hash\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_hash\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied block hash\&. 
+.RE
+.PP
+
+.SS "\fBbtck_BlockHash\fP * btck_block_hash_create (const unsigned char block_hash[32])"
+
+.PP
+Create a block hash from its raw data\&. 
+.SS "void btck_block_hash_destroy (\fBbtck_BlockHash\fP * block_hash)"
+Destroy the block hash\&. 
+.SS "int btck_block_hash_equals (const \fBbtck_BlockHash\fP * hash1, const \fBbtck_BlockHash\fP * hash2)"
+
+.SS "void btck_block_hash_to_bytes (const \fBbtck_BlockHash\fP * block_hash, unsigned char output[32])"
+
+.SS "\fBbtck_Block\fP * btck_block_read (const \fBbtck_ChainstateManager\fP * chainman, const \fBbtck_BlockTreeEntry\fP * entry)"
+
+.SS "\fBbtck_BlockSpentOutputs\fP * btck_block_spent_outputs_copy (const \fBbtck_BlockSpentOutputs\fP * block_spent_outputs)"
+
+.PP
+Copy a block's spent outputs\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_spent_outputs\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied block spent outputs\&. 
+.RE
+.PP
+
+.SS "size_t btck_block_spent_outputs_count (const \fBbtck_BlockSpentOutputs\fP * block_spent_outputs)"
+
+.PP
+Returns the number of transaction spent outputs whose data is contained in block spent outputs\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_spent_outputs\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The number of transaction spent outputs data in the block spent outputs\&. 
+.RE
+.PP
+
+.SS "void btck_block_spent_outputs_destroy (\fBbtck_BlockSpentOutputs\fP * block_spent_outputs)"
+Destroy the block spent outputs\&. 
+.SS "const \fBbtck_TransactionSpentOutputs\fP * btck_block_spent_outputs_get_transaction_spent_outputs_at (const \fBbtck_BlockSpentOutputs\fP * block_spent_outputs, size_t transaction_spent_outputs_index)"
+
+.PP
+Returns a transaction spent outputs contained in the block spent outputs at a certain index\&. The returned pointer is unowned and only valid for the lifetime of block_spent_outputs\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_spent_outputs\fP Non-null\&. 
+.br
+\fItransaction_spent_outputs_index\fP The index of the transaction spent outputs within the block spent outputs\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A transaction spent outputs pointer\&. 
+.RE
+.PP
+
+.SS "\fBbtck_BlockSpentOutputs\fP * btck_block_spent_outputs_read (const \fBbtck_ChainstateManager\fP * chainman, const \fBbtck_BlockTreeEntry\fP * entry)"
+
+.SS "int btck_block_to_bytes (const \fBbtck_Block\fP * block, \fBbtck_WriteBytes\fP writer, void * user_data)"
+
+.SS "int btck_block_tree_entry_equals (const \fBbtck_BlockTreeEntry\fP * entry1, const \fBbtck_BlockTreeEntry\fP * entry2)"
+
+.SS "const \fBbtck_BlockHash\fP * btck_block_tree_entry_get_block_hash (const \fBbtck_BlockTreeEntry\fP * block_tree_entry)"
+
+.PP
+Return the block hash associated with a block tree entry\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_tree_entry\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The block hash\&. 
+.RE
+.PP
+
+.SS "int32_t btck_block_tree_entry_get_height (const \fBbtck_BlockTreeEntry\fP * block_tree_entry)"
+
+.PP
+Return the height of a certain block tree entry\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_tree_entry\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The block height\&. 
+.RE
+.PP
+
+.SS "const \fBbtck_BlockTreeEntry\fP * btck_block_tree_entry_get_previous (const \fBbtck_BlockTreeEntry\fP * block_tree_entry)"
+
+.PP
+Returns the previous block tree entry in the tree, or null if the current block tree entry is the genesis block\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_tree_entry\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The previous block tree entry, or null on error or if the current block tree entry is the genesis block\&. 
+.RE
+.PP
+
+.SS "\fBbtck_BlockValidationResult\fP btck_block_validation_state_get_block_validation_result (const \fBbtck_BlockValidationState\fP * block_validation_state)"
+Returns the validation result from an opaque block validation state pointer\&. 
+.SS "\fBbtck_ValidationMode\fP btck_block_validation_state_get_validation_mode (const \fBbtck_BlockValidationState\fP * block_validation_state)"
+Returns the validation mode from an opaque block validation state pointer\&. 
+.SS "int btck_chain_contains (const \fBbtck_Chain\fP * chain, const \fBbtck_BlockTreeEntry\fP * entry)"
+
+.SS "const \fBbtck_BlockTreeEntry\fP * btck_chain_get_by_height (const \fBbtck_Chain\fP * chain, int block_height)"
+
+.PP
+Retrieve a block tree entry by its height in the currently active chain\&. Once retrieved there is no guarantee that it remains in the active chain\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchain\fP Non-null\&. 
+.br
+\fIblock_height\fP Height in the chain of the to be retrieved block tree entry\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The block tree entry at a certain height in the currently active chain, or null if the height is out of bounds\&. 
+.RE
+.PP
+
+.SS "int btck_chain_get_height (const \fBbtck_Chain\fP * chain)"
+
+.PP
+Return the height of the tip of the chain\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchain\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The current height\&. 
+.RE
+.PP
+
+.SS "\fBbtck_ChainParameters\fP * btck_chain_parameters_copy (const \fBbtck_ChainParameters\fP * chain_parameters)"
+Copy the chain parameters\&. 
+.SS "\fBbtck_ChainParameters\fP * btck_chain_parameters_create (const \fBbtck_ChainType\fP chain_type)"
+
+.PP
+Creates a chain parameters struct with default parameters based on the passed in chain type\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchain_type\fP Controls the chain parameters type created\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+An allocated chain parameters opaque struct\&. 
+.RE
+.PP
+
+.SS "void btck_chain_parameters_destroy (\fBbtck_ChainParameters\fP * chain_parameters)"
+Destroy the chain parameters\&. 
+.SS "\fBbtck_ChainstateManager\fP * btck_chainstate_manager_create (const \fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options)"
+
+.PP
+Create a chainstate manager\&. This is the main object for many validation tasks as well as for retrieving data from the chain and interacting with its chainstate and indexes\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager_options\fP Non-null, created by \fBbtck_chainstate_manager_options_create\fP\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The allocated chainstate manager, or null on error\&. 
+.RE
+.PP
+
+.SS "void btck_chainstate_manager_destroy (\fBbtck_ChainstateManager\fP * chainstate_manager)"
+Destroy the chainstate manager\&. 
+.SS "const \fBbtck_Chain\fP * btck_chainstate_manager_get_active_chain (const \fBbtck_ChainstateManager\fP * chainstate_manager)"
+
+.PP
+Returns the best known currently active chain\&. Its lifetime is dependent on the chainstate manager\&. It can be thought of as a view on a vector of block tree entries that form the best chain\&. The returned chain reference always points to the currently active best chain\&. However, state transitions within the chainstate manager (e\&.g\&., processing blocks) will update the chain's contents\&. Data retrieved from this chain is only consistent up to the point when new data is processed in the chainstate manager\&. It is the user's responsibility to guard against these inconsistencies\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The chain\&. 
+.RE
+.PP
+
+.SS "const \fBbtck_BlockTreeEntry\fP * btck_chainstate_manager_get_block_tree_entry_by_hash (const \fBbtck_ChainstateManager\fP * chainman, const \fBbtck_BlockHash\fP * block_hash)"
+
+.SS "int btck_chainstate_manager_import_blocks (\fBbtck_ChainstateManager\fP * chainstate_manager, const char ** block_file_paths_data, size_t * block_file_paths_lens, size_t block_file_paths_data_len)"
+
+.PP
+Triggers the start of a reindex if the wipe options were previously set for the chainstate manager\&. Can also import an array of existing block files selected by the user\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager\fP Non-null\&. 
+.br
+\fIblock_file_paths_data\fP Nullable, array of block files described by their full filesystem paths\&. 
+.br
+\fIblock_file_paths_lens\fP Nullable, array containing the lengths of each of the paths\&. 
+.br
+\fIblock_file_paths_data_len\fP Length of the block_file_paths_data and block_file_paths_len arrays\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 if the import blocks call was completed successfully, non-zero otherwise\&. 
+.RE
+.PP
+
+.SS "\fBbtck_ChainstateManagerOptions\fP * btck_chainstate_manager_options_create (const \fBbtck_Context\fP * context, const char * data_directory, size_t data_directory_len, const char * blocks_directory, size_t blocks_directory_len)"
+
+.PP
+Create options for the chainstate manager\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontext\fP Non-null, the created options and through it the chainstate manager will associate with this kernel context for the duration of their lifetimes\&. 
+.br
+\fIdata_directory\fP Non-null, non-empty path string of the directory containing the chainstate data\&. If the directory does not exist yet, it will be created\&. 
+.br
+\fIblocks_directory\fP Non-null, non-empty path string of the directory containing the block data\&. If the directory does not exist yet, it will be created\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The allocated chainstate manager options, or null on error\&. 
+.RE
+.PP
+
+.SS "void btck_chainstate_manager_options_destroy (\fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options)"
+Destroy the chainstate manager options\&. 
+.SS "int btck_chainstate_manager_options_set_wipe_dbs (\fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options, int wipe_block_tree_db, int wipe_chainstate_db)"
+
+.PP
+Sets wipe db in the options\&. In combination with calling \fBbtck_chainstate_manager_import_blocks\fP this triggers either a full reindex, or a reindex of just the chainstate database\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager_options\fP Non-null, created by \fBbtck_chainstate_manager_options_create\fP\&. 
+.br
+\fIwipe_block_tree_db\fP Set wipe block tree db\&. Should only be 1 if wipe_chainstate_db is 1 too\&. 
+.br
+\fIwipe_chainstate_db\fP Set wipe chainstate db\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 if the set was successful, non-zero if the set failed\&. 
+.RE
+.PP
+
+.SS "void btck_chainstate_manager_options_set_worker_threads_num (\fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options, int worker_threads)"
+
+.PP
+Set the number of available worker threads used during validation\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager_options\fP Non-null, options to be set\&. 
+.br
+\fIworker_threads\fP The number of worker threads that should be spawned in the thread pool used for validation\&. When set to 0 no parallel verification is done\&. The value range is clamped internally between 0 and 15\&. 
+.RE
+.PP
+
+.SS "void btck_chainstate_manager_options_update_block_tree_db_in_memory (\fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options, int block_tree_db_in_memory)"
+
+.PP
+Sets block tree db in memory in the options\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager_options\fP Non-null, created by \fBbtck_chainstate_manager_options_create\fP\&. 
+.br
+\fIblock_tree_db_in_memory\fP Set block tree db in memory\&. 
+.RE
+.PP
+
+.SS "void btck_chainstate_manager_options_update_chainstate_db_in_memory (\fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options, int chainstate_db_in_memory)"
+
+.PP
+Sets chainstate db in memory in the options\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager_options\fP Non-null, created by \fBbtck_chainstate_manager_options_create\fP\&. 
+.br
+\fIchainstate_db_in_memory\fP Set chainstate db in memory\&. 
+.RE
+.PP
+
+.SS "int btck_chainstate_manager_process_block (\fBbtck_ChainstateManager\fP * chainman, const \fBbtck_Block\fP * block, int * _new_block)"
+
+.SS "uint32_t btck_coin_confirmation_height (const \fBbtck_Coin\fP * coin)"
+
+.PP
+Returns the block height where the transaction that created this coin was included in\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcoin\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The block height of the coin\&. 
+.RE
+.PP
+
+.SS "\fBbtck_Coin\fP * btck_coin_copy (const \fBbtck_Coin\fP * coin)"
+
+.PP
+Copy a coin\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcoin\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied coin\&. 
+.RE
+.PP
+
+.SS "void btck_coin_destroy (\fBbtck_Coin\fP * coin)"
+Destroy the coin\&. 
+.SS "const \fBbtck_TransactionOutput\fP * btck_coin_get_output (const \fBbtck_Coin\fP * coin)"
+
+.PP
+Return the transaction output of a coin\&. The returned pointer is unowned and only valid for the lifetime of the coin\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcoin\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A transaction output pointer\&. 
+.RE
+.PP
+
+.SS "int btck_coin_is_coinbase (const \fBbtck_Coin\fP * coin)"
+
+.PP
+Returns whether the containing transaction was a coinbase\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcoin\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+1 if the coin is a coinbase coin, 0 otherwise\&. 
+.RE
+.PP
+
+.SS "\fBbtck_Context\fP * btck_context_copy (const \fBbtck_Context\fP * context)"
+Copy the context\&. 
+.SS "\fBbtck_Context\fP * btck_context_create (const \fBbtck_ContextOptions\fP * context_options)"
+
+.PP
+Create a new kernel context\&. If the options have not been previously set, their corresponding fields will be initialized to default values; the context will assume mainnet chain parameters and won't attempt to call the kernel notification callbacks\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontext_options\fP Nullable, created by \fBbtck_context_options_create\fP\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The allocated context, or null on error\&. 
+.RE
+.PP
+
+.SS "void btck_context_destroy (\fBbtck_Context\fP * context)"
+Destroy the context\&. 
+.SS "int btck_context_interrupt (\fBbtck_Context\fP * context)"
+
+.PP
+Interrupt can be used to halt long-running validation functions like when reindexing, importing or processing blocks\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontext\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 if the interrupt was successful, non-zero otherwise\&. 
+.RE
+.PP
+
+.SS "\fBbtck_ContextOptions\fP * btck_context_options_create ()"
+Creates an empty context options\&. 
+.SS "void btck_context_options_destroy (\fBbtck_ContextOptions\fP * context_options)"
+Destroy the context options\&. 
+.SS "void btck_context_options_set_chainparams (\fBbtck_ContextOptions\fP * options, const \fBbtck_ChainParameters\fP * chain_parameters)"
+
+.SS "void btck_context_options_set_notifications (\fBbtck_ContextOptions\fP * context_options, \fBbtck_NotificationInterfaceCallbacks\fP notifications)"
+
+.PP
+Set the kernel notifications for the context options\&. The context created with the options will be configured with these notifications\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontext_options\fP Non-null, previously created by \fBbtck_context_options_create\fP\&. 
+.br
+\fInotifications\fP Is set to the context options\&. 
+.RE
+.PP
+
+.SS "void btck_context_options_set_validation_interface (\fBbtck_ContextOptions\fP * context_options, \fBbtck_ValidationInterfaceCallbacks\fP validation_interface_callbacks)"
+
+.PP
+Set the validation interface callbacks for the context options\&. The context created with the options will be configured for these validation interface callbacks\&. The callbacks will then be triggered from validation events issued by the chainstate manager created from the same context\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontext_options\fP Non-null, previously created with btck_context_options_create\&. 
+.br
+\fIvalidation_interface_callbacks\fP The callbacks used for passing validation information to the user\&. 
+.RE
+.PP
+
+.SS "\fBbtck_LoggingConnection\fP * btck_logging_connection_create (\fBbtck_LogCallback\fP log_callback, void * user_data, \fBbtck_DestroyCallback\fP user_data_destroy_callback)"
+
+.PP
+Start logging messages through the provided callback\&. Log messages produced before this function is first called are buffered and on calling this function are logged immediately\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIlog_callback\fP Non-null, function through which messages will be logged\&. 
+.br
+\fIuser_data\fP Nullable, holds a user-defined opaque structure\&. Is passed back to the user through the callback\&. If the user_data_destroy_callback is also defined it is assumed that ownership of the user_data is passed to the created logging connection\&. 
+.br
+\fIuser_data_destroy_callback\fP Nullable, function for freeing the user data\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A new kernel logging connection, or null on error\&. 
+.RE
+.PP
+
+.SS "void btck_logging_connection_destroy (\fBbtck_LoggingConnection\fP * logging_connection)"
+Stop logging and destroy the logging connection\&. 
+.SS "void btck_logging_disable ()"
+
+.PP
+This disables the global internal logger\&. No log messages will be buffered internally anymore once this is called and the buffer is cleared\&. This function should only be called once and is not thread or re-entry safe\&. Log messages will be buffered until this function is called, or a logging connection is created\&. This must not be called while a logging connection already exists\&. 
+.SS "void btck_logging_disable_category (\fBbtck_LogCategory\fP category)"
+
+.PP
+Disable a specific log category for the global internal logger\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcategory\fP If btck_LogCategory_ALL is chosen, all categories will be disabled\&. 
+.RE
+.PP
+
+.SS "void btck_logging_enable_category (\fBbtck_LogCategory\fP category)"
+
+.PP
+Enable a specific log category for the global internal logger\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcategory\fP If btck_LogCategory_ALL is chosen, all categories will be enabled\&. 
+.RE
+.PP
+
+.SS "void btck_logging_set_level_category (\fBbtck_LogCategory\fP category, \fBbtck_LogLevel\fP level)"
+
+.PP
+Set the log level of the global internal logger\&. This does not enable the selected categories\&. Use \fBbtck_logging_enable_category\fP to start logging from a specific, or all categories\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcategory\fP If btck_LogCategory_ALL is chosen, sets both the global fallback log level used by all categories that don't have a specific level set, and also sets the log level for messages logged with the btck_LogCategory_ALL category itself\&. For any other category, sets a category-specific log level that overrides the global fallback for that category only\&.
+.br
+\fIlevel\fP Log level at which the log category is set\&. 
+.RE
+.PP
+
+.SS "void btck_logging_set_options (const \fBbtck_LoggingOptions\fP options)"
+
+.PP
+Set some options for the global internal logger\&. This changes global settings and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIoptions\fP Sets formatting options of the log messages\&. 
+.RE
+.PP
+
+.SS "\fBbtck_ScriptPubkey\fP * btck_script_pubkey_copy (const \fBbtck_ScriptPubkey\fP * script_pubkey)"
+
+.PP
+Copy a script pubkey\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIscript_pubkey\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied script pubkey\&. 
+.RE
+.PP
+
+.SS "\fBbtck_ScriptPubkey\fP * btck_script_pubkey_create (const void * script_pubkey, size_t script_pubkey_len)"
+
+.PP
+Create a script pubkey from serialized data\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIscript_pubkey\fP Serialized script pubkey\&. 
+.br
+\fIscript_pubkey_len\fP Length of the script pubkey data\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The script pubkey\&. 
+.RE
+.PP
+
+.SS "void btck_script_pubkey_destroy (\fBbtck_ScriptPubkey\fP * script_pubkey)"
+Destroy the script pubkey\&. 
+.SS "int btck_script_pubkey_to_bytes (const \fBbtck_ScriptPubkey\fP * script_pubkey_, \fBbtck_WriteBytes\fP writer, void * user_data)"
+
+.SS "int btck_script_pubkey_verify (const \fBbtck_ScriptPubkey\fP * script_pubkey, const int64_t amount, const \fBbtck_Transaction\fP * tx_to, const \fBbtck_TransactionOutput\fP ** spent_outputs_, size_t spent_outputs_len, const unsigned int input_index, const \fBbtck_ScriptVerificationFlags\fP flags, \fBbtck_ScriptVerifyStatus\fP * status)"
+
+.SS "\fBbtck_Transaction\fP * btck_transaction_copy (const \fBbtck_Transaction\fP * transaction)"
+
+.PP
+Copy a transaction\&. Transactions are reference counted, so this just increments the reference count\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied transaction\&. 
+.RE
+.PP
+
+.SS "size_t btck_transaction_count_inputs (const \fBbtck_Transaction\fP * transaction)"
+
+.PP
+Get the number of inputs of a transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The number of inputs\&. 
+.RE
+.PP
+
+.SS "size_t btck_transaction_count_outputs (const \fBbtck_Transaction\fP * transaction)"
+
+.PP
+Get the number of outputs of a transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The number of outputs\&. 
+.RE
+.PP
+
+.SS "\fBbtck_Transaction\fP * btck_transaction_create (const void * raw_transaction, size_t raw_transaction_len)"
+
+.PP
+Create a new transaction from the serialized data\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIraw_transaction\fP Serialized transaction\&. 
+.br
+\fIraw_transaction_len\fP Length of the serialized transaction\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction, or null on error\&. 
+.RE
+.PP
+
+.SS "void btck_transaction_destroy (\fBbtck_Transaction\fP * transaction)"
+Destroy the transaction\&. 
+.SS "const \fBbtck_TransactionInput\fP * btck_transaction_get_input_at (const \fBbtck_Transaction\fP * transaction, size_t input_index)"
+
+.PP
+Get the transaction input at the provided index\&. The returned transaction input is not owned and depends on the lifetime of the transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.br
+\fIinput_index\fP The index of the transaction input to be retrieved\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction input 
+.RE
+.PP
+
+.SS "const \fBbtck_TransactionOutput\fP * btck_transaction_get_output_at (const \fBbtck_Transaction\fP * transaction, size_t output_index)"
+
+.PP
+Get the transaction outputs at the provided index\&. The returned transaction output is not owned and depends on the lifetime of the transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.br
+\fIoutput_index\fP The index of the transaction output to be retrieved\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction output 
+.RE
+.PP
+
+.SS "const \fBbtck_Txid\fP * btck_transaction_get_txid (const \fBbtck_Transaction\fP * transaction)"
+
+.PP
+Get the txid of a transaction\&. The returned txid is not owned and depends on the lifetime of the transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The txid\&. 
+.RE
+.PP
+
+.SS "\fBbtck_TransactionInput\fP * btck_transaction_input_copy (const \fBbtck_TransactionInput\fP * transaction_input)"
+
+.PP
+Copy a transaction input\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_input\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied transaction input\&. 
+.RE
+.PP
+
+.SS "void btck_transaction_input_destroy (\fBbtck_TransactionInput\fP * transaction_input)"
+Destroy the transaction input\&. 
+.SS "const \fBbtck_TransactionOutPoint\fP * btck_transaction_input_get_out_point (const \fBbtck_TransactionInput\fP * transaction_input)"
+
+.PP
+Get the transaction out point\&. The returned transaction out point is not owned and depends on the lifetime of the transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_input\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction out point\&. 
+.RE
+.PP
+
+.SS "\fBbtck_TransactionOutPoint\fP * btck_transaction_out_point_copy (const \fBbtck_TransactionOutPoint\fP * transaction_out_point)"
+
+.PP
+Copy a transaction out point\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_out_point\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied transaction out point\&. 
+.RE
+.PP
+
+.SS "void btck_transaction_out_point_destroy (\fBbtck_TransactionOutPoint\fP * transaction_out_point)"
+Destroy the transaction out point\&. 
+.SS "uint32_t btck_transaction_out_point_get_index (const \fBbtck_TransactionOutPoint\fP * transaction_out_point)"
+
+.PP
+Get the output position from the transaction out point\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_out_point\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The output index\&. 
+.RE
+.PP
+
+.SS "const \fBbtck_Txid\fP * btck_transaction_out_point_get_txid (const \fBbtck_TransactionOutPoint\fP * transaction_out_point)"
+
+.PP
+Get the txid from the transaction out point\&. The returned txid is not owned and depends on the lifetime of the transaction out point\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_out_point\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The txid\&. 
+.RE
+.PP
+
+.SS "\fBbtck_TransactionOutput\fP * btck_transaction_output_copy (const \fBbtck_TransactionOutput\fP * transaction_output)"
+
+.PP
+Copy a transaction output\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_output\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied transaction output\&. 
+.RE
+.PP
+
+.SS "\fBbtck_TransactionOutput\fP * btck_transaction_output_create (const \fBbtck_ScriptPubkey\fP * script_pubkey, int64_t amount)"
+
+.PP
+Create a transaction output from a script pubkey and an amount\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIscript_pubkey\fP Non-null\&. 
+.br
+\fIamount\fP The amount associated with the script pubkey for this output\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction output\&. 
+.RE
+.PP
+
+.SS "void btck_transaction_output_destroy (\fBbtck_TransactionOutput\fP * transaction_output)"
+Destroy the transaction output\&. 
+.SS "int64_t btck_transaction_output_get_amount (const \fBbtck_TransactionOutput\fP * transaction_output)"
+
+.PP
+Get the amount in the output\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_output\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The amount\&. 
+.RE
+.PP
+
+.SS "const \fBbtck_ScriptPubkey\fP * btck_transaction_output_get_script_pubkey (const \fBbtck_TransactionOutput\fP * transaction_output)"
+
+.PP
+Get the script pubkey of the output\&. The returned script pubkey is not owned and depends on the lifetime of the transaction output\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_output\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The script pubkey\&. 
+.RE
+.PP
+
+.SS "\fBbtck_TransactionSpentOutputs\fP * btck_transaction_spent_outputs_copy (const \fBbtck_TransactionSpentOutputs\fP * transaction_spent_outputs)"
+
+.PP
+Copy a transaction's spent outputs\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_spent_outputs\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied transaction spent outputs\&. 
+.RE
+.PP
+
+.SS "size_t btck_transaction_spent_outputs_count (const \fBbtck_TransactionSpentOutputs\fP * transaction_spent_outputs)"
+
+.PP
+Returns the number of previous transaction outputs contained in the transaction spent outputs data\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_spent_outputs\fP Non-null 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The number of spent transaction outputs for the transaction\&. 
+.RE
+.PP
+
+.SS "void btck_transaction_spent_outputs_destroy (\fBbtck_TransactionSpentOutputs\fP * transaction_spent_outputs)"
+Destroy the transaction spent outputs\&. 
+.SS "const \fBbtck_Coin\fP * btck_transaction_spent_outputs_get_coin_at (const \fBbtck_TransactionSpentOutputs\fP * transaction_spent_outputs, size_t coin_index)"
+
+.PP
+Returns a coin contained in the transaction spent outputs at a certain index\&. The returned pointer is unowned and only valid for the lifetime of transaction_spent_outputs\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_spent_outputs\fP Non-null\&. 
+.br
+\fIcoin_index\fP The index of the to be retrieved coin within the transaction spent outputs\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A coin pointer\&. 
+.RE
+.PP
+
+.SS "int btck_transaction_to_bytes (const \fBbtck_Transaction\fP * transaction, \fBbtck_WriteBytes\fP writer, void * user_data)"
+
+.SS "\fBbtck_Txid\fP * btck_txid_copy (const \fBbtck_Txid\fP * txid)"
+
+.PP
+Copy a txid\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItxid\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied txid\&. 
+.RE
+.PP
+
+.SS "void btck_txid_destroy (\fBbtck_Txid\fP * txid)"
+Destroy the txid\&. 
+.SS "int btck_txid_equals (const \fBbtck_Txid\fP * txid1, const \fBbtck_Txid\fP * txid2)"
+
+.SS "void btck_txid_to_bytes (const \fBbtck_Txid\fP * txid, unsigned char output[32])"
+
+.SH "Variable Documentation"
+.PP 
+.SS "const std::function<std::string(const char*)> G_TRANSLATION_FUN {nullptr}\fR [extern]\fP"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

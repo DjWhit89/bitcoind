@@ -1,0 +1,60 @@
+.TH "SerialTaskRunner" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+SerialTaskRunner
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <scheduler\&.h>\fP
+.PP
+Inherits \fBTaskRunnerInterface\fP\&.
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBSerialTaskRunner\fP (\fBCScheduler\fP &scheduler \fBLIFETIMEBOUND\fP)"
+.br
+.ti -1c
+.RI "void \fBinsert\fP (std::function< void()> func) override \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!m_callbacks_mutex)"
+.br
+.ti -1c
+.RI "void \fBflush\fP () override \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!m_callbacks_mutex)"
+.br
+.ti -1c
+.RI "size_t \fBsize\fP () override \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!m_callbacks_mutex)"
+.br
+.in -1c
+
+Public Member Functions inherited from \fBTaskRunnerInterface\fP
+.in +1c
+.ti -1c
+.RI "virtual \fB~TaskRunnerInterface\fP ()=default"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Class used by \fBCScheduler\fP clients which may schedule multiple jobs which are required to be run serially\&. Jobs may not be run on the same thread, but no two jobs will be executed at the same time and memory will be release-acquire consistent (the scheduler will internally do an acquire before invoking a callback as well as a release at the end)\&. In practice this means that a callback \fBB()\fP will be able to observe all of the effects of callback A() which executed before it\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBSerialTaskRunner\fP (\fBCScheduler\fP &scheduler LIFETIMEBOUND)\fR [inline]\fP, \fR [explicit]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "void flush ()\fR [override]\fP, \fR [virtual]\fP"
+Processes all remaining queue members on the calling thread, blocking until queue is empty Must be called after the \fBCScheduler\fP has no remaining processing threads! 
+.PP
+Implements \fBTaskRunnerInterface\fP\&.
+.SS "void insert (std::function< void()> func)\fR [override]\fP, \fR [virtual]\fP"
+Add a callback to be executed\&. Callbacks are executed serially and memory is release-acquire consistent between callback executions\&. Practically, this means that callbacks can behave as if they are executed in order by a single thread\&. 
+.PP
+Implements \fBTaskRunnerInterface\fP\&.
+.SS "size_t size ()\fR [override]\fP, \fR [virtual]\fP"
+Returns the number of currently pending events\&. 
+.PP
+Implements \fBTaskRunnerInterface\fP\&.
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

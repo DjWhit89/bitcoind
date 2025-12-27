@@ -1,0 +1,226 @@
+\doxysection{proxy.\+h}
+\label{proxy_8h_source}\index{src/ipc/libmultiprocess/include/mp/proxy.h@{src/ipc/libmultiprocess/include/mp/proxy.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ MP\_PROXY\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ MP\_PROXY\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <mp/util.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <list>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <stddef.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <tuple>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <variant>}\ \textcolor{comment}{//\ IWYU\ pragma:\ keep}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{keyword}{namespace\ }mp\ \{}
+\DoxyCodeLine{00021\ \textcolor{keyword}{class\ }Connection;}
+\DoxyCodeLine{00022\ \textcolor{keyword}{class\ }EventLoop;}
+\DoxyCodeLine{00025\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Interface>\ \textcolor{keyword}{struct\ }ProxyClient;\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00028\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Interface>\ \textcolor{keyword}{struct\ }ProxyServer;\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00030\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Params>\ \textcolor{keyword}{struct\ }ProxyMethod;\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00032\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Struct>\ \textcolor{keyword}{struct\ }ProxyStruct;\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00034\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Type>\ \textcolor{keyword}{struct\ }ProxyType;\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{keyword}{using\ }CleanupList\ =\ std::list<std::function<void()>>;}
+\DoxyCodeLine{00037\ \textcolor{keyword}{using\ }CleanupIt\ =\ \textcolor{keyword}{typename}\ CleanupList::iterator;}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ CleanupRun(CleanupList\&\ fns)\ \{}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordflow}{while}\ (!fns.empty())\ \{}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ fn\ =\ std::move(fns.front());}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ fns.pop\_front();}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ fn();}
+\DoxyCodeLine{00044\ \ \ \ \ \}}
+\DoxyCodeLine{00045\ \}}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00050\ \textcolor{keyword}{class\ }EventLoopRef}
+\DoxyCodeLine{00051\ \{}
+\DoxyCodeLine{00052\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{explicit}\ EventLoopRef(EventLoop\&\ loop,\ Lock*\ lock\ =\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00054\ \ \ \ \ EventLoopRef(EventLoopRef\&\&\ other)\ noexcept\ :\ m\_loop(other.m\_loop)\ \{\ other.m\_loop\ =\ \textcolor{keyword}{nullptr};\ \}}
+\DoxyCodeLine{00055\ \ \ \ \ EventLoopRef(\textcolor{keyword}{const}\ EventLoopRef\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00056\ \ \ \ \ EventLoopRef\&\ operator=(\textcolor{keyword}{const}\ EventLoopRef\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00057\ \ \ \ \ EventLoopRef\&\ operator=(EventLoopRef\&\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00058\ \ \ \ \ \string~EventLoopRef()\ \{\ reset();\ \}}
+\DoxyCodeLine{00059\ \ \ \ \ EventLoop\&\ operator*()\textcolor{keyword}{\ const\ }\{\ assert(m\_loop);\ \textcolor{keywordflow}{return}\ *m\_loop;\ \}}
+\DoxyCodeLine{00060\ \ \ \ \ EventLoop*\ operator-\/>()\textcolor{keyword}{\ const\ }\{\ assert(m\_loop);\ \textcolor{keywordflow}{return}\ m\_loop;\ \}}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordtype}{void}\ reset(\textcolor{keywordtype}{bool}\ relock=\textcolor{keyword}{false});}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \ \ EventLoop*\ m\_loop\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00064\ \ \ \ \ Lock*\ m\_lock\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00065\ \};}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00068\ \textcolor{keyword}{struct\ }ProxyContext}
+\DoxyCodeLine{00069\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ Connection*\ connection;}
+\DoxyCodeLine{00071\ \ \ \ \ EventLoopRef\ loop;}
+\DoxyCodeLine{00072\ \ \ \ \ CleanupList\ cleanup\_fns;}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ \ \ ProxyContext(Connection*\ connection);}
+\DoxyCodeLine{00075\ \};}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00079\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Interface\_,\ \textcolor{keyword}{typename}\ Impl\_>}
+\DoxyCodeLine{00080\ \textcolor{keyword}{class\ }ProxyClientBase\ :\ \textcolor{keyword}{public}\ Impl\_}
+\DoxyCodeLine{00081\ \{}
+\DoxyCodeLine{00082\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keyword}{using\ }Interface\ =\ Interface\_;}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keyword}{using\ }Impl\ =\ Impl\_;}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keyword}{using\ }Sub\ =\ ProxyClient<Interface>;}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keyword}{using\ }Super\ =\ ProxyClientBase<Interface,\ Impl>;}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00097\ \ \ \ \ ProxyClientBase(\textcolor{keyword}{typename}\ Interface::Client\ client,\ Connection*\ connection,\ \textcolor{keywordtype}{bool}\ destroy\_connection);}
+\DoxyCodeLine{00098\ \ \ \ \ \string~ProxyClientBase()\ noexcept;}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{comment}{//\ construct/destroy\ methods\ called\ during\ client\ construction/destruction}}
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{comment}{//\ that\ can\ optionally\ be\ defined\ in\ capnp\ interfaces\ to\ invoke\ code\ on\ the}}
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{comment}{//\ server\ when\ proxy\ client\ objects\ are\ created\ and\ destroyed.}}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{comment}{//\ The\ construct()\ method\ is\ not\ generally\ very\ useful,\ but\ can\ be\ used\ to}}
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{comment}{//\ run\ custom\ code\ on\ the\ server\ automatically\ when\ a\ ProxyClient\ client\ is}}
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{comment}{//\ constructed.\ The\ only\ current\ use\ is\ adding\ a\ construct\ method\ to\ Init}}
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{comment}{//\ interfaces\ that\ is\ called\ automatically\ on\ construction,\ so\ client\ and}}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{comment}{//\ server\ exchange\ ThreadMap\ references\ and\ set\ Connection::m\_thread\_map}}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{comment}{//\ values\ as\ soon\ as\ the\ Init\ client\ is\ created.}}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ construct\ @0\ (threadMap:\ Proxy.ThreadMap)\ -\/>\ (threadMap:\ Proxy.ThreadMap);}}
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{comment}{//\ But\ construct()\ is\ not\ necessary\ for\ this,\ thread\ maps\ could\ be\ passed}}
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{comment}{//\ through\ a\ normal\ method\ that\ is\ just\ called\ explicitly\ rather\ than}}
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{comment}{//\ implicitly.}}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{comment}{//\ The\ destroy()\ method\ is\ more\ generally\ useful\ than\ construct(),\ because}}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{comment}{//\ it\ ensures\ that\ the\ server\ object\ will\ be\ destroyed\ synchronously\ before}}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{comment}{//\ the\ client\ destructor\ returns,\ instead\ of\ asynchronously\ at\ some}}
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{comment}{//\ unpredictable\ time\ after\ the\ client\ object\ is\ already\ destroyed\ and}}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{comment}{//\ client\ code\ has\ moved\ on.\ If\ the\ destroy\ method\ accepts\ a\ Context}}
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{comment}{//\ parameter\ like:}}
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ destroy\ @0\ (context:\ Proxy.Context)\ -\/>\ ();}}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{comment}{//\ then\ it\ will\ also\ ensure\ that\ the\ destructor\ runs\ on\ the\ same\ thread\ the}}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{comment}{//\ client\ used\ to\ make\ other\ RPC\ calls,\ instead\ of\ running\ on\ the\ server}}
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{comment}{//\ EventLoop\ thread\ and\ possibly\ blocking\ it.}}
+\DoxyCodeLine{00129\ \ \ \ \ static\ \textcolor{keywordtype}{void}\ construct(Super\&)\ \{\}}
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ destroy(Super\&)\ \{\}}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keyword}{typename}\ Interface::Client\ m\_client;}
+\DoxyCodeLine{00133\ \ \ \ \ ProxyContext\ m\_context;}
+\DoxyCodeLine{00134\ \};}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00138\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Interface,\ \textcolor{keyword}{typename}\ Impl>}
+\DoxyCodeLine{00139\ \textcolor{keyword}{class\ }ProxyClientCustom\ :\ \textcolor{keyword}{public}\ ProxyClientBase<Interface,\ Impl>}
+\DoxyCodeLine{00140\ \{}
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{keyword}{using\ }ProxyClientBase<Interface,\ Impl>::ProxyClientBase;}
+\DoxyCodeLine{00142\ \};}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00146\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Interface\_,\ \textcolor{keyword}{typename}\ Impl\_>}
+\DoxyCodeLine{00147\ \textcolor{keyword}{struct\ }ProxyServerBase\ :\ \textcolor{keyword}{public}\ \textcolor{keyword}{virtual}\ Interface\_::Server}
+\DoxyCodeLine{00148\ \{}
+\DoxyCodeLine{00149\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00150\ \ \ \ \ \textcolor{keyword}{using\ }Interface\ =\ Interface\_;}
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{keyword}{using\ }Impl\ =\ Impl\_;}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00153\ \ \ \ \ ProxyServerBase(std::shared\_ptr<Impl>\ impl,\ Connection\&\ connection);}
+\DoxyCodeLine{00154\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~ProxyServerBase();}
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keywordtype}{void}\ invokeDestroy();}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00170\ \ \ \ \ std::shared\_ptr<Impl>\ m\_impl;}
+\DoxyCodeLine{00171\ \ \ \ \ ProxyContext\ m\_context;}
+\DoxyCodeLine{00172\ \};}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00194\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Interface,\ \textcolor{keyword}{typename}\ Impl>}
+\DoxyCodeLine{00195\ \textcolor{keyword}{struct\ }ProxyServerCustom\ :\ \textcolor{keyword}{public}\ ProxyServerBase<Interface,\ Impl>}
+\DoxyCodeLine{00196\ \{}
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keyword}{using\ }ProxyServerBase<Interface,\ Impl>::ProxyServerBase;}
+\DoxyCodeLine{00198\ \};}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00215\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ Fn>}
+\DoxyCodeLine{00216\ \textcolor{keyword}{struct\ }FunctionTraits;}
+\DoxyCodeLine{00217\ }
+\DoxyCodeLine{00221\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class\ }\_Class,\ \textcolor{keyword}{class\ }\_Result,\ \textcolor{keyword}{class}...\ \_Params>}
+\DoxyCodeLine{00222\ \textcolor{keyword}{struct\ }FunctionTraits<\_Result\ (\_Class::*const)(\_Params...)>}
+\DoxyCodeLine{00223\ \{}
+\DoxyCodeLine{00224\ \ \ \ \ \textcolor{keyword}{using\ }Params\ =\ TypeList<\_Params...>;}
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keyword}{using\ }Result\ =\ \_Result;}
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{size\_t}\ N>}
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{keyword}{using\ }Param\ =\ \textcolor{keyword}{typename}\ std::tuple\_element<N,\ std::tuple<\_Params...>>::type;}
+\DoxyCodeLine{00228\ \ \ \ \ \textcolor{keyword}{using\ }Fields\ =}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ std::conditional\_t<std::is\_same\_v<void,\ Result>,\ Params,\ TypeList<\_Params...,\ \_Result>>;}
+\DoxyCodeLine{00230\ }
+\DoxyCodeLine{00238\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{size\_t}\ N>}
+\DoxyCodeLine{00239\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ Fwd(Param<N>\&\ arg)\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}Param<N>\&\&\textcolor{keyword}{>}(arg);\ \}}
+\DoxyCodeLine{00240\ \};}
+\DoxyCodeLine{00241\ }
+\DoxyCodeLine{00256\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MethodParams,\ \textcolor{keyword}{typename}\ Enable\ =\ \textcolor{keywordtype}{void}>}
+\DoxyCodeLine{00257\ \textcolor{keyword}{struct\ }ProxyMethodTraits}
+\DoxyCodeLine{00258\ \{}
+\DoxyCodeLine{00259\ \ \ \ \ \textcolor{keyword}{using\ }Params\ =\ TypeList<>;}
+\DoxyCodeLine{00260\ \ \ \ \ \textcolor{keyword}{using\ }Result\ =\ void;}
+\DoxyCodeLine{00261\ \ \ \ \ \textcolor{keyword}{using\ }Fields\ =\ Params;}
+\DoxyCodeLine{00262\ }
+\DoxyCodeLine{00263\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ ServerContext>}
+\DoxyCodeLine{00264\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ invoke(ServerContext\&)}
+\DoxyCodeLine{00265\ \ \ \ \ \{}
+\DoxyCodeLine{00266\ \ \ \ \ \}}
+\DoxyCodeLine{00267\ \};}
+\DoxyCodeLine{00268\ }
+\DoxyCodeLine{00281\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MethodParams>}
+\DoxyCodeLine{00282\ \textcolor{keyword}{struct\ }ProxyMethodTraits<MethodParams,\ Require<decltype(ProxyMethod<MethodParams>::impl)>>}
+\DoxyCodeLine{00283\ \ \ \ \ :\ \textcolor{keyword}{public}\ FunctionTraits<decltype(ProxyMethod<MethodParams>::impl)>}
+\DoxyCodeLine{00284\ \{}
+\DoxyCodeLine{00285\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ ServerContext,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00286\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ invoke(ServerContext\&\ server\_context,\ Args\&\&...\ args)}
+\DoxyCodeLine{00287\ \ \ \ \ \{}
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (server\_context.proxy\_server.m\_impl.get()-\/>*ProxyMethod<MethodParams>::impl)(std::forward<Args>(args)...);}
+\DoxyCodeLine{00289\ \ \ \ \ \}}
+\DoxyCodeLine{00290\ \};}
+\DoxyCodeLine{00291\ }
+\DoxyCodeLine{00294\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MethodParams>}
+\DoxyCodeLine{00295\ \textcolor{keyword}{struct\ }ProxyClientMethodTraits\ :\ \textcolor{keyword}{public}\ ProxyMethodTraits<MethodParams>}
+\DoxyCodeLine{00296\ \{}
+\DoxyCodeLine{00297\ \};}
+\DoxyCodeLine{00298\ }
+\DoxyCodeLine{00301\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MethodParams>}
+\DoxyCodeLine{00302\ \textcolor{keyword}{struct\ }ProxyServerMethodTraits\ :\ \textcolor{keyword}{public}\ ProxyMethodTraits<MethodParams>}
+\DoxyCodeLine{00303\ \{}
+\DoxyCodeLine{00304\ \};}
+\DoxyCodeLine{00305\ }
+\DoxyCodeLine{00306\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ FIELD\_IN\ =\ 1;}
+\DoxyCodeLine{00307\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ FIELD\_OUT\ =\ 2;}
+\DoxyCodeLine{00308\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ FIELD\_OPTIONAL\ =\ 4;}
+\DoxyCodeLine{00309\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ FIELD\_REQUESTED\ =\ 8;}
+\DoxyCodeLine{00310\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ FIELD\_BOXED\ =\ 16;}
+\DoxyCodeLine{00311\ }
+\DoxyCodeLine{00313\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Field,\ \textcolor{keywordtype}{int}\ flags>}
+\DoxyCodeLine{00314\ \textcolor{keyword}{struct\ }Accessor\ :\ \textcolor{keyword}{public}\ Field}
+\DoxyCodeLine{00315\ \{}
+\DoxyCodeLine{00316\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ in\ =\ flags\ \&\ FIELD\_IN;}
+\DoxyCodeLine{00317\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ out\ =\ flags\ \&\ FIELD\_OUT;}
+\DoxyCodeLine{00318\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ optional\ =\ flags\ \&\ FIELD\_OPTIONAL;}
+\DoxyCodeLine{00319\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ requested\ =\ flags\ \&\ FIELD\_REQUESTED;}
+\DoxyCodeLine{00320\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ boxed\ =\ flags\ \&\ FIELD\_BOXED;}
+\DoxyCodeLine{00321\ \};}
+\DoxyCodeLine{00322\ }
+\DoxyCodeLine{00324\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Fn>}
+\DoxyCodeLine{00325\ \textcolor{keyword}{class\ }ProxyCallback;}
+\DoxyCodeLine{00326\ }
+\DoxyCodeLine{00328\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Result,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00329\ \textcolor{keyword}{class\ }ProxyCallback<std::function<Result(Args...)>>}
+\DoxyCodeLine{00330\ \{}
+\DoxyCodeLine{00331\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00332\ \ \ \ \ \textcolor{keyword}{virtual}\ Result\ call(Args\&\&...\ args)\ =\ 0;}
+\DoxyCodeLine{00333\ \};}
+\DoxyCodeLine{00334\ }
+\DoxyCodeLine{00335\ \}\ \textcolor{comment}{//\ namespace\ mp}}
+\DoxyCodeLine{00336\ }
+\DoxyCodeLine{00337\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ MP\_PROXY\_H}}
+
+\end{DoxyCode}

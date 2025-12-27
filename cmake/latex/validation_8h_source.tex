@@ -1,0 +1,798 @@
+\doxysection{validation.\+h}
+\label{validation_8h_source}\index{src/validation.h@{src/validation.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_VALIDATION\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_VALIDATION\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <arith\_uint256.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <chain.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <checkqueue.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <cuckoocache.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <deploymentstatus.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <kernel/chain.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <kernel/chainparams.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <kernel/chainstatemanager\_opts.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <kernel/cs\_main.h>}\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <node/blockstorage.h>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <policy/feerate.h>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <policy/packages.h>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <policy/policy.h>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <script/script\_error.h>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <script/sigcache.h>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <script/verify\_flags.h>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <txdb.h>}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ <txmempool.h>}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <util/byte\_units.h>}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#include\ <util/fs.h>}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#include\ <util/hasher.h>}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#include\ <util/result.h>}}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#include\ <util/time.h>}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#include\ <util/translation.h>}}
+\DoxyCodeLine{00038\ \textcolor{preprocessor}{\#include\ <versionbits.h>}}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00043\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00044\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00045\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\#include\ <span>}}
+\DoxyCodeLine{00048\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00049\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00051\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \textcolor{keyword}{class\ }Chainstate;}
+\DoxyCodeLine{00054\ \textcolor{keyword}{class\ }CTxMemPool;}
+\DoxyCodeLine{00055\ \textcolor{keyword}{class\ }ChainstateManager;}
+\DoxyCodeLine{00056\ \textcolor{keyword}{struct\ }ChainTxData;}
+\DoxyCodeLine{00057\ \textcolor{keyword}{class\ }DisconnectedBlockTransactions;}
+\DoxyCodeLine{00058\ \textcolor{keyword}{struct\ }PrecomputedTransactionData;}
+\DoxyCodeLine{00059\ \textcolor{keyword}{struct\ }LockPoints;}
+\DoxyCodeLine{00060\ \textcolor{keyword}{struct\ }AssumeutxoData;}
+\DoxyCodeLine{00061\ \textcolor{keyword}{namespace\ }kernel\ \{}
+\DoxyCodeLine{00062\ \textcolor{keyword}{struct\ }ChainstateRole;}
+\DoxyCodeLine{00063\ \}\ \textcolor{comment}{//\ namespace\ kernel}}
+\DoxyCodeLine{00064\ \textcolor{keyword}{namespace\ }node\ \{}
+\DoxyCodeLine{00065\ \textcolor{keyword}{class\ }SnapshotMetadata;}
+\DoxyCodeLine{00066\ \}\ \textcolor{comment}{//\ namespace\ node}}
+\DoxyCodeLine{00067\ \textcolor{keyword}{namespace\ }Consensus\ \{}
+\DoxyCodeLine{00068\ \textcolor{keyword}{struct\ }Params;}
+\DoxyCodeLine{00069\ \}\ \textcolor{comment}{//\ namespace\ Consensus}}
+\DoxyCodeLine{00070\ \textcolor{keyword}{namespace\ }util\ \{}
+\DoxyCodeLine{00071\ \textcolor{keyword}{class\ }SignalInterrupt;}
+\DoxyCodeLine{00072\ \}\ \textcolor{comment}{//\ namespace\ util}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00075\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ MIN\_BLOCKS\_TO\_KEEP\ =\ 288;}
+\DoxyCodeLine{00076\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{signed}\ \textcolor{keywordtype}{int}\ DEFAULT\_CHECKBLOCKS\ =\ 6;}
+\DoxyCodeLine{00077\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ DEFAULT\_CHECKLEVEL\{3\};}
+\DoxyCodeLine{00078\ \textcolor{comment}{//\ Require\ that\ user\ allocate\ at\ least\ 550\ MiB\ for\ block\ \&\ undo\ files\ (blk???.dat\ and\ rev???.dat)}}
+\DoxyCodeLine{00079\ \textcolor{comment}{//\ At\ 1MB\ per\ block,\ 288\ blocks\ =\ 288MB.}}
+\DoxyCodeLine{00080\ \textcolor{comment}{//\ Add\ 15\%\ for\ Undo\ data\ =\ 331MB}}
+\DoxyCodeLine{00081\ \textcolor{comment}{//\ Add\ 20\%\ for\ Orphan\ block\ rate\ =\ 397MB}}
+\DoxyCodeLine{00082\ \textcolor{comment}{//\ We\ want\ the\ low\ water\ mark\ after\ pruning\ to\ be\ at\ least\ 397\ MB\ and\ since\ we\ prune\ in}}
+\DoxyCodeLine{00083\ \textcolor{comment}{//\ full\ block\ file\ chunks,\ we\ need\ the\ high\ water\ mark\ which\ triggers\ the\ prune\ to\ be}}
+\DoxyCodeLine{00084\ \textcolor{comment}{//\ one\ 128MB\ block\ file\ +\ added\ 15\%\ undo\ data\ =\ 147MB\ greater\ for\ a\ total\ of\ 545MB}}
+\DoxyCodeLine{00085\ \textcolor{comment}{//\ Setting\ the\ target\ to\ >=\ 550\ MiB\ will\ make\ it\ likely\ we\ can\ respect\ the\ target.}}
+\DoxyCodeLine{00086\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint64\_t\ MIN\_DISK\_SPACE\_FOR\_BLOCK\_FILES\ =\ 550\ *\ 1024\ *\ 1024;}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00089\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ MAX\_SCRIPTCHECK\_THREADS\{15\};}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00092\ \textcolor{keyword}{enum\ class}\ SynchronizationState\ \{}
+\DoxyCodeLine{00093\ \ \ \ \ INIT\_REINDEX,}
+\DoxyCodeLine{00094\ \ \ \ \ INIT\_DOWNLOAD,}
+\DoxyCodeLine{00095\ \ \ \ \ POST\_INIT}
+\DoxyCodeLine{00096\ \};}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00099\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::vector<std::string>\ CHECKLEVEL\_DOC;}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ CAmount\ GetBlockSubsidy(\textcolor{keywordtype}{int}\ nHeight,\ \textcolor{keyword}{const}\ Consensus::Params\&\ consensusParams);}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00103\ \textcolor{keywordtype}{bool}\ FatalError(kernel::Notifications\&\ notifications,\ BlockValidationState\&\ state,\ \textcolor{keyword}{const}\ bilingual\_str\&\ message);}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00106\ \textcolor{keywordtype}{void}\ PruneBlockFilesManual(Chainstate\&\ active\_chainstate,\ \textcolor{keywordtype}{int}\ nManualPruneHeight);}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00130\ \textcolor{keyword}{struct\ }MempoolAcceptResult\ \{}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keyword}{enum\ class}\ ResultType\ \{}
+\DoxyCodeLine{00133\ \ \ \ \ \ \ \ \ VALID,\ }
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ INVALID,\ }
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ MEMPOOL\_ENTRY,\ }
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ DIFFERENT\_WITNESS,\ }
+\DoxyCodeLine{00137\ \ \ \ \ \};}
+\DoxyCodeLine{00139\ \ \ \ \ \textcolor{keyword}{const}\ ResultType\ m\_result\_type;}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keyword}{const}\ TxValidationState\ m\_state;}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keyword}{const}\ std::list<CTransactionRef>\ m\_replaced\_transactions;}
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keyword}{const}\ std::optional<int64\_t>\ m\_vsize;}
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keyword}{const}\ std::optional<CAmount>\ m\_base\_fees;}
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keyword}{const}\ std::optional<CFeeRate>\ m\_effective\_feerate;}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keyword}{const}\ std::optional<std::vector<Wtxid>>\ m\_wtxids\_fee\_calculations;}
+\DoxyCodeLine{00162\ }
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keyword}{const}\ std::optional<Wtxid>\ m\_other\_wtxid;}
+\DoxyCodeLine{00165\ }
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{keyword}{static}\ MempoolAcceptResult\ Failure(TxValidationState\ state)\ \{}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ MempoolAcceptResult(state);}
+\DoxyCodeLine{00168\ \ \ \ \ \}}
+\DoxyCodeLine{00169\ }
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{keyword}{static}\ MempoolAcceptResult\ FeeFailure(TxValidationState\ state,}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CFeeRate\ effective\_feerate,}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<Wtxid>\&\ wtxids\_fee\_calculations)\ \{}
+\DoxyCodeLine{00173\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ MempoolAcceptResult(state,\ effective\_feerate,\ wtxids\_fee\_calculations);}
+\DoxyCodeLine{00174\ \ \ \ \ \}}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ \ \ \ \ \textcolor{keyword}{static}\ MempoolAcceptResult\ Success(std::list<CTransactionRef>\&\&\ replaced\_txns,}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int64\_t\ vsize,}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CAmount\ fees,}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CFeeRate\ effective\_feerate,}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<Wtxid>\&\ wtxids\_fee\_calculations)\ \{}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ MempoolAcceptResult(std::move(replaced\_txns),\ vsize,\ fees,}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ effective\_feerate,\ wtxids\_fee\_calculations);}
+\DoxyCodeLine{00183\ \ \ \ \ \}}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00185\ \ \ \ \ \textcolor{keyword}{static}\ MempoolAcceptResult\ MempoolTx(int64\_t\ vsize,\ CAmount\ fees)\ \{}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ MempoolAcceptResult(vsize,\ fees);}
+\DoxyCodeLine{00187\ \ \ \ \ \}}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00189\ \ \ \ \ \textcolor{keyword}{static}\ MempoolAcceptResult\ MempoolTxDifferentWitness(\textcolor{keyword}{const}\ Wtxid\&\ other\_wtxid)\ \{}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ MempoolAcceptResult(other\_wtxid);}
+\DoxyCodeLine{00191\ \ \ \ \ \}}
+\DoxyCodeLine{00192\ }
+\DoxyCodeLine{00193\ \textcolor{comment}{//\ Private\ constructors.\ Use\ static\ methods\ MempoolAcceptResult::Success,\ etc.\ to\ construct.}}
+\DoxyCodeLine{00194\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{keyword}{explicit}\ MempoolAcceptResult(TxValidationState\ state)}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ :\ m\_result\_type(ResultType::INVALID),\ m\_state(state)\ \{}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ \ \ \ \ Assume(!state.IsValid());\ \textcolor{comment}{//\ Can\ be\ invalid\ or\ error}}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keyword}{explicit}\ MempoolAcceptResult(std::list<CTransactionRef>\&\&\ replaced\_txns,}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int64\_t\ vsize,}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CAmount\ fees,}
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CFeeRate\ effective\_feerate,}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<Wtxid>\&\ wtxids\_fee\_calculations)}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ :\ m\_result\_type(ResultType::VALID),}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ m\_replaced\_transactions(std::move(replaced\_txns)),}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ m\_vsize\{vsize\},}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ m\_base\_fees(fees),}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ m\_effective\_feerate(effective\_feerate),}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ m\_wtxids\_fee\_calculations(wtxids\_fee\_calculations)\ \{\}}
+\DoxyCodeLine{00213\ }
+\DoxyCodeLine{00215\ \ \ \ \ \textcolor{keyword}{explicit}\ MempoolAcceptResult(TxValidationState\ state,}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CFeeRate\ effective\_feerate,}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<Wtxid>\&\ wtxids\_fee\_calculations)}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ :\ m\_result\_type(ResultType::INVALID),}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ m\_state(state),}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ m\_effective\_feerate(effective\_feerate),}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ m\_wtxids\_fee\_calculations(wtxids\_fee\_calculations)\ \{\}}
+\DoxyCodeLine{00222\ }
+\DoxyCodeLine{00224\ \ \ \ \ \textcolor{keyword}{explicit}\ MempoolAcceptResult(int64\_t\ vsize,\ CAmount\ fees)}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ :\ m\_result\_type(ResultType::MEMPOOL\_ENTRY),\ m\_vsize\{vsize\},\ m\_base\_fees(fees)\ \{\}}
+\DoxyCodeLine{00226\ }
+\DoxyCodeLine{00228\ \ \ \ \ \textcolor{keyword}{explicit}\ MempoolAcceptResult(\textcolor{keyword}{const}\ Wtxid\&\ other\_wtxid)}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ :\ m\_result\_type(ResultType::DIFFERENT\_WITNESS),\ m\_other\_wtxid(other\_wtxid)\ \{\}}
+\DoxyCodeLine{00230\ \};}
+\DoxyCodeLine{00231\ }
+\DoxyCodeLine{00235\ \textcolor{keyword}{struct\ }PackageMempoolAcceptResult}
+\DoxyCodeLine{00236\ \{}
+\DoxyCodeLine{00237\ \ \ \ \ PackageValidationState\ m\_state;}
+\DoxyCodeLine{00244\ \ \ \ \ std::map<Wtxid,\ MempoolAcceptResult>\ m\_tx\_results;}
+\DoxyCodeLine{00245\ }
+\DoxyCodeLine{00246\ \ \ \ \ \textcolor{keyword}{explicit}\ PackageMempoolAcceptResult(PackageValidationState\ state,}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::map<Wtxid,\ MempoolAcceptResult>\&\&\ results)}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ :\ m\_state\{state\},\ m\_tx\_results(std::move(results))\ \{\}}
+\DoxyCodeLine{00249\ }
+\DoxyCodeLine{00250\ \ \ \ \ \textcolor{keyword}{explicit}\ PackageMempoolAcceptResult(PackageValidationState\ state,\ CFeeRate\ feerate,}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::map<Wtxid,\ MempoolAcceptResult>\&\&\ results)}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ :\ m\_state\{state\},\ m\_tx\_results(std::move(results))\ \{\}}
+\DoxyCodeLine{00253\ }
+\DoxyCodeLine{00255\ \ \ \ \ \textcolor{keyword}{explicit}\ PackageMempoolAcceptResult(\textcolor{keyword}{const}\ Wtxid\&\ wtxid,\ \textcolor{keyword}{const}\ MempoolAcceptResult\&\ result)}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ :\ m\_tx\_results\{\ \{wtxid,\ result\}\ \}\ \{\}}
+\DoxyCodeLine{00257\ \};}
+\DoxyCodeLine{00258\ }
+\DoxyCodeLine{00273\ MempoolAcceptResult\ AcceptToMemoryPool(Chainstate\&\ active\_chainstate,\ \textcolor{keyword}{const}\ CTransactionRef\&\ tx,}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int64\_t\ accept\_time,\ \textcolor{keywordtype}{bool}\ bypass\_limits,\ \textcolor{keywordtype}{bool}\ test\_accept)}
+\DoxyCodeLine{00275\ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00276\ }
+\DoxyCodeLine{00287\ PackageMempoolAcceptResult\ ProcessNewPackage(Chainstate\&\ active\_chainstate,\ CTxMemPool\&\ pool,}
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Package\&\ txns,\ \textcolor{keywordtype}{bool}\ test\_accept,\ \textcolor{keyword}{const}\ std::optional<CFeeRate>\&\ client\_maxfeerate)}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00290\ }
+\DoxyCodeLine{00291\ \textcolor{comment}{/*\ Mempool\ validation\ helper\ functions\ */}}
+\DoxyCodeLine{00292\ }
+\DoxyCodeLine{00296\ \textcolor{keywordtype}{bool}\ CheckFinalTxAtTip(\textcolor{keyword}{const}\ CBlockIndex\&\ active\_chain\_tip,\ \textcolor{keyword}{const}\ CTransaction\&\ tx)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00297\ }
+\DoxyCodeLine{00316\ std::optional<LockPoints>\ CalculateLockPointsAtTip(}
+\DoxyCodeLine{00317\ \ \ \ \ CBlockIndex*\ tip,}
+\DoxyCodeLine{00318\ \ \ \ \ \textcolor{keyword}{const}\ CCoinsView\&\ coins\_view,}
+\DoxyCodeLine{00319\ \ \ \ \ \textcolor{keyword}{const}\ CTransaction\&\ tx);}
+\DoxyCodeLine{00320\ }
+\DoxyCodeLine{00330\ \textcolor{keywordtype}{bool}\ CheckSequenceLocksAtTip(CBlockIndex*\ tip,}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ LockPoints\&\ lock\_points);}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00337\ \textcolor{keyword}{class\ }CScriptCheck}
+\DoxyCodeLine{00338\ \{}
+\DoxyCodeLine{00339\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00340\ \ \ \ \ CTxOut\ m\_tx\_out;}
+\DoxyCodeLine{00341\ \ \ \ \ \textcolor{keyword}{const}\ CTransaction\ *ptxTo;}
+\DoxyCodeLine{00342\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nIn;}
+\DoxyCodeLine{00343\ \ \ \ \ script\_verify\_flags\ m\_flags;}
+\DoxyCodeLine{00344\ \ \ \ \ \textcolor{keywordtype}{bool}\ cacheStore;}
+\DoxyCodeLine{00345\ \ \ \ \ PrecomputedTransactionData\ *txdata;}
+\DoxyCodeLine{00346\ \ \ \ \ SignatureCache*\ m\_signature\_cache;}
+\DoxyCodeLine{00347\ }
+\DoxyCodeLine{00348\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00349\ \ \ \ \ CScriptCheck(\textcolor{keyword}{const}\ CTxOut\&\ outIn,\ \textcolor{keyword}{const}\ CTransaction\&\ txToIn,\ SignatureCache\&\ signature\_cache,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nInIn,\ script\_verify\_flags\ flags,\ \textcolor{keywordtype}{bool}\ cacheIn,\ PrecomputedTransactionData*\ txdataIn)\ :}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ m\_tx\_out(outIn),\ ptxTo(\&txToIn),\ nIn(nInIn),\ m\_flags(flags),\ cacheStore(cacheIn),\ txdata(txdataIn),\ m\_signature\_cache(\&signature\_cache)\ \{\ \}}
+\DoxyCodeLine{00351\ }
+\DoxyCodeLine{00352\ \ \ \ \ CScriptCheck(\textcolor{keyword}{const}\ CScriptCheck\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00353\ \ \ \ \ CScriptCheck\&\ operator=(\textcolor{keyword}{const}\ CScriptCheck\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00354\ \ \ \ \ CScriptCheck(CScriptCheck\&\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00355\ \ \ \ \ CScriptCheck\&\ operator=(CScriptCheck\&\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00356\ }
+\DoxyCodeLine{00357\ \ \ \ \ std::optional<std::pair<ScriptError,\ std::string>>\ operator()();}
+\DoxyCodeLine{00358\ \};}
+\DoxyCodeLine{00359\ }
+\DoxyCodeLine{00360\ \textcolor{comment}{//\ CScriptCheck\ is\ used\ a\ lot\ in\ std::vector,\ make\ sure\ that's\ efficient}}
+\DoxyCodeLine{00361\ \textcolor{keyword}{static\_assert}(std::is\_nothrow\_move\_assignable\_v<CScriptCheck>);}
+\DoxyCodeLine{00362\ \textcolor{keyword}{static\_assert}(std::is\_nothrow\_move\_constructible\_v<CScriptCheck>);}
+\DoxyCodeLine{00363\ \textcolor{keyword}{static\_assert}(std::is\_nothrow\_destructible\_v<CScriptCheck>);}
+\DoxyCodeLine{00364\ }
+\DoxyCodeLine{00369\ \textcolor{keyword}{class\ }ValidationCache}
+\DoxyCodeLine{00370\ \{}
+\DoxyCodeLine{00371\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00373\ \ \ \ \ CSHA256\ m\_script\_execution\_cache\_hasher;}
+\DoxyCodeLine{00374\ }
+\DoxyCodeLine{00375\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00376\ \ \ \ \ CuckooCache::cache<uint256,\ SignatureCacheHasher>\ m\_script\_execution\_cache;}
+\DoxyCodeLine{00377\ \ \ \ \ SignatureCache\ m\_signature\_cache;}
+\DoxyCodeLine{00378\ }
+\DoxyCodeLine{00379\ \ \ \ \ ValidationCache(\textcolor{keywordtype}{size\_t}\ script\_execution\_cache\_bytes,\ \textcolor{keywordtype}{size\_t}\ signature\_cache\_bytes);}
+\DoxyCodeLine{00380\ }
+\DoxyCodeLine{00381\ \ \ \ \ ValidationCache(\textcolor{keyword}{const}\ ValidationCache\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00382\ \ \ \ \ ValidationCache\&\ operator=(\textcolor{keyword}{const}\ ValidationCache\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00383\ }
+\DoxyCodeLine{00385\ \ \ \ \ CSHA256\ ScriptExecutionCacheHasher()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_script\_execution\_cache\_hasher;\ \}}
+\DoxyCodeLine{00386\ \};}
+\DoxyCodeLine{00387\ }
+\DoxyCodeLine{00389\ }
+\DoxyCodeLine{00391\ \textcolor{keywordtype}{bool}\ CheckBlock(\textcolor{keyword}{const}\ CBlock\&\ block,\ BlockValidationState\&\ state,\ \textcolor{keyword}{const}\ Consensus::Params\&\ consensusParams,\ \textcolor{keywordtype}{bool}\ fCheckPOW\ =\ \textcolor{keyword}{true},\ \textcolor{keywordtype}{bool}\ fCheckMerkleRoot\ =\ \textcolor{keyword}{true});}
+\DoxyCodeLine{00392\ }
+\DoxyCodeLine{00410\ BlockValidationState\ TestBlockValidity(}
+\DoxyCodeLine{00411\ \ \ \ \ Chainstate\&\ chainstate,}
+\DoxyCodeLine{00412\ \ \ \ \ \textcolor{keyword}{const}\ CBlock\&\ block,}
+\DoxyCodeLine{00413\ \ \ \ \ \textcolor{keywordtype}{bool}\ check\_pow,}
+\DoxyCodeLine{00414\ \ \ \ \ \textcolor{keywordtype}{bool}\ check\_merkle\_root)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00415\ }
+\DoxyCodeLine{00417\ \textcolor{keywordtype}{bool}\ HasValidProofOfWork(\textcolor{keyword}{const}\ std::vector<CBlockHeader>\&\ headers,\ \textcolor{keyword}{const}\ Consensus::Params\&\ consensusParams);}
+\DoxyCodeLine{00418\ }
+\DoxyCodeLine{00420\ \textcolor{keywordtype}{bool}\ IsBlockMutated(\textcolor{keyword}{const}\ CBlock\&\ block,\ \textcolor{keywordtype}{bool}\ check\_witness\_root);}
+\DoxyCodeLine{00421\ }
+\DoxyCodeLine{00423\ arith\_uint256\ CalculateClaimedHeadersWork(std::span<const\ CBlockHeader>\ headers);}
+\DoxyCodeLine{00424\ }
+\DoxyCodeLine{00425\ \textcolor{keyword}{enum\ class}\ VerifyDBResult\ \{}
+\DoxyCodeLine{00426\ \ \ \ \ SUCCESS,}
+\DoxyCodeLine{00427\ \ \ \ \ CORRUPTED\_BLOCK\_DB,}
+\DoxyCodeLine{00428\ \ \ \ \ INTERRUPTED,}
+\DoxyCodeLine{00429\ \ \ \ \ SKIPPED\_L3\_CHECKS,}
+\DoxyCodeLine{00430\ \ \ \ \ SKIPPED\_MISSING\_BLOCKS,}
+\DoxyCodeLine{00431\ \};}
+\DoxyCodeLine{00432\ }
+\DoxyCodeLine{00434\ \textcolor{keyword}{class\ }CVerifyDB}
+\DoxyCodeLine{00435\ \{}
+\DoxyCodeLine{00436\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00437\ \ \ \ \ kernel::Notifications\&\ m\_notifications;}
+\DoxyCodeLine{00438\ }
+\DoxyCodeLine{00439\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00440\ \ \ \ \ \textcolor{keyword}{explicit}\ CVerifyDB(kernel::Notifications\&\ notifications);}
+\DoxyCodeLine{00441\ \ \ \ \ \string~CVerifyDB();}
+\DoxyCodeLine{00442\ \ \ \ \ [[nodiscard]]\ VerifyDBResult\ VerifyDB(}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ Chainstate\&\ chainstate,}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Consensus::Params\&\ consensus\_params,}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ CCoinsView\&\ coinsview,}
+\DoxyCodeLine{00446\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ nCheckLevel,}
+\DoxyCodeLine{00447\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ nCheckDepth)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00448\ \};}
+\DoxyCodeLine{00449\ }
+\DoxyCodeLine{00450\ \textcolor{keyword}{enum}\ DisconnectResult}
+\DoxyCodeLine{00451\ \{}
+\DoxyCodeLine{00452\ \ \ \ \ DISCONNECT\_OK,\ \ \ \ \ \ \textcolor{comment}{//\ All\ good.}}
+\DoxyCodeLine{00453\ \ \ \ \ DISCONNECT\_UNCLEAN,\ \textcolor{comment}{//\ Rolled\ back,\ but\ UTXO\ set\ was\ inconsistent\ with\ block.}}
+\DoxyCodeLine{00454\ \ \ \ \ DISCONNECT\_FAILED\ \ \ \textcolor{comment}{//\ Something\ else\ went\ wrong.}}
+\DoxyCodeLine{00455\ \};}
+\DoxyCodeLine{00456\ }
+\DoxyCodeLine{00457\ \textcolor{keyword}{class\ }ConnectTrace;}
+\DoxyCodeLine{00458\ }
+\DoxyCodeLine{00460\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ std::array\ FlushStateModeNames\{\textcolor{stringliteral}{"{}NONE"{}},\ \textcolor{stringliteral}{"{}IF\_NEEDED"{}},\ \textcolor{stringliteral}{"{}PERIODIC"{}},\ \textcolor{stringliteral}{"{}ALWAYS"{}}\};}
+\DoxyCodeLine{00461\ \textcolor{keyword}{enum\ class}\ FlushStateMode:\ uint8\_t\ \{}
+\DoxyCodeLine{00462\ \ \ \ \ NONE,}
+\DoxyCodeLine{00463\ \ \ \ \ IF\_NEEDED,}
+\DoxyCodeLine{00464\ \ \ \ \ PERIODIC,}
+\DoxyCodeLine{00465\ \ \ \ \ ALWAYS}
+\DoxyCodeLine{00466\ \};}
+\DoxyCodeLine{00467\ }
+\DoxyCodeLine{00477\ \textcolor{keyword}{class\ }CoinsViews\ \{}
+\DoxyCodeLine{00478\ }
+\DoxyCodeLine{00479\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00482\ \ \ \ \ CCoinsViewDB\ m\_dbview\ GUARDED\_BY(cs\_main);}
+\DoxyCodeLine{00483\ }
+\DoxyCodeLine{00485\ \ \ \ \ CCoinsViewErrorCatcher\ m\_catcherview\ GUARDED\_BY(cs\_main);}
+\DoxyCodeLine{00486\ }
+\DoxyCodeLine{00489\ \ \ \ \ std::unique\_ptr<CCoinsViewCache>\ m\_cacheview\ GUARDED\_BY(cs\_main);}
+\DoxyCodeLine{00490\ }
+\DoxyCodeLine{00497\ \ \ \ \ CoinsViews(DBParams\ db\_params,\ CoinsViewOptions\ options);}
+\DoxyCodeLine{00498\ }
+\DoxyCodeLine{00500\ \ \ \ \ \textcolor{keywordtype}{void}\ InitCache()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00501\ \};}
+\DoxyCodeLine{00502\ }
+\DoxyCodeLine{00503\ enum\ class\ CoinsCacheSizeState}
+\DoxyCodeLine{00504\ \{}
+\DoxyCodeLine{00506\ \ \ \ \ CRITICAL\ =\ 2,}
+\DoxyCodeLine{00508\ \ \ \ \ LARGE\ =\ 1,}
+\DoxyCodeLine{00509\ \ \ \ \ OK\ =\ 0}
+\DoxyCodeLine{00510\ \};}
+\DoxyCodeLine{00511\ }
+\DoxyCodeLine{00512\ \textcolor{keyword}{constexpr}\ int64\_t\ LargeCoinsCacheThreshold(int64\_t\ total\_space)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00513\ \{}
+\DoxyCodeLine{00514\ \ \ \ \ \textcolor{comment}{//\ No\ periodic\ flush\ needed\ if\ at\ least\ this\ much\ space\ is\ free}}
+\DoxyCodeLine{00515\ \ \ \ \ \textcolor{keyword}{constexpr}\ int64\_t\ MAX\_BLOCK\_COINSDB\_USAGE\_BYTES\{int64\_t(10\_MiB)\};}
+\DoxyCodeLine{00516\ \ \ \ \ \textcolor{keywordflow}{return}\ std::max((total\_space\ *\ 9)\ /\ 10,}
+\DoxyCodeLine{00517\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ total\_space\ -\/\ MAX\_BLOCK\_COINSDB\_USAGE\_BYTES);}
+\DoxyCodeLine{00518\ \}}
+\DoxyCodeLine{00519\ }
+\DoxyCodeLine{00521\ \textcolor{keyword}{enum\ class}\ Assumeutxo\ \{}
+\DoxyCodeLine{00523\ \ \ \ \ VALIDATED,}
+\DoxyCodeLine{00525\ \ \ \ \ UNVALIDATED,}
+\DoxyCodeLine{00527\ \ \ \ \ INVALID,}
+\DoxyCodeLine{00528\ \};}
+\DoxyCodeLine{00529\ }
+\DoxyCodeLine{00544\ \textcolor{keyword}{class\ }Chainstate}
+\DoxyCodeLine{00545\ \{}
+\DoxyCodeLine{00546\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00552\ \ \ \ \ Mutex\ m\_chainstate\_mutex;}
+\DoxyCodeLine{00553\ }
+\DoxyCodeLine{00556\ \ \ \ \ CTxMemPool*\ m\_mempool;}
+\DoxyCodeLine{00557\ }
+\DoxyCodeLine{00559\ \ \ \ \ std::unique\_ptr<CoinsViews>\ m\_coins\_views;}
+\DoxyCodeLine{00560\ }
+\DoxyCodeLine{00562\ \ \ \ \ \textcolor{keyword}{mutable}\ \textcolor{keyword}{const}\ CBlockIndex*\ m\_cached\_snapshot\_base\ GUARDED\_BY(::cs\_main)\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00563\ }
+\DoxyCodeLine{00565\ \ \ \ \ \textcolor{keyword}{mutable}\ \textcolor{keyword}{const}\ CBlockIndex*\ m\_cached\_target\_block\ GUARDED\_BY(::cs\_main)\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00566\ }
+\DoxyCodeLine{00567\ \ \ \ \ std::optional<const\ char*>\ m\_last\_script\_check\_reason\_logged\ GUARDED\_BY(::cs\_main)\{\};}
+\DoxyCodeLine{00568\ }
+\DoxyCodeLine{00569\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00572\ \ \ \ \ node::BlockManager\&\ m\_blockman;}
+\DoxyCodeLine{00573\ }
+\DoxyCodeLine{00577\ \ \ \ \ ChainstateManager\&\ m\_chainman;}
+\DoxyCodeLine{00578\ }
+\DoxyCodeLine{00579\ \ \ \ \ \textcolor{keyword}{explicit}\ Chainstate(}
+\DoxyCodeLine{00580\ \ \ \ \ \ \ \ \ CTxMemPool*\ mempool,}
+\DoxyCodeLine{00581\ \ \ \ \ \ \ \ \ node::BlockManager\&\ blockman,}
+\DoxyCodeLine{00582\ \ \ \ \ \ \ \ \ ChainstateManager\&\ chainman,}
+\DoxyCodeLine{00583\ \ \ \ \ \ \ \ \ std::optional<uint256>\ from\_snapshot\_blockhash\ =\ std::nullopt);}
+\DoxyCodeLine{00584\ }
+\DoxyCodeLine{00586\ \ \ \ \ fs::path\ StoragePath()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00587\ }
+\DoxyCodeLine{00592\ \ \ \ \ kernel::ChainstateRole\ GetRole()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00593\ }
+\DoxyCodeLine{00600\ \ \ \ \ \textcolor{keywordtype}{void}\ InitCoinsDB(}
+\DoxyCodeLine{00601\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ cache\_size\_bytes,}
+\DoxyCodeLine{00602\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ in\_memory,}
+\DoxyCodeLine{00603\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ should\_wipe);}
+\DoxyCodeLine{00604\ }
+\DoxyCodeLine{00607\ \ \ \ \ \textcolor{keywordtype}{void}\ InitCoinsCache(\textcolor{keywordtype}{size\_t}\ cache\_size\_bytes)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00608\ }
+\DoxyCodeLine{00611\ \ \ \ \ \textcolor{keywordtype}{bool}\ CanFlushToDisk()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main)}
+\DoxyCodeLine{00612\ \ \ \ \ \{}
+\DoxyCodeLine{00613\ \ \ \ \ \ \ \ \ AssertLockHeld(::cs\_main);}
+\DoxyCodeLine{00614\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_coins\_views\ \&\&\ m\_coins\_views-\/>m\_cacheview;}
+\DoxyCodeLine{00615\ \ \ \ \ \}}
+\DoxyCodeLine{00616\ }
+\DoxyCodeLine{00619\ \ \ \ \ CChain\ m\_chain;}
+\DoxyCodeLine{00620\ }
+\DoxyCodeLine{00624\ \ \ \ \ Assumeutxo\ m\_assumeutxo\ GUARDED\_BY(::cs\_main);}
+\DoxyCodeLine{00625\ }
+\DoxyCodeLine{00631\ \ \ \ \ \textcolor{keyword}{const}\ std::optional<uint256>\ m\_from\_snapshot\_blockhash;}
+\DoxyCodeLine{00632\ }
+\DoxyCodeLine{00637\ \ \ \ \ std::optional<uint256>\ m\_target\_blockhash\ GUARDED\_BY(::cs\_main);}
+\DoxyCodeLine{00638\ }
+\DoxyCodeLine{00641\ \ \ \ \ std::optional<AssumeutxoHash>\ m\_target\_utxohash\ GUARDED\_BY(::cs\_main);}
+\DoxyCodeLine{00642\ }
+\DoxyCodeLine{00648\ \ \ \ \ \textcolor{keyword}{const}\ CBlockIndex*\ SnapshotBase()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00649\ }
+\DoxyCodeLine{00653\ \ \ \ \ const\ CBlockIndex*\ TargetBlock()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00657\ \ \ \ \ \textcolor{keywordtype}{void}\ SetTargetBlock(CBlockIndex*\ block)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00660\ \ \ \ \ \textcolor{keywordtype}{void}\ SetTargetBlockHash(uint256\ block\_hash)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00661\ }
+\DoxyCodeLine{00663\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReachedTarget()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main)}
+\DoxyCodeLine{00664\ \ \ \ \ \{}
+\DoxyCodeLine{00665\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CBlockIndex*\ target\_block\{TargetBlock()\};}
+\DoxyCodeLine{00666\ \ \ \ \ \ \ \ \ assert(!target\_block\ ||\ target\_block-\/>GetAncestor(m\_chain.Height())\ ==\ m\_chain.Tip());}
+\DoxyCodeLine{00667\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ target\_block\ \&\&\ target\_block\ ==\ m\_chain.Tip();}
+\DoxyCodeLine{00668\ \ \ \ \ \}}
+\DoxyCodeLine{00669\ }
+\DoxyCodeLine{00677\ \ \ \ \ std::set<CBlockIndex*,\ node::CBlockIndexWorkComparator>\ setBlockIndexCandidates;}
+\DoxyCodeLine{00678\ }
+\DoxyCodeLine{00680\ \ \ \ \ CCoinsViewCache\&\ CoinsTip()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main)}
+\DoxyCodeLine{00681\ \ \ \ \ \{}
+\DoxyCodeLine{00682\ \ \ \ \ \ \ \ \ AssertLockHeld(::cs\_main);}
+\DoxyCodeLine{00683\ \ \ \ \ \ \ \ \ Assert(m\_coins\_views);}
+\DoxyCodeLine{00684\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *Assert(m\_coins\_views-\/>m\_cacheview);}
+\DoxyCodeLine{00685\ \ \ \ \ \}}
+\DoxyCodeLine{00686\ }
+\DoxyCodeLine{00688\ \ \ \ \ CCoinsViewDB\&\ CoinsDB()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main)}
+\DoxyCodeLine{00689\ \ \ \ \ \{}
+\DoxyCodeLine{00690\ \ \ \ \ \ \ \ \ AssertLockHeld(::cs\_main);}
+\DoxyCodeLine{00691\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Assert(m\_coins\_views)-\/>m\_dbview;}
+\DoxyCodeLine{00692\ \ \ \ \ \}}
+\DoxyCodeLine{00693\ }
+\DoxyCodeLine{00695\ \ \ \ \ CTxMemPool*\ GetMempool()}
+\DoxyCodeLine{00696\ \ \ \ \ \{}
+\DoxyCodeLine{00697\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_mempool;}
+\DoxyCodeLine{00698\ \ \ \ \ \}}
+\DoxyCodeLine{00699\ }
+\DoxyCodeLine{00702\ \ \ \ \ CCoinsViewErrorCatcher\&\ CoinsErrorCatcher()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main)}
+\DoxyCodeLine{00703\ \ \ \ \ \{}
+\DoxyCodeLine{00704\ \ \ \ \ \ \ \ \ AssertLockHeld(::cs\_main);}
+\DoxyCodeLine{00705\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Assert(m\_coins\_views)-\/>m\_catcherview;}
+\DoxyCodeLine{00706\ \ \ \ \ \}}
+\DoxyCodeLine{00707\ }
+\DoxyCodeLine{00709\ \ \ \ \ \textcolor{keywordtype}{void}\ ResetCoinsViews()\ \{\ m\_coins\_views.reset();\ \}}
+\DoxyCodeLine{00710\ }
+\DoxyCodeLine{00712\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_coinsdb\_cache\_size\_bytes\{0\};}
+\DoxyCodeLine{00713\ }
+\DoxyCodeLine{00715\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_coinstip\_cache\_size\_bytes\{0\};}
+\DoxyCodeLine{00716\ }
+\DoxyCodeLine{00719\ \ \ \ \ \textcolor{keywordtype}{bool}\ ResizeCoinsCaches(\textcolor{keywordtype}{size\_t}\ coinstip\_size,\ \textcolor{keywordtype}{size\_t}\ coinsdb\_size)}
+\DoxyCodeLine{00720\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00721\ }
+\DoxyCodeLine{00733\ \ \ \ \ \textcolor{keywordtype}{bool}\ FlushStateToDisk(}
+\DoxyCodeLine{00734\ \ \ \ \ \ \ \ \ BlockValidationState\&\ state,}
+\DoxyCodeLine{00735\ \ \ \ \ \ \ \ \ FlushStateMode\ mode,}
+\DoxyCodeLine{00736\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ nManualPruneHeight\ =\ 0);}
+\DoxyCodeLine{00737\ }
+\DoxyCodeLine{00739\ \ \ \ \ \textcolor{keywordtype}{void}\ ForceFlushStateToDisk();}
+\DoxyCodeLine{00740\ }
+\DoxyCodeLine{00743\ \ \ \ \ \textcolor{keywordtype}{void}\ PruneAndFlush();}
+\DoxyCodeLine{00744\ }
+\DoxyCodeLine{00766\ \ \ \ \ \textcolor{keywordtype}{bool}\ ActivateBestChain(}
+\DoxyCodeLine{00767\ \ \ \ \ \ \ \ \ BlockValidationState\&\ state,}
+\DoxyCodeLine{00768\ \ \ \ \ \ \ \ \ std::shared\_ptr<const\ CBlock>\ pblock\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00769\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_chainstate\_mutex)}
+\DoxyCodeLine{00770\ \ \ \ \ \ \ \ \ LOCKS\_EXCLUDED(::cs\_main);}
+\DoxyCodeLine{00771\ }
+\DoxyCodeLine{00772\ \ \ \ \ \textcolor{comment}{//\ Block\ (dis)connection\ on\ a\ given\ view:}}
+\DoxyCodeLine{00773\ \ \ \ \ DisconnectResult\ DisconnectBlock(const\ CBlock\&\ block,\ const\ CBlockIndex*\ pindex,\ CCoinsViewCache\&\ view)}
+\DoxyCodeLine{00774\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00775\ \ \ \ \ \textcolor{keywordtype}{bool}\ ConnectBlock(const\ CBlock\&\ block,\ BlockValidationState\&\ state,\ CBlockIndex*\ pindex,}
+\DoxyCodeLine{00776\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CCoinsViewCache\&\ view,\ \textcolor{keywordtype}{bool}\ fJustCheck\ =\ false)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00777\ }
+\DoxyCodeLine{00778\ \ \ \ \ \textcolor{comment}{//\ Apply\ the\ effects\ of\ a\ block\ disconnection\ on\ the\ UTXO\ set.}}
+\DoxyCodeLine{00779\ \ \ \ \ \textcolor{keywordtype}{bool}\ DisconnectTip(BlockValidationState\&\ state,\ DisconnectedBlockTransactions*\ disconnectpool)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main,\ m\_mempool-\/>cs);}
+\DoxyCodeLine{00780\ }
+\DoxyCodeLine{00781\ \ \ \ \ \textcolor{comment}{//\ Manual\ block\ validity\ manipulation:}}
+\DoxyCodeLine{00786\ \ \ \ \ \textcolor{keywordtype}{bool}\ PreciousBlock(BlockValidationState\&\ state,\ CBlockIndex*\ pindex)}
+\DoxyCodeLine{00787\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_chainstate\_mutex)}
+\DoxyCodeLine{00788\ \ \ \ \ \ \ \ \ LOCKS\_EXCLUDED(::cs\_main);}
+\DoxyCodeLine{00789\ }
+\DoxyCodeLine{00791\ \ \ \ \ \textcolor{keywordtype}{bool}\ InvalidateBlock(BlockValidationState\&\ state,\ CBlockIndex*\ pindex)}
+\DoxyCodeLine{00792\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_chainstate\_mutex)}
+\DoxyCodeLine{00793\ \ \ \ \ \ \ \ \ LOCKS\_EXCLUDED(::cs\_main);}
+\DoxyCodeLine{00794\ }
+\DoxyCodeLine{00796\ \ \ \ \ \textcolor{keywordtype}{void}\ SetBlockFailureFlags(CBlockIndex*\ pindex)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00797\ }
+\DoxyCodeLine{00799\ \ \ \ \ \textcolor{keywordtype}{void}\ ResetBlockFailureFlags(CBlockIndex*\ pindex)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00800\ }
+\DoxyCodeLine{00802\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReplayBlocks();}
+\DoxyCodeLine{00803\ }
+\DoxyCodeLine{00805\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ NeedsRedownload()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00807\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadGenesisBlock();}
+\DoxyCodeLine{00808\ }
+\DoxyCodeLine{00809\ \ \ \ \ \textcolor{keywordtype}{void}\ TryAddBlockIndexCandidate(CBlockIndex*\ pindex)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00810\ }
+\DoxyCodeLine{00811\ \ \ \ \ \textcolor{keywordtype}{void}\ PruneBlockIndexCandidates();}
+\DoxyCodeLine{00812\ }
+\DoxyCodeLine{00813\ \ \ \ \ \textcolor{keywordtype}{void}\ ClearBlockIndexCandidates()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00814\ }
+\DoxyCodeLine{00816\ \ \ \ \ const\ CBlockIndex*\ FindForkInGlobalIndex(const\ CBlockLocator\&\ locator)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00817\ }
+\DoxyCodeLine{00819\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadChainTip()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00820\ }
+\DoxyCodeLine{00824\ \ \ \ \ CoinsCacheSizeState\ GetCoinsCacheSizeState()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00825\ }
+\DoxyCodeLine{00826\ \ \ \ \ CoinsCacheSizeState\ GetCoinsCacheSizeState(}
+\DoxyCodeLine{00827\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ max\_coins\_cache\_size\_bytes,}
+\DoxyCodeLine{00828\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ max\_mempool\_size\_bytes)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00829\ }
+\DoxyCodeLine{00830\ \ \ \ \ std::\textcolor{keywordtype}{string}\ ToString()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00831\ }
+\DoxyCodeLine{00833\ \ \ \ \ RecursiveMutex*\ MempoolMutex()\ const\ LOCK\_RETURNED(m\_mempool-\/>cs)}
+\DoxyCodeLine{00834\ \ \ \ \ \{}
+\DoxyCodeLine{00835\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_mempool\ ?\ \&m\_mempool-\/>cs\ :\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00836\ \ \ \ \ \}}
+\DoxyCodeLine{00837\ }
+\DoxyCodeLine{00841\ \ \ \ \ std::pair<int,\ int>\ GetPruneRange(\textcolor{keywordtype}{int}\ last\_height\_can\_prune)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00842\ }
+\DoxyCodeLine{00843\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00844\ \ \ \ \ \textcolor{keywordtype}{bool}\ ActivateBestChainStep(BlockValidationState\&\ state,\ CBlockIndex*\ pindexMostWork,\ \textcolor{keyword}{const}\ std::shared\_ptr<const\ CBlock>\&\ pblock,\ \textcolor{keywordtype}{bool}\&\ fInvalidFound,\ ConnectTrace\&\ connectTrace)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main,\ m\_mempool-\/>cs);}
+\DoxyCodeLine{00845\ \ \ \ \ \textcolor{keywordtype}{bool}\ ConnectTip(}
+\DoxyCodeLine{00846\ \ \ \ \ \ \ \ \ BlockValidationState\&\ state,}
+\DoxyCodeLine{00847\ \ \ \ \ \ \ \ \ CBlockIndex*\ pindexNew,}
+\DoxyCodeLine{00848\ \ \ \ \ \ \ \ \ std::shared\_ptr<const\ CBlock>\ block\_to\_connect,}
+\DoxyCodeLine{00849\ \ \ \ \ \ \ \ \ ConnectTrace\&\ connectTrace,}
+\DoxyCodeLine{00850\ \ \ \ \ \ \ \ \ DisconnectedBlockTransactions\&\ disconnectpool)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main,\ m\_mempool-\/>cs);}
+\DoxyCodeLine{00851\ }
+\DoxyCodeLine{00852\ \ \ \ \ \textcolor{keywordtype}{void}\ InvalidBlockFound(CBlockIndex*\ pindex,\ \textcolor{keyword}{const}\ BlockValidationState\&\ state)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00853\ \ \ \ \ CBlockIndex*\ FindMostWorkChain()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00854\ }
+\DoxyCodeLine{00855\ \ \ \ \ \textcolor{keywordtype}{bool}\ RollforwardBlock(const\ CBlockIndex*\ pindex,\ CCoinsViewCache\&\ inputs)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00856\ }
+\DoxyCodeLine{00857\ \ \ \ \ \textcolor{keywordtype}{void}\ CheckForkWarningConditions()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00858\ \ \ \ \ \textcolor{keywordtype}{void}\ InvalidChainFound(CBlockIndex*\ pindexNew)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00859\ }
+\DoxyCodeLine{00873\ \ \ \ \ \textcolor{keywordtype}{void}\ MaybeUpdateMempoolForReorg(}
+\DoxyCodeLine{00874\ \ \ \ \ \ \ \ \ DisconnectedBlockTransactions\&\ disconnectpool,}
+\DoxyCodeLine{00875\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ fAddToMempool)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main,\ m\_mempool-\/>cs);}
+\DoxyCodeLine{00876\ }
+\DoxyCodeLine{00878\ \ \ \ \ \textcolor{keywordtype}{void}\ UpdateTip(const\ CBlockIndex*\ pindexNew)}
+\DoxyCodeLine{00879\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00880\ }
+\DoxyCodeLine{00881\ \ \ \ \ NodeClock::time\_point\ m\_next\_write\{NodeClock::time\_point::max()\};}
+\DoxyCodeLine{00882\ }
+\DoxyCodeLine{00887\ \ \ \ \ [[nodiscard]]\ util::Result<void>\ InvalidateCoinsDBOnDisk()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00888\ }
+\DoxyCodeLine{00889\ \ \ \ \ friend\ ChainstateManager;}
+\DoxyCodeLine{00890\ \};}
+\DoxyCodeLine{00891\ }
+\DoxyCodeLine{00892\ enum\ class\ SnapshotCompletionResult\ \{}
+\DoxyCodeLine{00893\ \ \ \ \ SUCCESS,}
+\DoxyCodeLine{00894\ \ \ \ \ SKIPPED,}
+\DoxyCodeLine{00895\ }
+\DoxyCodeLine{00896\ \ \ \ \ \textcolor{comment}{//\ Expected\ assumeutxo\ configuration\ data\ is\ not\ found\ for\ the\ height\ of\ the}}
+\DoxyCodeLine{00897\ \ \ \ \ \textcolor{comment}{//\ base\ block.}}
+\DoxyCodeLine{00898\ \ \ \ \ MISSING\_CHAINPARAMS,}
+\DoxyCodeLine{00899\ }
+\DoxyCodeLine{00900\ \ \ \ \ \textcolor{comment}{//\ Failed\ to\ generate\ UTXO\ statistics\ (to\ check\ UTXO\ set\ hash)\ for\ the}}
+\DoxyCodeLine{00901\ \ \ \ \ \textcolor{comment}{//\ validated\ chainstate.}}
+\DoxyCodeLine{00902\ \ \ \ \ STATS\_FAILED,}
+\DoxyCodeLine{00903\ }
+\DoxyCodeLine{00904\ \ \ \ \ \textcolor{comment}{//\ The\ UTXO\ set\ hash\ of\ the\ validated\ chainstate\ does\ not\ match\ the\ one}}
+\DoxyCodeLine{00905\ \ \ \ \ \textcolor{comment}{//\ expected\ by\ assumeutxo\ chainparams.}}
+\DoxyCodeLine{00906\ \ \ \ \ HASH\_MISMATCH,}
+\DoxyCodeLine{00907\ \};}
+\DoxyCodeLine{00908\ }
+\DoxyCodeLine{00929\ \textcolor{keyword}{class\ }ChainstateManager}
+\DoxyCodeLine{00930\ \{}
+\DoxyCodeLine{00931\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00932\ }
+\DoxyCodeLine{00934\ \ \ \ \ CBlockIndex*\ m\_last\_notified\_header\ GUARDED\_BY(GetMutex())\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00935\ }
+\DoxyCodeLine{00936\ \ \ \ \ \textcolor{keywordtype}{bool}\ NotifyHeaderTip()\ LOCKS\_EXCLUDED(GetMutex());}
+\DoxyCodeLine{00937\ }
+\DoxyCodeLine{00945\ \ \ \ \ [[nodiscard]]\ util::Result<void>\ PopulateAndValidateSnapshot(}
+\DoxyCodeLine{00946\ \ \ \ \ \ \ \ \ Chainstate\&\ snapshot\_chainstate,}
+\DoxyCodeLine{00947\ \ \ \ \ \ \ \ \ AutoFile\&\ coins\_file,}
+\DoxyCodeLine{00948\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ node::SnapshotMetadata\&\ metadata);}
+\DoxyCodeLine{00949\ }
+\DoxyCodeLine{00957\ \ \ \ \ \textcolor{keywordtype}{bool}\ AcceptBlockHeader(}
+\DoxyCodeLine{00958\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CBlockHeader\&\ block,}
+\DoxyCodeLine{00959\ \ \ \ \ \ \ \ \ BlockValidationState\&\ state,}
+\DoxyCodeLine{00960\ \ \ \ \ \ \ \ \ CBlockIndex**\ ppindex,}
+\DoxyCodeLine{00961\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ min\_pow\_checked)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00962\ \ \ \ \ \textcolor{keyword}{friend}\ Chainstate;}
+\DoxyCodeLine{00963\ }
+\DoxyCodeLine{00965\ \ \ \ \ MockableSteadyClock::time\_point\ m\_last\_presync\_update\ GUARDED\_BY(GetMutex())\{\};}
+\DoxyCodeLine{00966\ }
+\DoxyCodeLine{00968\ \ \ \ \ CCheckQueue<CScriptCheck>\ m\_script\_check\_queue;}
+\DoxyCodeLine{00969\ }
+\DoxyCodeLine{00972\ \ \ \ \ SteadyClock::duration\ GUARDED\_BY(::cs\_main)\ time\_check\{\};}
+\DoxyCodeLine{00973\ \ \ \ \ SteadyClock::duration\ GUARDED\_BY(::cs\_main)\ time\_forks\{\};}
+\DoxyCodeLine{00974\ \ \ \ \ SteadyClock::duration\ GUARDED\_BY(::cs\_main)\ time\_connect\{\};}
+\DoxyCodeLine{00975\ \ \ \ \ SteadyClock::duration\ GUARDED\_BY(::cs\_main)\ time\_verify\{\};}
+\DoxyCodeLine{00976\ \ \ \ \ SteadyClock::duration\ GUARDED\_BY(::cs\_main)\ time\_undo\{\};}
+\DoxyCodeLine{00977\ \ \ \ \ SteadyClock::duration\ GUARDED\_BY(::cs\_main)\ time\_index\{\};}
+\DoxyCodeLine{00978\ \ \ \ \ SteadyClock::duration\ GUARDED\_BY(::cs\_main)\ time\_total\{\};}
+\DoxyCodeLine{00979\ \ \ \ \ int64\_t\ GUARDED\_BY(::cs\_main)\ num\_blocks\_total\{0\};}
+\DoxyCodeLine{00980\ \ \ \ \ SteadyClock::duration\ GUARDED\_BY(::cs\_main)\ time\_connect\_total\{\};}
+\DoxyCodeLine{00981\ \ \ \ \ SteadyClock::duration\ GUARDED\_BY(::cs\_main)\ time\_flush\{\};}
+\DoxyCodeLine{00982\ \ \ \ \ SteadyClock::duration\ GUARDED\_BY(::cs\_main)\ time\_chainstate\{\};}
+\DoxyCodeLine{00983\ \ \ \ \ SteadyClock::duration\ GUARDED\_BY(::cs\_main)\ time\_post\_connect\{\};}
+\DoxyCodeLine{00984\ }
+\DoxyCodeLine{00985\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00986\ \ \ \ \ CBlockIndex*\ m\_best\_invalid\ GUARDED\_BY(::cs\_main)\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00987\ }
+\DoxyCodeLine{00988\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00989\ \ \ \ \ \textcolor{keyword}{using\ }Options\ =\ kernel::ChainstateManagerOpts;}
+\DoxyCodeLine{00990\ }
+\DoxyCodeLine{00991\ \ \ \ \ \textcolor{keyword}{explicit}\ ChainstateManager(\textcolor{keyword}{const}\ util::SignalInterrupt\&\ interrupt,\ Options\ options,\ node::BlockManager::Options\ blockman\_options);}
+\DoxyCodeLine{00992\ }
+\DoxyCodeLine{00995\ \ \ \ \ std::function<void()>\ snapshot\_download\_completed\ =\ std::function<void()>();}
+\DoxyCodeLine{00996\ }
+\DoxyCodeLine{00997\ \ \ \ \ \textcolor{keyword}{const}\ CChainParams\&\ GetParams()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_options.chainparams;\ \}}
+\DoxyCodeLine{00998\ \ \ \ \ \textcolor{keyword}{const}\ Consensus::Params\&\ GetConsensus()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_options.chainparams.GetConsensus();\ \}}
+\DoxyCodeLine{00999\ \ \ \ \ \textcolor{keywordtype}{bool}\ ShouldCheckBlockIndex()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{01000\ \ \ \ \ \textcolor{keyword}{const}\ arith\_uint256\&\ MinimumChainWork()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ *Assert(m\_options.minimum\_chain\_work);\ \}}
+\DoxyCodeLine{01001\ \ \ \ \ \textcolor{keyword}{const}\ uint256\&\ AssumedValidBlock()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ *Assert(m\_options.assumed\_valid\_block);\ \}}
+\DoxyCodeLine{01002\ \ \ \ \ kernel::Notifications\&\ GetNotifications()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_options.notifications;\ \};}
+\DoxyCodeLine{01003\ }
+\DoxyCodeLine{01009\ \ \ \ \ \textcolor{keywordtype}{void}\ CheckBlockIndex()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{01010\ }
+\DoxyCodeLine{01022\ \ \ \ \ RecursiveMutex\&\ GetMutex()\ const\ LOCK\_RETURNED(::cs\_main)\ \{\ return\ ::cs\_main;\ \}}
+\DoxyCodeLine{01023\ }
+\DoxyCodeLine{01024\ \ \ \ \ \textcolor{keyword}{const}\ util::SignalInterrupt\&\ m\_interrupt;}
+\DoxyCodeLine{01025\ \ \ \ \ \textcolor{keyword}{const}\ Options\ m\_options;}
+\DoxyCodeLine{01028\ \ \ \ \ node::BlockManager\ m\_blockman;}
+\DoxyCodeLine{01029\ }
+\DoxyCodeLine{01030\ \ \ \ \ ValidationCache\ m\_validation\_cache;}
+\DoxyCodeLine{01031\ }
+\DoxyCodeLine{01039\ \ \ \ \ \textcolor{keyword}{mutable}\ std::atomic<bool>\ m\_cached\_finished\_ibd\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{01040\ }
+\DoxyCodeLine{01048\ \ \ \ \ int32\_t\ nBlockSequenceId\ GUARDED\_BY(::cs\_main)\ =\ SEQ\_ID\_INIT\_FROM\_DISK\ +\ 1;}
+\DoxyCodeLine{01050\ \ \ \ \ int32\_t\ nBlockReverseSequenceId\ =\ -\/1;}
+\DoxyCodeLine{01052\ \ \ \ \ arith\_uint256\ nLastPreciousChainwork\ =\ 0;}
+\DoxyCodeLine{01053\ }
+\DoxyCodeLine{01054\ \ \ \ \ \textcolor{comment}{//\ Reset\ the\ memory-\/only\ sequence\ counters\ we\ use\ to\ track\ block\ arrival}}
+\DoxyCodeLine{01055\ \ \ \ \ \textcolor{comment}{//\ (used\ by\ tests\ to\ reset\ state)}}
+\DoxyCodeLine{01056\ \ \ \ \ \textcolor{keywordtype}{void}\ ResetBlockSequenceCounters()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main)}
+\DoxyCodeLine{01057\ \ \ \ \ \{}
+\DoxyCodeLine{01058\ \ \ \ \ \ \ \ \ AssertLockHeld(::cs\_main);}
+\DoxyCodeLine{01059\ \ \ \ \ \ \ \ \ nBlockSequenceId\ =\ SEQ\_ID\_INIT\_FROM\_DISK\ +\ 1;}
+\DoxyCodeLine{01060\ \ \ \ \ \ \ \ \ nBlockReverseSequenceId\ =\ -\/1;}
+\DoxyCodeLine{01061\ \ \ \ \ \}}
+\DoxyCodeLine{01062\ }
+\DoxyCodeLine{01063\ }
+\DoxyCodeLine{01068\ \ \ \ \ CBlockIndex*\ m\_best\_header\ GUARDED\_BY(::cs\_main)\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{01069\ }
+\DoxyCodeLine{01072\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_total\_coinstip\_cache\{0\};}
+\DoxyCodeLine{01073\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01076\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_total\_coinsdb\_cache\{0\};}
+\DoxyCodeLine{01077\ }
+\DoxyCodeLine{01081\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ constructor}}
+\DoxyCodeLine{01082\ \ \ \ \ Chainstate\&\ InitializeChainstate(CTxMemPool*\ mempool)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{01083\ }
+\DoxyCodeLine{01095\ \ \ \ \ [[nodiscard]]\ util::Result<CBlockIndex*>\ ActivateSnapshot(}
+\DoxyCodeLine{01096\ \ \ \ \ \ \ \ \ AutoFile\&\ coins\_file,\ \textcolor{keyword}{const}\ node::SnapshotMetadata\&\ metadata,\ \textcolor{keywordtype}{bool}\ in\_memory);}
+\DoxyCodeLine{01097\ }
+\DoxyCodeLine{01106\ \ \ \ \ SnapshotCompletionResult\ MaybeValidateSnapshot(Chainstate\&\ validated\_cs,\ Chainstate\&\ unvalidated\_cs)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{01107\ }
+\DoxyCodeLine{01109\ \ \ \ \ Chainstate\&\ CurrentChainstate()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(GetMutex())}
+\DoxyCodeLine{01110\ \ \ \ \ \{}
+\DoxyCodeLine{01111\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ cs\ :\ m\_chainstates)\ \{}
+\DoxyCodeLine{01112\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cs\ \&\&\ cs-\/>m\_assumeutxo\ !=\ Assumeutxo::INVALID\ \&\&\ !cs-\/>m\_target\_blockhash)\ \textcolor{keywordflow}{return}\ *cs;}
+\DoxyCodeLine{01113\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01114\ \ \ \ \ \ \ \ \ abort();}
+\DoxyCodeLine{01115\ \ \ \ \ \}}
+\DoxyCodeLine{01116\ }
+\DoxyCodeLine{01118\ \ \ \ \ Chainstate*\ HistoricalChainstate()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(GetMutex())}
+\DoxyCodeLine{01119\ \ \ \ \ \{}
+\DoxyCodeLine{01120\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ cs\ :\ m\_chainstates)\ \{}
+\DoxyCodeLine{01121\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cs\ \&\&\ cs-\/>m\_assumeutxo\ !=\ Assumeutxo::INVALID\ \&\&\ cs-\/>m\_target\_blockhash\ \&\&\ !cs-\/>m\_target\_utxohash)\ \textcolor{keywordflow}{return}\ cs.get();}
+\DoxyCodeLine{01122\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01123\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{01124\ \ \ \ \ \}}
+\DoxyCodeLine{01125\ }
+\DoxyCodeLine{01129\ \ \ \ \ Chainstate\&\ ValidatedChainstate()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(GetMutex())}
+\DoxyCodeLine{01130\ \ \ \ \ \{}
+\DoxyCodeLine{01131\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}*\ cs\ :\ \{\&CurrentChainstate(),\ HistoricalChainstate()\})\ \{}
+\DoxyCodeLine{01132\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cs\ \&\&\ cs-\/>m\_assumeutxo\ ==\ Assumeutxo::VALIDATED)\ \textcolor{keywordflow}{return}\ *cs;}
+\DoxyCodeLine{01133\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01134\ \ \ \ \ \ \ \ \ abort();}
+\DoxyCodeLine{01135\ \ \ \ \ \}}
+\DoxyCodeLine{01136\ }
+\DoxyCodeLine{01138\ \ \ \ \ std::unique\_ptr<Chainstate>\ RemoveChainstate(Chainstate\&\ chainstate)\ EXCLUSIVE\_LOCKS\_REQUIRED(GetMutex())}
+\DoxyCodeLine{01139\ \ \ \ \ \{}
+\DoxyCodeLine{01140\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ it\{std::find\_if(m\_chainstates.begin(),\ m\_chainstates.end(),\ [\&](\textcolor{keyword}{auto}\&\ cs)\ \{\ return\ cs.get()\ ==\ \&chainstate;\ \})\};}
+\DoxyCodeLine{01141\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (it\ !=\ m\_chainstates.end())\ \{}
+\DoxyCodeLine{01142\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ ret\{std::move(*it)\};}
+\DoxyCodeLine{01143\ \ \ \ \ \ \ \ \ \ \ \ \ m\_chainstates.erase(it);}
+\DoxyCodeLine{01144\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{01145\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01146\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{01147\ \ \ \ \ \}}
+\DoxyCodeLine{01148\ }
+\DoxyCodeLine{01154\ \ \ \ \ Chainstate\&\ ActiveChainstate()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{01155\ \ \ \ \ CChain\&\ ActiveChain()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(GetMutex())\ \{\ \textcolor{keywordflow}{return}\ ActiveChainstate().m\_chain;\ \}}
+\DoxyCodeLine{01156\ \ \ \ \ \textcolor{keywordtype}{int}\ ActiveHeight()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(GetMutex())\ \{\ \textcolor{keywordflow}{return}\ ActiveChain().Height();\ \}}
+\DoxyCodeLine{01157\ \ \ \ \ CBlockIndex*\ ActiveTip()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(GetMutex())\ \{\ \textcolor{keywordflow}{return}\ ActiveChain().Tip();\ \}}
+\DoxyCodeLine{01159\ }
+\DoxyCodeLine{01160\ \ \ \ \ node::BlockMap\&\ BlockIndex()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main)}
+\DoxyCodeLine{01161\ \ \ \ \ \{}
+\DoxyCodeLine{01162\ \ \ \ \ \ \ \ \ AssertLockHeld(::cs\_main);}
+\DoxyCodeLine{01163\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_blockman.m\_block\_index;}
+\DoxyCodeLine{01164\ \ \ \ \ \}}
+\DoxyCodeLine{01165\ }
+\DoxyCodeLine{01169\ \ \ \ \ \textcolor{keyword}{mutable}\ VersionBitsCache\ m\_versionbitscache;}
+\DoxyCodeLine{01170\ }
+\DoxyCodeLine{01172\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsInitialBlockDownload()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{01173\ }
+\DoxyCodeLine{01175\ \ \ \ \ \textcolor{keywordtype}{double}\ GuessVerificationProgress(\textcolor{keyword}{const}\ CBlockIndex*\ pindex)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(GetMutex());}
+\DoxyCodeLine{01176\ }
+\DoxyCodeLine{01203\ \ \ \ \ \textcolor{keywordtype}{void}\ LoadExternalBlockFile(}
+\DoxyCodeLine{01204\ \ \ \ \ \ \ \ \ AutoFile\&\ file\_in,}
+\DoxyCodeLine{01205\ \ \ \ \ \ \ \ \ FlatFilePos*\ dbp\ =\ \textcolor{keyword}{nullptr},}
+\DoxyCodeLine{01206\ \ \ \ \ \ \ \ \ std::multimap<uint256,\ FlatFilePos>*\ blocks\_with\_unknown\_parent\ =\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{01207\ }
+\DoxyCodeLine{01232\ \ \ \ \ \textcolor{keywordtype}{bool}\ ProcessNewBlock(\textcolor{keyword}{const}\ std::shared\_ptr<const\ CBlock>\&\ block,\ \textcolor{keywordtype}{bool}\ force\_processing,\ \textcolor{keywordtype}{bool}\ min\_pow\_checked,\ \textcolor{keywordtype}{bool}*\ new\_block)\ LOCKS\_EXCLUDED(cs\_main);}
+\DoxyCodeLine{01233\ }
+\DoxyCodeLine{01246\ \ \ \ \ \textcolor{keywordtype}{bool}\ ProcessNewBlockHeaders(std::span<const\ CBlockHeader>\ headers,\ \textcolor{keywordtype}{bool}\ min\_pow\_checked,\ BlockValidationState\&\ state,\ \textcolor{keyword}{const}\ CBlockIndex**\ ppindex\ =\ \textcolor{keyword}{nullptr})\ LOCKS\_EXCLUDED(cs\_main);}
+\DoxyCodeLine{01247\ }
+\DoxyCodeLine{01267\ \ \ \ \ \textcolor{keywordtype}{bool}\ AcceptBlock(const\ std::shared\_ptr<const\ CBlock>\&\ pblock,\ BlockValidationState\&\ state,\ CBlockIndex**\ ppindex,\ \textcolor{keywordtype}{bool}\ fRequested,\ const\ FlatFilePos*\ dbp,\ \textcolor{keywordtype}{bool}*\ fNewBlock,\ \textcolor{keywordtype}{bool}\ min\_pow\_checked)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{01268\ }
+\DoxyCodeLine{01269\ \ \ \ \ \textcolor{keywordtype}{void}\ ReceivedBlockTransactions(const\ CBlock\&\ block,\ CBlockIndex*\ pindexNew,\ const\ FlatFilePos\&\ pos)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{01270\ }
+\DoxyCodeLine{01277\ \ \ \ \ [[nodiscard]]\ MempoolAcceptResult\ ProcessTransaction(const\ CTransactionRef\&\ tx,\ \textcolor{keywordtype}{bool}\ test\_accept=false)}
+\DoxyCodeLine{01278\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{01279\ }
+\DoxyCodeLine{01281\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadBlockIndex()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{01282\ }
+\DoxyCodeLine{01285\ \ \ \ \ \textcolor{keywordtype}{void}\ MaybeRebalanceCaches()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{01286\ }
+\DoxyCodeLine{01292\ \ \ \ \ \textcolor{keywordtype}{void}\ UpdateUncommittedBlockStructures(CBlock\&\ block,\ const\ CBlockIndex*\ pindexPrev)\ const;}
+\DoxyCodeLine{01293\ }
+\DoxyCodeLine{01295\ \ \ \ \ std::vector<\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}>\ GenerateCoinbaseCommitment(CBlock\&\ block,\ const\ CBlockIndex*\ pindexPrev)\ const;}
+\DoxyCodeLine{01296\ }
+\DoxyCodeLine{01301\ \ \ \ \ \textcolor{keywordtype}{void}\ ReportHeadersPresync(const\ arith\_uint256\&\ work,\ int64\_t\ height,\ int64\_t\ timestamp);}
+\DoxyCodeLine{01302\ }
+\DoxyCodeLine{01306\ \ \ \ \ Chainstate*\ LoadAssumeutxoChainstate()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{01307\ }
+\DoxyCodeLine{01309\ \ \ \ \ Chainstate\&\ AddChainstate(std::unique\_ptr<Chainstate>\ chainstate)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{01310\ }
+\DoxyCodeLine{01311\ \ \ \ \ \textcolor{keywordtype}{void}\ ResetChainstates()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{01312\ }
+\DoxyCodeLine{01315\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ DeleteChainstate(Chainstate\&\ chainstate)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{01316\ }
+\DoxyCodeLine{01326\ \ \ \ \ \textcolor{keywordtype}{bool}\ ValidatedSnapshotCleanup(Chainstate\&\ validated\_cs,\ Chainstate\&\ unvalidated\_cs)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{01327\ }
+\DoxyCodeLine{01329\ \ \ \ \ std::optional<std::pair<const\ CBlockIndex*,\ const\ CBlockIndex*>>\ GetHistoricalBlockRange()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{01330\ }
+\DoxyCodeLine{01332\ \ \ \ \ util::Result<\textcolor{keywordtype}{void}>\ ActivateBestChains()\ LOCKS\_EXCLUDED(::cs\_main);}
+\DoxyCodeLine{01333\ }
+\DoxyCodeLine{01337\ \ \ \ \ \textcolor{keywordtype}{void}\ RecalculateBestHeader()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{01338\ }
+\DoxyCodeLine{01339\ \ \ \ \ CCheckQueue<CScriptCheck>\&\ GetCheckQueue()\ \{\ \textcolor{keywordflow}{return}\ m\_script\_check\_queue;\ \}}
+\DoxyCodeLine{01340\ }
+\DoxyCodeLine{01341\ \ \ \ \ \string~ChainstateManager();}
+\DoxyCodeLine{01342\ }
+\DoxyCodeLine{01350\ \ \ \ \ std::vector<std::unique\_ptr<Chainstate>>\ m\_chainstates\ GUARDED\_BY(::cs\_main);}
+\DoxyCodeLine{01351\ \};}
+\DoxyCodeLine{01352\ }
+\DoxyCodeLine{01354\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ DEP>}
+\DoxyCodeLine{01355\ \textcolor{keywordtype}{bool}\ DeploymentActiveAfter(\textcolor{keyword}{const}\ CBlockIndex*\ pindexPrev,\ \textcolor{keyword}{const}\ ChainstateManager\&\ chainman,\ DEP\ dep)}
+\DoxyCodeLine{01356\ \{}
+\DoxyCodeLine{01357\ \ \ \ \ \textcolor{keywordflow}{return}\ DeploymentActiveAfter(pindexPrev,\ chainman.GetConsensus(),\ dep,\ chainman.m\_versionbitscache);}
+\DoxyCodeLine{01358\ \}}
+\DoxyCodeLine{01359\ }
+\DoxyCodeLine{01360\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ DEP>}
+\DoxyCodeLine{01361\ \textcolor{keywordtype}{bool}\ DeploymentActiveAt(\textcolor{keyword}{const}\ CBlockIndex\&\ index,\ \textcolor{keyword}{const}\ ChainstateManager\&\ chainman,\ DEP\ dep)}
+\DoxyCodeLine{01362\ \{}
+\DoxyCodeLine{01363\ \ \ \ \ \textcolor{keywordflow}{return}\ DeploymentActiveAt(index,\ chainman.GetConsensus(),\ dep,\ chainman.m\_versionbitscache);}
+\DoxyCodeLine{01364\ \}}
+\DoxyCodeLine{01365\ }
+\DoxyCodeLine{01366\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ DEP>}
+\DoxyCodeLine{01367\ \textcolor{keywordtype}{bool}\ DeploymentEnabled(\textcolor{keyword}{const}\ ChainstateManager\&\ chainman,\ DEP\ dep)}
+\DoxyCodeLine{01368\ \{}
+\DoxyCodeLine{01369\ \ \ \ \ \textcolor{keywordflow}{return}\ DeploymentEnabled(chainman.GetConsensus(),\ dep);}
+\DoxyCodeLine{01370\ \}}
+\DoxyCodeLine{01371\ }
+\DoxyCodeLine{01373\ \textcolor{keywordtype}{bool}\ IsBIP30Repeat(\textcolor{keyword}{const}\ CBlockIndex\&\ block\_index);}
+\DoxyCodeLine{01374\ }
+\DoxyCodeLine{01376\ \textcolor{keywordtype}{bool}\ IsBIP30Unspendable(\textcolor{keyword}{const}\ uint256\&\ block\_hash,\ \textcolor{keywordtype}{int}\ block\_height);}
+\DoxyCodeLine{01377\ }
+\DoxyCodeLine{01378\ \textcolor{comment}{//\ Returns\ the\ script\ flags\ which\ should\ be\ checked\ for\ a\ given\ block}}
+\DoxyCodeLine{01379\ script\_verify\_flags\ GetBlockScriptFlags(\textcolor{keyword}{const}\ CBlockIndex\&\ block\_index,\ \textcolor{keyword}{const}\ ChainstateManager\&\ chainman);}
+\DoxyCodeLine{01380\ }
+\DoxyCodeLine{01381\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_VALIDATION\_H}}
+
+\end{DoxyCode}

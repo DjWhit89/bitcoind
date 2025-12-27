@@ -1,0 +1,225 @@
+\doxysection{signingprovider.\+h}
+\label{signingprovider_8h_source}\index{src/script/signingprovider.h@{src/script/signingprovider.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_SCRIPT\_SIGNINGPROVIDER\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_SCRIPT\_SIGNINGPROVIDER\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <addresstype.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <key.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <musig.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <pubkey.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <script/keyorigin.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <script/script.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{struct\ }ShortestVectorFirstComparator}
+\DoxyCodeLine{00022\ \{}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator()(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ a,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ b)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00024\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00025\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (a.size()\ <\ b.size())\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (a.size()\ >\ b.size())\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a\ <\ b;}
+\DoxyCodeLine{00028\ \ \ \ \ \}}
+\DoxyCodeLine{00029\ \};}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{keyword}{struct\ }TaprootSpendData}
+\DoxyCodeLine{00032\ \{}
+\DoxyCodeLine{00034\ \ \ \ \ XOnlyPubKey\ internal\_key;}
+\DoxyCodeLine{00036\ \ \ \ \ uint256\ merkle\_root;}
+\DoxyCodeLine{00043\ \ \ \ \ std::map<std::pair<std::vector<unsigned\ char>,\ \textcolor{keywordtype}{int}>,\ std::set<std::vector<unsigned\ char>,\ ShortestVectorFirstComparator>>\ scripts;}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keywordtype}{void}\ Merge(TaprootSpendData\ other);}
+\DoxyCodeLine{00046\ \};}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00049\ \textcolor{keyword}{class\ }TaprootBuilder}
+\DoxyCodeLine{00050\ \{}
+\DoxyCodeLine{00051\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{struct\ }LeafInfo}
+\DoxyCodeLine{00054\ \ \ \ \ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ script;\ \ \ }
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ leaf\_version;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ std::vector<uint256>\ merkle\_branch;\ \ }
+\DoxyCodeLine{00058\ \ \ \ \ \};}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keyword}{struct\ }NodeInfo}
+\DoxyCodeLine{00062\ \ \ \ \ \{}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ uint256\ hash;}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ std::vector<LeafInfo>\ leaves;}
+\DoxyCodeLine{00068\ \ \ \ \ \};}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_valid\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00107\ \ \ \ \ std::vector<std::optional<NodeInfo>>\ m\_branch;}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00109\ \ \ \ \ XOnlyPubKey\ m\_internal\_key;\ \ }
+\DoxyCodeLine{00110\ \ \ \ \ XOnlyPubKey\ m\_output\_key;\ \ \ \ }
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_parity;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keyword}{static}\ NodeInfo\ Combine(NodeInfo\&\&\ a,\ NodeInfo\&\&\ b);}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keywordtype}{void}\ Insert(NodeInfo\&\&\ node,\ \textcolor{keywordtype}{int}\ depth);}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00122\ \ \ \ \ TaprootBuilder\&\ Add(\textcolor{keywordtype}{int}\ depth,\ std::span<const\ unsigned\ char>\ script,\ \textcolor{keywordtype}{int}\ leaf\_version,\ \textcolor{keywordtype}{bool}\ track\ =\ \textcolor{keyword}{true});}
+\DoxyCodeLine{00124\ \ \ \ \ TaprootBuilder\&\ AddOmitted(\textcolor{keywordtype}{int}\ depth,\ \textcolor{keyword}{const}\ uint256\&\ hash);}
+\DoxyCodeLine{00127\ \ \ \ \ TaprootBuilder\&\ Finalize(\textcolor{keyword}{const}\ XOnlyPubKey\&\ internal\_key);}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsValid()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_valid;\ \}}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsComplete()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_valid\ \&\&\ (m\_branch.size()\ ==\ 0\ ||\ (m\_branch.size()\ ==\ 1\ \&\&\ m\_branch[0].has\_value()));\ \}}
+\DoxyCodeLine{00134\ \ \ \ \ WitnessV1Taproot\ GetOutput();}
+\DoxyCodeLine{00136\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ ValidDepths(\textcolor{keyword}{const}\ std::vector<int>\&\ depths);}
+\DoxyCodeLine{00138\ \ \ \ \ TaprootSpendData\ GetSpendData()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00140\ \ \ \ \ std::vector<std::tuple<uint8\_t,\ uint8\_t,\ std::vector<unsigned\ char>>>\ GetTreeTuples()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasScripts()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ !m\_branch.empty();\ \}}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ TaprootBuilder\&\ other)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ GetTreeTuples()\ ==\ other.GetTreeTuples();\ \}}
+\DoxyCodeLine{00145\ \};}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00153\ std::optional<std::vector<std::tuple<int,\ std::vector<unsigned\ char>,\ \textcolor{keywordtype}{int}>>>\ InferTaprootTree(\textcolor{keyword}{const}\ TaprootSpendData\&\ spenddata,\ \textcolor{keyword}{const}\ XOnlyPubKey\&\ output);}
+\DoxyCodeLine{00154\ }
+\DoxyCodeLine{00156\ \textcolor{keyword}{class\ }SigningProvider}
+\DoxyCodeLine{00157\ \{}
+\DoxyCodeLine{00158\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~SigningProvider()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetCScript(\textcolor{keyword}{const}\ CScriptID\ \&scriptid,\ CScript\&\ script)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HaveCScript(\textcolor{keyword}{const}\ CScriptID\ \&scriptid)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetPubKey(\textcolor{keyword}{const}\ CKeyID\ \&address,\ CPubKey\&\ pubkey)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00163\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetKey(\textcolor{keyword}{const}\ CKeyID\ \&address,\ CKey\&\ key)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HaveKey(\textcolor{keyword}{const}\ CKeyID\ \&address)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetKeyOrigin(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ KeyOriginInfo\&\ info)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetTaprootSpendData(\textcolor{keyword}{const}\ XOnlyPubKey\&\ output\_key,\ TaprootSpendData\&\ spenddata)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00167\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetTaprootBuilder(\textcolor{keyword}{const}\ XOnlyPubKey\&\ output\_key,\ TaprootBuilder\&\ builder)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00168\ \ \ \ \ \textcolor{keyword}{virtual}\ std::vector<CPubKey>\ GetMuSig2ParticipantPubkeys(\textcolor{keyword}{const}\ CPubKey\&\ pubkey)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \{\};\ \}}
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{keyword}{virtual}\ std::map<CPubKey,\ std::vector<CPubKey>>\ GetAllMuSig2ParticipantPubkeys()\textcolor{keyword}{\ const\ }\{\textcolor{keywordflow}{return}\ \{\};\ \}}
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ SetMuSig2SecNonce(\textcolor{keyword}{const}\ uint256\&\ \textcolor{keywordtype}{id},\ MuSig2SecNonce\&\&\ nonce)\textcolor{keyword}{\ const\ }\{\}}
+\DoxyCodeLine{00171\ \ \ \ \ \textcolor{keyword}{virtual}\ std::optional<std::reference\_wrapper<MuSig2SecNonce>>\ GetMuSig2SecNonce(\textcolor{keyword}{const}\ uint256\&\ session\_id)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ std::nullopt;\ \}}
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ DeleteMuSig2Session(\textcolor{keyword}{const}\ uint256\&\ session\_id)\textcolor{keyword}{\ const\ }\{\}}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKeyByXOnly(\textcolor{keyword}{const}\ XOnlyPubKey\&\ pubkey,\ CKey\&\ key)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00175\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ \textcolor{keywordtype}{id}\ :\ pubkey.GetKeyIDs())\ \{}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (GetKey(\textcolor{keywordtype}{id},\ key))\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00180\ \ \ \ \ \}}
+\DoxyCodeLine{00181\ }
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetPubKeyByXOnly(\textcolor{keyword}{const}\ XOnlyPubKey\&\ pubkey,\ CPubKey\&\ out)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00183\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ \textcolor{keywordtype}{id}\ :\ pubkey.GetKeyIDs())\ \{}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (GetPubKey(\textcolor{keywordtype}{id},\ out))\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00188\ \ \ \ \ \}}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00190\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKeyOriginByXOnly(\textcolor{keyword}{const}\ XOnlyPubKey\&\ pubkey,\ KeyOriginInfo\&\ info)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00191\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ \textcolor{keywordtype}{id}\ :\ pubkey.GetKeyIDs())\ \{}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (GetKeyOrigin(\textcolor{keywordtype}{id},\ info))\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00196\ \ \ \ \ \}}
+\DoxyCodeLine{00197\ \};}
+\DoxyCodeLine{00198\ }
+\DoxyCodeLine{00199\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ SigningProvider\&\ DUMMY\_SIGNING\_PROVIDER;}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00201\ \textcolor{keyword}{class\ }HidingSigningProvider\ :\ \textcolor{keyword}{public}\ SigningProvider}
+\DoxyCodeLine{00202\ \{}
+\DoxyCodeLine{00203\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00204\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ m\_hide\_secret;}
+\DoxyCodeLine{00205\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ m\_hide\_origin;}
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keyword}{const}\ SigningProvider*\ m\_provider;}
+\DoxyCodeLine{00207\ }
+\DoxyCodeLine{00208\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00209\ \ \ \ \ HidingSigningProvider(\textcolor{keyword}{const}\ SigningProvider*\ provider,\ \textcolor{keywordtype}{bool}\ hide\_secret,\ \textcolor{keywordtype}{bool}\ hide\_origin)\ :\ m\_hide\_secret(hide\_secret),\ m\_hide\_origin(hide\_origin),\ m\_provider(provider)\ \{\}}
+\DoxyCodeLine{00210\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetCScript(\textcolor{keyword}{const}\ CScriptID\&\ scriptid,\ CScript\&\ script)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetPubKey(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ CPubKey\&\ pubkey)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKey(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ CKey\&\ key)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00213\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKeyOrigin(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ KeyOriginInfo\&\ info)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00214\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetTaprootSpendData(\textcolor{keyword}{const}\ XOnlyPubKey\&\ output\_key,\ TaprootSpendData\&\ spenddata)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00215\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetTaprootBuilder(\textcolor{keyword}{const}\ XOnlyPubKey\&\ output\_key,\ TaprootBuilder\&\ builder)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00216\ \ \ \ \ std::vector<CPubKey>\ GetMuSig2ParticipantPubkeys(\textcolor{keyword}{const}\ CPubKey\&\ pubkey)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00217\ \ \ \ \ std::map<CPubKey,\ std::vector<CPubKey>>\ GetAllMuSig2ParticipantPubkeys()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00218\ \ \ \ \ \textcolor{keywordtype}{void}\ SetMuSig2SecNonce(\textcolor{keyword}{const}\ uint256\&\ \textcolor{keywordtype}{id},\ MuSig2SecNonce\&\&\ nonce)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00219\ \ \ \ \ std::optional<std::reference\_wrapper<MuSig2SecNonce>>\ GetMuSig2SecNonce(\textcolor{keyword}{const}\ uint256\&\ session\_id)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00220\ \ \ \ \ \textcolor{keywordtype}{void}\ DeleteMuSig2Session(\textcolor{keyword}{const}\ uint256\&\ session\_id)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00221\ \};}
+\DoxyCodeLine{00222\ }
+\DoxyCodeLine{00223\ \textcolor{keyword}{struct\ }FlatSigningProvider\ final\ :\ \textcolor{keyword}{public}\ SigningProvider}
+\DoxyCodeLine{00224\ \{}
+\DoxyCodeLine{00225\ \ \ \ \ std::map<CScriptID,\ CScript>\ scripts;}
+\DoxyCodeLine{00226\ \ \ \ \ std::map<CKeyID,\ CPubKey>\ pubkeys;}
+\DoxyCodeLine{00227\ \ \ \ \ std::map<CKeyID,\ std::pair<CPubKey,\ KeyOriginInfo>>\ origins;}
+\DoxyCodeLine{00228\ \ \ \ \ std::map<CKeyID,\ CKey>\ keys;}
+\DoxyCodeLine{00229\ \ \ \ \ std::map<XOnlyPubKey,\ TaprootBuilder>\ tr\_trees;\ }
+\DoxyCodeLine{00230\ \ \ \ \ std::map<CPubKey,\ std::vector<CPubKey>>\ aggregate\_pubkeys;\ }
+\DoxyCodeLine{00231\ \ \ \ \ std::map<uint256,\ MuSig2SecNonce>*\ musig2\_secnonces\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00233\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetCScript(\textcolor{keyword}{const}\ CScriptID\&\ scriptid,\ CScript\&\ script)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetPubKey(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ CPubKey\&\ pubkey)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00235\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKeyOrigin(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ KeyOriginInfo\&\ info)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00236\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveKey(\textcolor{keyword}{const}\ CKeyID\ \&keyid)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00237\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKey(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ CKey\&\ key)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00238\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetTaprootSpendData(\textcolor{keyword}{const}\ XOnlyPubKey\&\ output\_key,\ TaprootSpendData\&\ spenddata)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00239\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetTaprootBuilder(\textcolor{keyword}{const}\ XOnlyPubKey\&\ output\_key,\ TaprootBuilder\&\ builder)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00240\ \ \ \ \ std::vector<CPubKey>\ GetMuSig2ParticipantPubkeys(\textcolor{keyword}{const}\ CPubKey\&\ pubkey)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00241\ \ \ \ \ std::map<CPubKey,\ std::vector<CPubKey>>\ GetAllMuSig2ParticipantPubkeys()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00242\ \ \ \ \ \textcolor{keywordtype}{void}\ SetMuSig2SecNonce(\textcolor{keyword}{const}\ uint256\&\ \textcolor{keywordtype}{id},\ MuSig2SecNonce\&\&\ nonce)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00243\ \ \ \ \ std::optional<std::reference\_wrapper<MuSig2SecNonce>>\ GetMuSig2SecNonce(\textcolor{keyword}{const}\ uint256\&\ session\_id)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keywordtype}{void}\ DeleteMuSig2Session(\textcolor{keyword}{const}\ uint256\&\ session\_id)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00245\ }
+\DoxyCodeLine{00246\ \ \ \ \ FlatSigningProvider\&\ Merge(FlatSigningProvider\&\&\ b)\ LIFETIMEBOUND;}
+\DoxyCodeLine{00247\ \};}
+\DoxyCodeLine{00248\ }
+\DoxyCodeLine{00250\ \textcolor{keyword}{class\ }FillableSigningProvider\ :\ \textcolor{keyword}{public}\ SigningProvider}
+\DoxyCodeLine{00251\ \{}
+\DoxyCodeLine{00252\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00253\ \ \ \ \ \textcolor{keyword}{using\ }KeyMap\ =\ std::map<CKeyID,\ CKey>;}
+\DoxyCodeLine{00254\ \ \ \ \ \textcolor{keyword}{using\ }ScriptMap\ =\ std::map<CScriptID,\ CScript>;}
+\DoxyCodeLine{00255\ }
+\DoxyCodeLine{00261\ \ \ \ \ KeyMap\ mapKeys\ GUARDED\_BY(cs\_KeyStore);}
+\DoxyCodeLine{00262\ }
+\DoxyCodeLine{00303\ \ \ \ \ ScriptMap\ mapScripts\ GUARDED\_BY(cs\_KeyStore);}
+\DoxyCodeLine{00304\ }
+\DoxyCodeLine{00305\ \ \ \ \ \textcolor{keywordtype}{void}\ ImplicitlyLearnRelatedKeyScripts(\textcolor{keyword}{const}\ CPubKey\&\ pubkey)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_KeyStore);}
+\DoxyCodeLine{00306\ }
+\DoxyCodeLine{00307\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00308\ \ \ \ \ \textcolor{keyword}{mutable}\ RecursiveMutex\ cs\_KeyStore;}
+\DoxyCodeLine{00309\ }
+\DoxyCodeLine{00310\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ AddKeyPubKey(\textcolor{keyword}{const}\ CKey\&\ key,\ \textcolor{keyword}{const}\ CPubKey\ \&pubkey);}
+\DoxyCodeLine{00311\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ AddKey(\textcolor{keyword}{const}\ CKey\ \&key)\ \{\ \textcolor{keywordflow}{return}\ AddKeyPubKey(key,\ key.GetPubKey());\ \}}
+\DoxyCodeLine{00312\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetPubKey(\textcolor{keyword}{const}\ CKeyID\ \&address,\ CPubKey\&\ vchPubKeyOut)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00313\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HaveKey(\textcolor{keyword}{const}\ CKeyID\ \&address)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00314\ \ \ \ \ \textcolor{keyword}{virtual}\ std::set<CKeyID>\ GetKeys()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00315\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetKey(\textcolor{keyword}{const}\ CKeyID\ \&address,\ CKey\ \&keyOut)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00316\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ AddCScript(\textcolor{keyword}{const}\ CScript\&\ redeemScript);}
+\DoxyCodeLine{00317\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HaveCScript(\textcolor{keyword}{const}\ CScriptID\ \&hash)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00318\ \ \ \ \ \textcolor{keyword}{virtual}\ std::set<CScriptID>\ GetCScripts()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00319\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetCScript(\textcolor{keyword}{const}\ CScriptID\ \&hash,\ CScript\&\ redeemScriptOut)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00320\ \};}
+\DoxyCodeLine{00321\ }
+\DoxyCodeLine{00323\ CKeyID\ GetKeyForDestination(\textcolor{keyword}{const}\ SigningProvider\&\ store,\ \textcolor{keyword}{const}\ CTxDestination\&\ dest);}
+\DoxyCodeLine{00324\ }
+\DoxyCodeLine{00326\ \textcolor{keyword}{class\ }MultiSigningProvider:\ \textcolor{keyword}{public}\ SigningProvider\ \{}
+\DoxyCodeLine{00327\ \ \ \ \ std::vector<std::unique\_ptr<SigningProvider>>\ m\_providers;}
+\DoxyCodeLine{00328\ }
+\DoxyCodeLine{00329\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00330\ \ \ \ \ \textcolor{keywordtype}{void}\ AddProvider(std::unique\_ptr<SigningProvider>\ provider);}
+\DoxyCodeLine{00331\ }
+\DoxyCodeLine{00332\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetCScript(\textcolor{keyword}{const}\ CScriptID\&\ scriptid,\ CScript\&\ script)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00333\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetPubKey(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ CPubKey\&\ pubkey)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00334\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKeyOrigin(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ KeyOriginInfo\&\ info)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00335\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetKey(\textcolor{keyword}{const}\ CKeyID\&\ keyid,\ CKey\&\ key)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00336\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetTaprootSpendData(\textcolor{keyword}{const}\ XOnlyPubKey\&\ output\_key,\ TaprootSpendData\&\ spenddata)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00337\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetTaprootBuilder(\textcolor{keyword}{const}\ XOnlyPubKey\&\ output\_key,\ TaprootBuilder\&\ builder)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00338\ \};}
+\DoxyCodeLine{00339\ }
+\DoxyCodeLine{00340\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_SCRIPT\_SIGNINGPROVIDER\_H}}
+
+\end{DoxyCode}

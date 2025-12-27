@@ -1,0 +1,106 @@
+\doxysection{scheduler.\+h}
+\label{scheduler_8h_source}\index{src/scheduler.h@{src/scheduler.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2015-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_SCHEDULER\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_SCHEDULER\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <threadsafety.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <util/task\_runner.h>}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <condition\_variable>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <list>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <thread>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{class\ }CScheduler}
+\DoxyCodeLine{00040\ \{}
+\DoxyCodeLine{00041\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00042\ \ \ \ \ CScheduler();}
+\DoxyCodeLine{00043\ \ \ \ \ \string~CScheduler();}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \ \ \ \ std::thread\ m\_service\_thread;}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keyword}{typedef}\ std::function<void()>\ Function;}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordtype}{void}\ schedule(Function\ f,\ std::chrono::steady\_clock::time\_point\ t)\ EXCLUSIVE\_LOCKS\_REQUIRED(!newTaskMutex);}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordtype}{void}\ scheduleFromNow(Function\ f,\ std::chrono::milliseconds\ delta)\ EXCLUSIVE\_LOCKS\_REQUIRED(!newTaskMutex)}
+\DoxyCodeLine{00054\ \ \ \ \ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ schedule(std::move(f),\ std::chrono::steady\_clock::now()\ +\ delta);}
+\DoxyCodeLine{00056\ \ \ \ \ \}}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordtype}{void}\ scheduleEvery(Function\ f,\ std::chrono::milliseconds\ delta)\ EXCLUSIVE\_LOCKS\_REQUIRED(!newTaskMutex);}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordtype}{void}\ MockForward(std::chrono::seconds\ delta\_seconds)\ EXCLUSIVE\_LOCKS\_REQUIRED(!newTaskMutex);}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keywordtype}{void}\ serviceQueue()\ EXCLUSIVE\_LOCKS\_REQUIRED(!newTaskMutex);}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keywordtype}{void}\ stop()\ EXCLUSIVE\_LOCKS\_REQUIRED(!newTaskMutex)}
+\DoxyCodeLine{00080\ \ \ \ \ \{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ WITH\_LOCK(newTaskMutex,\ stopRequested\ =\ \textcolor{keyword}{true});}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ newTaskScheduled.notify\_all();}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_service\_thread.joinable())\ m\_service\_thread.join();}
+\DoxyCodeLine{00084\ \ \ \ \ \}}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keywordtype}{void}\ StopWhenDrained()\ EXCLUSIVE\_LOCKS\_REQUIRED(!newTaskMutex)}
+\DoxyCodeLine{00087\ \ \ \ \ \{}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ WITH\_LOCK(newTaskMutex,\ stopWhenEmpty\ =\ \textcolor{keyword}{true});}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ newTaskScheduled.notify\_all();}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_service\_thread.joinable())\ m\_service\_thread.join();}
+\DoxyCodeLine{00091\ \ \ \ \ \}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ getQueueInfo(std::chrono::steady\_clock::time\_point\&\ first,}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::chrono::steady\_clock::time\_point\&\ last)\ \textcolor{keyword}{const}}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!newTaskMutex);}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{keywordtype}{bool}\ AreThreadsServicingQueue()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(!newTaskMutex);}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ private:}
+\DoxyCodeLine{00105\ \ \ \ \ mutable\ Mutex\ newTaskMutex;}
+\DoxyCodeLine{00106\ \ \ \ \ std::condition\_variable\ newTaskScheduled;}
+\DoxyCodeLine{00107\ \ \ \ \ std::multimap<std::chrono::steady\_clock::time\_point,\ Function>\ taskQueue\ GUARDED\_BY(newTaskMutex);}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keywordtype}{int}\ nThreadsServicingQueue\ GUARDED\_BY(newTaskMutex)\{0\};}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keywordtype}{bool}\ stopRequested\ GUARDED\_BY(newTaskMutex)\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordtype}{bool}\ stopWhenEmpty\ GUARDED\_BY(newTaskMutex)\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keywordtype}{bool}\ shouldStop()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(newTaskMutex)\ \{\ \textcolor{keywordflow}{return}\ stopRequested\ ||\ (stopWhenEmpty\ \&\&\ taskQueue.empty());\ \}}
+\DoxyCodeLine{00112\ \};}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00124\ \textcolor{keyword}{class\ }SerialTaskRunner\ :\ \textcolor{keyword}{public}\ util::TaskRunnerInterface}
+\DoxyCodeLine{00125\ \{}
+\DoxyCodeLine{00126\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00127\ \ \ \ \ CScheduler\&\ m\_scheduler;}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00129\ \ \ \ \ Mutex\ m\_callbacks\_mutex;}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00131\ \ \ \ \ \textcolor{comment}{//\ We\ are\ not\ allowed\ to\ assume\ the\ scheduler\ only\ runs\ in\ one\ thread,}}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{comment}{//\ but\ must\ ensure\ all\ callbacks\ happen\ in-\/order,\ so\ we\ end\ up\ creating}}
+\DoxyCodeLine{00133\ \ \ \ \ \textcolor{comment}{//\ our\ own\ queue\ here\ :(}}
+\DoxyCodeLine{00134\ \ \ \ \ std::list<std::function<void()>>\ m\_callbacks\_pending\ GUARDED\_BY(m\_callbacks\_mutex);}
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_are\_callbacks\_running\ GUARDED\_BY(m\_callbacks\_mutex)\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keywordtype}{void}\ MaybeScheduleProcessQueue()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_callbacks\_mutex);}
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{keywordtype}{void}\ ProcessQueue()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_callbacks\_mutex);}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00140\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{keyword}{explicit}\ SerialTaskRunner(CScheduler\&\ scheduler\ LIFETIMEBOUND)\ :\ m\_scheduler\{scheduler\}\ \{\}}
+\DoxyCodeLine{00142\ }
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keywordtype}{void}\ insert(std::function<\textcolor{keywordtype}{void}()>\ func)\ \textcolor{keyword}{override}\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_callbacks\_mutex);}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keywordtype}{void}\ flush()\ override\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_callbacks\_mutex);}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size()\ override\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_callbacks\_mutex);}
+\DoxyCodeLine{00158\ \};}
+\DoxyCodeLine{00159\ }
+\DoxyCodeLine{00160\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_SCHEDULER\_H}}
+
+\end{DoxyCode}

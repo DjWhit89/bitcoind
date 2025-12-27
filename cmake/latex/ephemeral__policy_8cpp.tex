@@ -1,0 +1,58 @@
+\doxysection{src/policy/ephemeral\+\_\+policy.cpp File Reference}
+\label{ephemeral__policy_8cpp}\index{src/policy/ephemeral\_policy.cpp@{src/policy/ephemeral\_policy.cpp}}
+{\ttfamily \#include $<$consensus/validation.\+h$>$}\newline
+{\ttfamily \#include $<$policy/ephemeral\+\_\+policy.\+h$>$}\newline
+{\ttfamily \#include $<$policy/feerate.\+h$>$}\newline
+{\ttfamily \#include $<$policy/packages.\+h$>$}\newline
+{\ttfamily \#include $<$policy/policy.\+h$>$}\newline
+{\ttfamily \#include $<$primitives/transaction.\+h$>$}\newline
+{\ttfamily \#include $<$txmempool.\+h$>$}\newline
+{\ttfamily \#include $<$util/check.\+h$>$}\newline
+{\ttfamily \#include $<$util/hasher.\+h$>$}\newline
+{\ttfamily \#include $<$algorithm$>$}\newline
+{\ttfamily \#include $<$cstdint$>$}\newline
+{\ttfamily \#include $<$map$>$}\newline
+{\ttfamily \#include $<$memory$>$}\newline
+{\ttfamily \#include $<$unordered\+\_\+set$>$}\newline
+{\ttfamily \#include $<$utility$>$}\newline
+{\ttfamily \#include $<$vector$>$}\newline
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+bool \textbf{ Pre\+Check\+Ephemeral\+Tx} (const \textbf{ CTransaction} \&tx, \textbf{ CFee\+Rate} dust\+\_\+relay\+\_\+rate, \textbf{ CAmount} base\+\_\+fee, \textbf{ CAmount} mod\+\_\+fee, \textbf{ Tx\+Validation\+State} \&state)
+\item 
+bool \textbf{ Check\+Ephemeral\+Spends} (const \textbf{ Package} \&package, \textbf{ CFee\+Rate} dust\+\_\+relay\+\_\+rate, const \textbf{ CTx\+Mem\+Pool} \&tx\+\_\+pool, \textbf{ Tx\+Validation\+State} \&out\+\_\+child\+\_\+state, \textbf{ Wtxid} \&out\+\_\+child\+\_\+wtxid)
+\end{DoxyCompactItemize}
+
+
+\label{doc-func-members}
+\doxysubsection{Function Documentation}
+\index{ephemeral\_policy.cpp@{ephemeral\_policy.cpp}!CheckEphemeralSpends@{CheckEphemeralSpends}}
+\index{CheckEphemeralSpends@{CheckEphemeralSpends}!ephemeral\_policy.cpp@{ephemeral\_policy.cpp}}
+\doxysubsubsection{CheckEphemeralSpends()}
+{\footnotesize\ttfamily \label{ephemeral__policy_8cpp_a36520c63ad736ab372a46a44d24cd004} 
+bool Check\+Ephemeral\+Spends (\begin{DoxyParamCaption}\item[{const \textbf{ Package} \&}]{package}{, }\item[{\textbf{ CFee\+Rate}}]{dust\+\_\+relay\+\_\+rate}{, }\item[{const \textbf{ CTx\+Mem\+Pool} \&}]{tx\+\_\+pool}{, }\item[{\textbf{ Tx\+Validation\+State} \&}]{out\+\_\+child\+\_\+state}{, }\item[{\textbf{ Wtxid} \&}]{out\+\_\+child\+\_\+wtxid}{}\end{DoxyParamCaption})}
+
+Must be called for each transaction(package) if any dust is in the package. Checks that each transaction\textquotesingle{}s parents have their dust spent by the child, where parents are either in the mempool or in the package itself. Sets out\+\_\+child\+\_\+state and out\+\_\+child\+\_\+wtxid on failure. \begin{DoxyReturn}{Returns}
+true if all dust is properly spent. 
+\end{DoxyReturn}
+\index{ephemeral\_policy.cpp@{ephemeral\_policy.cpp}!PreCheckEphemeralTx@{PreCheckEphemeralTx}}
+\index{PreCheckEphemeralTx@{PreCheckEphemeralTx}!ephemeral\_policy.cpp@{ephemeral\_policy.cpp}}
+\doxysubsubsection{PreCheckEphemeralTx()}
+{\footnotesize\ttfamily \label{ephemeral__policy_8cpp_adde5d12df12eda5917d9a8ce710320d2} 
+bool Pre\+Check\+Ephemeral\+Tx (\begin{DoxyParamCaption}\item[{const \textbf{ CTransaction} \&}]{tx}{, }\item[{\textbf{ CFee\+Rate}}]{dust\+\_\+relay\+\_\+rate}{, }\item[{\textbf{ CAmount}}]{base\+\_\+fee}{, }\item[{\textbf{ CAmount}}]{mod\+\_\+fee}{, }\item[{\textbf{ Tx\+Validation\+State} \&}]{state}{}\end{DoxyParamCaption})}
+
+These utility functions ensure that ephemeral dust is safely created and spent without unduly risking them entering the utxo set.
+
+This is ensured by requiring\+:
+\begin{DoxyItemize}
+\item Pre\+Check\+Ephemeral\+Tx checks are respected
+\item The parent has no child (and 0-\/fee as implied above to disincentivize mining)
+\item OR the parent transaction has exactly one child, and the dust is spent by that child
+\end{DoxyItemize}
+
+Imagine three transactions\+: TxA, 0-\/fee with two outputs, one non-\/dust, one dust TxB, spends TxA\textquotesingle{}s non-\/dust TxC, spends TxA\textquotesingle{}s dust
+
+All the dust is spent if Tx\+A+\+Tx\+B+\+TxC is accepted, but the mining template may just pick up Tx\+A+\+TxB rather than the three "{}legal configurations"{}\+: 1) None 2) Tx\+A+\+Tx\+B+\+TxC 3) Tx\+A+\+TxC By requiring the child transaction to sweep any dust from the parent txn, we ensure that there is a single child only, and this child, or the child\textquotesingle{}s descendants, are the only way to bring fees. Must be called for each transaction once transaction fees are known. Does context-\/less checks about a single transaction. \begin{DoxyReturn}{Returns}
+false if the fee is non-\/zero and dust exists, populating state. True otherwise. 
+\end{DoxyReturn}

@@ -1,0 +1,182 @@
+\doxysection{Pool\+Resource$<$ MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, ALIGN\+\_\+\+BYTES $>$ Class Template Reference}
+\label{class_pool_resource}\index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+
+
+{\ttfamily \#include $<$pool.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ Pool\+Resource} (std\+::size\+\_\+t chunk\+\_\+size\+\_\+bytes)
+\item 
+\textbf{ Pool\+Resource} ()
+\item 
+\textbf{ Pool\+Resource} (const \textbf{ Pool\+Resource} \&)=delete
+\item 
+\textbf{ Pool\+Resource} \& \textbf{ operator=} (const \textbf{ Pool\+Resource} \&)=delete
+\item 
+\textbf{ Pool\+Resource} (\textbf{ Pool\+Resource} \&\&)=delete
+\item 
+\textbf{ Pool\+Resource} \& \textbf{ operator=} (\textbf{ Pool\+Resource} \&\&)=delete
+\item 
+\textbf{ $\sim$\+Pool\+Resource} ()
+\item 
+void $\ast$ \textbf{ Allocate} (std\+::size\+\_\+t bytes, std\+::size\+\_\+t alignment)
+\item 
+void \textbf{ Deallocate} (void $\ast$p, std\+::size\+\_\+t bytes, std\+::size\+\_\+t alignment) noexcept
+\item 
+std\+::size\+\_\+t \textbf{ Num\+Allocated\+Chunks} () const
+\item 
+size\+\_\+t \textbf{ Chunk\+Size\+Bytes} () const
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+class \textbf{ Pool\+Resource\+Tester}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$\newline
+class Pool\+Resource$<$ MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, ALIGN\+\_\+\+BYTES $>$}
+A memory resource similar to std\+::pmr\+::unsynchronized\+\_\+pool\+\_\+resource, but optimized for node-\/based containers. It has the following properties\+:
+
+
+\begin{DoxyItemize}
+\item Owns the allocated memory and frees it on destruction, even when deallocate has not been called on the allocated blocks.
+\item Consists of a number of pools, each one for a different block size. Each pool holds blocks of uniform size in a freelist.
+\item Exhausting memory in a freelist causes a new allocation of a fixed size chunk. This chunk is used to carve out blocks.
+\item Block sizes or alignments that can not be served by the pools are allocated and deallocated by operator new().
+\end{DoxyItemize}
+
+\doxyref{Pool\+Resource}{p.}{class_pool_resource} is not thread-\/safe. It is intended to be used by \doxyref{Pool\+Allocator}{p.}{class_pool_allocator}.
+
+
+\begin{DoxyTemplParams}{Template Parameters}
+{\em MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES} & Maximum size to allocate with the pool. If larger sizes are requested, allocation falls back to new().\\
+\hline
+{\em ALIGN\+\_\+\+BYTES} & Required alignment for the allocations.\\
+\hline
+\end{DoxyTemplParams}
+An example\+: If you create a Pool\+Resource$<$128, 8$>$(262144) and perform a bunch of allocations and deallocate 2 blocks with size 8 bytes, and 3 blocks with size 16, the members will look like this\+: \begin{DoxyVerb}m_free_lists                         m_allocated_chunks
+   ┌───┐                                ┌───┐  ┌────────────-------──────┐
+   │   │  blocks                        │   ├─►│    262144 B             │
+   │   │  ┌─────┐  ┌─────┐              └─┬─┘  └────────────-------──────┘
+   │ 1 ├─►│ 8 B ├─►│ 8 B │                │
+   │   │  └─────┘  └─────┘                :
+   │   │                                  │
+   │   │  ┌─────┐  ┌─────┐  ┌─────┐       ▼
+   │ 2 ├─►│16 B ├─►│16 B ├─►│16 B │     ┌───┐  ┌─────────────────────────┐
+   │   │  └─────┘  └─────┘  └─────┘     │   ├─►│          ▲              │ ▲
+   │   │                                └───┘  └──────────┬──────────────┘ │
+   │ . │                                                  │    m_available_memory_end
+   │ . │                                         m_available_memory_it
+   │ . │
+   │   │
+   │   │
+   │16 │
+   └───┘
+\end{DoxyVerb}
+
+
+Here m\+\_\+free\+\_\+lists[1] holds the 2 blocks of size 8 bytes, and m\+\_\+free\+\_\+lists[2] holds the 3 blocks of size 16. The blocks came from the data stored in the m\+\_\+allocated\+\_\+chunks list. Each chunk has bytes 262144. The last chunk has still some memory available for the blocks, and when m\+\_\+available\+\_\+memory\+\_\+it is at the end, a new chunk will be allocated and added to the list. 
+
+\label{doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!PoolResource@{PoolResource}}
+\index{PoolResource@{PoolResource}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{PoolResource()\hspace{0.1cm}{\footnotesize\ttfamily [1/4]}}
+{\footnotesize\ttfamily \label{class_pool_resource_a4acb246482aa7b28e74ef9af33f68d3e} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+\textbf{ Pool\+Resource} (\begin{DoxyParamCaption}\item[{std\+::size\+\_\+t}]{chunk\+\_\+size\+\_\+bytes}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [explicit]}}
+
+Construct a new \doxyref{Pool\+Resource}{p.}{class_pool_resource} object which allocates the first chunk. chunk\+\_\+size\+\_\+bytes will be rounded up to next multiple of ELEM\+\_\+\+ALIGN\+\_\+\+BYTES. \index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!PoolResource@{PoolResource}}
+\index{PoolResource@{PoolResource}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{PoolResource()\hspace{0.1cm}{\footnotesize\ttfamily [2/4]}}
+{\footnotesize\ttfamily \label{class_pool_resource_a6e5c14e2e1b5d07244ddf1675b72cc21} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+\textbf{ Pool\+Resource} (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Construct a new Pool Resource object, defaults to 2$^\wedge$18=262144 chunk size. \index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!PoolResource@{PoolResource}}
+\index{PoolResource@{PoolResource}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{PoolResource()\hspace{0.1cm}{\footnotesize\ttfamily [3/4]}}
+{\footnotesize\ttfamily \label{class_pool_resource_a50d0b4344045ca6d99923f30803ac42e} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+\textbf{ Pool\+Resource} (\begin{DoxyParamCaption}\item[{const \textbf{ Pool\+Resource}$<$ MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, ALIGN\+\_\+\+BYTES $>$ \&}]{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [delete]}}
+
+Disable copy \& move semantics, these are not supported for the resource. \index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!PoolResource@{PoolResource}}
+\index{PoolResource@{PoolResource}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{PoolResource()\hspace{0.1cm}{\footnotesize\ttfamily [4/4]}}
+{\footnotesize\ttfamily \label{class_pool_resource_abab6fac7af0cad3f95a33753e6318c8c} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+\textbf{ Pool\+Resource} (\begin{DoxyParamCaption}\item[{\textbf{ Pool\+Resource}$<$ MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, ALIGN\+\_\+\+BYTES $>$ \&\&}]{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [delete]}}
+
+\index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!````~PoolResource@{$\sim$PoolResource}}
+\index{````~PoolResource@{$\sim$PoolResource}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{$\sim$PoolResource()}
+{\footnotesize\ttfamily \label{class_pool_resource_ac19d43fbaf6a1d0c3e1046ede42339cf} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+$\sim$\textbf{ Pool\+Resource} (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Deallocates all memory allocated associated with the memory resource. 
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!Allocate@{Allocate}}
+\index{Allocate@{Allocate}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{Allocate()}
+{\footnotesize\ttfamily \label{class_pool_resource_aaf1fa44496df783dfa22e486125ff818} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+void $\ast$ Allocate (\begin{DoxyParamCaption}\item[{std\+::size\+\_\+t}]{bytes}{, }\item[{std\+::size\+\_\+t}]{alignment}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Allocates a block of bytes. If possible the freelist is used, otherwise allocation is forwarded to \+::operator new(). \index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!ChunkSizeBytes@{ChunkSizeBytes}}
+\index{ChunkSizeBytes@{ChunkSizeBytes}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{ChunkSizeBytes()}
+{\footnotesize\ttfamily \label{class_pool_resource_adc25c4af262f938d224853db94055ca5} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+size\+\_\+t Chunk\+Size\+Bytes (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [nodiscard]}}
+
+Size in bytes to allocate per chunk, currently hardcoded to a fixed size. \index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!Deallocate@{Deallocate}}
+\index{Deallocate@{Deallocate}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{Deallocate()}
+{\footnotesize\ttfamily \label{class_pool_resource_afe1e3f2e53b6f5c16153a9a21dd40d6e} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+void Deallocate (\begin{DoxyParamCaption}\item[{void $\ast$}]{p}{, }\item[{std\+::size\+\_\+t}]{bytes}{, }\item[{std\+::size\+\_\+t}]{alignment}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [noexcept]}}
+
+Returns a block to the freelists, or deletes the block when it did not come from the chunks. \index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!NumAllocatedChunks@{NumAllocatedChunks}}
+\index{NumAllocatedChunks@{NumAllocatedChunks}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{NumAllocatedChunks()}
+{\footnotesize\ttfamily \label{class_pool_resource_a727d8936e6084ec9c278db347c172b35} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+std\+::size\+\_\+t Num\+Allocated\+Chunks (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [nodiscard]}}
+
+Number of allocated chunks \index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!operator=@{operator=}}
+\index{operator=@{operator=}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{operator=()\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily \label{class_pool_resource_aab278c425ee8df4d5d93e907118d324f} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+\textbf{ Pool\+Resource} \& operator= (\begin{DoxyParamCaption}\item[{const \textbf{ Pool\+Resource}$<$ MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, ALIGN\+\_\+\+BYTES $>$ \&}]{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [delete]}}
+
+\index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!operator=@{operator=}}
+\index{operator=@{operator=}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{operator=()\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily \label{class_pool_resource_ac0a44fd3d4393cbb28eaf5948f019088} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+\textbf{ Pool\+Resource} \& operator= (\begin{DoxyParamCaption}\item[{\textbf{ Pool\+Resource}$<$ MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, ALIGN\+\_\+\+BYTES $>$ \&\&}]{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [delete]}}
+
+
+
+\label{doc-related-members}
+\doxysubsection{Friends And Related Symbol Documentation}
+\index{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}!PoolResourceTester@{PoolResourceTester}}
+\index{PoolResourceTester@{PoolResourceTester}!PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$@{PoolResource$<$ MAX\_BLOCK\_SIZE\_BYTES, ALIGN\_BYTES $>$}}
+\doxysubsubsection{PoolResourceTester}
+{\footnotesize\ttfamily \label{class_pool_resource_a5999a5bec44f166427dfbd1cf96d7eae} 
+template$<$std\+::size\+\_\+t MAX\+\_\+\+BLOCK\+\_\+\+SIZE\+\_\+\+BYTES, std\+::size\+\_\+t ALIGN\+\_\+\+BYTES$>$ \\
+friend class \textbf{ Pool\+Resource\+Tester}\hspace{0.3cm}{\ttfamily [friend]}}
+
+Access to internals for testing purpose only 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/support/allocators/\textbf{ pool.\+h}\end{DoxyCompactItemize}

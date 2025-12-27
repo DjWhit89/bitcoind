@@ -1,0 +1,60 @@
+.TH "ProxyServerCustom< Interface, Impl >" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+ProxyServerCustom< Interface, Impl >
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <proxy\&.h>\fP
+.PP
+Inherits \fBProxyServerBase< Interface, Impl >\fP\&.
+.SS "Additional Inherited Members"
+
+
+Public Types inherited from \fBProxyServerBase< Interface, Impl >\fP
+.in +1c
+.ti -1c
+.RI "using \fBInterface\fP"
+.br
+.ti -1c
+.RI "using \fBImpl\fP"
+.br
+.in -1c
+
+Public Member Functions inherited from \fBProxyServerBase< Interface, Impl >\fP
+.in +1c
+.ti -1c
+.RI "\fBProxyServerBase\fP (std::shared_ptr< \fBImpl\fP > impl, \fBConnection\fP &connection)"
+.br
+.ti -1c
+.RI "virtual \fB~ProxyServerBase\fP ()"
+.br
+.ti -1c
+.RI "void \fBinvokeDestroy\fP ()"
+.br
+.in -1c
+
+Data Fields inherited from \fBProxyServerBase< Interface, Impl >\fP
+.in +1c
+.ti -1c
+.RI "std::shared_ptr< \fBImpl\fP > \fBm_impl\fP"
+.br
+.ti -1c
+.RI "\fBProxyContext\fP \fBm_context\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+
+.SS "template<typename \fBInterface\fP, typename \fBImpl\fP>
+.br
+struct mp::ProxyServerCustom< Interface, Impl >"Customizable (through template specialization) base class which \fBProxyServer\fP classes produced by generated code will inherit from\&. The default specialization of this class just inherits from \fBProxyServerBase\fP, but custom specializations can be defined to control \fBProxyServer\fP behavior\&.
+
+.PP
+Specifically, it can be useful to specialize this class to add additional state to \fBProxyServer\fP classes, for example to cache state between IPC calls\&. If this is done, however, care should be taken to ensure that the extra state can be destroyed without blocking, because \fBProxyServer\fP destructors are called from the \fBEventLoop\fP thread, and if they block, it could deadlock the program\&. One way to do avoid blocking is to clean up the state by pushing cleanup callbacks to the m_context\&.cleanup_fns list, which run after the server m_impl object is destroyed on the same thread destroying it (which will either be an IPC worker thread if the \fBProxyServer\fP is being explicitly destroyed by a client calling a destroy() method with a Context argument and Context\&.thread value set, or the temporary \fBEventLoop::m_async_thread\fP used to run destructors without blocking the event loop when no-longer used server objects are garbage collected by Cap'n Proto\&.) Alternately, if cleanup needs to run before m_impl is destroyed, the specialization can override invokeDestroy and destructor methods to do that\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

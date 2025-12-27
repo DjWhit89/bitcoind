@@ -1,0 +1,100 @@
+\doxysection{txorphanage.\+h}
+\label{txorphanage_8h_source}\index{src/node/txorphanage.h@{src/node/txorphanage.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2021-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_NODE\_TXORPHANAGE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_NODE\_TXORPHANAGE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <consensus/validation.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <net.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <primitives/block.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <util/time.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{keyword}{namespace\ }node\ \{}
+\DoxyCodeLine{00020\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int64\_t\ DEFAULT\_RESERVED\_ORPHAN\_WEIGHT\_PER\_PEER\{404'000\};}
+\DoxyCodeLine{00023\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ DEFAULT\_MAX\_ORPHANAGE\_LATENCY\_SCORE\{3000\};}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00038\ \textcolor{keyword}{class\ }TxOrphanage\ \{}
+\DoxyCodeLine{00039\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{using\ }Usage\ =\ int64\_t;}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keyword}{using\ }Count\ =\ \textcolor{keywordtype}{unsigned}\ int;}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keyword}{struct\ }OrphanInfo\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ CTransactionRef\ tx;}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ std::set<NodeId>\ announcers;}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Constructor\ with\ moved\ announcers}}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ OrphanInfo(CTransactionRef\ tx,\ std::set<NodeId>\&\&\ announcers)\ :}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \ \ \ \ tx(std::move(tx)),}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ announcers(std::move(announcers))}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \{\}}
+\DoxyCodeLine{00054\ \ \ \ \ \};}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~TxOrphanage()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ AddTx(\textcolor{keyword}{const}\ CTransactionRef\&\ tx,\ NodeId\ peer)\ =\ 0;}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ AddAnnouncer(\textcolor{keyword}{const}\ Wtxid\&\ wtxid,\ NodeId\ peer)\ =\ 0;}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keyword}{virtual}\ CTransactionRef\ GetTx(\textcolor{keyword}{const}\ Wtxid\&\ wtxid)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HaveTx(\textcolor{keyword}{const}\ Wtxid\&\ wtxid)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HaveTxFromPeer(\textcolor{keyword}{const}\ Wtxid\&\ wtxid,\ NodeId\ peer)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keyword}{virtual}\ CTransactionRef\ GetTxToReconsider(NodeId\ peer)\ =\ 0;}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ EraseTx(\textcolor{keyword}{const}\ Wtxid\&\ wtxid)\ =\ 0;}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ EraseForPeer(NodeId\ peer)\ =\ 0;}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ EraseForBlock(\textcolor{keyword}{const}\ CBlock\&\ block)\ =\ 0;}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keyword}{virtual}\ std::vector<std::pair<Wtxid,\ NodeId>>\ AddChildrenToWorkSet(\textcolor{keyword}{const}\ CTransaction\&\ tx,\ FastRandomContext\&\ rng)\ =\ 0;}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HaveTxToReconsider(NodeId\ peer)\ =\ 0;}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{keyword}{virtual}\ std::vector<CTransactionRef>\ GetChildrenFromSamePeer(\textcolor{keyword}{const}\ CTransactionRef\&\ parent,\ NodeId\ nodeid)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{keyword}{virtual}\ std::vector<OrphanInfo>\ GetOrphanTransactions()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{keyword}{virtual}\ Usage\ TotalOrphanUsage()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{keyword}{virtual}\ Usage\ UsageByPeer(NodeId\ peer)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ SanityCheck()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keyword}{virtual}\ Count\ CountAnnouncements()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00121\ }
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{keyword}{virtual}\ Count\ CountUniqueOrphans()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keyword}{virtual}\ Count\ AnnouncementsFromPeer(NodeId\ peer)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{keyword}{virtual}\ Count\ LatencyScoreFromPeer(NodeId\ peer)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keyword}{virtual}\ Count\ MaxGlobalLatencyScore()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{keyword}{virtual}\ Count\ TotalLatencyScore()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{keyword}{virtual}\ Usage\ ReservedPeerUsage()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{keyword}{virtual}\ Count\ MaxPeerLatencyScore()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00142\ }
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keyword}{virtual}\ Usage\ MaxGlobalUsage()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00145\ \};}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00148\ std::unique\_ptr<TxOrphanage>\ MakeTxOrphanage()\ noexcept;}
+\DoxyCodeLine{00149\ std::unique\_ptr<TxOrphanage>\ MakeTxOrphanage(TxOrphanage::Count\ max\_global\_latency\_score,\ TxOrphanage::Usage\ reserved\_peer\_usage)\ noexcept;}
+\DoxyCodeLine{00150\ \}\ \textcolor{comment}{//\ namespace\ node}}
+\DoxyCodeLine{00151\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_NODE\_TXORPHANAGE\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,527 @@
+\doxysection{field\+\_\+5x52\+\_\+impl.\+h}
+\label{field__5x52__impl_8h_source}\index{src/secp256k1/src/field\_5x52\_impl.h@{src/secp256k1/src/field\_5x52\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2013,\ 2014\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_FIELD\_REPR\_IMPL\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_FIELD\_REPR\_IMPL\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}checkmem.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}field.h"{}}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}modinv64\_impl.h"{}}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}field\_5x52\_int128\_impl.h"{}}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00018\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_verify(\textcolor{keyword}{const}\ secp256k1\_fe\ *a)\ \{}
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ *d\ =\ a-\/>n;}
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{keywordtype}{int}\ m\ =\ a-\/>normalized\ ?\ 1\ :\ 2\ *\ a-\/>magnitude;}
+\DoxyCodeLine{00021\ \ \ \ \textcolor{comment}{/*\ secp256k1\ 'p'\ value\ defined\ in\ "{}Standards\ for\ Efficient\ Cryptography"{}\ (SEC2)\ 2.7.1.\ */}}
+\DoxyCodeLine{00022\ \ \ \ \ VERIFY\_CHECK(d[0]\ <=\ 0xFFFFFFFFFFFFFULL\ *\ m);}
+\DoxyCodeLine{00023\ \ \ \ \ VERIFY\_CHECK(d[1]\ <=\ 0xFFFFFFFFFFFFFULL\ *\ m);}
+\DoxyCodeLine{00024\ \ \ \ \ VERIFY\_CHECK(d[2]\ <=\ 0xFFFFFFFFFFFFFULL\ *\ m);}
+\DoxyCodeLine{00025\ \ \ \ \ VERIFY\_CHECK(d[3]\ <=\ 0xFFFFFFFFFFFFFULL\ *\ m);}
+\DoxyCodeLine{00026\ \ \ \ \ VERIFY\_CHECK(d[4]\ <=\ 0x0FFFFFFFFFFFFULL\ *\ m);}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keywordflow}{if}\ (a-\/>normalized)\ \{}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((d[4]\ ==\ 0x0FFFFFFFFFFFFULL)\ \&\&\ ((d[3]\ \&\ d[2]\ \&\ d[1])\ ==\ 0xFFFFFFFFFFFFFULL))\ \{}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ \ \ VERIFY\_CHECK(d[0]\ <\ 0xFFFFEFFFFFC2FULL);}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00031\ \ \ \ \ \}}
+\DoxyCodeLine{00032\ \}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_get\_bounds(secp256k1\_fe\ *r,\ \textcolor{keywordtype}{int}\ m)\ \{}
+\DoxyCodeLine{00036\ \ \ \ \ r-\/>n[0]\ =\ 0xFFFFFFFFFFFFFULL\ *\ 2\ *\ m;}
+\DoxyCodeLine{00037\ \ \ \ \ r-\/>n[1]\ =\ 0xFFFFFFFFFFFFFULL\ *\ 2\ *\ m;}
+\DoxyCodeLine{00038\ \ \ \ \ r-\/>n[2]\ =\ 0xFFFFFFFFFFFFFULL\ *\ 2\ *\ m;}
+\DoxyCodeLine{00039\ \ \ \ \ r-\/>n[3]\ =\ 0xFFFFFFFFFFFFFULL\ *\ 2\ *\ m;}
+\DoxyCodeLine{00040\ \ \ \ \ r-\/>n[4]\ =\ 0x0FFFFFFFFFFFFULL\ *\ 2\ *\ m;}
+\DoxyCodeLine{00041\ \}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_normalize(secp256k1\_fe\ *r)\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ uint64\_t\ t0\ =\ r-\/>n[0],\ t1\ =\ r-\/>n[1],\ t2\ =\ r-\/>n[2],\ t3\ =\ r-\/>n[3],\ t4\ =\ r-\/>n[4];}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{comment}{/*\ Reduce\ t4\ at\ the\ start\ so\ there\ will\ be\ at\ most\ a\ single\ carry\ from\ the\ first\ pass\ */}}
+\DoxyCodeLine{00047\ \ \ \ \ uint64\_t\ m;}
+\DoxyCodeLine{00048\ \ \ \ \ uint64\_t\ x\ =\ t4\ >>\ 48;\ t4\ \&=\ 0x0FFFFFFFFFFFFULL;}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{comment}{/*\ The\ first\ pass\ ensures\ the\ magnitude\ is\ 1,\ ...\ */}}
+\DoxyCodeLine{00051\ \ \ \ \ t0\ +=\ x\ *\ 0x1000003D1ULL;}
+\DoxyCodeLine{00052\ \ \ \ \ t1\ +=\ (t0\ >>\ 52);\ t0\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00053\ \ \ \ \ t2\ +=\ (t1\ >>\ 52);\ t1\ \&=\ 0xFFFFFFFFFFFFFULL;\ m\ =\ t1;}
+\DoxyCodeLine{00054\ \ \ \ \ t3\ +=\ (t2\ >>\ 52);\ t2\ \&=\ 0xFFFFFFFFFFFFFULL;\ m\ \&=\ t2;}
+\DoxyCodeLine{00055\ \ \ \ \ t4\ +=\ (t3\ >>\ 52);\ t3\ \&=\ 0xFFFFFFFFFFFFFULL;\ m\ \&=\ t3;}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{comment}{/*\ ...\ except\ for\ a\ possible\ carry\ at\ bit\ 48\ of\ t4\ (i.e.\ bit\ 256\ of\ the\ field\ element)\ */}}
+\DoxyCodeLine{00058\ \ \ \ \ VERIFY\_CHECK(t4\ >>\ 49\ ==\ 0);}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{comment}{/*\ At\ most\ a\ single\ final\ reduction\ is\ needed;\ check\ if\ the\ value\ is\ >=\ the\ field\ characteristic\ */}}
+\DoxyCodeLine{00061\ \ \ \ \ x\ =\ (t4\ >>\ 48)\ |\ ((t4\ ==\ 0x0FFFFFFFFFFFFULL)\ \&\ (m\ ==\ 0xFFFFFFFFFFFFFULL)}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \&\ (t0\ >=\ 0xFFFFEFFFFFC2FULL));}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{comment}{/*\ Apply\ the\ final\ reduction\ (for\ constant-\/time\ behaviour,\ we\ do\ it\ always)\ */}}
+\DoxyCodeLine{00065\ \ \ \ \ t0\ +=\ x\ *\ 0x1000003D1ULL;}
+\DoxyCodeLine{00066\ \ \ \ \ t1\ +=\ (t0\ >>\ 52);\ t0\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00067\ \ \ \ \ t2\ +=\ (t1\ >>\ 52);\ t1\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00068\ \ \ \ \ t3\ +=\ (t2\ >>\ 52);\ t2\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00069\ \ \ \ \ t4\ +=\ (t3\ >>\ 52);\ t3\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{comment}{/*\ If\ t4\ didn't\ carry\ to\ bit\ 48\ already,\ then\ it\ should\ have\ after\ any\ final\ reduction\ */}}
+\DoxyCodeLine{00072\ \ \ \ \ VERIFY\_CHECK(t4\ >>\ 48\ ==\ x);}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{comment}{/*\ Mask\ off\ the\ possible\ multiple\ of\ 2\string^256\ from\ the\ final\ reduction\ */}}
+\DoxyCodeLine{00075\ \ \ \ \ t4\ \&=\ 0x0FFFFFFFFFFFFULL;}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ \ \ \ \ r-\/>n[0]\ =\ t0;\ r-\/>n[1]\ =\ t1;\ r-\/>n[2]\ =\ t2;\ r-\/>n[3]\ =\ t3;\ r-\/>n[4]\ =\ t4;}
+\DoxyCodeLine{00078\ \}}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_normalize\_weak(secp256k1\_fe\ *r)\ \{}
+\DoxyCodeLine{00081\ \ \ \ \ uint64\_t\ t0\ =\ r-\/>n[0],\ t1\ =\ r-\/>n[1],\ t2\ =\ r-\/>n[2],\ t3\ =\ r-\/>n[3],\ t4\ =\ r-\/>n[4];}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{comment}{/*\ Reduce\ t4\ at\ the\ start\ so\ there\ will\ be\ at\ most\ a\ single\ carry\ from\ the\ first\ pass\ */}}
+\DoxyCodeLine{00084\ \ \ \ \ uint64\_t\ x\ =\ t4\ >>\ 48;\ t4\ \&=\ 0x0FFFFFFFFFFFFULL;}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{comment}{/*\ The\ first\ pass\ ensures\ the\ magnitude\ is\ 1,\ ...\ */}}
+\DoxyCodeLine{00087\ \ \ \ \ t0\ +=\ x\ *\ 0x1000003D1ULL;}
+\DoxyCodeLine{00088\ \ \ \ \ t1\ +=\ (t0\ >>\ 52);\ t0\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00089\ \ \ \ \ t2\ +=\ (t1\ >>\ 52);\ t1\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00090\ \ \ \ \ t3\ +=\ (t2\ >>\ 52);\ t2\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00091\ \ \ \ \ t4\ +=\ (t3\ >>\ 52);\ t3\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{comment}{/*\ ...\ except\ for\ a\ possible\ carry\ at\ bit\ 48\ of\ t4\ (i.e.\ bit\ 256\ of\ the\ field\ element)\ */}}
+\DoxyCodeLine{00094\ \ \ \ \ VERIFY\_CHECK(t4\ >>\ 49\ ==\ 0);}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \ \ \ \ r-\/>n[0]\ =\ t0;\ r-\/>n[1]\ =\ t1;\ r-\/>n[2]\ =\ t2;\ r-\/>n[3]\ =\ t3;\ r-\/>n[4]\ =\ t4;}
+\DoxyCodeLine{00097\ \}}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_normalize\_var(secp256k1\_fe\ *r)\ \{}
+\DoxyCodeLine{00100\ \ \ \ \ uint64\_t\ t0\ =\ r-\/>n[0],\ t1\ =\ r-\/>n[1],\ t2\ =\ r-\/>n[2],\ t3\ =\ r-\/>n[3],\ t4\ =\ r-\/>n[4];}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{comment}{/*\ Reduce\ t4\ at\ the\ start\ so\ there\ will\ be\ at\ most\ a\ single\ carry\ from\ the\ first\ pass\ */}}
+\DoxyCodeLine{00103\ \ \ \ \ uint64\_t\ m;}
+\DoxyCodeLine{00104\ \ \ \ \ uint64\_t\ x\ =\ t4\ >>\ 48;\ t4\ \&=\ 0x0FFFFFFFFFFFFULL;}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{comment}{/*\ The\ first\ pass\ ensures\ the\ magnitude\ is\ 1,\ ...\ */}}
+\DoxyCodeLine{00107\ \ \ \ \ t0\ +=\ x\ *\ 0x1000003D1ULL;}
+\DoxyCodeLine{00108\ \ \ \ \ t1\ +=\ (t0\ >>\ 52);\ t0\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00109\ \ \ \ \ t2\ +=\ (t1\ >>\ 52);\ t1\ \&=\ 0xFFFFFFFFFFFFFULL;\ m\ =\ t1;}
+\DoxyCodeLine{00110\ \ \ \ \ t3\ +=\ (t2\ >>\ 52);\ t2\ \&=\ 0xFFFFFFFFFFFFFULL;\ m\ \&=\ t2;}
+\DoxyCodeLine{00111\ \ \ \ \ t4\ +=\ (t3\ >>\ 52);\ t3\ \&=\ 0xFFFFFFFFFFFFFULL;\ m\ \&=\ t3;}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{comment}{/*\ ...\ except\ for\ a\ possible\ carry\ at\ bit\ 48\ of\ t4\ (i.e.\ bit\ 256\ of\ the\ field\ element)\ */}}
+\DoxyCodeLine{00114\ \ \ \ \ VERIFY\_CHECK(t4\ >>\ 49\ ==\ 0);}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{comment}{/*\ At\ most\ a\ single\ final\ reduction\ is\ needed;\ check\ if\ the\ value\ is\ >=\ the\ field\ characteristic\ */}}
+\DoxyCodeLine{00117\ \ \ \ \ x\ =\ (t4\ >>\ 48)\ |\ ((t4\ ==\ 0x0FFFFFFFFFFFFULL)\ \&\ (m\ ==\ 0xFFFFFFFFFFFFFULL)}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \&\ (t0\ >=\ 0xFFFFEFFFFFC2FULL));}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keywordflow}{if}\ (x)\ \{}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ t0\ +=\ 0x1000003D1ULL;}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ t1\ +=\ (t0\ >>\ 52);\ t0\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ t2\ +=\ (t1\ >>\ 52);\ t1\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ t3\ +=\ (t2\ >>\ 52);\ t2\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ t4\ +=\ (t3\ >>\ 52);\ t3\ \&=\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ t4\ didn't\ carry\ to\ bit\ 48\ already,\ then\ it\ should\ have\ after\ any\ final\ reduction\ */}}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(t4\ >>\ 48\ ==\ x);}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Mask\ off\ the\ possible\ multiple\ of\ 2\string^256\ from\ the\ final\ reduction\ */}}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ t4\ \&=\ 0x0FFFFFFFFFFFFULL;}
+\DoxyCodeLine{00132\ \ \ \ \ \}}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00134\ \ \ \ \ r-\/>n[0]\ =\ t0;\ r-\/>n[1]\ =\ t1;\ r-\/>n[2]\ =\ t2;\ r-\/>n[3]\ =\ t3;\ r-\/>n[4]\ =\ t4;}
+\DoxyCodeLine{00135\ \}}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_impl\_normalizes\_to\_zero(\textcolor{keyword}{const}\ secp256k1\_fe\ *r)\ \{}
+\DoxyCodeLine{00138\ \ \ \ \ uint64\_t\ t0\ =\ r-\/>n[0],\ t1\ =\ r-\/>n[1],\ t2\ =\ r-\/>n[2],\ t3\ =\ r-\/>n[3],\ t4\ =\ r-\/>n[4];}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00140\ \ \ \ \ \textcolor{comment}{/*\ z0\ tracks\ a\ possible\ raw\ value\ of\ 0,\ z1\ tracks\ a\ possible\ raw\ value\ of\ P\ */}}
+\DoxyCodeLine{00141\ \ \ \ \ uint64\_t\ z0,\ z1;}
+\DoxyCodeLine{00142\ }
+\DoxyCodeLine{00143\ \ \ \ \ \textcolor{comment}{/*\ Reduce\ t4\ at\ the\ start\ so\ there\ will\ be\ at\ most\ a\ single\ carry\ from\ the\ first\ pass\ */}}
+\DoxyCodeLine{00144\ \ \ \ \ uint64\_t\ x\ =\ t4\ >>\ 48;\ t4\ \&=\ 0x0FFFFFFFFFFFFULL;}
+\DoxyCodeLine{00145\ }
+\DoxyCodeLine{00146\ \ \ \ \ \textcolor{comment}{/*\ The\ first\ pass\ ensures\ the\ magnitude\ is\ 1,\ ...\ */}}
+\DoxyCodeLine{00147\ \ \ \ \ t0\ +=\ x\ *\ 0x1000003D1ULL;}
+\DoxyCodeLine{00148\ \ \ \ \ t1\ +=\ (t0\ >>\ 52);\ t0\ \&=\ 0xFFFFFFFFFFFFFULL;\ z0\ \ =\ t0;\ z1\ \ =\ t0\ \string^\ 0x1000003D0ULL;}
+\DoxyCodeLine{00149\ \ \ \ \ t2\ +=\ (t1\ >>\ 52);\ t1\ \&=\ 0xFFFFFFFFFFFFFULL;\ z0\ |=\ t1;\ z1\ \&=\ t1;}
+\DoxyCodeLine{00150\ \ \ \ \ t3\ +=\ (t2\ >>\ 52);\ t2\ \&=\ 0xFFFFFFFFFFFFFULL;\ z0\ |=\ t2;\ z1\ \&=\ t2;}
+\DoxyCodeLine{00151\ \ \ \ \ t4\ +=\ (t3\ >>\ 52);\ t3\ \&=\ 0xFFFFFFFFFFFFFULL;\ z0\ |=\ t3;\ z1\ \&=\ t3;}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ z0\ |=\ t4;\ z1\ \&=\ t4\ \string^\ 0xF000000000000ULL;}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \ \ \ \ \textcolor{comment}{/*\ ...\ except\ for\ a\ possible\ carry\ at\ bit\ 48\ of\ t4\ (i.e.\ bit\ 256\ of\ the\ field\ element)\ */}}
+\DoxyCodeLine{00155\ \ \ \ \ VERIFY\_CHECK(t4\ >>\ 49\ ==\ 0);}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ \ \ \ \ \textcolor{keywordflow}{return}\ (z0\ ==\ 0)\ |\ (z1\ ==\ 0xFFFFFFFFFFFFFULL);}
+\DoxyCodeLine{00158\ \}}
+\DoxyCodeLine{00159\ }
+\DoxyCodeLine{00160\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_impl\_normalizes\_to\_zero\_var(\textcolor{keyword}{const}\ secp256k1\_fe\ *r)\ \{}
+\DoxyCodeLine{00161\ \ \ \ \ uint64\_t\ t0,\ t1,\ t2,\ t3,\ t4;}
+\DoxyCodeLine{00162\ \ \ \ \ uint64\_t\ z0,\ z1;}
+\DoxyCodeLine{00163\ \ \ \ \ uint64\_t\ x;}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \ \ \ \ t0\ =\ r-\/>n[0];}
+\DoxyCodeLine{00166\ \ \ \ \ t4\ =\ r-\/>n[4];}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ \ \ \ \ \textcolor{comment}{/*\ Reduce\ t4\ at\ the\ start\ so\ there\ will\ be\ at\ most\ a\ single\ carry\ from\ the\ first\ pass\ */}}
+\DoxyCodeLine{00169\ \ \ \ \ x\ =\ t4\ >>\ 48;}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00171\ \ \ \ \ \textcolor{comment}{/*\ The\ first\ pass\ ensures\ the\ magnitude\ is\ 1,\ ...\ */}}
+\DoxyCodeLine{00172\ \ \ \ \ t0\ +=\ x\ *\ 0x1000003D1ULL;}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{comment}{/*\ z0\ tracks\ a\ possible\ raw\ value\ of\ 0,\ z1\ tracks\ a\ possible\ raw\ value\ of\ P\ */}}
+\DoxyCodeLine{00175\ \ \ \ \ z0\ =\ t0\ \&\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00176\ \ \ \ \ z1\ =\ z0\ \string^\ 0x1000003D0ULL;}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{comment}{/*\ Fast\ return\ path\ should\ catch\ the\ majority\ of\ cases\ */}}
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{keywordflow}{if}\ ((z0\ !=\ 0ULL)\ \&\ (z1\ !=\ 0xFFFFFFFFFFFFFULL))\ \{}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00181\ \ \ \ \ \}}
+\DoxyCodeLine{00182\ }
+\DoxyCodeLine{00183\ \ \ \ \ t1\ =\ r-\/>n[1];}
+\DoxyCodeLine{00184\ \ \ \ \ t2\ =\ r-\/>n[2];}
+\DoxyCodeLine{00185\ \ \ \ \ t3\ =\ r-\/>n[3];}
+\DoxyCodeLine{00186\ }
+\DoxyCodeLine{00187\ \ \ \ \ t4\ \&=\ 0x0FFFFFFFFFFFFULL;}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00189\ \ \ \ \ t1\ +=\ (t0\ >>\ 52);}
+\DoxyCodeLine{00190\ \ \ \ \ t2\ +=\ (t1\ >>\ 52);\ t1\ \&=\ 0xFFFFFFFFFFFFFULL;\ z0\ |=\ t1;\ z1\ \&=\ t1;}
+\DoxyCodeLine{00191\ \ \ \ \ t3\ +=\ (t2\ >>\ 52);\ t2\ \&=\ 0xFFFFFFFFFFFFFULL;\ z0\ |=\ t2;\ z1\ \&=\ t2;}
+\DoxyCodeLine{00192\ \ \ \ \ t4\ +=\ (t3\ >>\ 52);\ t3\ \&=\ 0xFFFFFFFFFFFFFULL;\ z0\ |=\ t3;\ z1\ \&=\ t3;}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ z0\ |=\ t4;\ z1\ \&=\ t4\ \string^\ 0xF000000000000ULL;}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00195\ \ \ \ \ \textcolor{comment}{/*\ ...\ except\ for\ a\ possible\ carry\ at\ bit\ 48\ of\ t4\ (i.e.\ bit\ 256\ of\ the\ field\ element)\ */}}
+\DoxyCodeLine{00196\ \ \ \ \ VERIFY\_CHECK(t4\ >>\ 49\ ==\ 0);}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{keywordflow}{return}\ (z0\ ==\ 0)\ |\ (z1\ ==\ 0xFFFFFFFFFFFFFULL);}
+\DoxyCodeLine{00199\ \}}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00201\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_set\_int(secp256k1\_fe\ *r,\ \textcolor{keywordtype}{int}\ a)\ \{}
+\DoxyCodeLine{00202\ \ \ \ \ r-\/>n[0]\ =\ a;}
+\DoxyCodeLine{00203\ \ \ \ \ r-\/>n[1]\ =\ r-\/>n[2]\ =\ r-\/>n[3]\ =\ r-\/>n[4]\ =\ 0;}
+\DoxyCodeLine{00204\ \}}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_impl\_is\_zero(\textcolor{keyword}{const}\ secp256k1\_fe\ *a)\ \{}
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ *t\ =\ a-\/>n;}
+\DoxyCodeLine{00208\ \ \ \ \ \textcolor{keywordflow}{return}\ (t[0]\ |\ t[1]\ |\ t[2]\ |\ t[3]\ |\ t[4])\ ==\ 0;}
+\DoxyCodeLine{00209\ \}}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00211\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_impl\_is\_odd(\textcolor{keyword}{const}\ secp256k1\_fe\ *a)\ \{}
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{keywordflow}{return}\ a-\/>n[0]\ \&\ 1;}
+\DoxyCodeLine{00213\ \}}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00215\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_impl\_cmp\_var(\textcolor{keyword}{const}\ secp256k1\_fe\ *a,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *b)\ \{}
+\DoxyCodeLine{00216\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00217\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 4;\ i\ >=\ 0;\ i-\/-\/)\ \{}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (a-\/>n[i]\ >\ b-\/>n[i])\ \{}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (a-\/>n[i]\ <\ b-\/>n[i])\ \{}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00224\ \ \ \ \ \}}
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00226\ \}}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00228\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_set\_b32\_mod(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *a)\ \{}
+\DoxyCodeLine{00229\ \ \ \ \ r-\/>n[0]\ =\ (uint64\_t)a[31]}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[30]\ <<\ 8)}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[29]\ <<\ 16)}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[28]\ <<\ 24)}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[27]\ <<\ 32)}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[26]\ <<\ 40)}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)(a[25]\ \&\ 0xF)\ \ <<\ 48);}
+\DoxyCodeLine{00236\ \ \ \ \ r-\/>n[1]\ =\ (uint64\_t)((a[25]\ >>\ 4)\ \&\ 0xF)}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[24]\ <<\ 4)}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[23]\ <<\ 12)}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[22]\ <<\ 20)}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[21]\ <<\ 28)}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[20]\ <<\ 36)}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[19]\ <<\ 44);}
+\DoxyCodeLine{00243\ \ \ \ \ r-\/>n[2]\ =\ (uint64\_t)a[18]}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[17]\ <<\ 8)}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[16]\ <<\ 16)}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[15]\ <<\ 24)}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[14]\ <<\ 32)}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[13]\ <<\ 40)}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)(a[12]\ \&\ 0xF)\ <<\ 48);}
+\DoxyCodeLine{00250\ \ \ \ \ r-\/>n[3]\ =\ (uint64\_t)((a[12]\ >>\ 4)\ \&\ 0xF)}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[11]\ <<\ 4)}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[10]\ <<\ 12)}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[9]\ \ <<\ 20)}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[8]\ \ <<\ 28)}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[7]\ \ <<\ 36)}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[6]\ \ <<\ 44);}
+\DoxyCodeLine{00257\ \ \ \ \ r-\/>n[4]\ =\ (uint64\_t)a[5]}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[4]\ <<\ 8)}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[3]\ <<\ 16)}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[2]\ <<\ 24)}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[1]\ <<\ 32)}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ((uint64\_t)a[0]\ <<\ 40);}
+\DoxyCodeLine{00263\ \}}
+\DoxyCodeLine{00264\ }
+\DoxyCodeLine{00265\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_impl\_set\_b32\_limit(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *a)\ \{}
+\DoxyCodeLine{00266\ \ \ \ \ secp256k1\_fe\_impl\_set\_b32\_mod(r,\ a);}
+\DoxyCodeLine{00267\ \ \ \ \ \textcolor{keywordflow}{return}\ !((r-\/>n[4]\ ==\ 0x0FFFFFFFFFFFFULL)\ \&\ ((r-\/>n[3]\ \&\ r-\/>n[2]\ \&\ r-\/>n[1])\ ==\ 0xFFFFFFFFFFFFFULL)\ \&\ (r-\/>n[0]\ >=\ 0xFFFFEFFFFFC2FULL));}
+\DoxyCodeLine{00268\ \}}
+\DoxyCodeLine{00269\ }
+\DoxyCodeLine{00271\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_get\_b32(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a)\ \{}
+\DoxyCodeLine{00272\ \ \ \ \ r[0]\ =\ (a-\/>n[4]\ >>\ 40)\ \&\ 0xFF;}
+\DoxyCodeLine{00273\ \ \ \ \ r[1]\ =\ (a-\/>n[4]\ >>\ 32)\ \&\ 0xFF;}
+\DoxyCodeLine{00274\ \ \ \ \ r[2]\ =\ (a-\/>n[4]\ >>\ 24)\ \&\ 0xFF;}
+\DoxyCodeLine{00275\ \ \ \ \ r[3]\ =\ (a-\/>n[4]\ >>\ 16)\ \&\ 0xFF;}
+\DoxyCodeLine{00276\ \ \ \ \ r[4]\ =\ (a-\/>n[4]\ >>\ 8)\ \&\ 0xFF;}
+\DoxyCodeLine{00277\ \ \ \ \ r[5]\ =\ a-\/>n[4]\ \&\ 0xFF;}
+\DoxyCodeLine{00278\ \ \ \ \ r[6]\ =\ (a-\/>n[3]\ >>\ 44)\ \&\ 0xFF;}
+\DoxyCodeLine{00279\ \ \ \ \ r[7]\ =\ (a-\/>n[3]\ >>\ 36)\ \&\ 0xFF;}
+\DoxyCodeLine{00280\ \ \ \ \ r[8]\ =\ (a-\/>n[3]\ >>\ 28)\ \&\ 0xFF;}
+\DoxyCodeLine{00281\ \ \ \ \ r[9]\ =\ (a-\/>n[3]\ >>\ 20)\ \&\ 0xFF;}
+\DoxyCodeLine{00282\ \ \ \ \ r[10]\ =\ (a-\/>n[3]\ >>\ 12)\ \&\ 0xFF;}
+\DoxyCodeLine{00283\ \ \ \ \ r[11]\ =\ (a-\/>n[3]\ >>\ 4)\ \&\ 0xFF;}
+\DoxyCodeLine{00284\ \ \ \ \ r[12]\ =\ ((a-\/>n[2]\ >>\ 48)\ \&\ 0xF)\ |\ ((a-\/>n[3]\ \&\ 0xF)\ <<\ 4);}
+\DoxyCodeLine{00285\ \ \ \ \ r[13]\ =\ (a-\/>n[2]\ >>\ 40)\ \&\ 0xFF;}
+\DoxyCodeLine{00286\ \ \ \ \ r[14]\ =\ (a-\/>n[2]\ >>\ 32)\ \&\ 0xFF;}
+\DoxyCodeLine{00287\ \ \ \ \ r[15]\ =\ (a-\/>n[2]\ >>\ 24)\ \&\ 0xFF;}
+\DoxyCodeLine{00288\ \ \ \ \ r[16]\ =\ (a-\/>n[2]\ >>\ 16)\ \&\ 0xFF;}
+\DoxyCodeLine{00289\ \ \ \ \ r[17]\ =\ (a-\/>n[2]\ >>\ 8)\ \&\ 0xFF;}
+\DoxyCodeLine{00290\ \ \ \ \ r[18]\ =\ a-\/>n[2]\ \&\ 0xFF;}
+\DoxyCodeLine{00291\ \ \ \ \ r[19]\ =\ (a-\/>n[1]\ >>\ 44)\ \&\ 0xFF;}
+\DoxyCodeLine{00292\ \ \ \ \ r[20]\ =\ (a-\/>n[1]\ >>\ 36)\ \&\ 0xFF;}
+\DoxyCodeLine{00293\ \ \ \ \ r[21]\ =\ (a-\/>n[1]\ >>\ 28)\ \&\ 0xFF;}
+\DoxyCodeLine{00294\ \ \ \ \ r[22]\ =\ (a-\/>n[1]\ >>\ 20)\ \&\ 0xFF;}
+\DoxyCodeLine{00295\ \ \ \ \ r[23]\ =\ (a-\/>n[1]\ >>\ 12)\ \&\ 0xFF;}
+\DoxyCodeLine{00296\ \ \ \ \ r[24]\ =\ (a-\/>n[1]\ >>\ 4)\ \&\ 0xFF;}
+\DoxyCodeLine{00297\ \ \ \ \ r[25]\ =\ ((a-\/>n[0]\ >>\ 48)\ \&\ 0xF)\ |\ ((a-\/>n[1]\ \&\ 0xF)\ <<\ 4);}
+\DoxyCodeLine{00298\ \ \ \ \ r[26]\ =\ (a-\/>n[0]\ >>\ 40)\ \&\ 0xFF;}
+\DoxyCodeLine{00299\ \ \ \ \ r[27]\ =\ (a-\/>n[0]\ >>\ 32)\ \&\ 0xFF;}
+\DoxyCodeLine{00300\ \ \ \ \ r[28]\ =\ (a-\/>n[0]\ >>\ 24)\ \&\ 0xFF;}
+\DoxyCodeLine{00301\ \ \ \ \ r[29]\ =\ (a-\/>n[0]\ >>\ 16)\ \&\ 0xFF;}
+\DoxyCodeLine{00302\ \ \ \ \ r[30]\ =\ (a-\/>n[0]\ >>\ 8)\ \&\ 0xFF;}
+\DoxyCodeLine{00303\ \ \ \ \ r[31]\ =\ a-\/>n[0]\ \&\ 0xFF;}
+\DoxyCodeLine{00304\ \}}
+\DoxyCodeLine{00305\ }
+\DoxyCodeLine{00306\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_negate\_unchecked(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a,\ \textcolor{keywordtype}{int}\ m)\ \{}
+\DoxyCodeLine{00307\ \ \ \ \ \textcolor{comment}{/*\ For\ all\ legal\ values\ of\ m\ (0..31),\ the\ following\ properties\ hold:\ */}}
+\DoxyCodeLine{00308\ \ \ \ \ VERIFY\_CHECK(0xFFFFEFFFFFC2FULL\ *\ 2\ *\ (m\ +\ 1)\ >=\ 0xFFFFFFFFFFFFFULL\ *\ 2\ *\ m);}
+\DoxyCodeLine{00309\ \ \ \ \ VERIFY\_CHECK(0xFFFFFFFFFFFFFULL\ *\ 2\ *\ (m\ +\ 1)\ >=\ 0xFFFFFFFFFFFFFULL\ *\ 2\ *\ m);}
+\DoxyCodeLine{00310\ \ \ \ \ VERIFY\_CHECK(0x0FFFFFFFFFFFFULL\ *\ 2\ *\ (m\ +\ 1)\ >=\ 0x0FFFFFFFFFFFFULL\ *\ 2\ *\ m);}
+\DoxyCodeLine{00311\ }
+\DoxyCodeLine{00312\ \ \ \ \ \textcolor{comment}{/*\ Due\ to\ the\ properties\ above,\ the\ left\ hand\ in\ the\ subtractions\ below\ is\ never\ less\ than}}
+\DoxyCodeLine{00313\ \textcolor{comment}{\ \ \ \ \ *\ the\ right\ hand.\ */}}
+\DoxyCodeLine{00314\ \ \ \ \ r-\/>n[0]\ =\ 0xFFFFEFFFFFC2FULL\ *\ 2\ *\ (m\ +\ 1)\ -\/\ a-\/>n[0];}
+\DoxyCodeLine{00315\ \ \ \ \ r-\/>n[1]\ =\ 0xFFFFFFFFFFFFFULL\ *\ 2\ *\ (m\ +\ 1)\ -\/\ a-\/>n[1];}
+\DoxyCodeLine{00316\ \ \ \ \ r-\/>n[2]\ =\ 0xFFFFFFFFFFFFFULL\ *\ 2\ *\ (m\ +\ 1)\ -\/\ a-\/>n[2];}
+\DoxyCodeLine{00317\ \ \ \ \ r-\/>n[3]\ =\ 0xFFFFFFFFFFFFFULL\ *\ 2\ *\ (m\ +\ 1)\ -\/\ a-\/>n[3];}
+\DoxyCodeLine{00318\ \ \ \ \ r-\/>n[4]\ =\ 0x0FFFFFFFFFFFFULL\ *\ 2\ *\ (m\ +\ 1)\ -\/\ a-\/>n[4];}
+\DoxyCodeLine{00319\ \}}
+\DoxyCodeLine{00320\ }
+\DoxyCodeLine{00321\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_mul\_int\_unchecked(secp256k1\_fe\ *r,\ \textcolor{keywordtype}{int}\ a)\ \{}
+\DoxyCodeLine{00322\ \ \ \ \ r-\/>n[0]\ *=\ a;}
+\DoxyCodeLine{00323\ \ \ \ \ r-\/>n[1]\ *=\ a;}
+\DoxyCodeLine{00324\ \ \ \ \ r-\/>n[2]\ *=\ a;}
+\DoxyCodeLine{00325\ \ \ \ \ r-\/>n[3]\ *=\ a;}
+\DoxyCodeLine{00326\ \ \ \ \ r-\/>n[4]\ *=\ a;}
+\DoxyCodeLine{00327\ \}}
+\DoxyCodeLine{00328\ }
+\DoxyCodeLine{00329\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_add\_int(secp256k1\_fe\ *r,\ \textcolor{keywordtype}{int}\ a)\ \{}
+\DoxyCodeLine{00330\ \ \ \ \ r-\/>n[0]\ +=\ a;}
+\DoxyCodeLine{00331\ \}}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00333\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_add(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a)\ \{}
+\DoxyCodeLine{00334\ \ \ \ \ r-\/>n[0]\ +=\ a-\/>n[0];}
+\DoxyCodeLine{00335\ \ \ \ \ r-\/>n[1]\ +=\ a-\/>n[1];}
+\DoxyCodeLine{00336\ \ \ \ \ r-\/>n[2]\ +=\ a-\/>n[2];}
+\DoxyCodeLine{00337\ \ \ \ \ r-\/>n[3]\ +=\ a-\/>n[3];}
+\DoxyCodeLine{00338\ \ \ \ \ r-\/>n[4]\ +=\ a-\/>n[4];}
+\DoxyCodeLine{00339\ \}}
+\DoxyCodeLine{00340\ }
+\DoxyCodeLine{00341\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_mul(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *\ SECP256K1\_RESTRICT\ b)\ \{}
+\DoxyCodeLine{00342\ \ \ \ \ secp256k1\_fe\_mul\_inner(r-\/>n,\ a-\/>n,\ b-\/>n);}
+\DoxyCodeLine{00343\ \}}
+\DoxyCodeLine{00344\ }
+\DoxyCodeLine{00345\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_sqr(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a)\ \{}
+\DoxyCodeLine{00346\ \ \ \ \ secp256k1\_fe\_sqr\_inner(r-\/>n,\ a-\/>n);}
+\DoxyCodeLine{00347\ \}}
+\DoxyCodeLine{00348\ }
+\DoxyCodeLine{00349\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_cmov(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a,\ \textcolor{keywordtype}{int}\ flag)\ \{}
+\DoxyCodeLine{00350\ \ \ \ \ uint64\_t\ mask0,\ mask1;}
+\DoxyCodeLine{00351\ \ \ \ \ \textcolor{keyword}{volatile}\ \textcolor{keywordtype}{int}\ vflag\ =\ flag;}
+\DoxyCodeLine{00352\ \ \ \ \ SECP256K1\_CHECKMEM\_CHECK\_VERIFY(r-\/>n,\ \textcolor{keyword}{sizeof}(r-\/>n));}
+\DoxyCodeLine{00353\ \ \ \ \ mask0\ =\ vflag\ +\ \string~((uint64\_t)0);}
+\DoxyCodeLine{00354\ \ \ \ \ mask1\ =\ \string~mask0;}
+\DoxyCodeLine{00355\ \ \ \ \ r-\/>n[0]\ =\ (r-\/>n[0]\ \&\ mask0)\ |\ (a-\/>n[0]\ \&\ mask1);}
+\DoxyCodeLine{00356\ \ \ \ \ r-\/>n[1]\ =\ (r-\/>n[1]\ \&\ mask0)\ |\ (a-\/>n[1]\ \&\ mask1);}
+\DoxyCodeLine{00357\ \ \ \ \ r-\/>n[2]\ =\ (r-\/>n[2]\ \&\ mask0)\ |\ (a-\/>n[2]\ \&\ mask1);}
+\DoxyCodeLine{00358\ \ \ \ \ r-\/>n[3]\ =\ (r-\/>n[3]\ \&\ mask0)\ |\ (a-\/>n[3]\ \&\ mask1);}
+\DoxyCodeLine{00359\ \ \ \ \ r-\/>n[4]\ =\ (r-\/>n[4]\ \&\ mask0)\ |\ (a-\/>n[4]\ \&\ mask1);}
+\DoxyCodeLine{00360\ \}}
+\DoxyCodeLine{00361\ }
+\DoxyCodeLine{00362\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_half(secp256k1\_fe\ *r)\ \{}
+\DoxyCodeLine{00363\ \ \ \ \ uint64\_t\ t0\ =\ r-\/>n[0],\ t1\ =\ r-\/>n[1],\ t2\ =\ r-\/>n[2],\ t3\ =\ r-\/>n[3],\ t4\ =\ r-\/>n[4];}
+\DoxyCodeLine{00364\ \ \ \ \ uint64\_t\ one\ =\ (uint64\_t)1;}
+\DoxyCodeLine{00365\ \ \ \ \ uint64\_t\ mask\ =\ -\/(t0\ \&\ one)\ >>\ 12;}
+\DoxyCodeLine{00366\ }
+\DoxyCodeLine{00367\ \ \ \ \ \textcolor{comment}{/*\ Bounds\ analysis\ (over\ the\ rationals).}}
+\DoxyCodeLine{00368\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00369\ \textcolor{comment}{\ \ \ \ \ *\ Let\ m\ =\ r-\/>magnitude}}
+\DoxyCodeLine{00370\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ C\ =\ 0xFFFFFFFFFFFFFULL\ *\ 2}}
+\DoxyCodeLine{00371\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ D\ =\ 0x0FFFFFFFFFFFFULL\ *\ 2}}
+\DoxyCodeLine{00372\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00373\ \textcolor{comment}{\ \ \ \ \ *\ Initial\ bounds:\ t0..t3\ <=\ C\ *\ m}}
+\DoxyCodeLine{00374\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ t4\ <=\ D\ *\ m}}
+\DoxyCodeLine{00375\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00376\ }
+\DoxyCodeLine{00377\ \ \ \ \ t0\ +=\ 0xFFFFEFFFFFC2FULL\ \&\ mask;}
+\DoxyCodeLine{00378\ \ \ \ \ t1\ +=\ mask;}
+\DoxyCodeLine{00379\ \ \ \ \ t2\ +=\ mask;}
+\DoxyCodeLine{00380\ \ \ \ \ t3\ +=\ mask;}
+\DoxyCodeLine{00381\ \ \ \ \ t4\ +=\ mask\ >>\ 4;}
+\DoxyCodeLine{00382\ }
+\DoxyCodeLine{00383\ \ \ \ \ VERIFY\_CHECK((t0\ \&\ one)\ ==\ 0);}
+\DoxyCodeLine{00384\ }
+\DoxyCodeLine{00385\ \ \ \ \ \textcolor{comment}{/*\ t0..t3:\ added\ <=\ C/2}}
+\DoxyCodeLine{00386\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ t4:\ added\ <=\ D/2}}
+\DoxyCodeLine{00387\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00388\ \textcolor{comment}{\ \ \ \ \ *\ Current\ bounds:\ t0..t3\ <=\ C\ *\ (m\ +\ 1/2)}}
+\DoxyCodeLine{00389\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ t4\ <=\ D\ *\ (m\ +\ 1/2)}}
+\DoxyCodeLine{00390\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00391\ }
+\DoxyCodeLine{00392\ \ \ \ \ r-\/>n[0]\ =\ (t0\ >>\ 1)\ +\ ((t1\ \&\ one)\ <<\ 51);}
+\DoxyCodeLine{00393\ \ \ \ \ r-\/>n[1]\ =\ (t1\ >>\ 1)\ +\ ((t2\ \&\ one)\ <<\ 51);}
+\DoxyCodeLine{00394\ \ \ \ \ r-\/>n[2]\ =\ (t2\ >>\ 1)\ +\ ((t3\ \&\ one)\ <<\ 51);}
+\DoxyCodeLine{00395\ \ \ \ \ r-\/>n[3]\ =\ (t3\ >>\ 1)\ +\ ((t4\ \&\ one)\ <<\ 51);}
+\DoxyCodeLine{00396\ \ \ \ \ r-\/>n[4]\ =\ (t4\ >>\ 1);}
+\DoxyCodeLine{00397\ }
+\DoxyCodeLine{00398\ \ \ \ \ \textcolor{comment}{/*\ t0..t3:\ shifted\ right\ and\ added\ <=\ C/4\ +\ 1/2}}
+\DoxyCodeLine{00399\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ t4:\ shifted\ right}}
+\DoxyCodeLine{00400\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00401\ \textcolor{comment}{\ \ \ \ \ *\ Current\ bounds:\ t0..t3\ <=\ C\ *\ (m/2\ +\ 1/2)}}
+\DoxyCodeLine{00402\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ t4\ <=\ D\ *\ (m/2\ +\ 1/4)}}
+\DoxyCodeLine{00403\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00404\ \textcolor{comment}{\ \ \ \ \ *\ Therefore\ the\ output\ magnitude\ (M)\ has\ to\ be\ set\ such\ that:}}
+\DoxyCodeLine{00405\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ t0..t3:\ C\ *\ M\ >=\ C\ *\ (m/2\ +\ 1/2)}}
+\DoxyCodeLine{00406\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ t4:\ D\ *\ M\ >=\ D\ *\ (m/2\ +\ 1/4)}}
+\DoxyCodeLine{00407\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00408\ \textcolor{comment}{\ \ \ \ \ *\ It\ suffices\ for\ all\ limbs\ that,\ for\ any\ input\ magnitude\ m:}}
+\DoxyCodeLine{00409\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ M\ >=\ m/2\ +\ 1/2}}
+\DoxyCodeLine{00410\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00411\ \textcolor{comment}{\ \ \ \ \ *\ and\ since\ we\ want\ the\ smallest\ such\ integer\ value\ for\ M:}}
+\DoxyCodeLine{00412\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ M\ ==\ floor(m/2)\ +\ 1}}
+\DoxyCodeLine{00413\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00414\ \}}
+\DoxyCodeLine{00415\ }
+\DoxyCodeLine{00416\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_storage\_cmov(secp256k1\_fe\_storage\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\_storage\ *a,\ \textcolor{keywordtype}{int}\ flag)\ \{}
+\DoxyCodeLine{00417\ \ \ \ \ uint64\_t\ mask0,\ mask1;}
+\DoxyCodeLine{00418\ \ \ \ \ \textcolor{keyword}{volatile}\ \textcolor{keywordtype}{int}\ vflag\ =\ flag;}
+\DoxyCodeLine{00419\ \ \ \ \ SECP256K1\_CHECKMEM\_CHECK\_VERIFY(r-\/>n,\ \textcolor{keyword}{sizeof}(r-\/>n));}
+\DoxyCodeLine{00420\ \ \ \ \ mask0\ =\ vflag\ +\ \string~((uint64\_t)0);}
+\DoxyCodeLine{00421\ \ \ \ \ mask1\ =\ \string~mask0;}
+\DoxyCodeLine{00422\ \ \ \ \ r-\/>n[0]\ =\ (r-\/>n[0]\ \&\ mask0)\ |\ (a-\/>n[0]\ \&\ mask1);}
+\DoxyCodeLine{00423\ \ \ \ \ r-\/>n[1]\ =\ (r-\/>n[1]\ \&\ mask0)\ |\ (a-\/>n[1]\ \&\ mask1);}
+\DoxyCodeLine{00424\ \ \ \ \ r-\/>n[2]\ =\ (r-\/>n[2]\ \&\ mask0)\ |\ (a-\/>n[2]\ \&\ mask1);}
+\DoxyCodeLine{00425\ \ \ \ \ r-\/>n[3]\ =\ (r-\/>n[3]\ \&\ mask0)\ |\ (a-\/>n[3]\ \&\ mask1);}
+\DoxyCodeLine{00426\ \}}
+\DoxyCodeLine{00427\ }
+\DoxyCodeLine{00428\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_to\_storage(secp256k1\_fe\_storage\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a)\ \{}
+\DoxyCodeLine{00429\ \ \ \ \ r-\/>n[0]\ =\ a-\/>n[0]\ |\ a-\/>n[1]\ <<\ 52;}
+\DoxyCodeLine{00430\ \ \ \ \ r-\/>n[1]\ =\ a-\/>n[1]\ >>\ 12\ |\ a-\/>n[2]\ <<\ 40;}
+\DoxyCodeLine{00431\ \ \ \ \ r-\/>n[2]\ =\ a-\/>n[2]\ >>\ 24\ |\ a-\/>n[3]\ <<\ 28;}
+\DoxyCodeLine{00432\ \ \ \ \ r-\/>n[3]\ =\ a-\/>n[3]\ >>\ 36\ |\ a-\/>n[4]\ <<\ 16;}
+\DoxyCodeLine{00433\ \}}
+\DoxyCodeLine{00434\ }
+\DoxyCodeLine{00435\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_from\_storage(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\_storage\ *a)\ \{}
+\DoxyCodeLine{00436\ \ \ \ \ r-\/>n[0]\ =\ a-\/>n[0]\ \&\ 0xFFFFFFFFFFFFFULL;}
+\DoxyCodeLine{00437\ \ \ \ \ r-\/>n[1]\ =\ a-\/>n[0]\ >>\ 52\ |\ ((a-\/>n[1]\ <<\ 12)\ \&\ 0xFFFFFFFFFFFFFULL);}
+\DoxyCodeLine{00438\ \ \ \ \ r-\/>n[2]\ =\ a-\/>n[1]\ >>\ 40\ |\ ((a-\/>n[2]\ <<\ 24)\ \&\ 0xFFFFFFFFFFFFFULL);}
+\DoxyCodeLine{00439\ \ \ \ \ r-\/>n[3]\ =\ a-\/>n[2]\ >>\ 28\ |\ ((a-\/>n[3]\ <<\ 36)\ \&\ 0xFFFFFFFFFFFFFULL);}
+\DoxyCodeLine{00440\ \ \ \ \ r-\/>n[4]\ =\ a-\/>n[3]\ >>\ 16;}
+\DoxyCodeLine{00441\ \}}
+\DoxyCodeLine{00442\ }
+\DoxyCodeLine{00443\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_from\_signed62(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_signed62\ *a)\ \{}
+\DoxyCodeLine{00444\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ M52\ =\ UINT64\_MAX\ >>\ 12;}
+\DoxyCodeLine{00445\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ a0\ =\ a-\/>v[0],\ a1\ =\ a-\/>v[1],\ a2\ =\ a-\/>v[2],\ a3\ =\ a-\/>v[3],\ a4\ =\ a-\/>v[4];}
+\DoxyCodeLine{00446\ }
+\DoxyCodeLine{00447\ \ \ \ \ \textcolor{comment}{/*\ The\ output\ from\ secp256k1\_modinv64\{\_var\}\ should\ be\ normalized\ to\ range\ [0,modulus),\ and}}
+\DoxyCodeLine{00448\ \textcolor{comment}{\ \ \ \ \ *\ have\ limbs\ in\ [0,2\string^62).\ The\ modulus\ is\ <\ 2\string^256,\ so\ the\ top\ limb\ must\ be\ below\ 2\string^(256-\/62*4).}}
+\DoxyCodeLine{00449\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00450\ \ \ \ \ VERIFY\_CHECK(a0\ >>\ 62\ ==\ 0);}
+\DoxyCodeLine{00451\ \ \ \ \ VERIFY\_CHECK(a1\ >>\ 62\ ==\ 0);}
+\DoxyCodeLine{00452\ \ \ \ \ VERIFY\_CHECK(a2\ >>\ 62\ ==\ 0);}
+\DoxyCodeLine{00453\ \ \ \ \ VERIFY\_CHECK(a3\ >>\ 62\ ==\ 0);}
+\DoxyCodeLine{00454\ \ \ \ \ VERIFY\_CHECK(a4\ >>\ 8\ ==\ 0);}
+\DoxyCodeLine{00455\ }
+\DoxyCodeLine{00456\ \ \ \ \ r-\/>n[0]\ =\ \ a0\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&\ M52;}
+\DoxyCodeLine{00457\ \ \ \ \ r-\/>n[1]\ =\ (a0\ >>\ 52\ |\ a1\ <<\ 10)\ \&\ M52;}
+\DoxyCodeLine{00458\ \ \ \ \ r-\/>n[2]\ =\ (a1\ >>\ 42\ |\ a2\ <<\ 20)\ \&\ M52;}
+\DoxyCodeLine{00459\ \ \ \ \ r-\/>n[3]\ =\ (a2\ >>\ 32\ |\ a3\ <<\ 30)\ \&\ M52;}
+\DoxyCodeLine{00460\ \ \ \ \ r-\/>n[4]\ =\ (a3\ >>\ 22\ |\ a4\ <<\ 40);}
+\DoxyCodeLine{00461\ \}}
+\DoxyCodeLine{00462\ }
+\DoxyCodeLine{00463\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_to\_signed62(secp256k1\_modinv64\_signed62\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a)\ \{}
+\DoxyCodeLine{00464\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ M62\ =\ UINT64\_MAX\ >>\ 2;}
+\DoxyCodeLine{00465\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ a0\ =\ a-\/>n[0],\ a1\ =\ a-\/>n[1],\ a2\ =\ a-\/>n[2],\ a3\ =\ a-\/>n[3],\ a4\ =\ a-\/>n[4];}
+\DoxyCodeLine{00466\ }
+\DoxyCodeLine{00467\ \ \ \ \ r-\/>v[0]\ =\ (a0\ \ \ \ \ \ \ |\ a1\ <<\ 52)\ \&\ M62;}
+\DoxyCodeLine{00468\ \ \ \ \ r-\/>v[1]\ =\ (a1\ >>\ 10\ |\ a2\ <<\ 42)\ \&\ M62;}
+\DoxyCodeLine{00469\ \ \ \ \ r-\/>v[2]\ =\ (a2\ >>\ 20\ |\ a3\ <<\ 32)\ \&\ M62;}
+\DoxyCodeLine{00470\ \ \ \ \ r-\/>v[3]\ =\ (a3\ >>\ 30\ |\ a4\ <<\ 22)\ \&\ M62;}
+\DoxyCodeLine{00471\ \ \ \ \ r-\/>v[4]\ =\ \ a4\ >>\ 40;}
+\DoxyCodeLine{00472\ \}}
+\DoxyCodeLine{00473\ }
+\DoxyCodeLine{00474\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_modinfo\ secp256k1\_const\_modinfo\_fe\ =\ \{}
+\DoxyCodeLine{00475\ \ \ \ \ \{\{-\/0x1000003D1LL,\ 0,\ 0,\ 0,\ 256\}\},}
+\DoxyCodeLine{00476\ \ \ \ \ 0x27C7F6E22DDACACFLL}
+\DoxyCodeLine{00477\ \};}
+\DoxyCodeLine{00478\ }
+\DoxyCodeLine{00479\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_inv(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *x)\ \{}
+\DoxyCodeLine{00480\ \ \ \ \ secp256k1\_fe\ tmp\ =\ *x;}
+\DoxyCodeLine{00481\ \ \ \ \ secp256k1\_modinv64\_signed62\ s;}
+\DoxyCodeLine{00482\ }
+\DoxyCodeLine{00483\ \ \ \ \ secp256k1\_fe\_normalize(\&tmp);}
+\DoxyCodeLine{00484\ \ \ \ \ secp256k1\_fe\_to\_signed62(\&s,\ \&tmp);}
+\DoxyCodeLine{00485\ \ \ \ \ secp256k1\_modinv64(\&s,\ \&secp256k1\_const\_modinfo\_fe);}
+\DoxyCodeLine{00486\ \ \ \ \ secp256k1\_fe\_from\_signed62(r,\ \&s);}
+\DoxyCodeLine{00487\ \}}
+\DoxyCodeLine{00488\ }
+\DoxyCodeLine{00489\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_impl\_inv\_var(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *x)\ \{}
+\DoxyCodeLine{00490\ \ \ \ \ secp256k1\_fe\ tmp\ =\ *x;}
+\DoxyCodeLine{00491\ \ \ \ \ secp256k1\_modinv64\_signed62\ s;}
+\DoxyCodeLine{00492\ }
+\DoxyCodeLine{00493\ \ \ \ \ secp256k1\_fe\_normalize\_var(\&tmp);}
+\DoxyCodeLine{00494\ \ \ \ \ secp256k1\_fe\_to\_signed62(\&s,\ \&tmp);}
+\DoxyCodeLine{00495\ \ \ \ \ secp256k1\_modinv64\_var(\&s,\ \&secp256k1\_const\_modinfo\_fe);}
+\DoxyCodeLine{00496\ \ \ \ \ secp256k1\_fe\_from\_signed62(r,\ \&s);}
+\DoxyCodeLine{00497\ \}}
+\DoxyCodeLine{00498\ }
+\DoxyCodeLine{00499\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_impl\_is\_square\_var(\textcolor{keyword}{const}\ secp256k1\_fe\ *x)\ \{}
+\DoxyCodeLine{00500\ \ \ \ \ secp256k1\_fe\ tmp;}
+\DoxyCodeLine{00501\ \ \ \ \ secp256k1\_modinv64\_signed62\ s;}
+\DoxyCodeLine{00502\ \ \ \ \ \textcolor{keywordtype}{int}\ jac,\ ret;}
+\DoxyCodeLine{00503\ }
+\DoxyCodeLine{00504\ \ \ \ \ tmp\ =\ *x;}
+\DoxyCodeLine{00505\ \ \ \ \ secp256k1\_fe\_normalize\_var(\&tmp);}
+\DoxyCodeLine{00506\ \ \ \ \ \textcolor{comment}{/*\ secp256k1\_jacobi64\_maybe\_var\ cannot\ deal\ with\ input\ 0.\ */}}
+\DoxyCodeLine{00507\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_fe\_is\_zero(\&tmp))\ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00508\ \ \ \ \ secp256k1\_fe\_to\_signed62(\&s,\ \&tmp);}
+\DoxyCodeLine{00509\ \ \ \ \ jac\ =\ secp256k1\_jacobi64\_maybe\_var(\&s,\ \&secp256k1\_const\_modinfo\_fe);}
+\DoxyCodeLine{00510\ \ \ \ \ \textcolor{keywordflow}{if}\ (jac\ ==\ 0)\ \{}
+\DoxyCodeLine{00511\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ secp256k1\_jacobi64\_maybe\_var\ failed\ to\ compute\ the\ Jacobi\ symbol.\ Fall\ back}}
+\DoxyCodeLine{00512\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ to\ computing\ a\ square\ root.\ This\ should\ be\ extremely\ rare\ with\ random}}
+\DoxyCodeLine{00513\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ input\ (except\ in\ VERIFY\ mode,\ where\ a\ lower\ iteration\ count\ is\ used).\ */}}
+\DoxyCodeLine{00514\ \ \ \ \ \ \ \ \ secp256k1\_fe\ dummy;}
+\DoxyCodeLine{00515\ \ \ \ \ \ \ \ \ ret\ =\ secp256k1\_fe\_sqrt(\&dummy,\ \&tmp);}
+\DoxyCodeLine{00516\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00517\ \ \ \ \ \ \ \ \ ret\ =\ jac\ >=\ 0;}
+\DoxyCodeLine{00518\ \ \ \ \ \}}
+\DoxyCodeLine{00519\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00520\ \}}
+\DoxyCodeLine{00521\ }
+\DoxyCodeLine{00522\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_FIELD\_REPR\_IMPL\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

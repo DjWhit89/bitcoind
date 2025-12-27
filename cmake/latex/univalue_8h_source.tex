@@ -1,0 +1,213 @@
+\doxysection{univalue.\+h}
+\label{univalue_8h_source}\index{src/univalue/include/univalue.h@{src/univalue/include/univalue.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ 2014\ BitPay\ Inc.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ 2015\ Bitcoin\ Core\ Developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ https://opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UNIVALUE\_INCLUDE\_UNIVALUE\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_UNIVALUE\_INCLUDE\_UNIVALUE\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <charconv>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <stdexcept>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <string\_view>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <system\_error>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{comment}{//\ NOLINTNEXTLINE(misc-\/no-\/recursion)}}
+\DoxyCodeLine{00022\ \textcolor{keyword}{class\ }UniValue\ \{}
+\DoxyCodeLine{00023\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keyword}{enum}\ VType\ \{\ VNULL,\ VOBJ,\ VARR,\ VSTR,\ VNUM,\ VBOOL,\ \};}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keyword}{class\ }type\_error\ :\ \textcolor{keyword}{public}\ std::runtime\_error}
+\DoxyCodeLine{00027\ \ \ \ \ \{}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }std::runtime\_error::runtime\_error;}
+\DoxyCodeLine{00029\ \ \ \ \ \};}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \ \ \ \ UniValue()\ \{\ typ\ =\ VNULL;\ \}}
+\DoxyCodeLine{00032\ \ \ \ \ UniValue(UniValue::VType\ type,\ std::string\ str\ =\ \{\})\ :\ typ\{type\},\ val\{std::move(str)\}\ \{\}}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Ref,\ \textcolor{keyword}{typename}\ T\ =\ std::remove\_cv\_t<std::remove\_reference\_t<Ref>>,}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::enable\_if\_t<std::is\_\textcolor{keywordtype}{float}ing\_po\textcolor{keywordtype}{int}\_v<T>\ ||\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ setFloat}}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::is\_same\_v<\textcolor{keywordtype}{bool},\ T>\ ||\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ setBool}}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::is\_\textcolor{keywordtype}{signed}\_v<T>\ ||\ std::is\_\textcolor{keywordtype}{unsigned}\_v<T>\ ||\ \textcolor{comment}{//\ setInt}}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::is\_constructible\_v<std::\textcolor{keywordtype}{string},\ T>,\ \ \ \ \ \ \ \ \textcolor{comment}{//\ setStr}}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}>\ =\ true>}
+\DoxyCodeLine{00039\ \ \ \ \ UniValue(Ref\&\&\ val)}
+\DoxyCodeLine{00040\ \ \ \ \ \{}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_floating\_point\_v<T>)\ \{}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ setFloat(val);}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_same\_v<bool,\ T>)\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \ \ \ \ setBool(val);}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_signed\_v<T>)\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \ \ \ \ setInt(int64\_t\{val\});}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_unsigned\_v<T>)\ \{}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \ \ \ \ setInt(uint64\_t\{val\});}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \ \ \ \ setStr(std::string\{std::forward<Ref>(val)\});}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00052\ \ \ \ \ \}}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keywordtype}{void}\ clear();}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{void}\ setNull();}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{void}\ setBool(\textcolor{keywordtype}{bool}\ val);}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordtype}{void}\ setNumStr(std::string\ str);}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keywordtype}{void}\ setInt(uint64\_t\ val);}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keywordtype}{void}\ setInt(int64\_t\ val);}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordtype}{void}\ setInt(\textcolor{keywordtype}{int}\ val\_)\ \{\ \textcolor{keywordflow}{return}\ setInt(int64\_t\{val\_\});\ \}}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordtype}{void}\ setFloat(\textcolor{keywordtype}{double}\ val);}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keywordtype}{void}\ setStr(std::string\ str);}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordtype}{void}\ setArray();}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordtype}{void}\ setObject();}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keyword}{enum}\ VType\ getType()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ typ;\ \}}
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ getValStr()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ val;\ \}}
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordtype}{bool}\ empty()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (values.size()\ ==\ 0);\ \}}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ values.size();\ \}}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keywordtype}{void}\ reserve(\textcolor{keywordtype}{size\_t}\ new\_cap);}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keywordtype}{void}\ getObjMap(std::map<std::string,UniValue>\&\ kv)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keywordtype}{bool}\ checkObject(\textcolor{keyword}{const}\ std::map<std::string,UniValue::VType>\&\ memberTypes)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keyword}{const}\ UniValue\&\ operator[](\textcolor{keyword}{const}\ std::string\&\ key)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keyword}{const}\ UniValue\&\ operator[](\textcolor{keywordtype}{size\_t}\ index)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keywordtype}{bool}\ exists(\textcolor{keyword}{const}\ std::string\&\ key)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordtype}{size\_t}\ i;\ \textcolor{keywordflow}{return}\ findKey(key,\ i);\ \}}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{keywordtype}{bool}\ isNull()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (typ\ ==\ VNULL);\ \}}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keywordtype}{bool}\ isTrue()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (typ\ ==\ VBOOL)\ \&\&\ (val\ ==\ \textcolor{stringliteral}{"{}1"{}});\ \}}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordtype}{bool}\ isFalse()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (typ\ ==\ VBOOL)\ \&\&\ (val\ !=\ \textcolor{stringliteral}{"{}1"{}});\ \}}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keywordtype}{bool}\ isBool()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (typ\ ==\ VBOOL);\ \}}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordtype}{bool}\ isStr()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (typ\ ==\ VSTR);\ \}}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keywordtype}{bool}\ isNum()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (typ\ ==\ VNUM);\ \}}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{keywordtype}{bool}\ isArray()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (typ\ ==\ VARR);\ \}}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keywordtype}{bool}\ isObject()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (typ\ ==\ VOBJ);\ \}}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{keywordtype}{void}\ push\_back(UniValue\ val);}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{keywordtype}{void}\ push\_backV(\textcolor{keyword}{const}\ std::vector<UniValue>\&\ vec);}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ It>}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keywordtype}{void}\ push\_backV(It\ first,\ It\ last);}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keywordtype}{void}\ pushKVEnd(std::string\ key,\ UniValue\ val);}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordtype}{void}\ pushKV(std::string\ key,\ UniValue\ val);}
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keywordtype}{void}\ pushKVs(UniValue\ obj);}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ \ \ std::string\ write(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ prettyIndent\ =\ 0,}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ indentLevel\ =\ 0)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{keywordtype}{bool}\ read(std::string\_view\ raw);}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00105\ \ \ \ \ UniValue::VType\ typ;}
+\DoxyCodeLine{00106\ \ \ \ \ std::string\ val;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ numbers\ are\ stored\ as\ C++\ strings}}
+\DoxyCodeLine{00107\ \ \ \ \ std::vector<std::string>\ keys;}
+\DoxyCodeLine{00108\ \ \ \ \ std::vector<UniValue>\ values;}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordtype}{void}\ checkType(\textcolor{keyword}{const}\ VType\&\ expected)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keywordtype}{bool}\ findKey(\textcolor{keyword}{const}\ std::string\&\ key,\ \textcolor{keywordtype}{size\_t}\&\ retIdx)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{keywordtype}{void}\ writeArray(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ prettyIndent,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ indentLevel,\ std::string\&\ s)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{keywordtype}{void}\ writeObject(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ prettyIndent,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ indentLevel,\ std::string\&\ s)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00114\ }
+\DoxyCodeLine{00115\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{comment}{//\ Strict\ type-\/specific\ getters,\ these\ throw\ std::runtime\_error\ if\ the}}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{comment}{//\ value\ is\ of\ unexpected\ type}}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<std::string>\&\ getKeys()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<UniValue>\&\ getValues()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Int>}
+\DoxyCodeLine{00121\ \ \ \ \ Int\ getInt()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{keywordtype}{bool}\ get\_bool()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ get\_str()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{keywordtype}{double}\ get\_real()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keyword}{const}\ UniValue\&\ get\_obj()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keyword}{const}\ UniValue\&\ get\_array()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keyword}{enum}\ VType\ type()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ getType();\ \}}
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{keyword}{const}\ UniValue\&\ find\_value(std::string\_view\ key)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00130\ \};}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ It>}
+\DoxyCodeLine{00133\ \textcolor{keywordtype}{void}\ UniValue::push\_backV(It\ first,\ It\ last)}
+\DoxyCodeLine{00134\ \{}
+\DoxyCodeLine{00135\ \ \ \ \ checkType(VARR);}
+\DoxyCodeLine{00136\ \ \ \ \ values.insert(values.end(),\ first,\ last);}
+\DoxyCodeLine{00137\ \}}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00139\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Int>}
+\DoxyCodeLine{00140\ Int\ UniValue::getInt()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00141\ \textcolor{keyword}{}\{}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_integral\_v<Int>);}
+\DoxyCodeLine{00143\ \ \ \ \ checkType(VNUM);}
+\DoxyCodeLine{00144\ \ \ \ \ Int\ result;}
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ [first\_nonmatching,\ error\_condition]\ =\ std::from\_chars(val.data(),\ val.data()\ +\ val.size(),\ result);}
+\DoxyCodeLine{00146\ \ \ \ \ \textcolor{keywordflow}{if}\ (first\_nonmatching\ !=\ val.data()\ +\ val.size()\ ||\ error\_condition\ !=\ std::errc\{\})\ \{}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}JSON\ integer\ out\ of\ range"{}});}
+\DoxyCodeLine{00148\ \ \ \ \ \}}
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00150\ \}}
+\DoxyCodeLine{00151\ }
+\DoxyCodeLine{00152\ \textcolor{keyword}{enum}\ jtokentype\ \{}
+\DoxyCodeLine{00153\ \ \ \ \ JTOK\_ERR\ \ \ \ \ \ \ \ =\ -\/1,}
+\DoxyCodeLine{00154\ \ \ \ \ JTOK\_NONE\ \ \ \ \ \ \ =\ 0,\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ eof}}
+\DoxyCodeLine{00155\ \ \ \ \ JTOK\_OBJ\_OPEN,}
+\DoxyCodeLine{00156\ \ \ \ \ JTOK\_OBJ\_CLOSE,}
+\DoxyCodeLine{00157\ \ \ \ \ JTOK\_ARR\_OPEN,}
+\DoxyCodeLine{00158\ \ \ \ \ JTOK\_ARR\_CLOSE,}
+\DoxyCodeLine{00159\ \ \ \ \ JTOK\_COLON,}
+\DoxyCodeLine{00160\ \ \ \ \ JTOK\_COMMA,}
+\DoxyCodeLine{00161\ \ \ \ \ JTOK\_KW\_NULL,}
+\DoxyCodeLine{00162\ \ \ \ \ JTOK\_KW\_TRUE,}
+\DoxyCodeLine{00163\ \ \ \ \ JTOK\_KW\_FALSE,}
+\DoxyCodeLine{00164\ \ \ \ \ JTOK\_NUMBER,}
+\DoxyCodeLine{00165\ \ \ \ \ JTOK\_STRING,}
+\DoxyCodeLine{00166\ \};}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ \textcolor{keyword}{extern}\ \textcolor{keyword}{enum}\ jtokentype\ getJsonToken(std::string\&\ tokenVal,}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\&\ consumed,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *raw,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *end);}
+\DoxyCodeLine{00170\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *uvTypeName(UniValue::VType\ t);}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00172\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ jsonTokenIsValue(\textcolor{keyword}{enum}\ jtokentype\ jtt)}
+\DoxyCodeLine{00173\ \{}
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keywordflow}{switch}\ (jtt)\ \{}
+\DoxyCodeLine{00175\ \ \ \ \ \textcolor{keywordflow}{case}\ JTOK\_KW\_NULL:}
+\DoxyCodeLine{00176\ \ \ \ \ \textcolor{keywordflow}{case}\ JTOK\_KW\_TRUE:}
+\DoxyCodeLine{00177\ \ \ \ \ \textcolor{keywordflow}{case}\ JTOK\_KW\_FALSE:}
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keywordflow}{case}\ JTOK\_NUMBER:}
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{keywordflow}{case}\ JTOK\_STRING:}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00181\ }
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{keywordflow}{default}:}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00184\ \ \ \ \ \}}
+\DoxyCodeLine{00185\ }
+\DoxyCodeLine{00186\ \ \ \ \ \textcolor{comment}{//\ not\ reached}}
+\DoxyCodeLine{00187\ \}}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00189\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ json\_isspace(\textcolor{keywordtype}{int}\ ch)}
+\DoxyCodeLine{00190\ \{}
+\DoxyCodeLine{00191\ \ \ \ \ \textcolor{keywordflow}{switch}\ (ch)\ \{}
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{keywordflow}{case}\ 0x20:}
+\DoxyCodeLine{00193\ \ \ \ \ \textcolor{keywordflow}{case}\ 0x09:}
+\DoxyCodeLine{00194\ \ \ \ \ \textcolor{keywordflow}{case}\ 0x0a:}
+\DoxyCodeLine{00195\ \ \ \ \ \textcolor{keywordflow}{case}\ 0x0d:}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{keywordflow}{default}:}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00200\ \ \ \ \ \}}
+\DoxyCodeLine{00201\ }
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{comment}{//\ not\ reached}}
+\DoxyCodeLine{00203\ \}}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ UniValue\ NullUniValue;}
+\DoxyCodeLine{00206\ }
+\DoxyCodeLine{00207\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UNIVALUE\_INCLUDE\_UNIVALUE\_H}}
+
+\end{DoxyCode}

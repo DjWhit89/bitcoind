@@ -1,0 +1,240 @@
+\doxysection{block\+\_\+policy\+\_\+estimator.\+h}
+\label{block__policy__estimator_8h_source}\index{src/policy/fees/block\_policy\_estimator.h@{src/policy/fees/block\_policy\_estimator.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_POLICY\_FEES\_BLOCK\_POLICY\_ESTIMATOR\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_POLICY\_FEES\_BLOCK\_POLICY\_ESTIMATOR\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <policy/feerate.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <random.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <threadsafety.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/fs.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <validationinterface.h>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{comment}{//\ How\ often\ to\ flush\ fee\ estimates\ to\ fee\_estimates.dat.}}
+\DoxyCodeLine{00027\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ std::chrono::hours\ FEE\_FLUSH\_INTERVAL\{1\};}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ std::chrono::hours\ MAX\_FILE\_AGE\{60\};}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \textcolor{comment}{//\ Whether\ we\ allow\ importing\ a\ fee\_estimates\ file\ older\ than\ MAX\_FILE\_AGE.}}
+\DoxyCodeLine{00036\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ DEFAULT\_ACCEPT\_STALE\_FEE\_ESTIMATES\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{keyword}{class\ }AutoFile;}
+\DoxyCodeLine{00039\ \textcolor{keyword}{class\ }TxConfirmStats;}
+\DoxyCodeLine{00040\ \textcolor{keyword}{struct\ }RemovedMempoolTransactionInfo;}
+\DoxyCodeLine{00041\ \textcolor{keyword}{struct\ }NewMempoolTransactionInfo;}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \textcolor{comment}{/*\ Identifier\ for\ each\ of\ the\ 3\ different\ TxConfirmStats\ which\ will\ track}}
+\DoxyCodeLine{00044\ \textcolor{comment}{\ *\ history\ over\ different\ time\ horizons.\ */}}
+\DoxyCodeLine{00045\ \textcolor{keyword}{enum\ class}\ FeeEstimateHorizon\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ SHORT\_HALFLIFE,}
+\DoxyCodeLine{00047\ \ \ \ \ MED\_HALFLIFE,}
+\DoxyCodeLine{00048\ \ \ \ \ LONG\_HALFLIFE,}
+\DoxyCodeLine{00049\ \};}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ ALL\_FEE\_ESTIMATE\_HORIZONS\ =\ std::array\{}
+\DoxyCodeLine{00052\ \ \ \ \ FeeEstimateHorizon::SHORT\_HALFLIFE,}
+\DoxyCodeLine{00053\ \ \ \ \ FeeEstimateHorizon::MED\_HALFLIFE,}
+\DoxyCodeLine{00054\ \ \ \ \ FeeEstimateHorizon::LONG\_HALFLIFE,}
+\DoxyCodeLine{00055\ \};}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ std::string\ StringForFeeEstimateHorizon(FeeEstimateHorizon\ horizon);}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \textcolor{comment}{/*\ Enumeration\ of\ reason\ for\ returned\ fee\ estimate\ */}}
+\DoxyCodeLine{00060\ \textcolor{keyword}{enum\ class}\ FeeReason\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ NONE,}
+\DoxyCodeLine{00062\ \ \ \ \ HALF\_ESTIMATE,}
+\DoxyCodeLine{00063\ \ \ \ \ FULL\_ESTIMATE,}
+\DoxyCodeLine{00064\ \ \ \ \ DOUBLE\_ESTIMATE,}
+\DoxyCodeLine{00065\ \ \ \ \ CONSERVATIVE,}
+\DoxyCodeLine{00066\ \ \ \ \ MEMPOOL\_MIN,}
+\DoxyCodeLine{00067\ \ \ \ \ PAYTXFEE,}
+\DoxyCodeLine{00068\ \ \ \ \ FALLBACK,}
+\DoxyCodeLine{00069\ \ \ \ \ REQUIRED,}
+\DoxyCodeLine{00070\ \};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \textcolor{comment}{/*\ Used\ to\ return\ detailed\ information\ about\ a\ feerate\ bucket\ */}}
+\DoxyCodeLine{00073\ \textcolor{keyword}{struct\ }EstimatorBucket}
+\DoxyCodeLine{00074\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keywordtype}{double}\ start\ =\ -\/1;}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keywordtype}{double}\ end\ =\ -\/1;}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keywordtype}{double}\ withinTarget\ =\ 0;}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keywordtype}{double}\ totalConfirmed\ =\ 0;}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keywordtype}{double}\ inMempool\ =\ 0;}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keywordtype}{double}\ leftMempool\ =\ 0;}
+\DoxyCodeLine{00081\ \};}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \textcolor{comment}{/*\ Used\ to\ return\ detailed\ information\ about\ a\ fee\ estimate\ calculation\ */}}
+\DoxyCodeLine{00084\ \textcolor{keyword}{struct\ }EstimationResult}
+\DoxyCodeLine{00085\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ EstimatorBucket\ pass;}
+\DoxyCodeLine{00087\ \ \ \ \ EstimatorBucket\ fail;}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keywordtype}{double}\ decay\ =\ 0;}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ scale\ =\ 0;}
+\DoxyCodeLine{00090\ \};}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \textcolor{keyword}{struct\ }FeeCalculation}
+\DoxyCodeLine{00093\ \{}
+\DoxyCodeLine{00094\ \ \ \ \ EstimationResult\ est;}
+\DoxyCodeLine{00095\ \ \ \ \ FeeReason\ reason\ =\ FeeReason::NONE;}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordtype}{int}\ desiredTarget\ =\ 0;}
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keywordtype}{int}\ returnedTarget\ =\ 0;}
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ best\_height\{0\};}
+\DoxyCodeLine{00099\ \};}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00149\ \textcolor{keyword}{class\ }CBlockPolicyEstimator\ :\ \textcolor{keyword}{public}\ CValidationInterface}
+\DoxyCodeLine{00150\ \{}
+\DoxyCodeLine{00151\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ SHORT\_BLOCK\_PERIODS\ =\ 12;}
+\DoxyCodeLine{00154\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ SHORT\_SCALE\ =\ 1;}
+\DoxyCodeLine{00156\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ MED\_BLOCK\_PERIODS\ =\ 24;}
+\DoxyCodeLine{00157\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ MED\_SCALE\ =\ 2;}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ LONG\_BLOCK\_PERIODS\ =\ 42;}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ LONG\_SCALE\ =\ 24;}
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ OLDEST\_ESTIMATE\_HISTORY\ =\ 6\ *\ 1008;}
+\DoxyCodeLine{00163\ }
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ SHORT\_DECAY\ =\ .962;}
+\DoxyCodeLine{00167\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ MED\_DECAY\ =\ .9952;}
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ LONG\_DECAY\ =\ .99931;}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ HALF\_SUCCESS\_PCT\ =\ .6;}
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ SUCCESS\_PCT\ =\ .85;}
+\DoxyCodeLine{00176\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ DOUBLE\_SUCCESS\_PCT\ =\ .95;}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ SUFFICIENT\_FEETXS\ =\ 0.1;}
+\DoxyCodeLine{00181\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ SUFFICIENT\_TXS\_SHORT\ =\ 0.5;}
+\DoxyCodeLine{00182\ }
+\DoxyCodeLine{00190\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ MIN\_BUCKET\_FEERATE\ =\ 1000;}
+\DoxyCodeLine{00191\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ MAX\_BUCKET\_FEERATE\ =\ 1e7;}
+\DoxyCodeLine{00192\ }
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ FEE\_SPACING\ =\ 1.05;}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \ \ \ \ \textcolor{keyword}{const}\ fs::path\ m\_estimation\_filepath;}
+\DoxyCodeLine{00201\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00203\ \ \ \ \ CBlockPolicyEstimator(\textcolor{keyword}{const}\ fs::path\&\ estimation\_filepath,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ read\_stale\_estimates);}
+\DoxyCodeLine{00204\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~CBlockPolicyEstimator();}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{keywordtype}{void}\ processBlock(\textcolor{keyword}{const}\ std::vector<RemovedMempoolTransactionInfo>\&\ txs\_removed\_for\_block,}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nBlockHeight)}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{keywordtype}{void}\ processTransaction(\textcolor{keyword}{const}\ NewMempoolTransactionInfo\&\ tx)}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00216\ \ \ \ \ \textcolor{keywordtype}{bool}\ removeTx(Txid\ hash)}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00218\ }
+\DoxyCodeLine{00220\ \ \ \ \ CFeeRate\ estimateFee(\textcolor{keywordtype}{int}\ confTarget)\ \textcolor{keyword}{const}}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00222\ }
+\DoxyCodeLine{00228\ \ \ \ \ \textcolor{keyword}{virtual}\ CFeeRate\ estimateSmartFee(\textcolor{keywordtype}{int}\ confTarget,\ FeeCalculation\ *feeCalc,\ \textcolor{keywordtype}{bool}\ conservative)\ \textcolor{keyword}{const}}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00230\ }
+\DoxyCodeLine{00235\ \ \ \ \ CFeeRate\ estimateRawFee(\textcolor{keywordtype}{int}\ confTarget,\ \textcolor{keywordtype}{double}\ successThreshold,\ FeeEstimateHorizon\ horizon,}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ EstimationResult*\ result\ =\ \textcolor{keyword}{nullptr})\ const}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00238\ }
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{keywordtype}{bool}\ Write(AutoFile\&\ fileout)\ const}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keywordtype}{bool}\ Read(AutoFile\&\ filein)}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00246\ }
+\DoxyCodeLine{00248\ \ \ \ \ \textcolor{keywordtype}{void}\ FlushUnconfirmed()}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00252\ \ \ \ \ virtual\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ HighestTargetTracked(FeeEstimateHorizon\ horizon)\ const}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00254\ }
+\DoxyCodeLine{00256\ \ \ \ \ \textcolor{keywordtype}{void}\ Flush()}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00258\ }
+\DoxyCodeLine{00260\ \ \ \ \ \textcolor{keywordtype}{void}\ FlushFeeEstimates()}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00262\ }
+\DoxyCodeLine{00264\ \ \ \ \ std::chrono::hours\ GetFeeEstimatorFileAge();}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00266\ protected:}
+\DoxyCodeLine{00268\ \ \ \ \ \textcolor{keywordtype}{void}\ TransactionAddedToMempool(const\ NewMempoolTransactionInfo\&\ tx,\ uint64\_t\ \textcolor{comment}{/*unused*/})\ override}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00270\ \ \ \ \ \textcolor{keywordtype}{void}\ TransactionRemovedFromMempool(const\ CTransactionRef\&\ tx,\ MemPoolRemovalReason\ \textcolor{comment}{/*unused*/},\ uint64\_t\ \textcolor{comment}{/*unused*/})\ override}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{keywordtype}{void}\ MempoolTransactionsRemovedForBlock(const\ std::vector<RemovedMempoolTransactionInfo>\&\ txs\_removed\_for\_block,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nBlockHeight)\ override}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00274\ }
+\DoxyCodeLine{00275\ private:}
+\DoxyCodeLine{00276\ \ \ \ \ mutable\ Mutex\ m\_cs\_fee\_estimator;}
+\DoxyCodeLine{00277\ }
+\DoxyCodeLine{00278\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nBestSeenHeight\ GUARDED\_BY(m\_cs\_fee\_estimator)\{0\};}
+\DoxyCodeLine{00279\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ firstRecordedHeight\ GUARDED\_BY(m\_cs\_fee\_estimator)\{0\};}
+\DoxyCodeLine{00280\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ historicalFirst\ GUARDED\_BY(m\_cs\_fee\_estimator)\{0\};}
+\DoxyCodeLine{00281\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ historicalBest\ GUARDED\_BY(m\_cs\_fee\_estimator)\{0\};}
+\DoxyCodeLine{00282\ }
+\DoxyCodeLine{00283\ \ \ \ \ \textcolor{keyword}{struct\ }TxStatsInfo}
+\DoxyCodeLine{00284\ \ \ \ \ \{}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ blockHeight\{0\};}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ bucketIndex\{0\};}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ TxStatsInfo()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00288\ \ \ \ \ \};}
+\DoxyCodeLine{00289\ }
+\DoxyCodeLine{00290\ \ \ \ \ \textcolor{comment}{//\ map\ of\ txids\ to\ information\ about\ that\ transaction}}
+\DoxyCodeLine{00291\ \ \ \ \ std::map<Txid,\ TxStatsInfo>\ mapMemPoolTxs\ GUARDED\_BY(m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00292\ }
+\DoxyCodeLine{00294\ \ \ \ \ std::unique\_ptr<TxConfirmStats>\ feeStats\ PT\_GUARDED\_BY(m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00295\ \ \ \ \ std::unique\_ptr<TxConfirmStats>\ shortStats\ PT\_GUARDED\_BY(m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00296\ \ \ \ \ std::unique\_ptr<TxConfirmStats>\ longStats\ PT\_GUARDED\_BY(m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00297\ }
+\DoxyCodeLine{00298\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ trackedTxs\ GUARDED\_BY(m\_cs\_fee\_estimator)\{0\};}
+\DoxyCodeLine{00299\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ untrackedTxs\ GUARDED\_BY(m\_cs\_fee\_estimator)\{0\};}
+\DoxyCodeLine{00300\ }
+\DoxyCodeLine{00301\ \ \ \ \ std::vector<double>\ buckets\ GUARDED\_BY(m\_cs\_fee\_estimator);\ \textcolor{comment}{//\ The\ upper-\/bound\ of\ the\ range\ for\ the\ bucket\ (inclusive)}}
+\DoxyCodeLine{00302\ \ \ \ \ std::map<double,\ unsigned\ int>\ bucketMap\ GUARDED\_BY(m\_cs\_fee\_estimator);\ \textcolor{comment}{//\ Map\ of\ bucket\ upper-\/bound\ to\ index\ into\ all\ vectors\ by\ bucket}}
+\DoxyCodeLine{00303\ }
+\DoxyCodeLine{00305\ \ \ \ \ \textcolor{keywordtype}{bool}\ processBlockTx(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nBlockHeight,\ \textcolor{keyword}{const}\ RemovedMempoolTransactionInfo\&\ tx)\ EXCLUSIVE\_LOCKS\_REQUIRED(m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00306\ }
+\DoxyCodeLine{00308\ \ \ \ \ \textcolor{keywordtype}{double}\ estimateCombinedFee(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ confTarget,\ \textcolor{keywordtype}{double}\ successThreshold,\ \textcolor{keywordtype}{bool}\ checkShorterHorizon,\ EstimationResult\ *result)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00310\ \ \ \ \ \textcolor{keywordtype}{double}\ estimateConservativeFee(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ doubleTarget,\ EstimationResult\ *result)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00312\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ BlockSpan()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00314\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ HistoricalBlockSpan()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00316\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ MaxUsableEstimate()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00317\ }
+\DoxyCodeLine{00319\ \ \ \ \ \textcolor{keywordtype}{bool}\ \_removeTx(const\ Txid\&\ hash,\ \textcolor{keywordtype}{bool}\ inBlock)}
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(m\_cs\_fee\_estimator);}
+\DoxyCodeLine{00321\ \};}
+\DoxyCodeLine{00322\ }
+\DoxyCodeLine{00323\ class\ FeeFilterRounder}
+\DoxyCodeLine{00324\ \{}
+\DoxyCodeLine{00325\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00326\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ MAX\_FILTER\_FEERATE\ =\ 1e7;}
+\DoxyCodeLine{00331\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{double}\ FEE\_FILTER\_SPACING\ =\ 1.1;}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00333\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00335\ \ \ \ \ \textcolor{keyword}{explicit}\ FeeFilterRounder(\textcolor{keyword}{const}\ CFeeRate\&\ min\_incremental\_fee,\ FastRandomContext\&\ rng);}
+\DoxyCodeLine{00336\ }
+\DoxyCodeLine{00338\ \ \ \ \ CAmount\ round(CAmount\ currentMinFee)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_insecure\_rand\_mutex);}
+\DoxyCodeLine{00339\ }
+\DoxyCodeLine{00340\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00341\ \ \ \ \ \textcolor{keyword}{const}\ std::set<double>\ m\_fee\_set;}
+\DoxyCodeLine{00342\ \ \ \ \ Mutex\ m\_insecure\_rand\_mutex;}
+\DoxyCodeLine{00343\ \ \ \ \ FastRandomContext\&\ insecure\_rand\ GUARDED\_BY(m\_insecure\_rand\_mutex);}
+\DoxyCodeLine{00344\ \};}
+\DoxyCodeLine{00345\ }
+\DoxyCodeLine{00346\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_POLICY\_FEES\_BLOCK\_POLICY\_ESTIMATOR\_H}}
+
+\end{DoxyCode}

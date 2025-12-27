@@ -1,0 +1,75 @@
+\doxysection{filter\+\_\+block.\+h}
+\label{filter__block_8h_source}\index{src/leveldb/table/filter\_block.h@{src/leveldb/table/filter\_block.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2012\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ A\ filter\ block\ is\ stored\ near\ the\ end\ of\ a\ Table\ file.\ \ It\ contains}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//\ filters\ (e.g.,\ bloom\ filters)\ for\ all\ data\ blocks\ in\ the\ table\ combined}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//\ into\ a\ single\ filter\ block.}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_TABLE\_FILTER\_BLOCK\_H\_}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_TABLE\_FILTER\_BLOCK\_H\_}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <stddef.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ "{}leveldb/slice.h"{}}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ "{}util/hash.h"{}}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{class\ }FilterPolicy;}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{comment}{//\ A\ FilterBlockBuilder\ is\ used\ to\ construct\ all\ of\ the\ filters\ for\ a}}
+\DoxyCodeLine{00026\ \textcolor{comment}{//\ particular\ Table.\ \ It\ generates\ a\ single\ string\ which\ is\ stored\ as}}
+\DoxyCodeLine{00027\ \textcolor{comment}{//\ a\ special\ block\ in\ the\ Table.}}
+\DoxyCodeLine{00028\ \textcolor{comment}{//}}
+\DoxyCodeLine{00029\ \textcolor{comment}{//\ The\ sequence\ of\ calls\ to\ FilterBlockBuilder\ must\ match\ the\ regexp:}}
+\DoxyCodeLine{00030\ \textcolor{comment}{//\ \ \ \ \ \ (StartBlock\ AddKey*)*\ Finish}}
+\DoxyCodeLine{00031\ \textcolor{keyword}{class\ }FilterBlockBuilder\ \{}
+\DoxyCodeLine{00032\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00033\ \ \ \textcolor{keyword}{explicit}\ FilterBlockBuilder(\textcolor{keyword}{const}\ FilterPolicy*);}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \ \ FilterBlockBuilder(\textcolor{keyword}{const}\ FilterBlockBuilder\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00036\ \ \ FilterBlockBuilder\&\ operator=(\textcolor{keyword}{const}\ FilterBlockBuilder\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \textcolor{keywordtype}{void}\ StartBlock(uint64\_t\ block\_offset);}
+\DoxyCodeLine{00039\ \ \ \textcolor{keywordtype}{void}\ AddKey(\textcolor{keyword}{const}\ Slice\&\ key);}
+\DoxyCodeLine{00040\ \ \ Slice\ Finish();}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00043\ \ \ \textcolor{keywordtype}{void}\ GenerateFilter();}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \ \ \textcolor{keyword}{const}\ FilterPolicy*\ policy\_;}
+\DoxyCodeLine{00046\ \ \ std::string\ keys\_;\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Flattened\ key\ contents}}
+\DoxyCodeLine{00047\ \ \ std::vector<size\_t>\ start\_;\ \ \ \ \textcolor{comment}{//\ Starting\ index\ in\ keys\_\ of\ each\ key}}
+\DoxyCodeLine{00048\ \ \ std::string\ result\_;\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Filter\ data\ computed\ so\ far}}
+\DoxyCodeLine{00049\ \ \ std::vector<Slice>\ tmp\_keys\_;\ \ \textcolor{comment}{//\ policy\_-\/>CreateFilter()\ argument}}
+\DoxyCodeLine{00050\ \ \ std::vector<uint32\_t>\ filter\_offsets\_;}
+\DoxyCodeLine{00051\ \};}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \textcolor{keyword}{class\ }FilterBlockReader\ \{}
+\DoxyCodeLine{00054\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00055\ \ \ \textcolor{comment}{//\ REQUIRES:\ "{}contents"{}\ and\ *policy\ must\ stay\ live\ while\ *this\ is\ live.}}
+\DoxyCodeLine{00056\ \ \ FilterBlockReader(\textcolor{keyword}{const}\ FilterPolicy*\ policy,\ \textcolor{keyword}{const}\ Slice\&\ contents);}
+\DoxyCodeLine{00057\ \ \ \textcolor{keywordtype}{bool}\ KeyMayMatch(uint64\_t\ block\_offset,\ \textcolor{keyword}{const}\ Slice\&\ key);}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00060\ \ \ \textcolor{keyword}{const}\ FilterPolicy*\ policy\_;}
+\DoxyCodeLine{00061\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ data\_;\ \ \ \ \textcolor{comment}{//\ Pointer\ to\ filter\ data\ (at\ block-\/start)}}
+\DoxyCodeLine{00062\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ offset\_;\ \ \textcolor{comment}{//\ Pointer\ to\ beginning\ of\ offset\ array\ (at\ block-\/end)}}
+\DoxyCodeLine{00063\ \ \ \textcolor{keywordtype}{size\_t}\ num\_;\ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Number\ of\ entries\ in\ offset\ array}}
+\DoxyCodeLine{00064\ \ \ \textcolor{keywordtype}{size\_t}\ base\_lg\_;\ \ \ \ \ \ \textcolor{comment}{//\ Encoding\ parameter\ (see\ kFilterBaseLg\ in\ .cc\ file)}}
+\DoxyCodeLine{00065\ \};}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_TABLE\_FILTER\_BLOCK\_H\_}}
+
+\end{DoxyCode}

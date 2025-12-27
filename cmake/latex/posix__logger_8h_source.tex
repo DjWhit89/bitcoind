@@ -1,0 +1,136 @@
+\doxysection{posix\+\_\+logger.\+h}
+\label{posix__logger_8h_source}\index{src/leveldb/util/posix\_logger.h@{src/leveldb/util/posix\_logger.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ Logger\ implementation\ that\ can\ be\ shared\ by\ all\ environments}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//\ where\ enough\ posix\ functionality\ is\ available.}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_UTIL\_POSIX\_LOGGER\_H\_}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_UTIL\_POSIX\_LOGGER\_H\_}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <sys/time.h>}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <cstdarg>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <cstdio>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <ctime>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <sstream>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <thread>}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ "{}leveldb/env.h"{}}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{class\ }PosixLogger\ final\ :\ \textcolor{keyword}{public}\ Logger\ \{}
+\DoxyCodeLine{00025\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00026\ \ \ \textcolor{comment}{//\ Creates\ a\ logger\ that\ writes\ to\ the\ given\ file.}}
+\DoxyCodeLine{00027\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00028\ \ \ \textcolor{comment}{//\ The\ PosixLogger\ instance\ takes\ ownership\ of\ the\ file\ handle.}}
+\DoxyCodeLine{00029\ \ \ \textcolor{keyword}{explicit}\ PosixLogger(std::FILE*\ fp)\ :\ fp\_(fp)\ \{\ assert(fp\ !=\ \textcolor{keyword}{nullptr});\ \}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \ \ \string~PosixLogger()\textcolor{keyword}{\ override\ }\{\ std::fclose(fp\_);\ \}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \ \ \textcolor{keywordtype}{void}\ Logv(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ format,\ va\_list\ arguments)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{comment}{//\ Record\ the\ time\ as\ close\ to\ the\ Logv()\ call\ as\ possible.}}
+\DoxyCodeLine{00035\ \ \ \ \ struct\ ::timeval\ now\_timeval;}
+\DoxyCodeLine{00036\ \ \ \ \ ::gettimeofday(\&now\_timeval,\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keyword}{const}\ std::time\_t\ now\_seconds\ =\ now\_timeval.tv\_sec;}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keyword}{struct\ }std::tm\ now\_components;}
+\DoxyCodeLine{00039\ \ \ \ \ ::localtime\_r(\&now\_seconds,\ \&now\_components);}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{comment}{//\ Record\ the\ thread\ ID.}}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ kMaxThreadIdSize\ =\ 32;}
+\DoxyCodeLine{00043\ \ \ \ \ std::ostringstream\ thread\_stream;}
+\DoxyCodeLine{00044\ \ \ \ \ thread\_stream\ <<\ std::this\_thread::get\_id();}
+\DoxyCodeLine{00045\ \ \ \ \ std::string\ thread\_id\ =\ thread\_stream.str();}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordflow}{if}\ (thread\_id.size()\ >\ kMaxThreadIdSize)\ \{}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ thread\_id.resize(kMaxThreadIdSize);}
+\DoxyCodeLine{00048\ \ \ \ \ \}}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{comment}{//\ We\ first\ attempt\ to\ print\ into\ a\ stack-\/allocated\ buffer.\ If\ this\ attempt}}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{comment}{//\ fails,\ we\ make\ a\ second\ attempt\ with\ a\ dynamically\ allocated\ buffer.}}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ kStackBufferSize\ =\ 512;}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordtype}{char}\ stack\_buffer[kStackBufferSize];}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keyword}{static\_assert}(\textcolor{keyword}{sizeof}(stack\_buffer)\ ==\ \textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{size\_t}\textcolor{keyword}{>}(kStackBufferSize),}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}sizeof(char)\ is\ expected\ to\ be\ 1\ in\ C++"{}});}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{int}\ dynamic\_buffer\_size\ =\ 0;\ \ \textcolor{comment}{//\ Computed\ in\ the\ first\ iteration.}}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ iteration\ =\ 0;\ iteration\ <\ 2;\ ++iteration)\ \{}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ buffer\_size\ =}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ (iteration\ ==\ 0)\ ?\ kStackBufferSize\ :\ dynamic\_buffer\_size;}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \textcolor{keywordtype}{char}*\ \textcolor{keyword}{const}\ buffer\ =}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ (iteration\ ==\ 0)\ ?\ stack\_buffer\ :\ \textcolor{keyword}{new}\ \textcolor{keywordtype}{char}[dynamic\_buffer\_size];}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \textcolor{comment}{//\ Print\ the\ header\ into\ the\ buffer.}}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ buffer\_offset\ =\ snprintf(}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \ \ buffer,\ buffer\_size,\ \textcolor{stringliteral}{"{}\%04d/\%02d/\%02d-\/\%02d:\%02d:\%02d.\%06d\ \%s\ "{}},}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ now\_components.tm\_year\ +\ 1900,\ now\_components.tm\_mon\ +\ 1,}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ now\_components.tm\_mday,\ now\_components.tm\_hour,\ now\_components.tm\_min,}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ now\_components.tm\_sec,\ \textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{int}\textcolor{keyword}{>}(now\_timeval.tv\_usec),}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ thread\_id.c\_str());}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \textcolor{comment}{//\ The\ header\ can\ be\ at\ most\ 28\ characters\ (10\ date\ +\ 15\ time\ +}}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \textcolor{comment}{//\ 3\ delimiters)\ plus\ the\ thread\ ID,\ which\ should\ fit\ comfortably\ into\ the}}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \textcolor{comment}{//\ static\ buffer.}}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ assert(buffer\_offset\ <=\ 28\ +\ kMaxThreadIdSize);}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(28\ +\ kMaxThreadIdSize\ <\ kStackBufferSize,}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}stack-\/allocated\ buffer\ may\ not\ fit\ the\ message\ header"{}});}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ assert(buffer\_offset\ <\ buffer\_size);}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \textcolor{comment}{//\ Print\ the\ message\ into\ the\ buffer.}}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ std::va\_list\ arguments\_copy;}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ va\_copy(arguments\_copy,\ arguments);}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ buffer\_offset\ +=}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ std::vsnprintf(buffer\ +\ buffer\_offset,\ buffer\_size\ -\/\ buffer\_offset,}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ format,\ arguments\_copy);}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ va\_end(arguments\_copy);}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \textcolor{comment}{//\ The\ code\ below\ may\ append\ a\ newline\ at\ the\ end\ of\ the\ buffer,\ which}}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \textcolor{comment}{//\ requires\ an\ extra\ character.}}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (buffer\_offset\ >=\ buffer\_size\ -\/\ 1)\ \{}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ message\ did\ not\ fit\ into\ the\ buffer.}}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (iteration\ ==\ 0)\ \{}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Re-\/run\ the\ loop\ and\ use\ a\ dynamically-\/allocated\ buffer.\ The\ buffer}}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ will\ be\ large\ enough\ for\ the\ log\ message,\ an\ extra\ newline\ and\ a}}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ null\ terminator.}}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ dynamic\_buffer\_size\ =\ buffer\_offset\ +\ 2;}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ dynamically-\/allocated\ buffer\ was\ incorrectly\ sized.\ This\ should}}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ not\ happen,\ assuming\ a\ correct\ implementation\ of\ (v)snprintf.\ Fail}}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ in\ tests,\ recover\ by\ truncating\ the\ log\ message\ in\ production.}}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ assert(\textcolor{keyword}{false});}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ buffer\_offset\ =\ buffer\_size\ -\/\ 1;}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ a\ newline\ if\ necessary.}}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (buffer[buffer\_offset\ -\/\ 1]\ !=\ \textcolor{charliteral}{'\(\backslash\)n'})\ \{}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ buffer[buffer\_offset]\ =\ \textcolor{charliteral}{'\(\backslash\)n'};}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ ++buffer\_offset;}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00113\ \ \ \ \ \ \ assert(buffer\_offset\ <=\ buffer\_size);}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ std::fwrite(buffer,\ 1,\ buffer\_offset,\ fp\_);}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ std::fflush(fp\_);}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (iteration\ !=\ 0)\ \{}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \textcolor{keyword}{delete}[]\ buffer;}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00121\ \ \ \ \ \}}
+\DoxyCodeLine{00122\ \ \ \}}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00125\ \ \ std::FILE*\ \textcolor{keyword}{const}\ fp\_;}
+\DoxyCodeLine{00126\ \};}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00128\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_UTIL\_POSIX\_LOGGER\_H\_}}
+
+\end{DoxyCode}

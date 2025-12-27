@@ -1,0 +1,351 @@
+\doxysection{interpreter.\+h}
+\label{interpreter_8h_source}\index{src/script/interpreter.h@{src/script/interpreter.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_SCRIPT\_INTERPRETER\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_SCRIPT\_INTERPRETER\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <hash.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <script/script\_error.h>}\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <script/verify\_flags.h>}\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{class\ }CPubKey;}
+\DoxyCodeLine{00023\ \textcolor{keyword}{class\ }CScript;}
+\DoxyCodeLine{00024\ \textcolor{keyword}{class\ }CScriptNum;}
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }XOnlyPubKey;}
+\DoxyCodeLine{00026\ \textcolor{keyword}{struct\ }CScriptWitness;}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00029\ \textcolor{keyword}{enum}}
+\DoxyCodeLine{00030\ \{}
+\DoxyCodeLine{00031\ \ \ \ \ SIGHASH\_ALL\ =\ 1,}
+\DoxyCodeLine{00032\ \ \ \ \ SIGHASH\_NONE\ =\ 2,}
+\DoxyCodeLine{00033\ \ \ \ \ SIGHASH\_SINGLE\ =\ 3,}
+\DoxyCodeLine{00034\ \ \ \ \ SIGHASH\_ANYONECANPAY\ =\ 0x80,}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \ \ SIGHASH\_DEFAULT\ =\ 0,\ }
+\DoxyCodeLine{00037\ \ \ \ \ SIGHASH\_OUTPUT\_MASK\ =\ 3,}
+\DoxyCodeLine{00038\ \ \ \ \ SIGHASH\_INPUT\_MASK\ =\ 0x80,}
+\DoxyCodeLine{00039\ \};}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ script\_verify\_flags\ SCRIPT\_VERIFY\_NONE\{0\};}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \textcolor{keyword}{enum\ class}\ script\_verify\_flag\_name\ :\ uint8\_t\ \{}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{comment}{//\ Evaluate\ P2SH\ subscripts\ (BIP16).}}
+\DoxyCodeLine{00051\ \ \ \ \ SCRIPT\_VERIFY\_P2SH,}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{comment}{//\ Passing\ a\ non-\/strict-\/DER\ signature\ or\ one\ with\ undefined\ hashtype\ to\ a\ checksig\ operation\ causes\ script\ failure.}}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{comment}{//\ Evaluating\ a\ pubkey\ that\ is\ not\ (0x04\ +\ 64\ bytes)\ or\ (0x02\ or\ 0x03\ +\ 32\ bytes)\ by\ checksig\ causes\ script\ failure.}}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{comment}{//\ (not\ used\ or\ intended\ as\ a\ consensus\ rule).}}
+\DoxyCodeLine{00056\ \ \ \ \ SCRIPT\_VERIFY\_STRICTENC,}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{comment}{//\ Passing\ a\ non-\/strict-\/DER\ signature\ to\ a\ checksig\ operation\ causes\ script\ failure\ (BIP62\ rule\ 1)}}
+\DoxyCodeLine{00059\ \ \ \ \ SCRIPT\_VERIFY\_DERSIG,}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{comment}{//\ Passing\ a\ non-\/strict-\/DER\ signature\ or\ one\ with\ S\ >\ order/2\ to\ a\ checksig\ operation\ causes\ script\ failure}}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{comment}{//\ (BIP62\ rule\ 5).}}
+\DoxyCodeLine{00063\ \ \ \ \ SCRIPT\_VERIFY\_LOW\_S,}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{comment}{//\ verify\ dummy\ stack\ item\ consumed\ by\ CHECKMULTISIG\ is\ of\ zero-\/length\ (BIP62\ rule\ 7).}}
+\DoxyCodeLine{00066\ \ \ \ \ SCRIPT\_VERIFY\_NULLDUMMY,}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{comment}{//\ Using\ a\ non-\/push\ operator\ in\ the\ scriptSig\ causes\ script\ failure\ (BIP62\ rule\ 2).}}
+\DoxyCodeLine{00069\ \ \ \ \ SCRIPT\_VERIFY\_SIGPUSHONLY,}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{comment}{//\ Require\ minimal\ encodings\ for\ all\ push\ operations\ (OP\_0...\ OP\_16,\ OP\_1NEGATE\ where\ possible,\ direct}}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{comment}{//\ pushes\ up\ to\ 75\ bytes,\ OP\_PUSHDATA\ up\ to\ 255\ bytes,\ OP\_PUSHDATA2\ for\ anything\ larger).\ Evaluating}}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{comment}{//\ any\ other\ push\ causes\ the\ script\ to\ fail\ (BIP62\ rule\ 3).}}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{comment}{//\ In\ addition,\ whenever\ a\ stack\ element\ is\ interpreted\ as\ a\ number,\ it\ must\ be\ of\ minimal\ length\ (BIP62\ rule\ 4).}}
+\DoxyCodeLine{00075\ \ \ \ \ SCRIPT\_VERIFY\_MINIMALDATA,}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{comment}{//\ Discourage\ use\ of\ NOPs\ reserved\ for\ upgrades\ (NOP1-\/10)}}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{comment}{//\ Provided\ so\ that\ nodes\ can\ avoid\ accepting\ or\ mining\ transactions}}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{comment}{//\ containing\ executed\ NOP's\ whose\ meaning\ may\ change\ after\ a\ soft-\/fork,}}
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{comment}{//\ thus\ rendering\ the\ script\ invalid;\ with\ this\ flag\ set\ executing}}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{comment}{//\ discouraged\ NOPs\ fails\ the\ script.\ This\ verification\ flag\ will\ never\ be}}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{comment}{//\ a\ mandatory\ flag\ applied\ to\ scripts\ in\ a\ block.\ NOPs\ that\ are\ not}}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{comment}{//\ executed,\ e.g.\ \ within\ an\ unexecuted\ IF\ ENDIF\ block,\ are\ *not*\ rejected.}}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{comment}{//\ NOPs\ that\ have\ associated\ forks\ to\ give\ them\ new\ meaning\ (CLTV,\ CSV)}}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{comment}{//\ are\ not\ subject\ to\ this\ rule.}}
+\DoxyCodeLine{00087\ \ \ \ \ SCRIPT\_VERIFY\_DISCOURAGE\_UPGRADABLE\_NOPS,}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{comment}{//\ Require\ that\ only\ a\ single\ stack\ element\ remains\ after\ evaluation.\ This\ changes\ the\ success\ criterion\ from}}
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{comment}{//\ "{}At\ least\ one\ stack\ element\ must\ remain,\ and\ when\ interpreted\ as\ a\ boolean,\ it\ must\ be\ true"{}\ to}}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{comment}{//\ "{}Exactly\ one\ stack\ element\ must\ remain,\ and\ when\ interpreted\ as\ a\ boolean,\ it\ must\ be\ true"{}.}}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{comment}{//\ (BIP62\ rule\ 6)}}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{comment}{//\ Note:\ CLEANSTACK\ should\ never\ be\ used\ without\ P2SH\ or\ WITNESS.}}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{comment}{//\ Note:\ WITNESS\_V0\ and\ TAPSCRIPT\ script\ execution\ have\ behavior\ similar\ to\ CLEANSTACK\ as\ part\ of\ their}}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ consensus\ rules.\ It\ is\ automatic\ there\ and\ does\ not\ need\ this\ flag.}}
+\DoxyCodeLine{00096\ \ \ \ \ SCRIPT\_VERIFY\_CLEANSTACK,}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{comment}{//\ Verify\ CHECKLOCKTIMEVERIFY}}
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{comment}{//\ See\ BIP65\ for\ details.}}
+\DoxyCodeLine{00101\ \ \ \ \ SCRIPT\_VERIFY\_CHECKLOCKTIMEVERIFY,}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{comment}{//\ support\ CHECKSEQUENCEVERIFY\ opcode}}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{comment}{//\ See\ BIP112\ for\ details}}
+\DoxyCodeLine{00106\ \ \ \ \ SCRIPT\_VERIFY\_CHECKSEQUENCEVERIFY,}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{comment}{//\ Support\ segregated\ witness}}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00110\ \ \ \ \ SCRIPT\_VERIFY\_WITNESS,}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{comment}{//\ Making\ v1-\/v16\ witness\ program\ non-\/standard}}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00114\ \ \ \ \ SCRIPT\_VERIFY\_DISCOURAGE\_UPGRADABLE\_WITNESS\_PROGRAM,}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{comment}{//\ Segwit\ script\ only:\ Require\ the\ argument\ of\ OP\_IF/NOTIF\ to\ be\ exactly\ 0x01\ or\ empty\ vector}}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{comment}{//\ Note:\ TAPSCRIPT\ script\ execution\ has\ behavior\ similar\ to\ MINIMALIF\ as\ part\ of\ its\ consensus}}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ rules.\ It\ is\ automatic\ there\ and\ does\ not\ depend\ on\ this\ flag.}}
+\DoxyCodeLine{00120\ \ \ \ \ SCRIPT\_VERIFY\_MINIMALIF,}
+\DoxyCodeLine{00121\ }
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{comment}{//\ Signature(s)\ must\ be\ empty\ vector\ if\ a\ CHECK(MULTI)SIG\ operation\ failed}}
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00124\ \ \ \ \ SCRIPT\_VERIFY\_NULLFAIL,}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{comment}{//\ Public\ keys\ in\ segregated\ witness\ scripts\ must\ be\ compressed}}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00128\ \ \ \ \ SCRIPT\_VERIFY\_WITNESS\_PUBKEYTYPE,}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{comment}{//\ Making\ OP\_CODESEPARATOR\ and\ FindAndDelete\ fail\ any\ non-\/segwit\ scripts}}
+\DoxyCodeLine{00131\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00132\ \ \ \ \ SCRIPT\_VERIFY\_CONST\_SCRIPTCODE,}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{comment}{//\ Taproot/Tapscript\ validation\ (BIPs\ 341\ \&\ 342)}}
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00136\ \ \ \ \ SCRIPT\_VERIFY\_TAPROOT,}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{comment}{//\ Making\ unknown\ Taproot\ leaf\ versions\ non-\/standard}}
+\DoxyCodeLine{00139\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00140\ \ \ \ \ SCRIPT\_VERIFY\_DISCOURAGE\_UPGRADABLE\_TAPROOT\_VERSION,}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{comment}{//\ Making\ unknown\ OP\_SUCCESS\ non-\/standard}}
+\DoxyCodeLine{00143\ \ \ \ \ SCRIPT\_VERIFY\_DISCOURAGE\_OP\_SUCCESS,}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{comment}{//\ Making\ unknown\ public\ key\ versions\ (in\ BIP\ 342\ scripts)\ non-\/standard}}
+\DoxyCodeLine{00146\ \ \ \ \ SCRIPT\_VERIFY\_DISCOURAGE\_UPGRADABLE\_PUBKEYTYPE,}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{comment}{//\ Constants\ to\ point\ to\ the\ highest\ flag\ in\ use.\ Add\ new\ flags\ above\ this\ line.}}
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00150\ \ \ \ \ SCRIPT\_VERIFY\_END\_MARKER}
+\DoxyCodeLine{00151\ \};}
+\DoxyCodeLine{00152\ \textcolor{keyword}{using\ }enum\ script\_verify\_flag\_name;}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ MAX\_SCRIPT\_VERIFY\_FLAGS\_BITS\ =\ \textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{int}\textcolor{keyword}{>}(SCRIPT\_VERIFY\_END\_MARKER);}
+\DoxyCodeLine{00155\ }
+\DoxyCodeLine{00156\ \textcolor{comment}{//\ assert\ there\ is\ still\ a\ spare\ bit}}
+\DoxyCodeLine{00157\ \textcolor{keyword}{static\_assert}(0\ <\ MAX\_SCRIPT\_VERIFY\_FLAGS\_BITS\ \&\&\ MAX\_SCRIPT\_VERIFY\_FLAGS\_BITS\ <=\ 63);}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00159\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ script\_verify\_flags::value\_type\ MAX\_SCRIPT\_VERIFY\_FLAGS\ =\ ((script\_verify\_flags::value\_type\{1\}\ <<\ MAX\_SCRIPT\_VERIFY\_FLAGS\_BITS)\ -\/\ 1);}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00161\ \textcolor{keywordtype}{bool}\ CheckSignatureEncoding(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\ \&vchSig,\ script\_verify\_flags\ flags,\ ScriptError*\ serror);}
+\DoxyCodeLine{00162\ }
+\DoxyCodeLine{00163\ \textcolor{keyword}{struct\ }PrecomputedTransactionData}
+\DoxyCodeLine{00164\ \{}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{comment}{//\ BIP341\ precomputed\ data.}}
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{comment}{//\ These\ are\ single-\/SHA256,\ see\ https://github.com/bitcoin/bips/blob/master/bip-\/0341.mediawiki\#cite\_note-\/16.}}
+\DoxyCodeLine{00167\ \ \ \ \ uint256\ m\_prevouts\_single\_hash;}
+\DoxyCodeLine{00168\ \ \ \ \ uint256\ m\_sequences\_single\_hash;}
+\DoxyCodeLine{00169\ \ \ \ \ uint256\ m\_outputs\_single\_hash;}
+\DoxyCodeLine{00170\ \ \ \ \ uint256\ m\_spent\_amounts\_single\_hash;}
+\DoxyCodeLine{00171\ \ \ \ \ uint256\ m\_spent\_scripts\_single\_hash;}
+\DoxyCodeLine{00173\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_bip341\_taproot\_ready\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00174\ }
+\DoxyCodeLine{00175\ \ \ \ \ \textcolor{comment}{//\ BIP143\ precomputed\ data\ (double-\/SHA256).}}
+\DoxyCodeLine{00176\ \ \ \ \ uint256\ hashPrevouts,\ hashSequence,\ hashOutputs;}
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_bip143\_segwit\_ready\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00180\ \ \ \ \ std::vector<CTxOut>\ m\_spent\_outputs;}
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_spent\_outputs\_ready\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00184\ \ \ \ \ PrecomputedTransactionData()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00185\ }
+\DoxyCodeLine{00193\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T>}
+\DoxyCodeLine{00194\ \ \ \ \ \textcolor{keywordtype}{void}\ Init(\textcolor{keyword}{const}\ T\&\ tx,\ std::vector<CTxOut>\&\&\ spent\_outputs,\ \textcolor{keywordtype}{bool}\ force\ =\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00195\ }
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T>}
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keyword}{explicit}\ PrecomputedTransactionData(\textcolor{keyword}{const}\ T\&\ tx);}
+\DoxyCodeLine{00198\ \};}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \textcolor{keyword}{enum\ class}\ SigVersion}
+\DoxyCodeLine{00201\ \{}
+\DoxyCodeLine{00202\ \ \ \ \ BASE\ =\ 0,\ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00203\ \ \ \ \ WITNESS\_V0\ =\ 1,\ \ }
+\DoxyCodeLine{00204\ \ \ \ \ TAPROOT\ =\ 2,\ \ \ \ \ }
+\DoxyCodeLine{00205\ \ \ \ \ TAPSCRIPT\ =\ 3,\ \ \ }
+\DoxyCodeLine{00206\ \};}
+\DoxyCodeLine{00207\ }
+\DoxyCodeLine{00208\ \textcolor{keyword}{struct\ }ScriptExecutionData}
+\DoxyCodeLine{00209\ \{}
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_tapleaf\_hash\_init\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00213\ \ \ \ \ uint256\ m\_tapleaf\_hash;}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00216\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_codeseparator\_pos\_init\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00218\ \ \ \ \ uint32\_t\ m\_codeseparator\_pos;}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00221\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_annex\_init\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00223\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_annex\_present;}
+\DoxyCodeLine{00225\ \ \ \ \ uint256\ m\_annex\_hash;}
+\DoxyCodeLine{00226\ }
+\DoxyCodeLine{00228\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_validation\_weight\_left\_init\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00230\ \ \ \ \ int64\_t\ m\_validation\_weight\_left;}
+\DoxyCodeLine{00231\ }
+\DoxyCodeLine{00233\ \ \ \ \ std::optional<uint256>\ m\_output\_hash;}
+\DoxyCodeLine{00234\ \};}
+\DoxyCodeLine{00235\ }
+\DoxyCodeLine{00237\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ WITNESS\_V0\_SCRIPTHASH\_SIZE\ =\ 32;}
+\DoxyCodeLine{00238\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ WITNESS\_V0\_KEYHASH\_SIZE\ =\ 20;}
+\DoxyCodeLine{00239\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ WITNESS\_V1\_TAPROOT\_SIZE\ =\ 32;}
+\DoxyCodeLine{00240\ }
+\DoxyCodeLine{00241\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ TAPROOT\_LEAF\_MASK\ =\ 0xfe;}
+\DoxyCodeLine{00242\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ TAPROOT\_LEAF\_TAPSCRIPT\ =\ 0xc0;}
+\DoxyCodeLine{00243\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ TAPROOT\_CONTROL\_BASE\_SIZE\ =\ 33;}
+\DoxyCodeLine{00244\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ TAPROOT\_CONTROL\_NODE\_SIZE\ =\ 32;}
+\DoxyCodeLine{00245\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ TAPROOT\_CONTROL\_MAX\_NODE\_COUNT\ =\ 128;}
+\DoxyCodeLine{00246\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ TAPROOT\_CONTROL\_MAX\_SIZE\ =\ TAPROOT\_CONTROL\_BASE\_SIZE\ +\ TAPROOT\_CONTROL\_NODE\_SIZE\ *\ TAPROOT\_CONTROL\_MAX\_NODE\_COUNT;}
+\DoxyCodeLine{00247\ }
+\DoxyCodeLine{00248\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ HashWriter\ HASHER\_TAPSIGHASH;\ }
+\DoxyCodeLine{00249\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ HashWriter\ HASHER\_TAPLEAF;\ \ \ \ }
+\DoxyCodeLine{00250\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ HashWriter\ HASHER\_TAPBRANCH;\ \ }
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00254\ \textcolor{keyword}{class\ }SigHashCache}
+\DoxyCodeLine{00255\ \{}
+\DoxyCodeLine{00259\ \ \ \ \ std::optional<std::pair<CScript,\ HashWriter>>\ m\_cache\_entries[6];}
+\DoxyCodeLine{00260\ }
+\DoxyCodeLine{00262\ \ \ \ \ \textcolor{keywordtype}{int}\ CacheIndex(int32\_t\ hash\_type)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00263\ }
+\DoxyCodeLine{00264\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00266\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ Load(int32\_t\ hash\_type,\ \textcolor{keyword}{const}\ CScript\&\ script\_code,\ HashWriter\&\ writer)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00268\ \ \ \ \ \textcolor{keywordtype}{void}\ Store(int32\_t\ hash\_type,\ \textcolor{keyword}{const}\ CScript\&\ script\_code,\ \textcolor{keyword}{const}\ HashWriter\&\ writer)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00269\ \};}
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00271\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T>}
+\DoxyCodeLine{00272\ uint256\ SignatureHash(\textcolor{keyword}{const}\ CScript\&\ scriptCode,\ \textcolor{keyword}{const}\ T\&\ txTo,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nIn,\ int32\_t\ nHashType,\ \textcolor{keyword}{const}\ CAmount\&\ amount,\ SigVersion\ sigversion,\ \textcolor{keyword}{const}\ PrecomputedTransactionData*\ cache\ =\ \textcolor{keyword}{nullptr},\ SigHashCache*\ sighash\_cache\ =\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00273\ }
+\DoxyCodeLine{00274\ \textcolor{keyword}{class\ }BaseSignatureChecker}
+\DoxyCodeLine{00275\ \{}
+\DoxyCodeLine{00276\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ CheckECDSASignature(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ scriptSig,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ vchPubKey,\ \textcolor{keyword}{const}\ CScript\&\ scriptCode,\ SigVersion\ sigversion)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00278\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00280\ \ \ \ \ \}}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00282\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ CheckSchnorrSignature(std::span<const\ unsigned\ char>\ sig,\ std::span<const\ unsigned\ char>\ pubkey,\ SigVersion\ sigversion,\ ScriptExecutionData\&\ execdata,\ ScriptError*\ serror\ =\ \textcolor{keyword}{nullptr})\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00283\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00285\ \ \ \ \ \}}
+\DoxyCodeLine{00286\ }
+\DoxyCodeLine{00287\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ CheckLockTime(\textcolor{keyword}{const}\ CScriptNum\&\ nLockTime)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00288\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00290\ \ \ \ \ \}}
+\DoxyCodeLine{00291\ }
+\DoxyCodeLine{00292\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ CheckSequence(\textcolor{keyword}{const}\ CScriptNum\&\ nSequence)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00293\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00295\ \ \ \ \ \}}
+\DoxyCodeLine{00296\ }
+\DoxyCodeLine{00297\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~BaseSignatureChecker()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00298\ \};}
+\DoxyCodeLine{00299\ }
+\DoxyCodeLine{00303\ \textcolor{keyword}{enum\ class}\ MissingDataBehavior}
+\DoxyCodeLine{00304\ \{}
+\DoxyCodeLine{00305\ \ \ \ \ ASSERT\_FAIL,\ \ }
+\DoxyCodeLine{00306\ \ \ \ \ FAIL,\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00307\ \};}
+\DoxyCodeLine{00308\ }
+\DoxyCodeLine{00309\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00310\ \textcolor{keywordtype}{bool}\ SignatureHashSchnorr(uint256\&\ hash\_out,\ ScriptExecutionData\&\ execdata,\ \textcolor{keyword}{const}\ T\&\ tx\_to,\ uint32\_t\ in\_pos,\ uint8\_t\ hash\_type,\ SigVersion\ sigversion,\ \textcolor{keyword}{const}\ PrecomputedTransactionData\&\ cache,\ MissingDataBehavior\ mdb);}
+\DoxyCodeLine{00311\ }
+\DoxyCodeLine{00312\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T>}
+\DoxyCodeLine{00313\ \textcolor{keyword}{class\ }GenericTransactionSignatureChecker\ :\ \textcolor{keyword}{public}\ BaseSignatureChecker}
+\DoxyCodeLine{00314\ \{}
+\DoxyCodeLine{00315\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00316\ \ \ \ \ \textcolor{keyword}{const}\ T*\ txTo;}
+\DoxyCodeLine{00317\ \ \ \ \ \textcolor{keyword}{const}\ MissingDataBehavior\ m\_mdb;}
+\DoxyCodeLine{00318\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nIn;}
+\DoxyCodeLine{00319\ \ \ \ \ \textcolor{keyword}{const}\ CAmount\ amount;}
+\DoxyCodeLine{00320\ \ \ \ \ \textcolor{keyword}{const}\ PrecomputedTransactionData*\ txdata;}
+\DoxyCodeLine{00321\ \ \ \ \ \textcolor{keyword}{mutable}\ SigHashCache\ m\_sighash\_cache;}
+\DoxyCodeLine{00322\ }
+\DoxyCodeLine{00323\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00324\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ VerifyECDSASignature(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ vchSig,\ \textcolor{keyword}{const}\ CPubKey\&\ vchPubKey,\ \textcolor{keyword}{const}\ uint256\&\ sighash)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00325\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ VerifySchnorrSignature(std::span<const\ unsigned\ char>\ sig,\ \textcolor{keyword}{const}\ XOnlyPubKey\&\ pubkey,\ \textcolor{keyword}{const}\ uint256\&\ sighash)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00326\ }
+\DoxyCodeLine{00327\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00328\ \ \ \ \ GenericTransactionSignatureChecker(\textcolor{keyword}{const}\ T*\ txToIn,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nInIn,\ \textcolor{keyword}{const}\ CAmount\&\ amountIn,\ MissingDataBehavior\ mdb)\ :\ txTo(txToIn),\ m\_mdb(mdb),\ nIn(nInIn),\ amount(amountIn),\ txdata(nullptr)\ \{\}}
+\DoxyCodeLine{00329\ \ \ \ \ GenericTransactionSignatureChecker(\textcolor{keyword}{const}\ T*\ txToIn,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nInIn,\ \textcolor{keyword}{const}\ CAmount\&\ amountIn,\ \textcolor{keyword}{const}\ PrecomputedTransactionData\&\ txdataIn,\ MissingDataBehavior\ mdb)\ :\ txTo(txToIn),\ m\_mdb(mdb),\ nIn(nInIn),\ amount(amountIn),\ txdata(\&txdataIn)\ \{\}}
+\DoxyCodeLine{00330\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckECDSASignature(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ scriptSig,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ vchPubKey,\ \textcolor{keyword}{const}\ CScript\&\ scriptCode,\ SigVersion\ sigversion)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00331\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckSchnorrSignature(std::span<const\ unsigned\ char>\ sig,\ std::span<const\ unsigned\ char>\ pubkey,\ SigVersion\ sigversion,\ ScriptExecutionData\&\ execdata,\ ScriptError*\ serror\ =\ \textcolor{keyword}{nullptr})\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00332\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckLockTime(\textcolor{keyword}{const}\ CScriptNum\&\ nLockTime)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00333\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckSequence(\textcolor{keyword}{const}\ CScriptNum\&\ nSequence)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00334\ \};}
+\DoxyCodeLine{00335\ }
+\DoxyCodeLine{00336\ \textcolor{keyword}{using\ }TransactionSignatureChecker\ =\ GenericTransactionSignatureChecker<CTransaction>;}
+\DoxyCodeLine{00337\ \textcolor{keyword}{using\ }MutableTransactionSignatureChecker\ =\ GenericTransactionSignatureChecker<CMutableTransaction>;}
+\DoxyCodeLine{00338\ }
+\DoxyCodeLine{00339\ \textcolor{keyword}{class\ }DeferringSignatureChecker\ :\ \textcolor{keyword}{public}\ BaseSignatureChecker}
+\DoxyCodeLine{00340\ \{}
+\DoxyCodeLine{00341\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00342\ \ \ \ \ \textcolor{keyword}{const}\ BaseSignatureChecker\&\ m\_checker;}
+\DoxyCodeLine{00343\ }
+\DoxyCodeLine{00344\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00345\ \ \ \ \ DeferringSignatureChecker(\textcolor{keyword}{const}\ BaseSignatureChecker\&\ checker)\ :\ m\_checker(checker)\ \{\}}
+\DoxyCodeLine{00346\ }
+\DoxyCodeLine{00347\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckECDSASignature(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ scriptSig,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ vchPubKey,\ \textcolor{keyword}{const}\ CScript\&\ scriptCode,\ SigVersion\ sigversion)\textcolor{keyword}{\ const\ override}}
+\DoxyCodeLine{00348\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_checker.CheckECDSASignature(scriptSig,\ vchPubKey,\ scriptCode,\ sigversion);}
+\DoxyCodeLine{00350\ \ \ \ \ \}}
+\DoxyCodeLine{00351\ }
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckSchnorrSignature(std::span<const\ unsigned\ char>\ sig,\ std::span<const\ unsigned\ char>\ pubkey,\ SigVersion\ sigversion,\ ScriptExecutionData\&\ execdata,\ ScriptError*\ serror\ =\ \textcolor{keyword}{nullptr})\textcolor{keyword}{\ const\ override}}
+\DoxyCodeLine{00353\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_checker.CheckSchnorrSignature(sig,\ pubkey,\ sigversion,\ execdata,\ serror);}
+\DoxyCodeLine{00355\ \ \ \ \ \}}
+\DoxyCodeLine{00356\ }
+\DoxyCodeLine{00357\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckLockTime(\textcolor{keyword}{const}\ CScriptNum\&\ nLockTime)\textcolor{keyword}{\ const\ override}}
+\DoxyCodeLine{00358\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00359\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_checker.CheckLockTime(nLockTime);}
+\DoxyCodeLine{00360\ \ \ \ \ \}}
+\DoxyCodeLine{00361\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckSequence(\textcolor{keyword}{const}\ CScriptNum\&\ nSequence)\textcolor{keyword}{\ const\ override}}
+\DoxyCodeLine{00362\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00363\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_checker.CheckSequence(nSequence);}
+\DoxyCodeLine{00364\ \ \ \ \ \}}
+\DoxyCodeLine{00365\ \};}
+\DoxyCodeLine{00366\ }
+\DoxyCodeLine{00368\ uint256\ ComputeTapleafHash(uint8\_t\ leaf\_version,\ std::span<const\ unsigned\ char>\ script);}
+\DoxyCodeLine{00371\ uint256\ ComputeTapbranchHash(std::span<const\ unsigned\ char>\ a,\ std::span<const\ unsigned\ char>\ b);}
+\DoxyCodeLine{00374\ uint256\ ComputeTaprootMerkleRoot(std::span<const\ unsigned\ char>\ control,\ \textcolor{keyword}{const}\ uint256\&\ tapleaf\_hash);}
+\DoxyCodeLine{00375\ }
+\DoxyCodeLine{00376\ \textcolor{keywordtype}{bool}\ EvalScript(std::vector<std::vector<unsigned\ char>\ >\&\ stack,\ \textcolor{keyword}{const}\ CScript\&\ script,\ script\_verify\_flags\ flags,\ \textcolor{keyword}{const}\ BaseSignatureChecker\&\ checker,\ SigVersion\ sigversion,\ ScriptExecutionData\&\ execdata,\ ScriptError*\ error\ =\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00377\ \textcolor{keywordtype}{bool}\ EvalScript(std::vector<std::vector<unsigned\ char>\ >\&\ stack,\ \textcolor{keyword}{const}\ CScript\&\ script,\ script\_verify\_flags\ flags,\ \textcolor{keyword}{const}\ BaseSignatureChecker\&\ checker,\ SigVersion\ sigversion,\ ScriptError*\ error\ =\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00378\ \textcolor{keywordtype}{bool}\ VerifyScript(\textcolor{keyword}{const}\ CScript\&\ scriptSig,\ \textcolor{keyword}{const}\ CScript\&\ scriptPubKey,\ \textcolor{keyword}{const}\ CScriptWitness*\ witness,\ script\_verify\_flags\ flags,\ \textcolor{keyword}{const}\ BaseSignatureChecker\&\ checker,\ ScriptError*\ serror\ =\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00379\ }
+\DoxyCodeLine{00380\ \textcolor{keywordtype}{size\_t}\ CountWitnessSigOps(\textcolor{keyword}{const}\ CScript\&\ scriptSig,\ \textcolor{keyword}{const}\ CScript\&\ scriptPubKey,\ \textcolor{keyword}{const}\ CScriptWitness\&\ witness,\ script\_verify\_flags\ flags);}
+\DoxyCodeLine{00381\ }
+\DoxyCodeLine{00382\ \textcolor{keywordtype}{int}\ FindAndDelete(CScript\&\ script,\ \textcolor{keyword}{const}\ CScript\&\ b);}
+\DoxyCodeLine{00383\ }
+\DoxyCodeLine{00384\ \textcolor{keyword}{const}\ std::map<std::string,\ script\_verify\_flag\_name>\&\ ScriptFlagNamesToEnum();}
+\DoxyCodeLine{00385\ }
+\DoxyCodeLine{00386\ std::vector<std::string>\ GetScriptFlagNames(script\_verify\_flags\ flags);}
+\DoxyCodeLine{00387\ }
+\DoxyCodeLine{00388\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_SCRIPT\_INTERPRETER\_H}}
+
+\end{DoxyCode}

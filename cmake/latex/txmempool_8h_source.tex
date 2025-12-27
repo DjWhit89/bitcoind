@@ -1,0 +1,561 @@
+\doxysection{txmempool.\+h}
+\label{txmempool_8h_source}\index{src/txmempool.h@{src/txmempool.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_TXMEMPOOL\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_TXMEMPOOL\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <coins.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <indirectmap.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <kernel/cs\_main.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <kernel/mempool\_entry.h>}\ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <kernel/mempool\_limits.h>}\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <kernel/mempool\_options.h>}\ \ \ \ \ \ \ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <kernel/mempool\_removal\_reason.h>}\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <policy/feerate.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <policy/packages.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <primitives/transaction\_identifier.h>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <txgraph.h>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <util/epochguard.h>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <util/feefrac.h>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <util/hasher.h>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <util/result.h>}}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <boost/multi\_index/hashed\_index.hpp>}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ <boost/multi\_index/identity.hpp>}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ <boost/multi\_index/indexed\_by.hpp>}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <boost/multi\_index/ordered\_index.hpp>}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#include\ <boost/multi\_index/sequenced\_index.hpp>}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#include\ <boost/multi\_index/tag.hpp>}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#include\ <boost/multi\_index\_container.hpp>}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00038\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#include\ <string\_view>}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00043\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \textcolor{keyword}{class\ }CChain;}
+\DoxyCodeLine{00046\ \textcolor{keyword}{class\ }ValidationSignals;}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \textcolor{keyword}{struct\ }bilingual\_str;}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00051\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint32\_t\ MEMPOOL\_HEIGHT\ =\ 0x7FFFFFFF;}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00056\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint64\_t\ ACCEPTABLE\_ITERS\ =\ 1'700;}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00060\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint64\_t\ POST\_CHANGE\_WORK\ =\ 5\ *\ ACCEPTABLE\_ITERS;}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00065\ \textcolor{keywordtype}{bool}\ TestLockPointValidity(CChain\&\ active\_chain,\ \textcolor{keyword}{const}\ LockPoints\&\ lp)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \textcolor{comment}{//\ extracts\ a\ transaction\ hash\ from\ CTxMemPoolEntry\ or\ CTransactionRef}}
+\DoxyCodeLine{00068\ \textcolor{keyword}{struct\ }mempoolentry\_txid}
+\DoxyCodeLine{00069\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keyword}{typedef}\ Txid\ result\_type;}
+\DoxyCodeLine{00071\ \ \ \ \ result\_type\ operator()\ (\textcolor{keyword}{const}\ CTxMemPoolEntry\ \&entry)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00072\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ entry.GetTx().GetHash();}
+\DoxyCodeLine{00074\ \ \ \ \ \}}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \ \ \ \ result\_type\ operator()\ (\textcolor{keyword}{const}\ CTransactionRef\&\ tx)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00077\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ tx-\/>GetHash();}
+\DoxyCodeLine{00079\ \ \ \ \ \}}
+\DoxyCodeLine{00080\ \};}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \textcolor{comment}{//\ extracts\ a\ transaction\ witness-\/hash\ from\ CTxMemPoolEntry\ or\ CTransactionRef}}
+\DoxyCodeLine{00083\ \textcolor{keyword}{struct\ }mempoolentry\_wtxid}
+\DoxyCodeLine{00084\ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keyword}{typedef}\ Wtxid\ result\_type;}
+\DoxyCodeLine{00086\ \ \ \ \ result\_type\ operator()\ (\textcolor{keyword}{const}\ CTxMemPoolEntry\ \&entry)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00087\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ entry.GetTx().GetWitnessHash();}
+\DoxyCodeLine{00089\ \ \ \ \ \}}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00091\ \ \ \ \ result\_type\ operator()\ (\textcolor{keyword}{const}\ CTransactionRef\&\ tx)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00092\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ tx-\/>GetWitnessHash();}
+\DoxyCodeLine{00094\ \ \ \ \ \}}
+\DoxyCodeLine{00095\ \};}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00097\ \textcolor{keyword}{class\ }CompareTxMemPoolEntryByEntryTime}
+\DoxyCodeLine{00098\ \{}
+\DoxyCodeLine{00099\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator()(\textcolor{keyword}{const}\ CTxMemPoolEntry\&\ a,\ \textcolor{keyword}{const}\ CTxMemPoolEntry\&\ b)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00101\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a.GetTime()\ <\ b.GetTime();}
+\DoxyCodeLine{00103\ \ \ \ \ \}}
+\DoxyCodeLine{00104\ \};}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \textcolor{comment}{//\ Multi\_index\ tag\ names}}
+\DoxyCodeLine{00107\ \textcolor{keyword}{struct\ }entry\_time\ \{\};}
+\DoxyCodeLine{00108\ \textcolor{keyword}{struct\ }index\_by\_wtxid\ \{\};}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00113\ \textcolor{keyword}{struct\ }TxMempoolInfo}
+\DoxyCodeLine{00114\ \{}
+\DoxyCodeLine{00116\ \ \ \ \ CTransactionRef\ tx;}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00119\ \ \ \ \ std::chrono::seconds\ m\_time;}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00122\ \ \ \ \ CAmount\ fee;}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00125\ \ \ \ \ int32\_t\ vsize;}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00128\ \ \ \ \ int64\_t\ nFeeDelta;}
+\DoxyCodeLine{00129\ \};}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00188\ \textcolor{keyword}{class\ }CTxMemPool}
+\DoxyCodeLine{00189\ \{}
+\DoxyCodeLine{00190\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00191\ \ \ \ \ std::atomic<unsigned\ int>\ nTransactionsUpdated\{0\};\ }
+\DoxyCodeLine{00192\ }
+\DoxyCodeLine{00193\ \ \ \ \ uint64\_t\ totalTxSize\ GUARDED\_BY(cs)\{0\};\ \ \ \ \ \ }
+\DoxyCodeLine{00194\ \ \ \ \ CAmount\ m\_total\_fee\ GUARDED\_BY(cs)\{0\};\ \ \ \ \ \ \ }
+\DoxyCodeLine{00195\ \ \ \ \ uint64\_t\ cachedInnerUsage\ GUARDED\_BY(cs)\{0\};\ }
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keyword}{mutable}\ int64\_t\ lastRollingFeeUpdate\ GUARDED\_BY(cs)\{GetTime()\};}
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{keyword}{mutable}\ \textcolor{keywordtype}{bool}\ blockSinceLastRollingFeeBump\ GUARDED\_BY(cs)\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{keyword}{mutable}\ \textcolor{keywordtype}{double}\ rollingMinimumFeeRate\ GUARDED\_BY(cs)\{0\};\ }
+\DoxyCodeLine{00200\ \ \ \ \ \textcolor{keyword}{mutable}\ Epoch\ m\_epoch\ GUARDED\_BY(cs)\{\};}
+\DoxyCodeLine{00201\ }
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{comment}{//\ In-\/memory\ counter\ for\ external\ mempool\ tracking\ purposes.}}
+\DoxyCodeLine{00203\ \ \ \ \ \textcolor{comment}{//\ This\ number\ is\ incremented\ once\ every\ time\ a\ transaction}}
+\DoxyCodeLine{00204\ \ \ \ \ \textcolor{comment}{//\ is\ added\ or\ removed\ from\ the\ mempool\ for\ any\ reason.}}
+\DoxyCodeLine{00205\ \ \ \ \ \textcolor{keyword}{mutable}\ uint64\_t\ m\_sequence\_number\ GUARDED\_BY(cs)\{1\};}
+\DoxyCodeLine{00206\ }
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{keywordtype}{void}\ trackPackageRemoved(\textcolor{keyword}{const}\ CFeeRate\&\ rate)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00208\ }
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_load\_tried\ GUARDED\_BY(cs)\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00211\ \ \ \ \ CFeeRate\ GetMinFee(\textcolor{keywordtype}{size\_t}\ sizelimit)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00212\ }
+\DoxyCodeLine{00213\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00215\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ ROLLING\_FEE\_HALFLIFE\ =\ 60\ *\ 60\ *\ 12;\ \textcolor{comment}{//\ public\ only\ for\ testing}}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00217\ \ \ \ \ \textcolor{keyword}{struct\ }CTxMemPoolEntry\_Indices\ final\ :\ boost::multi\_index::indexed\_by<}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ sorted\ by\ txid}}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \ \ \ \ boost::multi\_index::hashed\_unique<mempoolentry\_txid,\ SaltedTxidHasher>,}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ sorted\ by\ wtxid}}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \ \ \ \ boost::multi\_index::hashed\_unique<}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ boost::multi\_index::tag<index\_by\_wtxid>,}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ mempoolentry\_wtxid,}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SaltedWtxidHasher}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \ \ \ \ >,}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ sorted\ by\ entry\ time}}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \ \ \ \ boost::multi\_index::ordered\_non\_unique<}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ boost::multi\_index::tag<entry\_time>,}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ boost::multi\_index::identity<CTxMemPoolEntry>,}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CompareTxMemPoolEntryByEntryTime}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ \ \ \ \ >}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ >}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ \{\};}
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{keyword}{typedef}\ boost::multi\_index\_container<}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ CTxMemPoolEntry,}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ CTxMemPoolEntry\_Indices}
+\DoxyCodeLine{00237\ \ \ \ \ >\ indexed\_transaction\_set;}
+\DoxyCodeLine{00238\ }
+\DoxyCodeLine{00263\ \ \ \ \ \textcolor{keyword}{mutable}\ RecursiveMutex\ cs;}
+\DoxyCodeLine{00264\ \ \ \ \ std::unique\_ptr<TxGraph>\ m\_txgraph\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00265\ \ \ \ \ \textcolor{keyword}{mutable}\ std::unique\_ptr<TxGraph::BlockBuilder>\ m\_builder\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00266\ \ \ \ \ indexed\_transaction\_set\ mapTx\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00267\ }
+\DoxyCodeLine{00268\ \ \ \ \ \textcolor{keyword}{using\ }txiter\ =\ indexed\_transaction\_set::nth\_index<0>::type::const\_iterator;}
+\DoxyCodeLine{00269\ \ \ \ \ std::vector<std::pair<Wtxid,\ txiter>>\ txns\_randomized\ GUARDED\_BY(cs);\ }
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00271\ \ \ \ \ \textcolor{keyword}{typedef}\ std::set<txiter,\ CompareIteratorByHash>\ setEntries;}
+\DoxyCodeLine{00272\ }
+\DoxyCodeLine{00273\ \ \ \ \ \textcolor{keyword}{using\ }Limits\ =\ kernel::MemPoolLimits;}
+\DoxyCodeLine{00274\ }
+\DoxyCodeLine{00275\ \ \ \ \ std::tuple<size\_t,\ size\_t,\ CAmount>\ CalculateAncestorData(\textcolor{keyword}{const}\ CTxMemPoolEntry\&\ entry)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00276\ \ \ \ \ std::tuple<size\_t,\ size\_t,\ CAmount>\ CalculateDescendantData(\textcolor{keyword}{const}\ CTxMemPoolEntry\&\ entry)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00277\ \ \ \ \ int64\_t\ GetDescendantCount(txiter\ it)\textcolor{keyword}{\ const\ }\{\ LOCK(cs);\ \textcolor{keywordflow}{return}\ m\_txgraph-\/>GetDescendants(*it,\ TxGraph::Level::MAIN).size();\ \}}
+\DoxyCodeLine{00278\ \ \ \ \ int64\_t\ GetDescendantCount(\textcolor{keyword}{const}\ CTxMemPoolEntry\ \&e)\textcolor{keyword}{\ const\ }\{\ LOCK(cs);\ \textcolor{keywordflow}{return}\ m\_txgraph-\/>GetDescendants(e,\ TxGraph::Level::MAIN).size();\ \}}
+\DoxyCodeLine{00279\ \ \ \ \ int64\_t\ GetAncestorCount(\textcolor{keyword}{const}\ CTxMemPoolEntry\ \&e)\textcolor{keyword}{\ const\ }\{\ LOCK(cs);\ \textcolor{keywordflow}{return}\ m\_txgraph-\/>GetAncestors(e,\ TxGraph::Level::MAIN).size();\ \}}
+\DoxyCodeLine{00280\ \ \ \ \ std::vector<CTxMemPoolEntry::CTxMemPoolEntryRef>\ GetChildren(\textcolor{keyword}{const}\ CTxMemPoolEntry\ \&entry)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00281\ \ \ \ \ std::vector<CTxMemPoolEntry::CTxMemPoolEntryRef>\ GetParents(\textcolor{keyword}{const}\ CTxMemPoolEntry\ \&entry)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00282\ }
+\DoxyCodeLine{00283\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00284\ \ \ \ \ std::vector<indexed\_transaction\_set::const\_iterator>\ GetSortedScoreWithTopology()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00285\ }
+\DoxyCodeLine{00289\ \ \ \ \ std::set<Txid>\ m\_unbroadcast\_txids\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00290\ }
+\DoxyCodeLine{00291\ \ \ \ \ static\ TxMempoolInfo\ GetInfo(CTxMemPool::indexed\_transaction\_set::const\_iterator\ it)}
+\DoxyCodeLine{00292\ \ \ \ \ \{}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ TxMempoolInfo\{it-\/>GetSharedTx(),\ it-\/>GetTime(),\ it-\/>GetFee(),\ it-\/>GetTxSize(),\ it-\/>GetModifiedFee()\ -\/\ it-\/>GetFee()\};}
+\DoxyCodeLine{00294\ \ \ \ \ \}}
+\DoxyCodeLine{00295\ }
+\DoxyCodeLine{00296\ \ \ \ \ \textcolor{comment}{//\ Helper\ to\ remove\ all\ transactions\ that\ conflict\ with\ a\ given}}
+\DoxyCodeLine{00297\ \ \ \ \ \textcolor{comment}{//\ transaction\ (used\ for\ transactions\ appearing\ in\ a\ block).}}
+\DoxyCodeLine{00298\ \ \ \ \ \textcolor{keywordtype}{void}\ removeConflicts(\textcolor{keyword}{const}\ CTransaction\&\ tx)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00299\ }
+\DoxyCodeLine{00300\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00301\ \ \ \ \ indirectmap<COutPoint,\ txiter>\ mapNextTx\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00302\ \ \ \ \ std::map<Txid,\ CAmount>\ mapDeltas\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00303\ }
+\DoxyCodeLine{00304\ \ \ \ \ \textcolor{keyword}{using\ }Options\ =\ kernel::MemPoolOptions;}
+\DoxyCodeLine{00305\ }
+\DoxyCodeLine{00306\ \ \ \ \ \textcolor{keyword}{const}\ Options\ m\_opts;}
+\DoxyCodeLine{00307\ }
+\DoxyCodeLine{00313\ \ \ \ \ \textcolor{keyword}{explicit}\ CTxMemPool(Options\ opts,\ bilingual\_str\&\ error);}
+\DoxyCodeLine{00314\ }
+\DoxyCodeLine{00321\ \ \ \ \ \textcolor{keywordtype}{void}\ check(\textcolor{keyword}{const}\ CCoinsViewCache\&\ active\_coins\_tip,\ int64\_t\ spendheight)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00322\ }
+\DoxyCodeLine{00328\ \ \ \ \ \textcolor{keywordtype}{void}\ removeRecursive(\textcolor{keyword}{const}\ CTransaction\&\ tx,\ MemPoolRemovalReason\ reason)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00336\ \ \ \ \ \textcolor{keywordtype}{void}\ removeForReorg(CChain\&\ chain,\ std::function<\textcolor{keywordtype}{bool}(txiter)>\ filter\_final\_and\_mature)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs,\ cs\_main);}
+\DoxyCodeLine{00337\ \ \ \ \ \textcolor{keywordtype}{void}\ removeForBlock(\textcolor{keyword}{const}\ std::vector<CTransactionRef>\&\ vtx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nBlockHeight)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00338\ }
+\DoxyCodeLine{00339\ \ \ \ \ \textcolor{keywordtype}{bool}\ CompareMiningScoreWithTopology(\textcolor{keyword}{const}\ Wtxid\&\ hasha,\ \textcolor{keyword}{const}\ Wtxid\&\ hashb)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00340\ \ \ \ \ \textcolor{keywordtype}{bool}\ isSpent(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00341\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ GetTransactionsUpdated()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00342\ \ \ \ \ \textcolor{keywordtype}{void}\ AddTransactionsUpdated(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ n);}
+\DoxyCodeLine{00347\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasNoInputsOf(\textcolor{keyword}{const}\ CTransaction\&\ tx)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00348\ }
+\DoxyCodeLine{00350\ \ \ \ \ \textcolor{keywordtype}{void}\ PrioritiseTransaction(\textcolor{keyword}{const}\ Txid\&\ hash,\ \textcolor{keyword}{const}\ CAmount\&\ nFeeDelta);}
+\DoxyCodeLine{00351\ \ \ \ \ \textcolor{keywordtype}{void}\ ApplyDelta(\textcolor{keyword}{const}\ Txid\&\ hash,\ CAmount\ \&nFeeDelta)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{keywordtype}{void}\ ClearPrioritisation(\textcolor{keyword}{const}\ Txid\&\ hash)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00353\ }
+\DoxyCodeLine{00354\ \ \ \ \ \textcolor{keyword}{struct\ }delta\_info\ \{}
+\DoxyCodeLine{00356\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ in\_mempool;}
+\DoxyCodeLine{00358\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CAmount\ delta;}
+\DoxyCodeLine{00360\ \ \ \ \ \ \ \ \ std::optional<CAmount>\ modified\_fee;}
+\DoxyCodeLine{00362\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Txid\ txid;}
+\DoxyCodeLine{00363\ \ \ \ \ \};}
+\DoxyCodeLine{00365\ \ \ \ \ std::vector<delta\_info>\ GetPrioritisedTransactions()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00366\ }
+\DoxyCodeLine{00368\ \ \ \ \ const\ CTransaction*\ GetConflictTx(const\ COutPoint\&\ prevout)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00369\ }
+\DoxyCodeLine{00371\ \ \ \ \ std::optional<txiter>\ GetIter(const\ Txid\&\ txid)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00372\ \ \ \ \ std::optional<txiter>\ GetIter(const\ Wtxid\&\ wtxid)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00373\ }
+\DoxyCodeLine{00377\ \ \ \ \ setEntries\ GetIterSet(const\ std::set<Txid>\&\ hashes)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00378\ }
+\DoxyCodeLine{00382\ \ \ \ \ std::vector<txiter>\ GetIterVec(const\ std::vector<Txid>\&\ txids)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00383\ }
+\DoxyCodeLine{00397\ \ \ \ \ \textcolor{keywordtype}{void}\ UpdateTransactionsFromBlock(const\ std::vector<Txid>\&\ vHashesToUpdate)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs,\ cs\_main)\ LOCKS\_EXCLUDED(m\_epoch);}
+\DoxyCodeLine{00398\ }
+\DoxyCodeLine{00399\ \ \ \ \ std::vector<FeePerWeight>\ GetFeerateDiagram()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00400\ \ \ \ \ FeePerWeight\ GetMainChunkFeerate(const\ CTxMemPoolEntry\&\ tx)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)\ \{}
+\DoxyCodeLine{00401\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_txgraph-\/>GetMainChunkFeerate(tx);}
+\DoxyCodeLine{00402\ \ \ \ \ \}}
+\DoxyCodeLine{00403\ \ \ \ \ std::vector<const\ CTxMemPoolEntry*>\ GetCluster(Txid\ txid)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)\ \{}
+\DoxyCodeLine{00404\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ tx\ =\ GetIter(txid);}
+\DoxyCodeLine{00405\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!tx)\ \textcolor{keywordflow}{return}\ \{\};}
+\DoxyCodeLine{00406\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ cluster\ =\ m\_txgraph-\/>GetCluster(**tx,\ TxGraph::Level::MAIN);}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ std::vector<const\ CTxMemPoolEntry*>\ ret;}
+\DoxyCodeLine{00408\ \ \ \ \ \ \ \ \ ret.reserve(cluster.size());}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ tx\ :\ cluster)\ \{}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ \ \ \ \ ret.emplace\_back(\textcolor{keyword}{static\_cast<}\textcolor{keyword}{const\ }CTxMemPoolEntry*\textcolor{keyword}{>}(tx));}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00413\ \ \ \ \ \}}
+\DoxyCodeLine{00414\ }
+\DoxyCodeLine{00415\ }
+\DoxyCodeLine{00416\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ GetUniqueClusterCount(\textcolor{keyword}{const}\ setEntries\&\ iters\_conflicting)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)\ \{}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ std::vector<const\ TxGraph::Ref\ *>\ entries;}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ entries.reserve(iters\_conflicting.size());}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ it\ :\ iters\_conflicting)\ \{}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ \ \ \ \ entries.emplace\_back(\&*it);}
+\DoxyCodeLine{00421\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00422\ \ \ \ \ \ \ \ \ Assume(!m\_txgraph-\/>IsOversized(TxGraph::Level::MAIN));}
+\DoxyCodeLine{00423\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_txgraph-\/>CountDistinctClusters(entries,\ TxGraph::Level::MAIN);}
+\DoxyCodeLine{00424\ \ \ \ \ \}}
+\DoxyCodeLine{00425\ }
+\DoxyCodeLine{00433\ \ \ \ \ setEntries\ CalculateMemPoolAncestors(\textcolor{keyword}{const}\ CTxMemPoolEntry\&\ entry)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00434\ }
+\DoxyCodeLine{00435\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasDescendants(\textcolor{keyword}{const}\ Txid\&\ txid)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00436\ }
+\DoxyCodeLine{00441\ \ \ \ \ std::vector<txiter>\ GatherClusters(\textcolor{keyword}{const}\ std::vector<Txid>\&\ txids)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00442\ }
+\DoxyCodeLine{00446\ \ \ \ \ \textcolor{keywordtype}{void}\ CalculateDescendants(txiter\ it,\ setEntries\&\ setDescendants)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00447\ \ \ \ \ CTxMemPool::txiter\ CalculateDescendants(\textcolor{keyword}{const}\ CTxMemPoolEntry\&\ entry,\ setEntries\&\ setDescendants)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00448\ }
+\DoxyCodeLine{00455\ \ \ \ \ CFeeRate\ GetMinFee()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00456\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ GetMinFee(m\_opts.max\_size\_bytes);}
+\DoxyCodeLine{00457\ \ \ \ \ \}}
+\DoxyCodeLine{00458\ }
+\DoxyCodeLine{00463\ \ \ \ \ \textcolor{keywordtype}{void}\ TrimToSize(\textcolor{keywordtype}{size\_t}\ sizelimit,\ std::vector<COutPoint>*\ pvNoSpendsRemaining\ =\ \textcolor{keyword}{nullptr})\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00464\ }
+\DoxyCodeLine{00466\ \ \ \ \ \textcolor{keywordtype}{int}\ Expire(std::chrono::seconds\ time)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00467\ }
+\DoxyCodeLine{00474\ \ \ \ \ \textcolor{keywordtype}{void}\ GetTransactionAncestry(const\ Txid\&\ txid,\ \textcolor{keywordtype}{size\_t}\&\ ancestors,\ \textcolor{keywordtype}{size\_t}\&\ cluster\_count,\ \textcolor{keywordtype}{size\_t}*\ ancestorsize\ =\ \textcolor{keywordtype}{nullptr},\ CAmount*\ ancestorfees\ =\ \textcolor{keywordtype}{nullptr})\ const;}
+\DoxyCodeLine{00475\ }
+\DoxyCodeLine{00480\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetLoadTried()\ const;}
+\DoxyCodeLine{00481\ }
+\DoxyCodeLine{00486\ \ \ \ \ \textcolor{keywordtype}{void}\ SetLoadTried(\textcolor{keywordtype}{bool}\ load\_tried);}
+\DoxyCodeLine{00487\ }
+\DoxyCodeLine{00488\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{long}\ size()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00489\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00490\ \ \ \ \ \ \ \ \ LOCK(cs);}
+\DoxyCodeLine{00491\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ mapTx.size();}
+\DoxyCodeLine{00492\ \ \ \ \ \}}
+\DoxyCodeLine{00493\ }
+\DoxyCodeLine{00494\ \ \ \ \ uint64\_t\ GetTotalTxSize()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)}
+\DoxyCodeLine{00495\ \ \ \ \ \{}
+\DoxyCodeLine{00496\ \ \ \ \ \ \ \ \ AssertLockHeld(cs);}
+\DoxyCodeLine{00497\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ totalTxSize;}
+\DoxyCodeLine{00498\ \ \ \ \ \}}
+\DoxyCodeLine{00499\ }
+\DoxyCodeLine{00500\ \ \ \ \ CAmount\ GetTotalFee()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)}
+\DoxyCodeLine{00501\ \ \ \ \ \{}
+\DoxyCodeLine{00502\ \ \ \ \ \ \ \ \ AssertLockHeld(cs);}
+\DoxyCodeLine{00503\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_total\_fee;}
+\DoxyCodeLine{00504\ \ \ \ \ \}}
+\DoxyCodeLine{00505\ }
+\DoxyCodeLine{00506\ \ \ \ \ \textcolor{keywordtype}{bool}\ exists(\textcolor{keyword}{const}\ Txid\&\ txid)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00507\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00508\ \ \ \ \ \ \ \ \ LOCK(cs);}
+\DoxyCodeLine{00509\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (mapTx.count(txid)\ !=\ 0);}
+\DoxyCodeLine{00510\ \ \ \ \ \}}
+\DoxyCodeLine{00511\ }
+\DoxyCodeLine{00512\ \ \ \ \ \textcolor{keywordtype}{bool}\ exists(\textcolor{keyword}{const}\ Wtxid\&\ wtxid)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00513\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00514\ \ \ \ \ \ \ \ \ LOCK(cs);}
+\DoxyCodeLine{00515\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (mapTx.get<index\_by\_wtxid>().count(wtxid)\ !=\ 0);}
+\DoxyCodeLine{00516\ \ \ \ \ \}}
+\DoxyCodeLine{00517\ }
+\DoxyCodeLine{00518\ \ \ \ \ \textcolor{keyword}{const}\ CTxMemPoolEntry*\ GetEntry(\textcolor{keyword}{const}\ Txid\&\ txid)\ \textcolor{keyword}{const}\ LIFETIMEBOUND\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00519\ }
+\DoxyCodeLine{00520\ \ \ \ \ CTransactionRef\ get(\textcolor{keyword}{const}\ Txid\&\ hash)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00521\ }
+\DoxyCodeLine{00522\ \ \ \ \ \textcolor{keyword}{template}\ <Tx\textcolor{keywordtype}{id}OrWtx\textcolor{keywordtype}{id}\ T>}
+\DoxyCodeLine{00523\ \ \ \ \ TxMempoolInfo\ info(\textcolor{keyword}{const}\ T\&\ \textcolor{keywordtype}{id})\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00524\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00525\ \ \ \ \ \ \ \ \ LOCK(cs);}
+\DoxyCodeLine{00526\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ i\{GetIter(\textcolor{keywordtype}{id})\};}
+\DoxyCodeLine{00527\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ i.has\_value()\ ?\ GetInfo(*i)\ :\ TxMempoolInfo\{\};}
+\DoxyCodeLine{00528\ \ \ \ \ \}}
+\DoxyCodeLine{00529\ }
+\DoxyCodeLine{00531\ \ \ \ \ \textcolor{keyword}{template}\ <Tx\textcolor{keywordtype}{id}OrWtx\textcolor{keywordtype}{id}\ T>}
+\DoxyCodeLine{00532\ \ \ \ \ TxMempoolInfo\ info\_for\_relay(\textcolor{keyword}{const}\ T\&\ \textcolor{keywordtype}{id},\ uint64\_t\ last\_sequence)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00533\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00534\ \ \ \ \ \ \ \ \ LOCK(cs);}
+\DoxyCodeLine{00535\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ i\{GetIter(\textcolor{keywordtype}{id})\};}
+\DoxyCodeLine{00536\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (i.has\_value()\ \&\&\ i.value()-\/>GetSequence()\ <\ last\_sequence)\ ?\ GetInfo(*i)\ :\ TxMempoolInfo\{\};}
+\DoxyCodeLine{00537\ \ \ \ \ \}}
+\DoxyCodeLine{00538\ }
+\DoxyCodeLine{00539\ \ \ \ \ std::vector<CTxMemPoolEntryRef>\ entryAll()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00540\ \ \ \ \ std::vector<TxMempoolInfo>\ infoAll()\ const;}
+\DoxyCodeLine{00541\ }
+\DoxyCodeLine{00542\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ DynamicMemoryUsage()\ const;}
+\DoxyCodeLine{00543\ }
+\DoxyCodeLine{00545\ \ \ \ \ \textcolor{keywordtype}{void}\ AddUnbroadcastTx(const\ Txid\&\ txid)}
+\DoxyCodeLine{00546\ \ \ \ \ \{}
+\DoxyCodeLine{00547\ \ \ \ \ \ \ \ \ LOCK(cs);}
+\DoxyCodeLine{00548\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Sanity\ check\ the\ transaction\ is\ in\ the\ mempool\ \&\ insert\ into}}
+\DoxyCodeLine{00549\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ unbroadcast\ set.}}
+\DoxyCodeLine{00550\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (exists(txid))\ m\_unbroadcast\_txids.insert(txid);}
+\DoxyCodeLine{00551\ \ \ \ \ \};}
+\DoxyCodeLine{00552\ }
+\DoxyCodeLine{00553\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckPolicyLimits(\textcolor{keyword}{const}\ CTransactionRef\&\ tx);}
+\DoxyCodeLine{00554\ }
+\DoxyCodeLine{00556\ \ \ \ \ \textcolor{keywordtype}{void}\ RemoveUnbroadcastTx(\textcolor{keyword}{const}\ Txid\&\ txid,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ unchecked\ =\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00557\ }
+\DoxyCodeLine{00559\ \ \ \ \ std::set<Txid>\ GetUnbroadcastTxs()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00560\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00561\ \ \ \ \ \ \ \ \ LOCK(cs);}
+\DoxyCodeLine{00562\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_unbroadcast\_txids;}
+\DoxyCodeLine{00563\ \ \ \ \ \}}
+\DoxyCodeLine{00564\ }
+\DoxyCodeLine{00566\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsUnbroadcastTx(\textcolor{keyword}{const}\ Txid\&\ txid)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)}
+\DoxyCodeLine{00567\ \ \ \ \ \{}
+\DoxyCodeLine{00568\ \ \ \ \ \ \ \ \ AssertLockHeld(cs);}
+\DoxyCodeLine{00569\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_unbroadcast\_txids.contains(txid);}
+\DoxyCodeLine{00570\ \ \ \ \ \}}
+\DoxyCodeLine{00571\ }
+\DoxyCodeLine{00573\ \ \ \ \ uint64\_t\ GetAndIncrementSequence()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)\ \{}
+\DoxyCodeLine{00574\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_sequence\_number++;}
+\DoxyCodeLine{00575\ \ \ \ \ \}}
+\DoxyCodeLine{00576\ }
+\DoxyCodeLine{00577\ \ \ \ \ uint64\_t\ GetSequence()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)\ \{}
+\DoxyCodeLine{00578\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_sequence\_number;}
+\DoxyCodeLine{00579\ \ \ \ \ \}}
+\DoxyCodeLine{00580\ }
+\DoxyCodeLine{00581\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00587\ \ \ \ \ \textcolor{keywordtype}{void}\ RemoveStaged(setEntries\&\ stage,\ MemPoolRemovalReason\ reason)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00588\ }
+\DoxyCodeLine{00589\ \ \ \ \ \textcolor{comment}{/*\ Helper\ for\ the\ public\ removeRecursive()\ */}}
+\DoxyCodeLine{00590\ \ \ \ \ \textcolor{keywordtype}{void}\ removeRecursive(txiter\ to\_remove,\ MemPoolRemovalReason\ reason)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00591\ }
+\DoxyCodeLine{00600\ \ \ \ \ \textcolor{keywordtype}{void}\ removeUnchecked(txiter\ entry,\ MemPoolRemovalReason\ reason)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00601\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00610\ \ \ \ \ \textcolor{keywordtype}{bool}\ visited(\textcolor{keyword}{const}\ txiter\ it)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs,\ m\_epoch)}
+\DoxyCodeLine{00611\ \ \ \ \ \{}
+\DoxyCodeLine{00612\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_epoch.visited(it-\/>m\_epoch\_marker);}
+\DoxyCodeLine{00613\ \ \ \ \ \}}
+\DoxyCodeLine{00614\ }
+\DoxyCodeLine{00615\ \ \ \ \ \textcolor{keywordtype}{bool}\ visited(std::optional<txiter>\ it)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs,\ m\_epoch)}
+\DoxyCodeLine{00616\ \ \ \ \ \{}
+\DoxyCodeLine{00617\ \ \ \ \ \ \ \ \ assert(m\_epoch.guarded());\ \textcolor{comment}{//\ verify\ guard\ even\ when\ it==nullopt}}
+\DoxyCodeLine{00618\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ !it\ ||\ visited(*it);}
+\DoxyCodeLine{00619\ \ \ \ \ \}}
+\DoxyCodeLine{00620\ }
+\DoxyCodeLine{00621\ \ \ \ \ \textcolor{comment}{/*}}
+\DoxyCodeLine{00622\ \textcolor{comment}{\ \ \ \ \ *\ CTxMemPool::ChangeSet:}}
+\DoxyCodeLine{00623\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00624\ \textcolor{comment}{\ \ \ \ \ *\ This\ class\ is\ used\ for\ all\ mempool\ additions\ and\ associated\ removals\ (eg}}
+\DoxyCodeLine{00625\ \textcolor{comment}{\ \ \ \ \ *\ due\ to\ rbf).\ Removals\ that\ don't\ need\ to\ be\ evaluated\ for\ acceptance,}}
+\DoxyCodeLine{00626\ \textcolor{comment}{\ \ \ \ \ *\ such\ as\ removing\ transactions\ that\ appear\ in\ a\ block,\ or\ due\ to\ reorg,}}
+\DoxyCodeLine{00627\ \textcolor{comment}{\ \ \ \ \ *\ or\ removals\ related\ to\ mempool\ limiting\ or\ expiry\ do\ not\ need\ to\ use}}
+\DoxyCodeLine{00628\ \textcolor{comment}{\ \ \ \ \ *\ this.}}
+\DoxyCodeLine{00629\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00630\ \textcolor{comment}{\ \ \ \ \ *\ Callers\ can\ interleave\ calls\ to\ StageAddition()/StageRemoval(),\ and}}
+\DoxyCodeLine{00631\ \textcolor{comment}{\ \ \ \ \ *\ removals\ may\ be\ invoked\ in\ any\ order,\ but\ additions\ must\ be\ done\ in\ a}}
+\DoxyCodeLine{00632\ \textcolor{comment}{\ \ \ \ \ *\ topological\ order\ in\ the\ case\ of\ transaction\ packages\ (ie,\ parents\ must}}
+\DoxyCodeLine{00633\ \textcolor{comment}{\ \ \ \ \ *\ be\ added\ before\ children).}}
+\DoxyCodeLine{00634\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00635\ \textcolor{comment}{\ \ \ \ \ *\ CalculateChunksForRBF()\ can\ be\ used\ to\ calculate\ the\ feerate\ diagram\ of}}
+\DoxyCodeLine{00636\ \textcolor{comment}{\ \ \ \ \ *\ the\ proposed\ set\ of\ new\ transactions\ and\ compare\ with\ the\ existing}}
+\DoxyCodeLine{00637\ \textcolor{comment}{\ \ \ \ \ *\ mempool.}}
+\DoxyCodeLine{00638\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00639\ \textcolor{comment}{\ \ \ \ \ *\ CalculateMemPoolAncestors()\ calculates\ the\ in-\/mempool\ (not\ including}}
+\DoxyCodeLine{00640\ \textcolor{comment}{\ \ \ \ \ *\ what\ is\ in\ the\ change\ set\ itself)\ ancestors\ of\ a\ given\ transaction.}}
+\DoxyCodeLine{00641\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00642\ \textcolor{comment}{\ \ \ \ \ *\ Apply()\ will\ apply\ the\ removals\ and\ additions\ that\ are\ staged\ into\ the}}
+\DoxyCodeLine{00643\ \textcolor{comment}{\ \ \ \ \ *\ mempool.}}
+\DoxyCodeLine{00644\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00645\ \textcolor{comment}{\ \ \ \ \ *\ Only\ one\ changeset\ may\ exist\ at\ a\ time.\ While\ a\ changeset\ is}}
+\DoxyCodeLine{00646\ \textcolor{comment}{\ \ \ \ \ *\ outstanding,\ no\ removals\ or\ additions\ may\ be\ made\ directly\ to\ the}}
+\DoxyCodeLine{00647\ \textcolor{comment}{\ \ \ \ \ *\ mempool.}}
+\DoxyCodeLine{00648\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00649\ \ \ \ \ \textcolor{keyword}{class\ }ChangeSet\ \{}
+\DoxyCodeLine{00650\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00651\ \ \ \ \ \ \ \ \ \textcolor{keyword}{explicit}\ ChangeSet(CTxMemPool*\ pool)\ :\ m\_pool(pool)\ \{\ m\_pool-\/>m\_txgraph-\/>StartStaging();\ \}}
+\DoxyCodeLine{00652\ \ \ \ \ \ \ \ \ \string~ChangeSet()\ EXCLUSIVE\_LOCKS\_REQUIRED(m\_pool-\/>cs)\ \{}
+\DoxyCodeLine{00653\ \ \ \ \ \ \ \ \ \ \ \ \ AssertLockHeld(m\_pool-\/>cs);}
+\DoxyCodeLine{00654\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_pool-\/>m\_txgraph-\/>HaveStaging())\ \{}
+\DoxyCodeLine{00655\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_pool-\/>m\_txgraph-\/>AbortStaging();}
+\DoxyCodeLine{00656\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00657\ \ \ \ \ \ \ \ \ \ \ \ \ m\_pool-\/>m\_have\_changeset\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00658\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00659\ }
+\DoxyCodeLine{00660\ \ \ \ \ \ \ \ \ ChangeSet(\textcolor{keyword}{const}\ ChangeSet\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00661\ \ \ \ \ \ \ \ \ ChangeSet\&\ operator=(\textcolor{keyword}{const}\ ChangeSet\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00662\ }
+\DoxyCodeLine{00663\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }TxHandle\ =\ CTxMemPool::txiter;}
+\DoxyCodeLine{00664\ }
+\DoxyCodeLine{00665\ \ \ \ \ \ \ \ \ TxHandle\ StageAddition(\textcolor{keyword}{const}\ CTransactionRef\&\ tx,\ \textcolor{keyword}{const}\ CAmount\ fee,\ int64\_t\ time,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ entry\_height,\ uint64\_t\ entry\_sequence,\ \textcolor{keywordtype}{bool}\ spends\_coinbase,\ int64\_t\ sigops\_cost,\ LockPoints\ lp);}
+\DoxyCodeLine{00666\ }
+\DoxyCodeLine{00667\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ StageRemoval(CTxMemPool::txiter\ it);}
+\DoxyCodeLine{00668\ }
+\DoxyCodeLine{00669\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CTxMemPool::setEntries\&\ GetRemovals()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_to\_remove;\ \}}
+\DoxyCodeLine{00670\ }
+\DoxyCodeLine{00672\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckMemPoolPolicyLimits();}
+\DoxyCodeLine{00673\ }
+\DoxyCodeLine{00674\ \ \ \ \ \ \ \ \ CTxMemPool::setEntries\ CalculateMemPoolAncestors(TxHandle\ tx)}
+\DoxyCodeLine{00675\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00676\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Look\ up\ transaction\ in\ our\ cache\ first}}
+\DoxyCodeLine{00677\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ it\ =\ m\_ancestors.find(tx);}
+\DoxyCodeLine{00678\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (it\ !=\ m\_ancestors.end())\ \textcolor{keywordflow}{return}\ it-\/>second;}
+\DoxyCodeLine{00679\ }
+\DoxyCodeLine{00680\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ not\ found,\ try\ to\ have\ the\ mempool\ calculate\ it,\ and\ cache}}
+\DoxyCodeLine{00681\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ for\ later.}}
+\DoxyCodeLine{00682\ \ \ \ \ \ \ \ \ \ \ \ \ LOCK(m\_pool-\/>cs);}
+\DoxyCodeLine{00683\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ ret\ =\ m\_pool-\/>CalculateMemPoolAncestors(*tx);}
+\DoxyCodeLine{00684\ \ \ \ \ \ \ \ \ \ \ \ \ m\_ancestors.try\_emplace(tx,\ ret);}
+\DoxyCodeLine{00685\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00686\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00687\ }
+\DoxyCodeLine{00688\ \ \ \ \ \ \ \ \ std::vector<CTransactionRef>\ GetAddedTxns()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00689\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<CTransactionRef>\ ret;}
+\DoxyCodeLine{00690\ \ \ \ \ \ \ \ \ \ \ \ \ ret.reserve(m\_entry\_vec.size());}
+\DoxyCodeLine{00691\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ entry\ :\ m\_entry\_vec)\ \{}
+\DoxyCodeLine{00692\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ret.emplace\_back(entry-\/>GetSharedTx());}
+\DoxyCodeLine{00693\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00694\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00695\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00696\ }
+\DoxyCodeLine{00703\ \ \ \ \ \ \ \ \ util::Result<std::pair<std::vector<FeeFrac>,\ std::vector<FeeFrac>>>\ CalculateChunksForRBF();}
+\DoxyCodeLine{00704\ }
+\DoxyCodeLine{00705\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ GetTxCount()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_entry\_vec.size();\ \}}
+\DoxyCodeLine{00706\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CTransaction\&\ GetAddedTxn(\textcolor{keywordtype}{size\_t}\ index)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_entry\_vec.at(index)-\/>GetTx();\ \}}
+\DoxyCodeLine{00707\ }
+\DoxyCodeLine{00708\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ Apply()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00709\ }
+\DoxyCodeLine{00710\ \ \ \ \ private:}
+\DoxyCodeLine{00711\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ ProcessDependencies();}
+\DoxyCodeLine{00712\ }
+\DoxyCodeLine{00713\ \ \ \ \ \ \ \ \ CTxMemPool*\ m\_pool;}
+\DoxyCodeLine{00714\ \ \ \ \ \ \ \ \ CTxMemPool::indexed\_transaction\_set\ m\_to\_add;}
+\DoxyCodeLine{00715\ \ \ \ \ \ \ \ \ std::vector<CTxMemPool::txiter>\ m\_entry\_vec;\ \textcolor{comment}{//\ track\ the\ added\ transactions'\ insertion\ order}}
+\DoxyCodeLine{00716\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ map\ from\ the\ m\_to\_add\ index\ to\ the\ ancestors\ for\ the\ transaction}}
+\DoxyCodeLine{00717\ \ \ \ \ \ \ \ \ std::map<CTxMemPool::txiter,\ CTxMemPool::setEntries,\ CompareIteratorByHash>\ m\_ancestors;}
+\DoxyCodeLine{00718\ \ \ \ \ \ \ \ \ CTxMemPool::setEntries\ m\_to\_remove;}
+\DoxyCodeLine{00719\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_dependencies\_processed\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00720\ }
+\DoxyCodeLine{00721\ \ \ \ \ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }CTxMemPool;}
+\DoxyCodeLine{00722\ \ \ \ \ \};}
+\DoxyCodeLine{00723\ }
+\DoxyCodeLine{00724\ \ \ \ \ std::unique\_ptr<ChangeSet>\ GetChangeSet()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)\ \{}
+\DoxyCodeLine{00725\ \ \ \ \ \ \ \ \ Assume(!m\_have\_changeset);}
+\DoxyCodeLine{00726\ \ \ \ \ \ \ \ \ m\_have\_changeset\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00727\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::make\_unique<ChangeSet>(\textcolor{keyword}{this});}
+\DoxyCodeLine{00728\ \ \ \ \ \}}
+\DoxyCodeLine{00729\ }
+\DoxyCodeLine{00730\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_have\_changeset\ GUARDED\_BY(cs)\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00731\ }
+\DoxyCodeLine{00732\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }CTxMemPool::ChangeSet;}
+\DoxyCodeLine{00733\ }
+\DoxyCodeLine{00734\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00735\ \ \ \ \ \textcolor{comment}{//\ Apply\ the\ given\ changeset\ to\ the\ mempool,\ by\ removing\ transactions\ in}}
+\DoxyCodeLine{00736\ \ \ \ \ \textcolor{comment}{//\ the\ to\_remove\ set\ and\ adding\ transactions\ in\ the\ to\_add\ set.}}
+\DoxyCodeLine{00737\ \ \ \ \ \textcolor{keywordtype}{void}\ Apply(CTxMemPool::ChangeSet*\ changeset)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00738\ }
+\DoxyCodeLine{00739\ \ \ \ \ \textcolor{comment}{//\ addNewTransaction\ must\ update\ state\ for\ all\ ancestors\ of\ a\ given\ transaction,}}
+\DoxyCodeLine{00740\ \ \ \ \ \textcolor{comment}{//\ to\ track\ size/count\ of\ descendant\ transactions.\ \ First\ version\ of}}
+\DoxyCodeLine{00741\ \ \ \ \ \textcolor{comment}{//\ addNewTransaction\ can\ be\ used\ to\ have\ it\ call\ CalculateMemPoolAncestors(),\ and}}
+\DoxyCodeLine{00742\ \ \ \ \ \textcolor{comment}{//\ then\ invoke\ the\ second\ version.}}
+\DoxyCodeLine{00743\ \ \ \ \ \textcolor{comment}{//\ Note\ that\ addNewTransaction\ is\ ONLY\ called\ (via\ Apply())\ from\ ATMP}}
+\DoxyCodeLine{00744\ \ \ \ \ \textcolor{comment}{//\ outside\ of\ tests\ and\ any\ other\ callers\ may\ break\ wallet's\ in-\/mempool}}
+\DoxyCodeLine{00745\ \ \ \ \ \textcolor{comment}{//\ tracking\ (due\ to\ lack\ of\ CValidationInterface::TransactionAddedToMempool}}
+\DoxyCodeLine{00746\ \ \ \ \ \textcolor{comment}{//\ callbacks).}}
+\DoxyCodeLine{00747\ \ \ \ \ \textcolor{keywordtype}{void}\ addNewTransaction(CTxMemPool::txiter\ it)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00748\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00749\ \ \ \ \ \textcolor{keywordtype}{void}\ StartBlockBuilding()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)\ \{\ assert(!m\_builder);\ m\_builder\ =\ m\_txgraph-\/>GetBlockBuilder();\ \}}
+\DoxyCodeLine{00750\ \ \ \ \ FeePerWeight\ GetBlockBuilderChunk(std::vector<CTxMemPoolEntry::CTxMemPoolEntryRef>\&\ entries)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)}
+\DoxyCodeLine{00751\ \ \ \ \ \{}
+\DoxyCodeLine{00752\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_builder)\ \{\ \textcolor{keywordflow}{return}\ \{\};\ \}}
+\DoxyCodeLine{00753\ }
+\DoxyCodeLine{00754\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ res\ =\ m\_builder-\/>GetCurrentChunk();}
+\DoxyCodeLine{00755\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!res)\ \{\ \textcolor{keywordflow}{return}\ \{\};\ \}}
+\DoxyCodeLine{00756\ }
+\DoxyCodeLine{00757\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ [chunk\_entries,\ chunk\_feerate]\ =\ *res;}
+\DoxyCodeLine{00758\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (TxGraph::Ref*\ ref\ :\ chunk\_entries)\ \{}
+\DoxyCodeLine{00759\ \ \ \ \ \ \ \ \ \ \ \ \ entries.emplace\_back(\textcolor{keyword}{static\_cast<}\textcolor{keyword}{const\ }CTxMemPoolEntry\&\textcolor{keyword}{>}(*ref));}
+\DoxyCodeLine{00760\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00761\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ chunk\_feerate;}
+\DoxyCodeLine{00762\ \ \ \ \ \}}
+\DoxyCodeLine{00763\ \ \ \ \ \textcolor{keywordtype}{void}\ IncludeBuilderChunk()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)\ \{\ m\_builder-\/>Include();\ \}}
+\DoxyCodeLine{00764\ \ \ \ \ \textcolor{keywordtype}{void}\ SkipBuilderChunk()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)\ \{\ m\_builder-\/>Skip();\ \}}
+\DoxyCodeLine{00765\ \ \ \ \ \textcolor{keywordtype}{void}\ StopBlockBuilding()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)\ \{\ m\_builder.reset();\ \}}
+\DoxyCodeLine{00766\ \};}
+\DoxyCodeLine{00767\ }
+\DoxyCodeLine{00781\ \textcolor{keyword}{class\ }CCoinsViewMemPool\ :\ \textcolor{keyword}{public}\ CCoinsViewBacked}
+\DoxyCodeLine{00782\ \{}
+\DoxyCodeLine{00787\ \ \ \ \ std::unordered\_map<COutPoint,\ Coin,\ SaltedOutpointHasher>\ m\_temp\_added;}
+\DoxyCodeLine{00788\ }
+\DoxyCodeLine{00793\ \ \ \ \ \textcolor{keyword}{mutable}\ std::unordered\_set<COutPoint,\ SaltedOutpointHasher>\ m\_non\_base\_coins;}
+\DoxyCodeLine{00794\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00795\ \ \ \ \ \textcolor{keyword}{const}\ CTxMemPool\&\ mempool;}
+\DoxyCodeLine{00796\ }
+\DoxyCodeLine{00797\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00798\ \ \ \ \ CCoinsViewMemPool(CCoinsView*\ baseIn,\ \textcolor{keyword}{const}\ CTxMemPool\&\ mempoolIn);}
+\DoxyCodeLine{00801\ \ \ \ \ std::optional<Coin>\ GetCoin(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00804\ \ \ \ \ \textcolor{keywordtype}{void}\ PackageAddTransaction(\textcolor{keyword}{const}\ CTransactionRef\&\ tx);}
+\DoxyCodeLine{00806\ \ \ \ \ \textcolor{keyword}{const}\ std::unordered\_set<COutPoint,\ SaltedOutpointHasher>\&\ GetNonBaseCoins()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_non\_base\_coins;\ \}}
+\DoxyCodeLine{00808\ \ \ \ \ \textcolor{keywordtype}{void}\ Reset();}
+\DoxyCodeLine{00809\ \};}
+\DoxyCodeLine{00810\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_TXMEMPOOL\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,120 @@
+\doxysection{coincontrol.\+h}
+\label{coincontrol_8h_source}\index{src/wallet/coincontrol.h@{src/wallet/coincontrol.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_WALLET\_COINCONTROL\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_WALLET\_COINCONTROL\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <outputtype.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <policy/feerate.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <policy/fees/block\_policy\_estimator.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <script/keyorigin.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <script/signingprovider.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00021\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ DEFAULT\_MIN\_DEPTH\ =\ 0;}
+\DoxyCodeLine{00022\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ DEFAULT\_MAX\_DEPTH\ =\ 9999999;}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ DEFAULT\_WALLET\_TX\_VERSION\ =\ CTransaction::CURRENT\_VERSION;}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ DEFAULT\_AVOIDPARTIALSPENDS\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{keyword}{class\ }PreselectedInput}
+\DoxyCodeLine{00030\ \{}
+\DoxyCodeLine{00031\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00033\ \ \ \ \ std::optional<CTxOut>\ m\_txout;}
+\DoxyCodeLine{00035\ \ \ \ \ std::optional<int64\_t>\ m\_weight;}
+\DoxyCodeLine{00037\ \ \ \ \ std::optional<uint32\_t>\ m\_sequence;}
+\DoxyCodeLine{00039\ \ \ \ \ std::optional<CScript>\ m\_script\_sig;}
+\DoxyCodeLine{00041\ \ \ \ \ std::optional<CScriptWitness>\ m\_script\_witness;}
+\DoxyCodeLine{00043\ \ \ \ \ std::optional<unsigned\ int>\ m\_pos;}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordtype}{void}\ SetTxOut(\textcolor{keyword}{const}\ CTxOut\&\ txout);}
+\DoxyCodeLine{00052\ \ \ \ \ CTxOut\ GetTxOut()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasTxOut()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{void}\ SetInputWeight(int64\_t\ weight);}
+\DoxyCodeLine{00059\ \ \ \ \ std::optional<int64\_t>\ GetInputWeight()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordtype}{void}\ SetSequence(uint32\_t\ sequence);}
+\DoxyCodeLine{00064\ \ \ \ \ std::optional<uint32\_t>\ GetSequence()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keywordtype}{void}\ SetScriptSig(\textcolor{keyword}{const}\ CScript\&\ script);}
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordtype}{void}\ SetScriptWitness(\textcolor{keyword}{const}\ CScriptWitness\&\ script\_wit);}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasScripts()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00073\ \ \ \ \ std::pair<std::optional<CScript>,\ std::optional<CScriptWitness>>\ GetScripts()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keywordtype}{void}\ SetPosition(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ pos);}
+\DoxyCodeLine{00078\ \ \ \ \ std::optional<unsigned\ int>\ GetPosition()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00079\ \};}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00082\ \textcolor{keyword}{class\ }CCoinControl}
+\DoxyCodeLine{00083\ \{}
+\DoxyCodeLine{00084\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00086\ \ \ \ \ CTxDestination\ destChange\ =\ CNoDestination();}
+\DoxyCodeLine{00088\ \ \ \ \ std::optional<OutputType>\ m\_change\_type;}
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_include\_unsafe\_inputs\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_allow\_other\_inputs\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keywordtype}{bool}\ fOverrideFeeRate\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00097\ \ \ \ \ std::optional<CFeeRate>\ m\_feerate;}
+\DoxyCodeLine{00099\ \ \ \ \ std::optional<unsigned\ int>\ m\_confirm\_target;}
+\DoxyCodeLine{00101\ \ \ \ \ std::optional<bool>\ m\_signal\_bip125\_rbf;}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_avoid\_partial\_spends\ =\ DEFAULT\_AVOIDPARTIALSPENDS;}
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_avoid\_address\_reuse\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00107\ \ \ \ \ FeeEstimateMode\ m\_fee\_mode\ =\ FeeEstimateMode::UNSET;}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_min\_depth\ =\ DEFAULT\_MIN\_DEPTH;}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_max\_depth\ =\ DEFAULT\_MAX\_DEPTH;}
+\DoxyCodeLine{00113\ \ \ \ \ FlatSigningProvider\ m\_external\_provider;}
+\DoxyCodeLine{00115\ \ \ \ \ uint32\_t\ m\_version\ =\ DEFAULT\_WALLET\_TX\_VERSION;}
+\DoxyCodeLine{00117\ \ \ \ \ std::optional<uint32\_t>\ m\_locktime;}
+\DoxyCodeLine{00119\ \ \ \ \ std::optional<int>\ m\_max\_tx\_weight\{std::nullopt\};}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \ \ \ \ CCoinControl();}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasSelected()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsSelected(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsExternalSelected(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00138\ \ \ \ \ std::optional<CTxOut>\ GetExternalOutput(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00143\ \ \ \ \ PreselectedInput\&\ Select(\textcolor{keyword}{const}\ COutPoint\&\ outpoint);}
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordtype}{void}\ UnSelect(\textcolor{keyword}{const}\ COutPoint\&\ outpoint);}
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{keywordtype}{void}\ UnSelectAll();}
+\DoxyCodeLine{00155\ \ \ \ \ std::vector<COutPoint>\ ListSelected()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{keywordtype}{void}\ SetInputWeight(\textcolor{keyword}{const}\ COutPoint\&\ outpoint,\ int64\_t\ weight);}
+\DoxyCodeLine{00163\ \ \ \ \ std::optional<int64\_t>\ GetInputWeight(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00165\ \ \ \ \ std::optional<uint32\_t>\ GetSequence(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00167\ \ \ \ \ std::pair<std::optional<CScript>,\ std::optional<CScriptWitness>>\ GetScripts(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasSelectedOrder()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00170\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_selection\_pos\ >\ 0;}
+\DoxyCodeLine{00172\ \ \ \ \ \}}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00174\ \ \ \ \ std::optional<unsigned\ int>\ GetSelectionPos(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00175\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ it\ =\ m\_selected.find(outpoint);}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (it\ ==\ m\_selected.end())\ \{}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ it-\/>second.GetPosition();}
+\DoxyCodeLine{00181\ \ \ \ \ \}}
+\DoxyCodeLine{00182\ }
+\DoxyCodeLine{00183\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00185\ \ \ \ \ std::map<COutPoint,\ PreselectedInput>\ m\_selected;}
+\DoxyCodeLine{00186\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ m\_selection\_pos\{0\};}
+\DoxyCodeLine{00187\ \};}
+\DoxyCodeLine{00188\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00190\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_WALLET\_COINCONTROL\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,81 @@
+.TH "src/node/eviction.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/node/eviction.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <node/eviction\&.h>\fP
+.br
+\fR#include <algorithm>\fP
+.br
+\fR#include <array>\fP
+.br
+\fR#include <chrono>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include <functional>\fP
+.br
+\fR#include <map>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBCompareNodeNetworkTime\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "void \fBProtectNoBanConnections\fP (std::vector< \fBNodeEvictionCandidate\fP > &eviction_candidates)"
+.br
+.ti -1c
+.RI "void \fBProtectOutboundConnections\fP (std::vector< \fBNodeEvictionCandidate\fP > &eviction_candidates)"
+.br
+.ti -1c
+.RI "void \fBProtectEvictionCandidatesByRatio\fP (std::vector< \fBNodeEvictionCandidate\fP > &eviction_candidates)"
+.br
+.ti -1c
+.RI "std::optional< \fBNodeId\fP > \fBSelectNodeToEvict\fP (std::vector< \fBNodeEvictionCandidate\fP > &&vEvictionCandidates)"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "void ProtectEvictionCandidatesByRatio (std::vector< \fBNodeEvictionCandidate\fP > & vEvictionCandidates)"
+Protect desirable or disadvantaged inbound peers from eviction by ratio\&.
+
+.PP
+This function protects half of the peers which have been connected the longest, to replicate the non-eviction implicit behavior and preclude attacks that start later\&.
+
+.PP
+Half of these protected spots (1/4 of the total) are reserved for the following categories of peers, sorted by longest uptime, even if they're not longest uptime overall:
+
+.PP
+.IP "\(bu" 2
+onion peers connected via our tor control service
+.IP "\(bu" 2
+localhost peers, as manually configured hidden services not using \fR-bind=addr[:port]=onion\fP will not be detected as inbound onion connections
+.IP "\(bu" 2
+I2P peers
+.IP "\(bu" 2
+CJDNS peers
+.PP
+
+.PP
+This helps protect these privacy network peers, which tend to be otherwise disadvantaged under our eviction criteria for their higher min ping times relative to IPv4/IPv6 peers, and favorise the diversity of peer connections\&. 
+.SS "void ProtectNoBanConnections (std::vector< \fBNodeEvictionCandidate\fP > & eviction_candidates)"
+
+.SS "void ProtectOutboundConnections (std::vector< \fBNodeEvictionCandidate\fP > & eviction_candidates)"
+
+.SS "std::optional< \fBNodeId\fP > SelectNodeToEvict (std::vector< \fBNodeEvictionCandidate\fP > && vEvictionCandidates)\fR [nodiscard]\fP"
+Select an inbound peer to evict after filtering out (protecting) peers having distinct, difficult-to-forge characteristics\&. The protection logic picks out fixed numbers of desirable peers per various criteria, followed by (mostly) ratios of desirable or disadvantaged peers\&. If any eviction candidates remain, the selection logic chooses a peer to evict\&. 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

@@ -1,0 +1,132 @@
+\doxysection{status.\+h}
+\label{status_8h_source}\index{src/leveldb/include/leveldb/status.h@{src/leveldb/include/leveldb/status.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ A\ Status\ encapsulates\ the\ result\ of\ an\ operation.\ \ It\ may\ indicate\ success,}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//\ or\ it\ may\ indicate\ an\ error\ with\ an\ associated\ error\ message.}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//}}
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ Multiple\ threads\ can\ invoke\ const\ methods\ on\ a\ Status\ without}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//\ external\ synchronization,\ but\ if\ any\ of\ the\ threads\ may\ call\ a}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//\ non-\/const\ method,\ all\ threads\ accessing\ the\ same\ Status\ must\ use}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//\ external\ synchronization.}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_STATUS\_H\_}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_STATUS\_H\_}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ "{}leveldb/slice.h"{}}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ Status\ \{}
+\DoxyCodeLine{00025\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00026\ \ \ \textcolor{comment}{//\ Create\ a\ success\ status.}}
+\DoxyCodeLine{00027\ \ \ Status()\ noexcept\ :\ state\_(\textcolor{keywordtype}{nullptr})\ \{\}}
+\DoxyCodeLine{00028\ \ \ \string~Status()\ \{\ \textcolor{keyword}{delete}[]\ state\_;\ \}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \ \ Status(\textcolor{keyword}{const}\ Status\&\ rhs);}
+\DoxyCodeLine{00031\ \ \ Status\&\ operator=(\textcolor{keyword}{const}\ Status\&\ rhs);}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \ \ Status(Status\&\&\ rhs)\ noexcept\ :\ state\_(rhs.state\_)\ \{\ rhs.state\_\ =\ \textcolor{keyword}{nullptr};\ \}}
+\DoxyCodeLine{00034\ \ \ Status\&\ operator=(Status\&\&\ rhs)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \textcolor{comment}{//\ Return\ a\ success\ status.}}
+\DoxyCodeLine{00037\ \ \ \textcolor{keyword}{static}\ Status\ OK()\ \{\ \textcolor{keywordflow}{return}\ Status();\ \}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \textcolor{comment}{//\ Return\ error\ status\ of\ an\ appropriate\ type.}}
+\DoxyCodeLine{00040\ \ \ \textcolor{keyword}{static}\ Status\ NotFound(\textcolor{keyword}{const}\ Slice\&\ msg,\ \textcolor{keyword}{const}\ Slice\&\ msg2\ =\ Slice())\ \{}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordflow}{return}\ Status(kNotFound,\ msg,\ msg2);}
+\DoxyCodeLine{00042\ \ \ \}}
+\DoxyCodeLine{00043\ \ \ \textcolor{keyword}{static}\ Status\ Corruption(\textcolor{keyword}{const}\ Slice\&\ msg,\ \textcolor{keyword}{const}\ Slice\&\ msg2\ =\ Slice())\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordflow}{return}\ Status(kCorruption,\ msg,\ msg2);}
+\DoxyCodeLine{00045\ \ \ \}}
+\DoxyCodeLine{00046\ \ \ \textcolor{keyword}{static}\ Status\ NotSupported(\textcolor{keyword}{const}\ Slice\&\ msg,\ \textcolor{keyword}{const}\ Slice\&\ msg2\ =\ Slice())\ \{}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordflow}{return}\ Status(kNotSupported,\ msg,\ msg2);}
+\DoxyCodeLine{00048\ \ \ \}}
+\DoxyCodeLine{00049\ \ \ \textcolor{keyword}{static}\ Status\ InvalidArgument(\textcolor{keyword}{const}\ Slice\&\ msg,\ \textcolor{keyword}{const}\ Slice\&\ msg2\ =\ Slice())\ \{}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordflow}{return}\ Status(kInvalidArgument,\ msg,\ msg2);}
+\DoxyCodeLine{00051\ \ \ \}}
+\DoxyCodeLine{00052\ \ \ \textcolor{keyword}{static}\ Status\ IOError(\textcolor{keyword}{const}\ Slice\&\ msg,\ \textcolor{keyword}{const}\ Slice\&\ msg2\ =\ Slice())\ \{}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordflow}{return}\ Status(kIOError,\ msg,\ msg2);}
+\DoxyCodeLine{00054\ \ \ \}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ the\ status\ indicates\ success.}}
+\DoxyCodeLine{00057\ \ \ \textcolor{keywordtype}{bool}\ ok()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (state\_\ ==\ \textcolor{keyword}{nullptr});\ \}}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ the\ status\ indicates\ a\ NotFound\ error.}}
+\DoxyCodeLine{00060\ \ \ \textcolor{keywordtype}{bool}\ IsNotFound()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ code()\ ==\ kNotFound;\ \}}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ the\ status\ indicates\ a\ Corruption\ error.}}
+\DoxyCodeLine{00063\ \ \ \textcolor{keywordtype}{bool}\ IsCorruption()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ code()\ ==\ kCorruption;\ \}}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ the\ status\ indicates\ an\ IOError.}}
+\DoxyCodeLine{00066\ \ \ \textcolor{keywordtype}{bool}\ IsIOError()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ code()\ ==\ kIOError;\ \}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ the\ status\ indicates\ a\ NotSupportedError.}}
+\DoxyCodeLine{00069\ \ \ \textcolor{keywordtype}{bool}\ IsNotSupportedError()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ code()\ ==\ kNotSupported;\ \}}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ the\ status\ indicates\ an\ InvalidArgument.}}
+\DoxyCodeLine{00072\ \ \ \textcolor{keywordtype}{bool}\ IsInvalidArgument()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ code()\ ==\ kInvalidArgument;\ \}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ \textcolor{comment}{//\ Return\ a\ string\ representation\ of\ this\ status\ suitable\ for\ printing.}}
+\DoxyCodeLine{00075\ \ \ \textcolor{comment}{//\ Returns\ the\ string\ "{}OK"{}\ for\ success.}}
+\DoxyCodeLine{00076\ \ \ std::string\ ToString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00079\ \ \ \textcolor{keyword}{enum}\ Code\ \{}
+\DoxyCodeLine{00080\ \ \ \ \ kOk\ =\ 0,}
+\DoxyCodeLine{00081\ \ \ \ \ kNotFound\ =\ 1,}
+\DoxyCodeLine{00082\ \ \ \ \ kCorruption\ =\ 2,}
+\DoxyCodeLine{00083\ \ \ \ \ kNotSupported\ =\ 3,}
+\DoxyCodeLine{00084\ \ \ \ \ kInvalidArgument\ =\ 4,}
+\DoxyCodeLine{00085\ \ \ \ \ kIOError\ =\ 5}
+\DoxyCodeLine{00086\ \ \ \};}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ Code\ code()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordflow}{return}\ (state\_\ ==\ \textcolor{keyword}{nullptr})\ ?\ kOk\ :\ \textcolor{keyword}{static\_cast<}Code\textcolor{keyword}{>}(state\_[4]);}
+\DoxyCodeLine{00090\ \ \ \}}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \ \ Status(Code\ code,\ \textcolor{keyword}{const}\ Slice\&\ msg,\ \textcolor{keyword}{const}\ Slice\&\ msg2);}
+\DoxyCodeLine{00093\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ CopyState(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ s);}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \textcolor{comment}{//\ OK\ status\ has\ a\ null\ state\_.\ \ Otherwise,\ state\_\ is\ a\ new[]\ array}}
+\DoxyCodeLine{00096\ \ \ \textcolor{comment}{//\ of\ the\ following\ form:}}
+\DoxyCodeLine{00097\ \ \ \textcolor{comment}{//\ \ \ \ state\_[0..3]\ ==\ length\ of\ message}}
+\DoxyCodeLine{00098\ \ \ \textcolor{comment}{//\ \ \ \ state\_[4]\ \ \ \ ==\ code}}
+\DoxyCodeLine{00099\ \ \ \textcolor{comment}{//\ \ \ \ state\_[5..]\ \ ==\ message}}
+\DoxyCodeLine{00100\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ state\_;}
+\DoxyCodeLine{00101\ \};}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00103\ \textcolor{keyword}{inline}\ Status::Status(\textcolor{keyword}{const}\ Status\&\ rhs)\ \{}
+\DoxyCodeLine{00104\ \ \ state\_\ =\ (rhs.state\_\ ==\ \textcolor{keyword}{nullptr})\ ?\ \textcolor{keyword}{nullptr}\ :\ CopyState(rhs.state\_);}
+\DoxyCodeLine{00105\ \}}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \textcolor{comment}{//\ NOLINTBEGIN(bugprone-\/unhandled-\/self-\/assignment)}}
+\DoxyCodeLine{00108\ \textcolor{keyword}{inline}\ Status\&\ Status::operator=(\textcolor{keyword}{const}\ Status\&\ rhs)\ \{}
+\DoxyCodeLine{00109\ \ \ \textcolor{comment}{//\ The\ following\ condition\ catches\ both\ aliasing\ (when\ this\ ==\ \&rhs),}}
+\DoxyCodeLine{00110\ \ \ \textcolor{comment}{//\ and\ the\ common\ case\ where\ both\ rhs\ and\ *this\ are\ ok.}}
+\DoxyCodeLine{00111\ \ \ \textcolor{keywordflow}{if}\ (state\_\ !=\ rhs.state\_)\ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{keyword}{delete}[]\ state\_;}
+\DoxyCodeLine{00113\ \ \ \ \ state\_\ =\ (rhs.state\_\ ==\ \textcolor{keyword}{nullptr})\ ?\ \textcolor{keyword}{nullptr}\ :\ CopyState(rhs.state\_);}
+\DoxyCodeLine{00114\ \ \ \}}
+\DoxyCodeLine{00115\ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00116\ \}}
+\DoxyCodeLine{00117\ \textcolor{comment}{//\ NOLINTEND(bugprone-\/unhandled-\/self-\/assignment)}}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00119\ \textcolor{keyword}{inline}\ Status\&\ Status::operator=(Status\&\&\ rhs)\ \textcolor{keyword}{noexcept}\ \{}
+\DoxyCodeLine{00120\ \ \ std::swap(state\_,\ rhs.state\_);}
+\DoxyCodeLine{00121\ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00122\ \}}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_INCLUDE\_STATUS\_H\_}}
+
+\end{DoxyCode}

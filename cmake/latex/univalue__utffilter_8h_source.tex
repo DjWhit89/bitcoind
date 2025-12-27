@@ -1,0 +1,121 @@
+\doxysection{univalue\+\_\+utffilter.\+h}
+\label{univalue__utffilter_8h_source}\index{src/univalue/include/univalue\_utffilter.h@{src/univalue/include/univalue\_utffilter.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ 2016\ Wladimir\ J.\ van\ der\ Laan}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ https://opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UNIVALUE\_INCLUDE\_UNIVALUE\_UTFFILTER\_H}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#define\ BITCOIN\_UNIVALUE\_INCLUDE\_UNIVALUE\_UTFFILTER\_H}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{class\ }JSONUTF8StringFilter}
+\DoxyCodeLine{00014\ \{}
+\DoxyCodeLine{00015\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00016\ \ \ \ \ \textcolor{keyword}{explicit}\ JSONUTF8StringFilter(std::string\&\ s)}
+\DoxyCodeLine{00017\ \ \ \ \ \ \ \ \ :\ str(s)}
+\DoxyCodeLine{00018\ \ \ \ \ \{}
+\DoxyCodeLine{00019\ \ \ \ \ \}}
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{comment}{//\ Write\ single\ 8-\/bit\ char\ (may\ be\ part\ of\ UTF-\/8\ sequence)}}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keywordtype}{void}\ push\_back(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ ch)}
+\DoxyCodeLine{00022\ \ \ \ \ \{}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (state\ ==\ 0)\ \{}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ch\ <\ 0x80)\ \textcolor{comment}{//\ 7-\/bit\ ASCII,\ fast\ direct\ pass-\/through}}
+\DoxyCodeLine{00025\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ str.push\_back(ch);}
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (ch\ <\ 0xc0)\ \textcolor{comment}{//\ Mid-\/sequence\ character,\ invalid\ in\ this\ state}}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ is\_valid\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (ch\ <\ 0xe0)\ \{\ \textcolor{comment}{//\ Start\ of\ 2-\/byte\ sequence}}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ codepoint\ =\ (ch\ \&\ 0x1f)\ <<\ 6;}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ state\ =\ 6;}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (ch\ <\ 0xf0)\ \{\ \textcolor{comment}{//\ Start\ of\ 3-\/byte\ sequence}}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ codepoint\ =\ (ch\ \&\ 0x0f)\ <<\ 12;}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ state\ =\ 12;}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (ch\ <\ 0xf8)\ \{\ \textcolor{comment}{//\ Start\ of\ 4-\/byte\ sequence}}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ codepoint\ =\ (ch\ \&\ 0x07)\ <<\ 18;}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ state\ =\ 18;}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{comment}{//\ Reserved,\ invalid}}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ is\_valid\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((ch\ \&\ 0xc0)\ !=\ 0x80)\ \textcolor{comment}{//\ Not\ a\ continuation,\ invalid}}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ is\_valid\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ state\ -\/=\ 6;}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \ \ \ \ codepoint\ |=\ (ch\ \&\ 0x3f)\ <<\ state;}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (state\ ==\ 0)}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ push\_back\_u(codepoint);}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00047\ \ \ \ \ \}}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{comment}{//\ Write\ codepoint\ directly,\ possibly\ collating\ surrogate\ pairs}}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordtype}{void}\ push\_back\_u(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ codepoint\_)}
+\DoxyCodeLine{00050\ \ \ \ \ \{}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (state)\ \textcolor{comment}{//\ Only\ accept\ full\ codepoints\ in\ open\ state}}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ is\_valid\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (codepoint\_\ >=\ 0xD800\ \&\&\ codepoint\_\ <\ 0xDC00)\ \{\ \textcolor{comment}{//\ First\ half\ of\ surrogate\ pair}}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (surpair)\ \textcolor{comment}{//\ Two\ subsequent\ surrogate\ pair\ openers\ -\/\ fail}}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ is\_valid\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ surpair\ =\ codepoint\_;}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (codepoint\_\ >=\ 0xDC00\ \&\&\ codepoint\_\ <\ 0xE000)\ \{\ \textcolor{comment}{//\ Second\ half\ of\ surrogate\ pair}}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (surpair)\ \{\ \textcolor{comment}{//\ Open\ surrogate\ pair,\ expect\ second\ half}}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Compute\ code\ point\ from\ UTF-\/16\ surrogate\ pair}}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ append\_codepoint(0x10000\ |\ ((surpair\ -\/\ 0xD800)<<10)\ |\ (codepoint\_\ -\/\ 0xDC00));}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ surpair\ =\ 0;}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{comment}{//\ Second\ half\ doesn't\ follow\ a\ first\ half\ -\/\ fail}}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ is\_valid\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (surpair)\ \textcolor{comment}{//\ First\ half\ of\ surrogate\ pair\ not\ followed\ by\ second\ -\/\ fail}}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ is\_valid\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ append\_codepoint(codepoint\_);}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00071\ \ \ \ \ \}}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{comment}{//\ Check\ that\ we're\ in\ a\ state\ where\ the\ string\ can\ be\ ended}}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{comment}{//\ No\ open\ sequences,\ no\ open\ surrogate\ pairs,\ etc}}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keywordtype}{bool}\ finalize()}
+\DoxyCodeLine{00075\ \ \ \ \ \{}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (state\ ||\ surpair)}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ is\_valid\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ is\_valid;}
+\DoxyCodeLine{00079\ \ \ \ \ \}}
+\DoxyCodeLine{00080\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00081\ \ \ \ \ std::string\ \&str;}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keywordtype}{bool}\ is\_valid\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{comment}{//\ Current\ UTF-\/8\ decoding\ state}}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ codepoint\{0\};}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordtype}{int}\ state\{0\};\ \textcolor{comment}{//\ Top\ bit\ to\ be\ filled\ in\ for\ next\ UTF-\/8\ byte,\ or\ 0}}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{comment}{//\ Keep\ track\ of\ the\ following\ state\ to\ handle\ the\ following\ section\ of}}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{comment}{//\ RFC4627:}}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{comment}{//\ \ \ \ To\ escape\ an\ extended\ character\ that\ is\ not\ in\ the\ Basic\ Multilingual}}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{comment}{//\ \ \ \ Plane,\ the\ character\ is\ represented\ as\ a\ twelve-\/character\ sequence,}}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{comment}{//\ \ \ \ encoding\ the\ UTF-\/16\ surrogate\ pair.\ \ So,\ for\ example,\ a\ string}}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{comment}{//\ \ \ \ containing\ only\ the\ G\ clef\ character\ (U+1D11E)\ may\ be\ represented\ as}}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{comment}{//\ \ \ \ "{}\(\backslash\)uD834\(\backslash\)uDD1E"{}.}}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{comment}{//\ \ Two\ subsequent\ \(\backslash\)u....\ may\ have\ to\ be\ replaced\ with\ one\ actual\ codepoint.}}
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ surpair\{0\};\ \textcolor{comment}{//\ First\ half\ of\ open\ UTF-\/16\ surrogate\ pair,\ or\ 0}}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{keywordtype}{void}\ append\_codepoint(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ codepoint\_)}
+\DoxyCodeLine{00100\ \ \ \ \ \{}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (codepoint\_\ <=\ 0x7f)}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \ \ \ \ str.push\_back((\textcolor{keywordtype}{char})codepoint\_);}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (codepoint\_\ <=\ 0x7FF)\ \{}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \ \ \ \ str.push\_back((\textcolor{keywordtype}{char})(0xC0\ |\ (codepoint\_\ >>\ 6)));}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ str.push\_back((\textcolor{keywordtype}{char})(0x80\ |\ (codepoint\_\ \&\ 0x3F)));}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (codepoint\_\ <=\ 0xFFFF)\ \{}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \ \ \ \ str.push\_back((\textcolor{keywordtype}{char})(0xE0\ |\ (codepoint\_\ >>\ 12)));}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \ \ \ \ str.push\_back((\textcolor{keywordtype}{char})(0x80\ |\ ((codepoint\_\ >>\ 6)\ \&\ 0x3F)));}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \ \ \ \ str.push\_back((\textcolor{keywordtype}{char})(0x80\ |\ (codepoint\_\ \&\ 0x3F)));}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (codepoint\_\ <=\ 0x1FFFFF)\ \{}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \ \ \ \ str.push\_back((\textcolor{keywordtype}{char})(0xF0\ |\ (codepoint\_\ >>\ 18)));}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \ \ \ \ str.push\_back((\textcolor{keywordtype}{char})(0x80\ |\ ((codepoint\_\ >>\ 12)\ \&\ 0x3F)));}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \ \ \ \ str.push\_back((\textcolor{keywordtype}{char})(0x80\ |\ ((codepoint\_\ >>\ 6)\ \&\ 0x3F)));}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \ \ \ \ str.push\_back((\textcolor{keywordtype}{char})(0x80\ |\ (codepoint\_\ \&\ 0x3F)));}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00116\ \ \ \ \ \}}
+\DoxyCodeLine{00117\ \};}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00119\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UNIVALUE\_INCLUDE\_UNIVALUE\_UTFFILTER\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,107 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="release-process_8md" kind="file" language="Markdown">
+    <compoundname>release-process.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">#<sp/>Release<sp/>process</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>document<sp/>outlines<sp/>the<sp/>process<sp/>for<sp/>releasing<sp/>versions<sp/>of<sp/>the<sp/>form<sp/>`$MAJOR.$MINOR.$PATCH`.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">We<sp/>distinguish<sp/>between<sp/>two<sp/>types<sp/>of<sp/>releases:<sp/>*regular*<sp/>and<sp/>*maintenance*<sp/>releases.</highlight></codeline>
+<codeline><highlight class="normal">Regular<sp/>releases<sp/>are<sp/>releases<sp/>of<sp/>a<sp/>new<sp/>major<sp/>or<sp/>minor<sp/>version<sp/>as<sp/>well<sp/>as<sp/>patches<sp/>of<sp/>the<sp/>most<sp/>recent<sp/>release.</highlight></codeline>
+<codeline><highlight class="normal">Maintenance<sp/>releases,<sp/>on<sp/>the<sp/>other<sp/>hand,<sp/>are<sp/>required<sp/>for<sp/>patches<sp/>of<sp/>older<sp/>releases.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">You<sp/>should<sp/>coordinate<sp/>with<sp/>the<sp/>other<sp/>maintainers<sp/>on<sp/>the<sp/>release<sp/>date,<sp/>if<sp/>possible.</highlight></codeline>
+<codeline><highlight class="normal">This<sp/>date<sp/>will<sp/>be<sp/>part<sp/>of<sp/>the<sp/>release<sp/>entry<sp/>in<sp/>[CHANGELOG.md](../CHANGELOG.md)<sp/>and<sp/>it<sp/>should<sp/>match<sp/>the<sp/>dates<sp/>of<sp/>the<sp/>remaining<sp/>steps<sp/>in<sp/>the<sp/>release<sp/>process<sp/>(including<sp/>the<sp/>date<sp/>of<sp/>the<sp/>tag<sp/>and<sp/>the<sp/>GitHub<sp/>release).</highlight></codeline>
+<codeline><highlight class="normal">It<sp/>is<sp/>best<sp/>if<sp/>the<sp/>maintainers<sp/>are<sp/>present<sp/>during<sp/>the<sp/>release,<sp/>so<sp/>they<sp/>can<sp/>help<sp/>ensure<sp/>that<sp/>the<sp/>process<sp/>is<sp/>followed<sp/>correctly<sp/>and,<sp/>in<sp/>the<sp/>case<sp/>of<sp/>a<sp/>regular<sp/>release,<sp/>they<sp/>are<sp/>aware<sp/>that<sp/>they<sp/>should<sp/>not<sp/>modify<sp/>the<sp/>master<sp/>branch<sp/>between<sp/>merging<sp/>the<sp/>PR<sp/>in<sp/>step<sp/>1<sp/>and<sp/>the<sp/>PR<sp/>in<sp/>step<sp/>3.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>process<sp/>also<sp/>assumes<sp/>that<sp/>there<sp/>will<sp/>be<sp/>no<sp/>minor<sp/>releases<sp/>for<sp/>old<sp/>major<sp/>releases.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">We<sp/>aim<sp/>to<sp/>cut<sp/>a<sp/>regular<sp/>release<sp/>every<sp/>3-4<sp/>months,<sp/>approximately<sp/>twice<sp/>as<sp/>frequent<sp/>as<sp/>major<sp/>Bitcoin<sp/>Core<sp/>releases.<sp/>Every<sp/>second<sp/>release<sp/>should<sp/>be<sp/>published<sp/>one<sp/>month<sp/>before<sp/>the<sp/>feature<sp/>freeze<sp/>of<sp/>the<sp/>next<sp/>major<sp/>Bitcoin<sp/>Core<sp/>release,<sp/>allowing<sp/>sufficient<sp/>time<sp/>to<sp/>update<sp/>the<sp/>library<sp/>in<sp/>Core.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Sanity<sp/>checks</highlight></codeline>
+<codeline><highlight class="normal">Perform<sp/>these<sp/>checks<sp/>when<sp/>reviewing<sp/>the<sp/>release<sp/>PR<sp/>(see<sp/>below):</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">1.<sp/>Ensure<sp/>`make<sp/>distcheck`<sp/>doesn&apos;t<sp/>fail.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```shell</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>./autogen.sh<sp/>&amp;&amp;<sp/>./configure<sp/>--enable-dev-mode<sp/>&amp;&amp;<sp/>make<sp/>distcheck</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```</highlight></codeline>
+<codeline><highlight class="normal">2.<sp/>Check<sp/>installation<sp/>with<sp/>autotools:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```shell</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>dir=$(mktemp<sp/>-d)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>./autogen.sh<sp/>&amp;&amp;<sp/>./configure<sp/>--prefix=$dir<sp/>&amp;&amp;<sp/>make<sp/>clean<sp/>&amp;&amp;<sp/>make<sp/>install<sp/>&amp;&amp;<sp/>ls<sp/>-RlAh<sp/>$dir</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>gcc<sp/>-o<sp/>ecdsa<sp/>examples/ecdsa.c<sp/>$(PKG_CONFIG_PATH=$dir/lib/pkgconfig<sp/>pkg-config<sp/>--cflags<sp/>--libs<sp/>libsecp256k1)<sp/>-Wl,-rpath,&quot;$dir/lib&quot;<sp/>&amp;&amp;<sp/>./ecdsa</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```</highlight></codeline>
+<codeline><highlight class="normal">3.<sp/>Check<sp/>installation<sp/>with<sp/>CMake:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```shell</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>dir=$(mktemp<sp/>-d)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>build=$(mktemp<sp/>-d)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>cmake<sp/>-B<sp/>$build<sp/>-DCMAKE_INSTALL_PREFIX=$dir<sp/>&amp;&amp;<sp/>cmake<sp/>--build<sp/>$build<sp/>&amp;&amp;<sp/>cmake<sp/>--install<sp/>$build<sp/>&amp;&amp;<sp/>ls<sp/>-RlAh<sp/>$dir</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>gcc<sp/>-o<sp/>ecdsa<sp/>examples/ecdsa.c<sp/>-I<sp/>$dir/include<sp/>-L<sp/>$dir/lib*/<sp/>-l<sp/>secp256k1<sp/>-Wl,-rpath,&quot;$dir/lib&quot;,-rpath,&quot;$dir/lib64&quot;<sp/>&amp;&amp;<sp/>./ecdsa</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```</highlight></codeline>
+<codeline><highlight class="normal">4.<sp/>Use<sp/>the<sp/>[`check-abi.sh`](/tools/check-abi.sh)<sp/>tool<sp/>to<sp/>verify<sp/>that<sp/>there<sp/>are<sp/>no<sp/>unexpected<sp/>ABI<sp/>incompatibilities<sp/>and<sp/>that<sp/>the<sp/>version<sp/>number<sp/>and<sp/>the<sp/>release<sp/>notes<sp/>accurately<sp/>reflect<sp/>all<sp/>potential<sp/>ABI<sp/>changes.<sp/>To<sp/>run<sp/>this<sp/>tool,<sp/>the<sp/>`abi-dumper`<sp/>and<sp/>`abi-compliance-checker`<sp/>packages<sp/>are<sp/>required.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```shell</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>tools/check-abi.sh</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Regular<sp/>release</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">1.<sp/>Open<sp/>a<sp/>PR<sp/>to<sp/>the<sp/>master<sp/>branch<sp/>with<sp/>a<sp/>commit<sp/>(using<sp/>message<sp/>`&quot;release:<sp/>prepare<sp/>for<sp/>$MAJOR.$MINOR.$PATCH&quot;`,<sp/>for<sp/>example)<sp/>that</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>*<sp/>finalizes<sp/>the<sp/>release<sp/>notes<sp/>in<sp/>[CHANGELOG.md](../CHANGELOG.md)<sp/>by</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>adding<sp/>a<sp/>section<sp/>for<sp/>the<sp/>release<sp/>(make<sp/>sure<sp/>that<sp/>the<sp/>version<sp/>number<sp/>is<sp/>a<sp/>link<sp/>to<sp/>a<sp/>diff<sp/>between<sp/>the<sp/>previous<sp/>and<sp/>new<sp/>version),</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>removing<sp/>the<sp/>`[Unreleased]`<sp/>section<sp/>header,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>ensuring<sp/>that<sp/>the<sp/>release<sp/>notes<sp/>are<sp/>not<sp/>missing<sp/>entries<sp/>(check<sp/>the<sp/>`needs-changelog`<sp/>label<sp/>on<sp/>github),<sp/>and</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>including<sp/>an<sp/>entry<sp/>for<sp/>`###<sp/>ABI<sp/>Compatibility`<sp/>if<sp/>it<sp/>doesn&apos;t<sp/>exist,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>*<sp/>sets<sp/>`_PKG_VERSION_IS_RELEASE`<sp/>to<sp/>`true`<sp/>in<sp/>`configure.ac`,<sp/>and,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>*<sp/>if<sp/>this<sp/>is<sp/>not<sp/>a<sp/>patch<sp/>release,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>updates<sp/>`_PKG_VERSION_*`<sp/>and<sp/>`_LIB_VERSION_*`<sp/><sp/>in<sp/>`configure.ac`,<sp/>and</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/>*<sp/>updates<sp/>`project(libsecp256k1<sp/>VERSION<sp/>...)`<sp/>and<sp/>`${PROJECT_NAME}_LIB_VERSION_*`<sp/>in<sp/>`CMakeLists.txt`.</highlight></codeline>
+<codeline><highlight class="normal">2.<sp/>Perform<sp/>the<sp/>[sanity<sp/>checks](#sanity-checks)<sp/>on<sp/>the<sp/>PR<sp/>branch.</highlight></codeline>
+<codeline><highlight class="normal">3.<sp/>After<sp/>the<sp/>PR<sp/>is<sp/>merged,<sp/>tag<sp/>the<sp/>commit,<sp/>and<sp/>push<sp/>the<sp/>tag:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>RELEASE_COMMIT=&lt;merge<sp/>commit<sp/>of<sp/>step<sp/>1&gt;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>git<sp/>tag<sp/>-s<sp/>v$MAJOR.$MINOR.$PATCH<sp/>-m<sp/>&quot;libsecp256k1<sp/>$MAJOR.$MINOR.$PATCH&quot;<sp/>$RELEASE_COMMIT</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>git<sp/>push<sp/>git@github.com:bitcoin-core/secp256k1.git<sp/>v$MAJOR.$MINOR.$PATCH</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```</highlight></codeline>
+<codeline><highlight class="normal">4.<sp/>Open<sp/>a<sp/>PR<sp/>to<sp/>the<sp/>master<sp/>branch<sp/>with<sp/>a<sp/>commit<sp/>(using<sp/>message<sp/>`&quot;release<sp/>cleanup:<sp/>bump<sp/>version<sp/>after<sp/>$MAJOR.$MINOR.$PATCH&quot;`,<sp/>for<sp/>example)<sp/>that</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>*<sp/>sets<sp/>`_PKG_VERSION_IS_RELEASE`<sp/>to<sp/>`false`<sp/>and<sp/>increments<sp/>`_PKG_VERSION_PATCH`<sp/>and<sp/>`_LIB_VERSION_REVISION`<sp/>in<sp/>`configure.ac`,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>*<sp/>increments<sp/>the<sp/>`$PATCH`<sp/>component<sp/>of<sp/>`project(libsecp256k1<sp/>VERSION<sp/>...)`<sp/>and<sp/>`${PROJECT_NAME}_LIB_VERSION_REVISION`<sp/>in<sp/>`CMakeLists.txt`,<sp/>and</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>*<sp/>adds<sp/>an<sp/>`[Unreleased]`<sp/>section<sp/>header<sp/>to<sp/>the<sp/>[CHANGELOG.md](../CHANGELOG.md).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>If<sp/>other<sp/>maintainers<sp/>are<sp/>not<sp/>present<sp/>to<sp/>approve<sp/>the<sp/>PR,<sp/>it<sp/>can<sp/>be<sp/>merged<sp/>without<sp/>ACKs.</highlight></codeline>
+<codeline><highlight class="normal">5.<sp/>Create<sp/>a<sp/>new<sp/>GitHub<sp/>release<sp/>with<sp/>a<sp/>link<sp/>to<sp/>the<sp/>corresponding<sp/>entry<sp/>in<sp/>[CHANGELOG.md](../CHANGELOG.md).</highlight></codeline>
+<codeline><highlight class="normal">6.<sp/>Send<sp/>an<sp/>announcement<sp/>email<sp/>to<sp/>the<sp/>bitcoin-dev<sp/>mailing<sp/>list.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Maintenance<sp/>release</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Note<sp/>that<sp/>bug<sp/>fixes<sp/>need<sp/>to<sp/>be<sp/>backported<sp/>only<sp/>to<sp/>releases<sp/>for<sp/>which<sp/>no<sp/>compatible<sp/>release<sp/>without<sp/>the<sp/>bug<sp/>exists.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">1.<sp/>If<sp/>there&apos;s<sp/>no<sp/>maintenance<sp/>branch<sp/>`$MAJOR.$MINOR`,<sp/>create<sp/>one:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>git<sp/>checkout<sp/>-b<sp/>$MAJOR.$MINOR<sp/>v$MAJOR.$MINOR.$((PATCH<sp/>-<sp/>1))</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>git<sp/>push<sp/>git@github.com:bitcoin-core/secp256k1.git<sp/>$MAJOR.$MINOR</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```</highlight></codeline>
+<codeline><highlight class="normal">2.<sp/>Open<sp/>a<sp/>pull<sp/>request<sp/>to<sp/>the<sp/>`$MAJOR.$MINOR`<sp/>branch<sp/>that</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>*<sp/>includes<sp/>the<sp/>bug<sp/>fixes,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>*<sp/>finalizes<sp/>the<sp/>release<sp/>notes<sp/>similar<sp/>to<sp/>a<sp/>regular<sp/>release,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>*<sp/>increments<sp/>`_PKG_VERSION_PATCH`<sp/>and<sp/>`_LIB_VERSION_REVISION`<sp/>in<sp/>`configure.ac`</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>and<sp/>the<sp/>`$PATCH`<sp/>component<sp/>of<sp/>`project(libsecp256k1<sp/>VERSION<sp/>...)`<sp/>and<sp/>`${PROJECT_NAME}_LIB_VERSION_REVISION`<sp/>in<sp/>`CMakeLists.txt`</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>(with<sp/>commit<sp/>message<sp/>`&quot;release:<sp/>bump<sp/>versions<sp/>for<sp/>$MAJOR.$MINOR.$PATCH&quot;`,<sp/>for<sp/>example).</highlight></codeline>
+<codeline><highlight class="normal">3.<sp/>Perform<sp/>the<sp/>[sanity<sp/>checks](#sanity-checks)<sp/>on<sp/>the<sp/>PR<sp/>branch.</highlight></codeline>
+<codeline><highlight class="normal">4.<sp/>After<sp/>the<sp/>PRs<sp/>are<sp/>merged,<sp/>update<sp/>the<sp/>release<sp/>branch,<sp/>tag<sp/>the<sp/>commit,<sp/>and<sp/>push<sp/>the<sp/>tag:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>git<sp/>checkout<sp/>$MAJOR.$MINOR<sp/>&amp;&amp;<sp/>git<sp/>pull</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>git<sp/>tag<sp/>-s<sp/>v$MAJOR.$MINOR.$PATCH<sp/>-m<sp/>&quot;libsecp256k1<sp/>$MAJOR.$MINOR.$PATCH&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>git<sp/>push<sp/>git@github.com:bitcoin-core/secp256k1.git<sp/>v$MAJOR.$MINOR.$PATCH</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>```</highlight></codeline>
+<codeline><highlight class="normal">6.<sp/>Create<sp/>a<sp/>new<sp/>GitHub<sp/>release<sp/>with<sp/>a<sp/>link<sp/>to<sp/>the<sp/>corresponding<sp/>entry<sp/>in<sp/>[CHANGELOG.md](../CHANGELOG.md).</highlight></codeline>
+<codeline><highlight class="normal">7.<sp/>Send<sp/>an<sp/>announcement<sp/>email<sp/>to<sp/>the<sp/>bitcoin-dev<sp/>mailing<sp/>list.</highlight></codeline>
+<codeline><highlight class="normal">8.<sp/>Open<sp/>PR<sp/>to<sp/>the<sp/>master<sp/>branch<sp/>that<sp/>includes<sp/>a<sp/>commit<sp/>(with<sp/>commit<sp/>message<sp/>`&quot;release<sp/>notes:<sp/>add<sp/>$MAJOR.$MINOR.$PATCH&quot;`,<sp/>for<sp/>example)<sp/>that<sp/>adds<sp/>release<sp/>notes<sp/>to<sp/>[CHANGELOG.md](../CHANGELOG.md).</highlight></codeline>
+    </programlisting>
+    <location file="src/secp256k1/doc/release-process.md"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,261 @@
+.TH "Type" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+Type
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <miniscript\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "constexpr Type \fBoperator|\fP (Type x) const"
+.br
+.RI "Compute the type with the union of properties\&. "
+.ti -1c
+.RI "constexpr Type \fBoperator&\fP (Type x) const"
+.br
+.RI "Compute the type with the intersection of properties\&. "
+.ti -1c
+.RI "constexpr bool \fBoperator<<\fP (Type x) const"
+.br
+.RI "Check whether the left hand's properties are superset of the right's (= left is a subtype of right)\&. "
+.ti -1c
+.RI "constexpr bool \fBoperator<\fP (Type x) const"
+.br
+.RI "Comparison operator to enable use in sets/maps (total ordering incompatible with <<)\&. "
+.ti -1c
+.RI "constexpr bool \fBoperator==\fP (Type x) const"
+.br
+.RI "Equality operator\&. "
+.ti -1c
+.RI "constexpr Type \fBIf\fP (bool x) const"
+.br
+.RI "The empty type if x is false, itself otherwise\&. "
+.in -1c
+.SS "Friends"
+
+.in +1c
+.ti -1c
+.RI "consteval Type \fBoperator''_mst\fP (const char *c, size_t l)"
+.br
+.RI "The only way to publicly construct a \fBType\fP is using this literal operator\&. "
+.in -1c
+.SH "Detailed Description"
+.PP 
+This type encapsulates the miniscript type system properties\&.
+
+.PP
+Every miniscript expression is one of 4 basic types, and additionally has a number of boolean type properties\&.
+
+.PP
+The basic types are:
+.IP "\(bu" 2
+"B" \fBBase\fP:
+.IP "  \(bu" 4
+Takes its inputs from the top of the stack\&.
+.IP "  \(bu" 4
+When satisfied, pushes a nonzero value of up to 4 bytes onto the stack\&.
+.IP "  \(bu" 4
+When dissatisfied, pushes a 0 onto the stack\&.
+.IP "  \(bu" 4
+This is used for most expressions, and required for the top level one\&.
+.IP "  \(bu" 4
+For example: older(n) = <n> OP_CHECKSEQUENCEVERIFY\&.
+.PP
+
+.IP "\(bu" 2
+"V" Verify:
+.IP "  \(bu" 4
+Takes its inputs from the top of the stack\&.
+.IP "  \(bu" 4
+When satisfied, pushes nothing\&.
+.IP "  \(bu" 4
+Cannot be dissatisfied\&.
+.IP "  \(bu" 4
+This can be obtained by adding an OP_VERIFY to a B, modifying the last opcode of a B to its -VERIFY version (only for OP_CHECKSIG, OP_CHECKSIGVERIFY, OP_NUMEQUAL and OP_EQUAL), or by combining a V fragment under some conditions\&.
+.IP "  \(bu" 4
+For example vc:pk_k(key) = <key> OP_CHECKSIGVERIFY
+.PP
+
+.IP "\(bu" 2
+"K" Key:
+.IP "  \(bu" 4
+Takes its inputs from the top of the stack\&.
+.IP "  \(bu" 4
+Becomes a B when followed by OP_CHECKSIG\&.
+.IP "  \(bu" 4
+Always pushes a public key onto the stack, for which a signature is to be provided to satisfy the expression\&.
+.IP "  \(bu" 4
+For example pk_h(key) = OP_DUP OP_HASH160 <Hash160(key)> OP_EQUALVERIFY
+.PP
+
+.IP "\(bu" 2
+"W" Wrapped:
+.IP "  \(bu" 4
+Takes its input from one below the top of the stack\&.
+.IP "  \(bu" 4
+When satisfied, pushes a nonzero value (like B) on top of the stack, or one below\&.
+.IP "  \(bu" 4
+When dissatisfied, pushes 0 op top of the stack or one below\&.
+.IP "  \(bu" 4
+Is always "OP_SWAP [B]" or "OP_TOALTSTACK [B] OP_FROMALTSTACK"\&.
+.IP "  \(bu" 4
+For example sc:pk_k(key) = OP_SWAP <key> OP_CHECKSIG
+.PP
+
+.PP
+
+.PP
+There are type properties that help reasoning about correctness:
+.IP "\(bu" 2
+"z" Zero-arg:
+.IP "  \(bu" 4
+Is known to always consume exactly 0 stack elements\&.
+.IP "  \(bu" 4
+For example after(n) = <n> OP_CHECKLOCKTIMEVERIFY
+.PP
+
+.IP "\(bu" 2
+"o" One-arg:
+.IP "  \(bu" 4
+Is known to always consume exactly 1 stack element\&.
+.IP "  \(bu" 4
+Conflicts with property 'z'
+.IP "  \(bu" 4
+For example \fBsha256(hash)\fP = OP_SIZE 32 OP_EQUALVERIFY OP_SHA256 <hash> OP_EQUAL
+.PP
+
+.IP "\(bu" 2
+"n" Nonzero:
+.IP "  \(bu" 4
+For every way this expression can be satisfied, a satisfaction exists that never needs a zero top stack element\&.
+.IP "  \(bu" 4
+Conflicts with property 'z' and with type 'W'\&.
+.PP
+
+.IP "\(bu" 2
+"d" Dissatisfiable:
+.IP "  \(bu" 4
+There is an easy way to construct a dissatisfaction for this expression\&.
+.IP "  \(bu" 4
+Conflicts with type 'V'\&.
+.PP
+
+.IP "\(bu" 2
+"u" Unit:
+.IP "  \(bu" 4
+In case of satisfaction, an exact 1 is put on the stack (rather than just nonzero)\&.
+.IP "  \(bu" 4
+Conflicts with type 'V'\&.
+.PP
+
+.PP
+
+.PP
+Additional type properties help reasoning about nonmalleability:
+.IP "\(bu" 2
+"e" Expression:
+.IP "  \(bu" 4
+This implies property 'd', but the dissatisfaction is nonmalleable\&.
+.IP "  \(bu" 4
+This generally requires 'e' for all subexpressions which are invoked for that dissatisfaction, and property 'f' for the unexecuted subexpressions in that case\&.
+.IP "  \(bu" 4
+Conflicts with type 'V'\&.
+.PP
+
+.IP "\(bu" 2
+"f" Forced:
+.IP "  \(bu" 4
+Dissatisfactions (if any) for this expression always involve at least one signature\&.
+.IP "  \(bu" 4
+Is always true for type 'V'\&.
+.PP
+
+.IP "\(bu" 2
+"s" Safe:
+.IP "  \(bu" 4
+Satisfactions for this expression always involve at least one signature\&.
+.PP
+
+.IP "\(bu" 2
+"m" Nonmalleable:
+.IP "  \(bu" 4
+For every way this expression can be satisfied (which may be none), a nonmalleable satisfaction exists\&.
+.IP "  \(bu" 4
+This generally requires 'm' for all subexpressions, and 'e' for all subexpressions which are dissatisfied when satisfying the parent\&.
+.PP
+
+.PP
+
+.PP
+One type property is an implementation detail:
+.IP "\(bu" 2
+"x" Expensive verify:
+.IP "  \(bu" 4
+Expressions with this property have a script whose last opcode is not EQUAL, CHECKSIG, or CHECKMULTISIG\&.
+.IP "  \(bu" 4
+Not having this property means that it can be converted to a V at no cost (by switching to the -VERIFY version of the last opcode)\&.
+.PP
+
+.PP
+
+.PP
+Five more type properties for representing timelock information\&. Spend paths in miniscripts containing conflicting timelocks and heightlocks cannot be spent together\&. This helps users detect if miniscript does not match the semantic behaviour the user expects\&.
+.IP "\(bu" 2
+"g" Whether the branch contains a relative time timelock
+.IP "\(bu" 2
+"h" Whether the branch contains a relative height timelock
+.IP "\(bu" 2
+"i" Whether the branch contains an absolute time timelock
+.IP "\(bu" 2
+"j" Whether the branch contains an absolute height timelock
+.IP "\(bu" 2
+"k"
+.IP "  \(bu" 4
+Whether all satisfactions of this expression don't contain a mix of heightlock and timelock of the same type\&.
+.IP "  \(bu" 4
+If the miniscript does not have the "k" property, the miniscript template will not match the user expectation of the corresponding spending policy\&. For each of these properties the subset rule holds: an expression with properties X, Y, and Z, is also valid in places where an X, a Y, a Z, an XY, \&.\&.\&. is expected\&. 
+.PP
+
+.PP
+
+.SH "Member Function Documentation"
+.PP 
+.SS "Type If (bool x) const\fR [inline]\fP, \fR [constexpr]\fP"
+
+.PP
+The empty type if x is false, itself otherwise\&. 
+.SS "Type operator& (Type x) const\fR [inline]\fP, \fR [constexpr]\fP"
+
+.PP
+Compute the type with the intersection of properties\&. 
+.SS "bool operator< (Type x) const\fR [inline]\fP, \fR [constexpr]\fP"
+
+.PP
+Comparison operator to enable use in sets/maps (total ordering incompatible with <<)\&. 
+.SS "bool operator<< (Type x) const\fR [inline]\fP, \fR [constexpr]\fP"
+
+.PP
+Check whether the left hand's properties are superset of the right's (= left is a subtype of right)\&. 
+.SS "bool operator== (Type x) const\fR [inline]\fP, \fR [constexpr]\fP"
+
+.PP
+Equality operator\&. 
+.SS "Type operator| (Type x) const\fR [inline]\fP, \fR [constexpr]\fP"
+
+.PP
+Compute the type with the union of properties\&. 
+.SH "Friends And Related Symbol Documentation"
+.PP 
+.SS "Type operator''_mst (const char * c, size_t l)\fR [friend]\fP"
+
+.PP
+The only way to publicly construct a \fBType\fP is using this literal operator\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

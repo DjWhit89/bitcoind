@@ -1,0 +1,114 @@
+.TH "TxConfirmStats" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+TxConfirmStats
+.SH SYNOPSIS
+.br
+.PP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBTxConfirmStats\fP (const std::vector< double > &defaultBuckets, const std::map< double, unsigned int > &defaultBucketMap, unsigned int maxPeriods, double decay, unsigned int scale)"
+.br
+.ti -1c
+.RI "void \fBClearCurrent\fP (unsigned int nBlockHeight)"
+.br
+.ti -1c
+.RI "void \fBRecord\fP (int blocksToConfirm, double val)"
+.br
+.ti -1c
+.RI "unsigned int \fBNewTx\fP (unsigned int nBlockHeight, double val)"
+.br
+.ti -1c
+.RI "void \fBremoveTx\fP (unsigned int entryHeight, unsigned int nBestSeenHeight, unsigned int bucketIndex, bool inBlock)"
+.br
+.ti -1c
+.RI "void \fBUpdateMovingAverages\fP ()"
+.br
+.ti -1c
+.RI "double \fBEstimateMedianVal\fP (int confTarget, double sufficientTxVal, double minSuccess, unsigned int nBlockHeight, \fBEstimationResult\fP *result=nullptr) const"
+.br
+.ti -1c
+.RI "unsigned int \fBGetMaxConfirms\fP () const"
+.br
+.ti -1c
+.RI "void \fBWrite\fP (\fBAutoFile\fP &fileout) const"
+.br
+.ti -1c
+.RI "void \fBRead\fP (\fBAutoFile\fP &filein, size_t numBuckets)"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+We will instantiate an instance of this class to track transactions that were included in a block\&. We will lump transactions into a bucket according to their approximate feerate and then track how long it took for those txs to be included in a block
+
+.PP
+The tracking of unconfirmed (mempool) transactions is completely independent of the historical tracking of transactions that have been confirmed in a block\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBTxConfirmStats\fP (const std::vector< double > & defaultBuckets, const std::map< double, unsigned int > & defaultBucketMap, unsigned int maxPeriods, double decay, unsigned int scale)"
+Create new \fBTxConfirmStats\fP\&. This is called by BlockPolicyEstimator's constructor with default values\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIdefaultBuckets\fP contains the upper limits for the bucket boundaries 
+.br
+\fImaxPeriods\fP max number of periods to track 
+.br
+\fIdecay\fP how much to decay the historical moving average per block 
+.RE
+.PP
+
+.SH "Member Function Documentation"
+.PP 
+.SS "void ClearCurrent (unsigned int nBlockHeight)"
+Roll the circular buffer for unconfirmed txs 
+.SS "double EstimateMedianVal (int confTarget, double sufficientTxVal, double minSuccess, unsigned int nBlockHeight, \fBEstimationResult\fP * result = \fRnullptr\fP) const"
+Calculate a feerate estimate\&. Find the lowest value bucket (or range of buckets to make sure we have enough data points) whose transactions still have sufficient likelihood of being confirmed within the target number of confirmations 
+.PP
+\fBParameters\fP
+.RS 4
+\fIconfTarget\fP target number of confirmations 
+.br
+\fIsufficientTxVal\fP required average number of transactions per block in a bucket range 
+.br
+\fIminSuccess\fP the success probability we require 
+.br
+\fInBlockHeight\fP the current block height 
+.RE
+.PP
+
+.SS "unsigned int GetMaxConfirms () const\fR [inline]\fP"
+Return the max number of confirms we're tracking 
+.SS "unsigned int NewTx (unsigned int nBlockHeight, double val)"
+Record a new transaction entering the mempool 
+.SS "void Read (\fBAutoFile\fP & filein, size_t numBuckets)"
+Read saved state of estimation data from a file and replace all internal data structures and variables with this state\&. 
+.SS "void Record (int blocksToConfirm, double val)"
+Record a new transaction data point in the current block stats 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblocksToConfirm\fP the number of blocks it took this transaction to confirm 
+.br
+\fIval\fP the feerate of the transaction 
+.RE
+.PP
+\fBWarning\fP
+.RS 4
+blocksToConfirm is 1-based and has to be >= 1 
+.RE
+.PP
+
+.SS "void removeTx (unsigned int entryHeight, unsigned int nBestSeenHeight, unsigned int bucketIndex, bool inBlock)"
+Remove a transaction from mempool tracking stats 
+.SS "void UpdateMovingAverages ()"
+Update our estimates by decaying our historical moving average and updating with the data gathered from the current block 
+.SS "void Write (\fBAutoFile\fP & fileout) const"
+Write state of estimation data to a file 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

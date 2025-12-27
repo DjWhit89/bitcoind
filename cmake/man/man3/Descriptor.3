@@ -1,0 +1,209 @@
+.TH "Descriptor" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+Descriptor \- Interface for parsed descriptor objects\&.  
+
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <descriptor\&.h>\fP
+.PP
+Inherited by \fBDummyDescriptor\fP\&.
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "virtual \fB~Descriptor\fP ()=default"
+.br
+.ti -1c
+.RI "virtual bool \fBIsRange\fP () const =0"
+.br
+.ti -1c
+.RI "virtual bool \fBIsSolvable\fP () const =0"
+.br
+.ti -1c
+.RI "virtual std::string \fBToString\fP (bool compat_format=false) const =0"
+.br
+.ti -1c
+.RI "virtual bool \fBIsSingleType\fP () const =0"
+.br
+.ti -1c
+.RI "virtual bool \fBToPrivateString\fP (const \fBSigningProvider\fP &provider, std::string &out) const =0"
+.br
+.ti -1c
+.RI "virtual bool \fBToNormalizedString\fP (const \fBSigningProvider\fP &provider, std::string &out, const \fBDescriptorCache\fP *cache=nullptr) const =0"
+.br
+.ti -1c
+.RI "virtual bool \fBExpand\fP (int pos, const \fBSigningProvider\fP &provider, std::vector< \fBCScript\fP > &output_scripts, \fBFlatSigningProvider\fP &out, \fBDescriptorCache\fP *write_cache=nullptr) const =0"
+.br
+.ti -1c
+.RI "virtual bool \fBExpandFromCache\fP (int pos, const \fBDescriptorCache\fP &read_cache, std::vector< \fBCScript\fP > &output_scripts, \fBFlatSigningProvider\fP &out) const =0"
+.br
+.ti -1c
+.RI "virtual void \fBExpandPrivate\fP (int pos, const \fBSigningProvider\fP &provider, \fBFlatSigningProvider\fP &out) const =0"
+.br
+.ti -1c
+.RI "virtual std::optional< \fBOutputType\fP > \fBGetOutputType\fP () const =0"
+.br
+.ti -1c
+.RI "virtual std::optional< int64_t > \fBScriptSize\fP () const =0"
+.br
+.ti -1c
+.RI "virtual std::optional< int64_t > \fBMaxSatisfactionWeight\fP (bool use_max_sig) const =0"
+.br
+.ti -1c
+.RI "virtual std::optional< int64_t > \fBMaxSatisfactionElems\fP () const =0"
+.br
+.ti -1c
+.RI "virtual void \fBGetPubKeys\fP (std::set< \fBCPubKey\fP > &pubkeys, std::set< \fBCExtPubKey\fP > &ext_pubs) const =0"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Interface for parsed descriptor objects\&. 
+
+Descriptors are strings that describe a set of scriptPubKeys, together with all information necessary to solve them\&. By combining all information into one, they avoid the need to separately import keys and scripts\&.
+
+.PP
+Descriptors may be ranged, which occurs when the public keys inside are specified in the form of HD chains (xpubs)\&.
+
+.PP
+Descriptors always represent public information - public keys and scripts - but in cases where private keys need to be conveyed along with a descriptor, they can be included inside by changing public keys to private keys (WIF format), and changing xpubs by xprvs\&.
+
+.PP
+Reference documentation about the descriptor language can be found in doc/descriptors\&.md\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "virtual ~\fBDescriptor\fP ()\fR [virtual]\fP, \fR [default]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "virtual bool Expand (int pos, const \fBSigningProvider\fP & provider, std::vector< \fBCScript\fP > & output_scripts, \fBFlatSigningProvider\fP & out, \fBDescriptorCache\fP * write_cache = \fRnullptr\fP) const\fR [pure virtual]\fP"
+Expand a descriptor at a specified position\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIpos\fP The position at which to expand the descriptor\&. If \fBIsRange()\fP is false, this is ignored\&. 
+.br
+\fIprovider\fP The provider to query for private keys in case of hardened derivation\&. 
+.br
+\fIoutput_scripts\fP The expanded scriptPubKeys\&. 
+.br
+\fIout\fP Scripts and public keys necessary for solving the expanded scriptPubKeys (may be equal to \fRprovider\fP)\&. 
+.br
+\fIwrite_cache\fP \fBCache\fP data necessary to evaluate the descriptor at this point without access to private keys\&. 
+.RE
+.PP
+
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual bool ExpandFromCache (int pos, const \fBDescriptorCache\fP & read_cache, std::vector< \fBCScript\fP > & output_scripts, \fBFlatSigningProvider\fP & out) const\fR [pure virtual]\fP"
+Expand a descriptor at a specified position using cached expansion data\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIpos\fP The position at which to expand the descriptor\&. If \fBIsRange()\fP is false, this is ignored\&. 
+.br
+\fIread_cache\fP Cached expansion data\&. 
+.br
+\fIoutput_scripts\fP The expanded scriptPubKeys\&. 
+.br
+\fIout\fP Scripts and public keys necessary for solving the expanded scriptPubKeys (may be equal to \fRprovider\fP)\&. 
+.RE
+.PP
+
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual void ExpandPrivate (int pos, const \fBSigningProvider\fP & provider, \fBFlatSigningProvider\fP & out) const\fR [pure virtual]\fP"
+Expand the private key for a descriptor at a specified position, if possible\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIpos\fP The position at which to expand the descriptor\&. If \fBIsRange()\fP is false, this is ignored\&. 
+.br
+\fIprovider\fP The provider to query for the private keys\&. 
+.br
+\fIout\fP Any private keys available for the specified \fRpos\fP\&. 
+.RE
+.PP
+
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual std::optional< \fBOutputType\fP > GetOutputType () const\fR [pure virtual]\fP"
+
+.PP
+\fBReturns\fP
+.RS 4
+The \fBOutputType\fP of the scriptPubKey(s) produced by this descriptor\&. Or nullopt if indeterminate (multiple or none) 
+.RE
+.PP
+
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual void GetPubKeys (std::set< \fBCPubKey\fP > & pubkeys, std::set< \fBCExtPubKey\fP > & ext_pubs) const\fR [pure virtual]\fP"
+Return all (extended) public keys for this descriptor, including any from subdescriptors\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIpubkeys\fP Any public keys 
+.br
+\fIext_pubs\fP Any extended public keys 
+.RE
+.PP
+
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual bool IsRange () const\fR [pure virtual]\fP"
+Whether the expansion of this descriptor depends on the position\&. 
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual bool IsSingleType () const\fR [pure virtual]\fP"
+Whether this descriptor will return one scriptPubKey or multiple (aka is or is not combo) 
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual bool IsSolvable () const\fR [pure virtual]\fP"
+Whether this descriptor has all information about signing ignoring lack of private keys\&. This is true for all descriptors except ones that use \fRraw\fP or \fRaddr\fP constructions\&. 
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual std::optional< int64_t > MaxSatisfactionElems () const\fR [pure virtual]\fP"
+Get the maximum size number of stack elements for satisfying this descriptor\&. 
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual std::optional< int64_t > MaxSatisfactionWeight (bool use_max_sig) const\fR [pure virtual]\fP"
+Get the maximum size of a satisfaction for this descriptor, in weight units\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIuse_max_sig\fP Whether to assume ECDSA signatures will have a high-r\&. 
+.RE
+.PP
+
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual std::optional< int64_t > ScriptSize () const\fR [pure virtual]\fP"
+Get the size of the scriptPubKey for this descriptor\&. 
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual bool ToNormalizedString (const \fBSigningProvider\fP & provider, std::string & out, const \fBDescriptorCache\fP * cache = \fRnullptr\fP) const\fR [pure virtual]\fP"
+Convert the descriptor to a normalized string\&. Normalized descriptors have the xpub at the last hardened step\&. This fails if the provided provider does not have the private keys to derive that xpub\&. 
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual bool ToPrivateString (const \fBSigningProvider\fP & provider, std::string & out) const\fR [pure virtual]\fP"
+Convert the descriptor to a private string\&. This fails if the provided provider does not have the relevant private keys\&. 
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+.SS "virtual std::string ToString (bool compat_format = \fRfalse\fP) const\fR [pure virtual]\fP"
+Convert the descriptor back to a string, undoing parsing\&. 
+.PP
+Implemented in \fBDummyDescriptor\fP\&.
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

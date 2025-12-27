@@ -1,0 +1,76 @@
+\doxysection{sigcache.\+h}
+\label{sigcache_8h_source}\index{src/script/sigcache.h@{src/script/sigcache.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_SCRIPT\_SIGCACHE\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_SCRIPT\_SIGCACHE\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <crypto/sha256.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <cuckoocache.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <script/interpreter.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <util/hasher.h>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <shared\_mutex>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{class\ }CPubKey;}
+\DoxyCodeLine{00022\ \textcolor{keyword}{class\ }CTransaction;}
+\DoxyCodeLine{00023\ \textcolor{keyword}{class\ }XOnlyPubKey;}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{comment}{//\ DoS\ prevention:\ limit\ cache\ size\ to\ 32MiB\ (over\ 1000000\ entries\ on\ 64-\/bit}}
+\DoxyCodeLine{00026\ \textcolor{comment}{//\ systems).\ Due\ to\ how\ we\ count\ cache\ size,\ actual\ memory\ usage\ is\ slightly}}
+\DoxyCodeLine{00027\ \textcolor{comment}{//\ more\ (\string~32.25\ MiB)}}
+\DoxyCodeLine{00028\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ DEFAULT\_VALIDATION\_CACHE\_BYTES\{32\ <<\ 20\};}
+\DoxyCodeLine{00029\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ DEFAULT\_SIGNATURE\_CACHE\_BYTES\{DEFAULT\_VALIDATION\_CACHE\_BYTES\ /\ 2\};}
+\DoxyCodeLine{00030\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ DEFAULT\_SCRIPT\_EXECUTION\_CACHE\_BYTES\{DEFAULT\_VALIDATION\_CACHE\_BYTES\ /\ 2\};}
+\DoxyCodeLine{00031\ \textcolor{keyword}{static\_assert}(DEFAULT\_VALIDATION\_CACHE\_BYTES\ ==\ DEFAULT\_SIGNATURE\_CACHE\_BYTES\ +\ DEFAULT\_SCRIPT\_EXECUTION\_CACHE\_BYTES);}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00038\ \textcolor{keyword}{class\ }SignatureCache}
+\DoxyCodeLine{00039\ \{}
+\DoxyCodeLine{00040\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00042\ \ \ \ \ CSHA256\ m\_salted\_hasher\_ecdsa;}
+\DoxyCodeLine{00043\ \ \ \ \ CSHA256\ m\_salted\_hasher\_schnorr;}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keyword}{typedef}\ CuckooCache::cache<uint256,\ SignatureCacheHasher>\ map\_type;}
+\DoxyCodeLine{00045\ \ \ \ \ map\_type\ setValid;}
+\DoxyCodeLine{00046\ \ \ \ \ std::shared\_mutex\ cs\_sigcache;}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00049\ \ \ \ \ SignatureCache(\textcolor{keywordtype}{size\_t}\ max\_size\_bytes);}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \ \ SignatureCache(\textcolor{keyword}{const}\ SignatureCache\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00052\ \ \ \ \ SignatureCache\&\ operator=(\textcolor{keyword}{const}\ SignatureCache\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keywordtype}{void}\ ComputeEntryECDSA(uint256\&\ entry,\ \textcolor{keyword}{const}\ uint256\ \&hash,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ vchSig,\ \textcolor{keyword}{const}\ CPubKey\&\ pubkey)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{void}\ ComputeEntrySchnorr(uint256\&\ entry,\ \textcolor{keyword}{const}\ uint256\ \&hash,\ std::span<const\ unsigned\ char>\ sig,\ \textcolor{keyword}{const}\ XOnlyPubKey\&\ pubkey)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordtype}{bool}\ Get(\textcolor{keyword}{const}\ uint256\&\ entry,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ erase);}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keywordtype}{void}\ Set(\textcolor{keyword}{const}\ uint256\&\ entry);}
+\DoxyCodeLine{00061\ \};}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \textcolor{keyword}{class\ }CachingTransactionSignatureChecker\ :\ \textcolor{keyword}{public}\ TransactionSignatureChecker}
+\DoxyCodeLine{00064\ \{}
+\DoxyCodeLine{00065\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keywordtype}{bool}\ store;}
+\DoxyCodeLine{00067\ \ \ \ \ SignatureCache\&\ m\_signature\_cache;}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00070\ \ \ \ \ CachingTransactionSignatureChecker(\textcolor{keyword}{const}\ CTransaction*\ txToIn,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nInIn,\ \textcolor{keyword}{const}\ CAmount\&\ amountIn,\ \textcolor{keywordtype}{bool}\ storeIn,\ SignatureCache\&\ signature\_cache,\ PrecomputedTransactionData\&\ txdataIn)\ :\ TransactionSignatureChecker(txToIn,\ nInIn,\ amountIn,\ txdataIn,\ MissingDataBehavior::ASSERT\_FAIL),\ store(storeIn),\ m\_signature\_cache(signature\_cache)\ \ \{\}}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keywordtype}{bool}\ VerifyECDSASignature(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ vchSig,\ \textcolor{keyword}{const}\ CPubKey\&\ vchPubKey,\ \textcolor{keyword}{const}\ uint256\&\ sighash)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keywordtype}{bool}\ VerifySchnorrSignature(std::span<const\ unsigned\ char>\ sig,\ \textcolor{keyword}{const}\ XOnlyPubKey\&\ pubkey,\ \textcolor{keyword}{const}\ uint256\&\ sighash)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00074\ \};}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_SCRIPT\_SIGCACHE\_H}}
+
+\end{DoxyCode}

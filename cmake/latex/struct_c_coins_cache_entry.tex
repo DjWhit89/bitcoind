@@ -1,0 +1,186 @@
+\doxysection{CCoins\+Cache\+Entry Struct Reference}
+\label{struct_c_coins_cache_entry}\index{CCoinsCacheEntry@{CCoinsCacheEntry}}
+
+
+{\ttfamily \#include $<$coins.\+h$>$}
+
+\doxysubsubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+enum \textbf{ Flags} \{ \textbf{ DIRTY} = (1 $<$$<$ 0)
+, \textbf{ FRESH} = (1 $<$$<$ 1)
+ \}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ CCoins\+Cache\+Entry} () noexcept=default
+\item 
+\textbf{ CCoins\+Cache\+Entry} (\textbf{ Coin} \&\&coin\+\_\+) noexcept
+\item 
+\textbf{ $\sim$\+CCoins\+Cache\+Entry} ()
+\item 
+void \textbf{ Set\+Clean} () noexcept
+\item 
+bool \textbf{ Is\+Dirty} () const noexcept
+\item 
+bool \textbf{ Is\+Fresh} () const noexcept
+\item 
+\textbf{ Coins\+Cache\+Pair} $\ast$ \textbf{ Next} () const noexcept
+\begin{DoxyCompactList}\small\item\em Only call Next when this entry is DIRTY, FRESH, or both. \end{DoxyCompactList}\item 
+\textbf{ Coins\+Cache\+Pair} $\ast$ \textbf{ Prev} () const noexcept
+\begin{DoxyCompactList}\small\item\em Only call Prev when this entry is DIRTY, FRESH, or both. \end{DoxyCompactList}\item 
+void \textbf{ Self\+Ref} (\textbf{ Coins\+Cache\+Pair} \&pair) noexcept
+\begin{DoxyCompactList}\small\item\em Only use this for initializing the linked list sentinel. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static void \textbf{ Set\+Dirty} (\textbf{ Coins\+Cache\+Pair} \&pair, \textbf{ Coins\+Cache\+Pair} \&sentinel) noexcept
+\item 
+static void \textbf{ Set\+Fresh} (\textbf{ Coins\+Cache\+Pair} \&pair, \textbf{ Coins\+Cache\+Pair} \&sentinel) noexcept
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ Coin} \textbf{ coin}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+A \doxyref{Coin}{p.}{class_coin} in one level of the coins database caching hierarchy.
+
+A coin can either be\+:
+\begin{DoxyItemize}
+\item unspent or spent (in which case the \doxyref{Coin}{p.}{class_coin} object will be nulled out -\/ see \doxyref{Coin.\+Clear()}{p.}{class_coin_aa71d36872f416feaa853788a7a7a7ef8})
+\item DIRTY or not DIRTY
+\item FRESH or not FRESH
+\end{DoxyItemize}
+
+Out of these 2$^\wedge$3 = 8 states, only some combinations are valid\+:
+\begin{DoxyItemize}
+\item unspent, FRESH, DIRTY (e.\+g. a new coin created in the cache)
+\item unspent, not FRESH, DIRTY (e.\+g. a coin changed in the cache during a reorg)
+\item unspent, not FRESH, not DIRTY (e.\+g. an unspent coin fetched from the parent cache)
+\item spent, FRESH, not DIRTY (e.\+g. a spent coin fetched from the parent cache)
+\item spent, not FRESH, DIRTY (e.\+g. a coin is spent and spentness needs to be flushed to the parent) 
+\end{DoxyItemize}
+
+\label{doc-enum-members}
+\doxysubsection{Member Enumeration Documentation}
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!Flags@{Flags}}
+\index{Flags@{Flags}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{Flags}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_aa705cf7e79a21c2352b00ffe20cd295f} 
+enum \textbf{ Flags}}
+
+\begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{DIRTY@{DIRTY}!CCoinsCacheEntry@{CCoinsCacheEntry}}\index{CCoinsCacheEntry@{CCoinsCacheEntry}!DIRTY@{DIRTY}}}\label{struct_c_coins_cache_entry_aa705cf7e79a21c2352b00ffe20cd295fa6a4e132eb192a22c351397837d4c082c} 
+DIRTY&DIRTY means the \doxyref{CCoins\+Cache\+Entry}{p.}{struct_c_coins_cache_entry} is potentially different from the version in the parent cache. Failure to mark a coin as DIRTY when it is potentially different from the parent cache will cause a consensus failure, since the coin\textquotesingle{}s state won\textquotesingle{}t get written to the parent when the cache is flushed. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{FRESH@{FRESH}!CCoinsCacheEntry@{CCoinsCacheEntry}}\index{CCoinsCacheEntry@{CCoinsCacheEntry}!FRESH@{FRESH}}}\label{struct_c_coins_cache_entry_aa705cf7e79a21c2352b00ffe20cd295fa7d8a4b440137432a88b4b9f61f0c0d06} 
+FRESH&FRESH means the parent cache does not have this coin or that it is a spent coin in the parent cache. If a FRESH coin in the cache is later spent, it can be deleted entirely and doesn\textquotesingle{}t ever need to be flushed to the parent. This is a performance optimization. Marking a coin as FRESH when it exists unspent in the parent cache will cause a consensus failure, since it might not be deleted from the parent when this cache is flushed. \\
+\hline
+
+\end{DoxyEnumFields}
+
+
+\label{doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{CCoinsCacheEntry()\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_ab4b7ad311788128dc19d2a061678556a} 
+\textbf{ CCoins\+Cache\+Entry} (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [default]}, {\ttfamily [noexcept]}}
+
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{CCoinsCacheEntry()\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_a9fa2f7ef7fbd61bba6816b2ef61528da} 
+\textbf{ CCoins\+Cache\+Entry} (\begin{DoxyParamCaption}\item[{\textbf{ Coin} \&\&}]{coin\+\_\+}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [explicit]}, {\ttfamily [noexcept]}}
+
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!````~CCoinsCacheEntry@{$\sim$CCoinsCacheEntry}}
+\index{````~CCoinsCacheEntry@{$\sim$CCoinsCacheEntry}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{$\sim$CCoinsCacheEntry()}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_abf32563af4385a98d6a9f0a1f24754f0} 
+$\sim$\textbf{ CCoins\+Cache\+Entry} (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!IsDirty@{IsDirty}}
+\index{IsDirty@{IsDirty}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{IsDirty()}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_a74d2adb4706dfe4ba36553f5ab9f74a7} 
+bool Is\+Dirty (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [noexcept]}}
+
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!IsFresh@{IsFresh}}
+\index{IsFresh@{IsFresh}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{IsFresh()}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_a13d3777ce953e5a4984a09fcdd396e0d} 
+bool Is\+Fresh (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [noexcept]}}
+
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!Next@{Next}}
+\index{Next@{Next}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{Next()}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_a48569748e5f7262f9a5599449a637d4f} 
+\textbf{ Coins\+Cache\+Pair} $\ast$ Next (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [noexcept]}}
+
+
+
+Only call Next when this entry is DIRTY, FRESH, or both. 
+
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!Prev@{Prev}}
+\index{Prev@{Prev}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{Prev()}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_a63f9f70e186743ac649c745b6c597fdf} 
+\textbf{ Coins\+Cache\+Pair} $\ast$ Prev (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [noexcept]}}
+
+
+
+Only call Prev when this entry is DIRTY, FRESH, or both. 
+
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!SelfRef@{SelfRef}}
+\index{SelfRef@{SelfRef}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{SelfRef()}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_a25bd73bef5e6fbccd8f5412542590b6a} 
+void Self\+Ref (\begin{DoxyParamCaption}\item[{\textbf{ Coins\+Cache\+Pair} \&}]{pair}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [noexcept]}}
+
+
+
+Only use this for initializing the linked list sentinel. 
+
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!SetClean@{SetClean}}
+\index{SetClean@{SetClean}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{SetClean()}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_af153d1d379dbe6837e4897634ccde6c2} 
+void Set\+Clean (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [noexcept]}}
+
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!SetDirty@{SetDirty}}
+\index{SetDirty@{SetDirty}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{SetDirty()}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_ae648a5fc9150ce651456b8f45e4af7d7} 
+void Set\+Dirty (\begin{DoxyParamCaption}\item[{\textbf{ Coins\+Cache\+Pair} \&}]{pair}{, }\item[{\textbf{ Coins\+Cache\+Pair} \&}]{sentinel}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [noexcept]}}
+
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!SetFresh@{SetFresh}}
+\index{SetFresh@{SetFresh}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{SetFresh()}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_af89b52459db336190ad8c4ee3c4cffac} 
+void Set\+Fresh (\begin{DoxyParamCaption}\item[{\textbf{ Coins\+Cache\+Pair} \&}]{pair}{, }\item[{\textbf{ Coins\+Cache\+Pair} \&}]{sentinel}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [noexcept]}}
+
+
+
+\label{doc-variable-members}
+\doxysubsection{Field Documentation}
+\index{CCoinsCacheEntry@{CCoinsCacheEntry}!coin@{coin}}
+\index{coin@{coin}!CCoinsCacheEntry@{CCoinsCacheEntry}}
+\doxysubsubsection{coin}
+{\footnotesize\ttfamily \label{struct_c_coins_cache_entry_ab59e55b114996a58cf056cbc7296037d} 
+\textbf{ Coin} coin}
+
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/\textbf{ coins.\+h}\end{DoxyCompactItemize}

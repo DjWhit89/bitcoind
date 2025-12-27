@@ -1,0 +1,161 @@
+\doxysection{uint256.\+h}
+\label{uint256_8h_source}\index{src/uint256.h@{src/uint256.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UINT256\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_UINT256\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <crypto/common.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <util/strencodings.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <util/string.h>}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <string\_view>}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{template}<\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ BITS>}
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }base\_blob}
+\DoxyCodeLine{00026\ \{}
+\DoxyCodeLine{00027\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ WIDTH\ =\ BITS\ /\ 8;}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keyword}{static\_assert}(BITS\ \%\ 8\ ==\ 0,\ \textcolor{stringliteral}{"{}base\_blob\ currently\ only\ supports\ whole\ bytes."{}});}
+\DoxyCodeLine{00030\ \ \ \ \ std::array<uint8\_t,\ WIDTH>\ m\_data;}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keyword}{static\_assert}(WIDTH\ ==\ \textcolor{keyword}{sizeof}(m\_data),\ \textcolor{stringliteral}{"{}Sanity\ check"{}});}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{comment}{/*\ construct\ 0\ value\ by\ default\ */}}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keyword}{constexpr}\ base\_blob()\ :\ m\_data()\ \{\}}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{comment}{/*\ constructor\ for\ constants\ between\ 1\ and\ 255\ */}}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{explicit}\ base\_blob(uint8\_t\ v)\ :\ m\_data\{v\}\ \{\}}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{explicit}\ base\_blob(std::span<const\ unsigned\ char>\ vch)}
+\DoxyCodeLine{00041\ \ \ \ \ \{}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ assert(vch.size()\ ==\ WIDTH);}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ std::copy(vch.begin(),\ vch.end(),\ m\_data.begin());}
+\DoxyCodeLine{00044\ \ \ \ \ \}}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keyword}{consteval}\ \textcolor{keyword}{explicit}\ base\_blob(std::string\_view\ hex\_str);}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ IsNull()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00049\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::all\_of(m\_data.begin(),\ m\_data.end(),\ [](uint8\_t\ val)\ \{}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \ \ \ \ return\ val\ ==\ 0;}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \});}
+\DoxyCodeLine{00053\ \ \ \ \ \}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{void}\ SetNull()}
+\DoxyCodeLine{00056\ \ \ \ \ \{}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ std::fill(m\_data.begin(),\ m\_data.end(),\ 0);}
+\DoxyCodeLine{00058\ \ \ \ \ \}}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ Compare(\textcolor{keyword}{const}\ base\_blob\&\ other)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ std::memcmp(m\_data.data(),\ other.m\_data.data(),\ WIDTH);\ \}}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ base\_blob\&\ a,\ \textcolor{keyword}{const}\ base\_blob\&\ b)\ \{\ \textcolor{keywordflow}{return}\ a.Compare(b)\ ==\ 0;\ \}}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ operator<(\textcolor{keyword}{const}\ base\_blob\&\ a,\ \textcolor{keyword}{const}\ base\_blob\&\ b)\ \{\ \textcolor{keywordflow}{return}\ a.Compare(b)\ <\ 0;\ \}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00093\ \ \ \ \ std::string\ GetHex()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00094\ \ \ \ \ std::string\ ToString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ data()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_data.data();\ \}}
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ data()\ \{\ \textcolor{keywordflow}{return}\ m\_data.data();\ \}}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ begin()\ \{\ \textcolor{keywordflow}{return}\ m\_data.data();\ \}}
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ end()\ \{\ \textcolor{keywordflow}{return}\ m\_data.data()\ +\ WIDTH;\ \}}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ begin()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_data.data();\ \}}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ end()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_data.data()\ +\ WIDTH;\ \}}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ size()\ \{\ \textcolor{keywordflow}{return}\ WIDTH;\ \}}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keyword}{constexpr}\ uint64\_t\ GetUint64(\textcolor{keywordtype}{int}\ pos)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ ReadLE64(m\_data.data()\ +\ pos\ *\ 8);\ \}}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00112\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ s\ <<\ std::span(m\_data);}
+\DoxyCodeLine{00114\ \ \ \ \ \}}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)}
+\DoxyCodeLine{00118\ \ \ \ \ \{}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ s.read(MakeWritableByteSpan(m\_data));}
+\DoxyCodeLine{00120\ \ \ \ \ \}}
+\DoxyCodeLine{00121\ \};}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ BITS>}
+\DoxyCodeLine{00124\ \textcolor{keyword}{consteval}\ base\_blob<BITS>::base\_blob(std::string\_view\ hex\_str)}
+\DoxyCodeLine{00125\ \{}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keywordflow}{if}\ (hex\_str.length()\ !=\ m\_data.size()\ *\ 2)\ \textcolor{keywordflow}{throw}\ \textcolor{stringliteral}{"{}Hex\ string\ must\ fit\ exactly"{}};}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keyword}{auto}\ str\_it\ =\ hex\_str.rbegin();}
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ elem\ :\ m\_data)\ \{}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ lo\ =\ util::ConstevalHexDigit(*(str\_it++));}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ elem\ =\ (util::ConstevalHexDigit(*(str\_it++))\ <<\ 4)\ |\ lo;}
+\DoxyCodeLine{00131\ \ \ \ \ \}}
+\DoxyCodeLine{00132\ \}}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00134\ \textcolor{keyword}{namespace\ }detail\ \{}
+\DoxyCodeLine{00141\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ u\textcolor{keywordtype}{int}N\_t>}
+\DoxyCodeLine{00142\ std::optional<uintN\_t>\ FromHex(std::string\_view\ str)}
+\DoxyCodeLine{00143\ \{}
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keywordflow}{if}\ (uintN\_t::size()\ *\ 2\ !=\ str.size()\ ||\ !IsHex(str))\ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00145\ \ \ \ \ uintN\_t\ rv;}
+\DoxyCodeLine{00146\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ p1\ =\ rv.begin();}
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ pend\ =\ rv.end();}
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ digits\ =\ str.size();}
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keywordflow}{while}\ (digits\ >\ 0\ \&\&\ p1\ <\ pend)\ \{}
+\DoxyCodeLine{00150\ \ \ \ \ \ \ \ \ *p1\ =\ ::HexDigit(str[-\/-\/digits]);}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (digits\ >\ 0)\ \{}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ \ \ \ \ *p1\ |=\ ((\textcolor{keywordtype}{unsigned}\ char)::HexDigit(str[-\/-\/digits])\ <<\ 4);}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \ \ \ \ p1++;}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00155\ \ \ \ \ \}}
+\DoxyCodeLine{00156\ \ \ \ \ \textcolor{keywordflow}{return}\ rv;}
+\DoxyCodeLine{00157\ \}}
+\DoxyCodeLine{00165\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ u\textcolor{keywordtype}{int}N\_t>}
+\DoxyCodeLine{00166\ std::optional<uintN\_t>\ FromUserHex(std::string\_view\ input)}
+\DoxyCodeLine{00167\ \{}
+\DoxyCodeLine{00168\ \ \ \ \ input\ =\ util::RemovePrefixView(input,\ \textcolor{stringliteral}{"{}0x"{}});}
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ expected\_size\{uintN\_t::size()\ *\ 2\};}
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{keywordflow}{if}\ (input.size()\ <\ expected\_size)\ \{}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ padded\ =\ std::string(expected\_size,\ \textcolor{charliteral}{'0'});}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ std::copy(input.begin(),\ input.end(),\ padded.begin()\ +\ expected\_size\ -\/\ input.size());}
+\DoxyCodeLine{00173\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ FromHex<uintN\_t>(padded);}
+\DoxyCodeLine{00174\ \ \ \ \ \}}
+\DoxyCodeLine{00175\ \ \ \ \ \textcolor{keywordflow}{return}\ FromHex<uintN\_t>(input);}
+\DoxyCodeLine{00176\ \}}
+\DoxyCodeLine{00177\ \}\ \textcolor{comment}{//\ namespace\ detail}}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00183\ \textcolor{keyword}{class\ }uint160\ :\ \textcolor{keyword}{public}\ base\_blob<160>\ \{}
+\DoxyCodeLine{00184\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00185\ \ \ \ \ \textcolor{keyword}{static}\ std::optional<uint160>\ FromHex(std::string\_view\ str)\ \{\ \textcolor{keywordflow}{return}\ detail::FromHex<uint160>(str);\ \}}
+\DoxyCodeLine{00186\ \ \ \ \ \textcolor{keyword}{constexpr}\ uint160()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00187\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{explicit}\ uint160(std::span<const\ unsigned\ char>\ vch)\ :\ base\_blob<160>(vch)\ \{\}}
+\DoxyCodeLine{00188\ \};}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00195\ \textcolor{keyword}{class\ }uint256\ :\ \textcolor{keyword}{public}\ base\_blob<256>\ \{}
+\DoxyCodeLine{00196\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keyword}{static}\ std::optional<uint256>\ FromHex(std::string\_view\ str)\ \{\ \textcolor{keywordflow}{return}\ detail::FromHex<uint256>(str);\ \}}
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{keyword}{static}\ std::optional<uint256>\ FromUserHex(std::string\_view\ str)\ \{\ \textcolor{keywordflow}{return}\ detail::FromUserHex<uint256>(str);\ \}}
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{keyword}{constexpr}\ uint256()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00200\ \ \ \ \ \textcolor{keyword}{consteval}\ \textcolor{keyword}{explicit}\ uint256(std::string\_view\ hex\_str)\ :\ base\_blob<256>(hex\_str)\ \{\}}
+\DoxyCodeLine{00201\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{explicit}\ uint256(uint8\_t\ v)\ :\ base\_blob<256>(v)\ \{\}}
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{explicit}\ uint256(std::span<const\ unsigned\ char>\ vch)\ :\ base\_blob<256>(vch)\ \{\}}
+\DoxyCodeLine{00203\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint256\ ZERO;}
+\DoxyCodeLine{00204\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint256\ ONE;}
+\DoxyCodeLine{00205\ \};}
+\DoxyCodeLine{00206\ }
+\DoxyCodeLine{00207\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UINT256\_H}}
+
+\end{DoxyCode}

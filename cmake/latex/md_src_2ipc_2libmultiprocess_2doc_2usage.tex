@@ -1,0 +1,29 @@
+\chapter{libmultiprocess Usage }
+\label{md_src_2ipc_2libmultiprocess_2doc_2usage}\index{libmultiprocess Usage@{libmultiprocess Usage}}
+\label{md_src_2ipc_2libmultiprocess_2doc_2usage_autotoc_md20}%
+\doxysection{Overview}\label{md_src_2ipc_2libmultiprocess_2doc_2usage_autotoc_md21}
+{\itshape libmultiprocess} is a library and code generator that allows calling C++ class interfaces across different processes. For an interface to be available from other processes, it needs two definitions\+:
+
+
+\begin{DoxyItemize}
+\item An {\bfseries{API definition}} declaring how the interface is called. Included examples\+: {\texttt{calculator.\+h}}, {\texttt{printer.\+h}}, {\texttt{init.\+h}}. Bitcoin examples\+: {\texttt{node.\+h}}, {\texttt{wallet.\+h}}, {\texttt{echo.\+h}}, {\texttt{init.\+h}}.
+\item A {\bfseries{data definition}} declaring how interface calls get sent across the wire. Included examples\+: {\texttt{calculator.\+capnp}}, {\texttt{printer.\+capnp}}, {\texttt{init.\+capnp}}. Bitcoin examples\+: {\texttt{node.\+capnp}}, {\texttt{wallet.\+capnp}}, {\texttt{echo.\+capnp}}, {\texttt{init.\+capnp}}.
+\end{DoxyItemize}
+
+The {\ttfamily $\ast$.capnp} data definition files are consumed by the {\itshape libmultiprocess} code generator and each {\ttfamily X.\+capnp} file generates {\ttfamily X.\+capnp.\+c++}, {\ttfamily X.\+capnp.\+h}, {\ttfamily X.\+capnp.\+proxy-\/client.\+c++}, {\ttfamily X.\+capnp.\+proxy-\/server.\+c++}, {\ttfamily X.\+capnp.\+proxy-\/types.\+c++}, {\ttfamily X.\+capnp.\+proxy-\/types.\+h}, and {\ttfamily X.\+capnp.\+proxy.\+h} output files. The generated files include {\ttfamily \doxyref{mp\+::\+Proxy\+Client}{p.}{structmp_1_1_proxy_client}$<$Interface$>$} and {\ttfamily \doxyref{mp\+::\+Proxy\+Server}{p.}{structmp_1_1_proxy_server}$<$Interface$>$} class specializations for all the interfaces in the {\ttfamily .capnp} files. These allow methods on C++ objects in one process to be called from other processes over IPC sockets.
+
+The {\ttfamily Proxy\+Server} objects help translate IPC requests from a socket to method calls on a local object. The {\ttfamily Proxy\+Server} objects are just used internally by the {\ttfamily mp\+::\+Serve\+Stream(loop, socket, wrapped\+\_\+object)} and {\ttfamily mp\+::\+Listen\+Connections(loop, socket, wrapped\+\_\+object)} functions, and aren\textquotesingle{}t exposed externally. The {\ttfamily Proxy\+Client} classes are exposed, and returned from the {\ttfamily mp\+::\+Connect\+Stream(loop, socket)} function and meant to be used directly. The classes implement methods described in {\ttfamily .capnp} definitions, and whenever any method is called, a request with the method arguments is sent over the associated IPC connection, and the corresponding {\ttfamily wrapped\+\_\+object} method on the other end of the connection is called, with the {\ttfamily Proxy\+Client} method blocking until it returns and forwarding back any return value to the {\ttfamily Proxy\+Client} method caller.\doxysection{Example}\label{md_src_2ipc_2libmultiprocess_2doc_2usage_autotoc_md22}
+A simple interface description can be found at {\texttt{test/mp/test/foo.\+capnp}}, implementation in {\texttt{test/mp/test/foo.\+h}}, and usage in {\texttt{test/mp/test/test.\+cpp}}.
+
+A more complete example can be found in {\texttt{example}} and run with\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{mkdir\ build}
+\DoxyCodeLine{cd\ build}
+\DoxyCodeLine{cmake\ ..}
+\DoxyCodeLine{make\ mpexamples}
+\DoxyCodeLine{example/mpexample}
+
+\end{DoxyCode}
+ 

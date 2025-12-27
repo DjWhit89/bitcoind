@@ -1,0 +1,114 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="structmp_1_1_thread_context" kind="struct" language="C++" prot="public">
+    <compoundname>mp::ThreadContext</compoundname>
+    <includes refid="proxy-io_8h" local="no">proxy-io.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structmp_1_1_thread_context_1af22159ec9e33831372abc5e43e4944f9" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string thread_name</definition>
+        <argsstring></argsstring>
+        <name>thread_name</name>
+        <qualifiedname>mp::ThreadContext::thread_name</qualifiedname>
+        <briefdescription>
+<para>Identifying string for debug. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/ipc/libmultiprocess/include/mp/proxy-io.h" line="623" column="17" bodyfile="src/ipc/libmultiprocess/include/mp/proxy-io.h" bodystart="623" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structmp_1_1_thread_context_1ab283ccca525d24f19bd1860fa2836783" prot="public" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="structmp_1_1_waiter" kindref="compound">Waiter</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Waiter&gt; waiter</definition>
+        <argsstring></argsstring>
+        <name>waiter</name>
+        <qualifiedname>mp::ThreadContext::waiter</qualifiedname>
+        <initializer>= nullptr</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="structmp_1_1_waiter" kindref="compound">Waiter</ref> object used to allow remote clients to execute code on this thread. For server threads created by <ref refid="structmp_1_1_proxy_server_3_01_thread_map_01_4_1a9019e0dfdcbbdf27a37291c74ee5da21" kindref="member">ProxyServer&lt;ThreadMap&gt;::makeThread()</ref>, this is initialized in that function. Otherwise, for client threads created externally, this is initialized the first time the thread tries to make an IPC call. Having a waiter is necessary for threads making IPC calls in case a server they are calling expects them to execute a callback during the call, before it sends a response.</para>
+<para>For IPC client threads, the <ref refid="structmp_1_1_waiter" kindref="compound">Waiter</ref> pointer is never cleared and the <ref refid="structmp_1_1_waiter" kindref="compound">Waiter</ref> just gets destroyed when the thread does. For server threads created by makeThread(), this pointer is set to null in the ~ProxyServer&lt;Thread&gt; as a signal for the thread to exit and destroy itself. In both cases, the same <ref refid="structmp_1_1_waiter" kindref="compound">Waiter</ref> object is used across different calls and only created and destroyed once for the lifetime of the thread. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/ipc/libmultiprocess/include/mp/proxy-io.h" line="640" column="21" bodyfile="src/ipc/libmultiprocess/include/mp/proxy-io.h" bodystart="640" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structmp_1_1_thread_context_1a370e26772b89031ea6428652997e3c91" prot="public" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool loop_thread</definition>
+        <argsstring></argsstring>
+        <name>loop_thread</name>
+        <qualifiedname>mp::ThreadContext::loop_thread</qualifiedname>
+        <initializer>= false</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Whether this thread is a capnp event loop thread. Not really used except to assert false if there&apos;s an attempt to execute a blocking operation which could deadlock the thread. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/ipc/libmultiprocess/include/mp/proxy-io.h" line="675" column="10" bodyfile="src/ipc/libmultiprocess/include/mp/proxy-io.h" bodystart="675" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="structmp_1_1_thread_context_1a9c938bed0c537f793043396cf41dfeab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="namespacemp_1a5176f804f9aaad2c96c46ac53c5bd28b" kindref="member">ConnThreads</ref> callback_threads</type>
+        <definition>ConnThreads callback_threads MP_GUARDED_BY</definition>
+        <argsstring>(waiter-&gt;m_mutex)</argsstring>
+        <name>MP_GUARDED_BY</name>
+        <qualifiedname>mp::ThreadContext::MP_GUARDED_BY</qualifiedname>
+        <param>
+          <type><ref refid="structmp_1_1_thread_context_1ab283ccca525d24f19bd1860fa2836783" kindref="member">waiter</ref>-&gt;</type>
+          <declname>m_mutex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>When client is making a request to a server, this is the <computeroutput>callbackThread</computeroutput> argument it passes in the request, used by the server in case it needs to make callbacks into the client that need to execute while the client is waiting. This will be set to a local thread object.</para>
+<para>Synchronization note: The callback_thread and request_thread maps are only ever accessed internally by this thread&apos;s destructor and externally by Cap&apos;n Proto event loop threads. Since it&apos;s possible for IPC client threads to make calls over different connections that could have different event loops, these maps are guarded by <ref refid="structmp_1_1_waiter_1a71aaf23d91d7b7a5611738c4f06e3577" kindref="member">Waiter::m_mutex</ref> in case different event loop threads add or remove map entries simultaneously. However, individual <ref refid="structmp_1_1_proxy_client_3_01_thread_01_4" kindref="compound">ProxyClient&lt;Thread&gt;</ref> objects in the maps will only be associated with one event loop and guarded by <ref refid="classmp_1_1_event_loop_1a71aaf23d91d7b7a5611738c4f06e3577" kindref="member">EventLoop::m_mutex</ref>. So <ref refid="structmp_1_1_waiter_1a71aaf23d91d7b7a5611738c4f06e3577" kindref="member">Waiter::m_mutex</ref> does not need to be held while accessing individual <ref refid="structmp_1_1_proxy_client_3_01_thread_01_4" kindref="compound">ProxyClient&lt;Thread&gt;</ref> instances, and may even need to be released to respect lock order and avoid locking <ref refid="structmp_1_1_waiter_1a71aaf23d91d7b7a5611738c4f06e3577" kindref="member">Waiter::m_mutex</ref> before <ref refid="classmp_1_1_event_loop_1a71aaf23d91d7b7a5611738c4f06e3577" kindref="member">EventLoop::m_mutex</ref>. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/ipc/libmultiprocess/include/mp/proxy-io.h" line="659" column="34"/>
+      </memberdef>
+      <memberdef kind="function" id="structmp_1_1_thread_context_1ad7d4449836b9c614cb977a93f75c4290" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="namespacemp_1a5176f804f9aaad2c96c46ac53c5bd28b" kindref="member">ConnThreads</ref> request_threads</type>
+        <definition>ConnThreads request_threads MP_GUARDED_BY</definition>
+        <argsstring>(waiter-&gt;m_mutex)</argsstring>
+        <name>MP_GUARDED_BY</name>
+        <qualifiedname>mp::ThreadContext::MP_GUARDED_BY</qualifiedname>
+        <param>
+          <type><ref refid="structmp_1_1_thread_context_1ab283ccca525d24f19bd1860fa2836783" kindref="member">waiter</ref>-&gt;</type>
+          <declname>m_mutex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>When client is making a request to a server, this is the <computeroutput>thread</computeroutput> argument it passes in the request, used to control which thread on server will be responsible for executing it. If client call is being made from a local thread, this will be a remote thread object returned by makeThread. If a client call is being made from a thread currently handling a server request, this will be set to the <computeroutput>callbackThread</computeroutput> request thread argument passed in that request.</para>
+<para>Synchronization note: callback_threads note applies here as well. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/ipc/libmultiprocess/include/mp/proxy-io.h" line="670" column="33"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>The thread_local <ref refid="structmp_1_1_thread_context" kindref="compound">ThreadContext</ref> g_thread_context struct provides information about individual threads and a way of communicating between them. Because it&apos;s a thread local struct, each <ref refid="structmp_1_1_thread_context" kindref="compound">ThreadContext</ref> instance is initialized by the thread that owns it.</para>
+<para><ref refid="structmp_1_1_thread_context" kindref="compound">ThreadContext</ref> is used for any client threads created externally which make IPC calls, and for server threads created by <ref refid="structmp_1_1_proxy_server_3_01_thread_map_01_4_1a9019e0dfdcbbdf27a37291c74ee5da21" kindref="member">ProxyServer&lt;ThreadMap&gt;::makeThread()</ref> which execute IPC calls for clients.</para>
+<para>In both cases, the struct holds information like the thread name, and a <ref refid="structmp_1_1_waiter" kindref="compound">Waiter</ref> object where the <ref refid="classmp_1_1_event_loop" kindref="compound">EventLoop</ref> can post incoming IPC requests to execute on the thread. The struct also holds <ref refid="namespacemp_1a4c23514105673e30f7c1f46afc594ece" kindref="member">ConnThread</ref> maps associating the thread with local and remote <ref refid="structmp_1_1_proxy_client_3_01_thread_01_4" kindref="compound">ProxyClient&lt;Thread&gt;</ref> objects. </para>
+    </detaileddescription>
+    <location file="src/ipc/libmultiprocess/include/mp/proxy-io.h" line="620" column="1" bodyfile="src/ipc/libmultiprocess/include/mp/proxy-io.h" bodystart="621" bodyend="676"/>
+    <listofallmembers>
+      <member refid="structmp_1_1_thread_context_1a370e26772b89031ea6428652997e3c91" prot="public" virt="non-virtual"><scope>mp::ThreadContext</scope><name>loop_thread</name></member>
+      <member refid="structmp_1_1_thread_context_1a9c938bed0c537f793043396cf41dfeab" prot="public" virt="non-virtual"><scope>mp::ThreadContext</scope><name>MP_GUARDED_BY</name></member>
+      <member refid="structmp_1_1_thread_context_1ad7d4449836b9c614cb977a93f75c4290" prot="public" virt="non-virtual"><scope>mp::ThreadContext</scope><name>MP_GUARDED_BY</name></member>
+      <member refid="structmp_1_1_thread_context_1af22159ec9e33831372abc5e43e4944f9" prot="public" virt="non-virtual"><scope>mp::ThreadContext</scope><name>thread_name</name></member>
+      <member refid="structmp_1_1_thread_context_1ab283ccca525d24f19bd1860fa2836783" prot="public" virt="non-virtual"><scope>mp::ThreadContext</scope><name>waiter</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

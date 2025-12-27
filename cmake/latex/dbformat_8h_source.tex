@@ -1,0 +1,230 @@
+\doxysection{dbformat.\+h}
+\label{dbformat_8h_source}\index{src/leveldb/db/dbformat.h@{src/leveldb/db/dbformat.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_DB\_DBFORMAT\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_DB\_DBFORMAT\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}leveldb/comparator.h"{}}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}leveldb/db.h"{}}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}leveldb/filter\_policy.h"{}}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}leveldb/slice.h"{}}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ "{}leveldb/table\_builder.h"{}}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ "{}util/coding.h"{}}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ "{}util/logging.h"{}}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{comment}{//\ Grouping\ of\ constants.\ \ We\ may\ want\ to\ make\ some\ of\ these}}
+\DoxyCodeLine{00023\ \textcolor{comment}{//\ parameters\ set\ via\ options.}}
+\DoxyCodeLine{00024\ \textcolor{keyword}{namespace\ }config\ \{}
+\DoxyCodeLine{00025\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ kNumLevels\ =\ 7;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{comment}{//\ Level-\/0\ compaction\ is\ started\ when\ we\ hit\ this\ many\ files.}}
+\DoxyCodeLine{00028\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ kL0\_CompactionTrigger\ =\ 4;}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{comment}{//\ Soft\ limit\ on\ number\ of\ level-\/0\ files.\ \ We\ slow\ down\ writes\ at\ this\ point.}}
+\DoxyCodeLine{00031\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ kL0\_SlowdownWritesTrigger\ =\ 8;}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{comment}{//\ Maximum\ number\ of\ level-\/0\ files.\ \ We\ stop\ writes\ at\ this\ point.}}
+\DoxyCodeLine{00034\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ kL0\_StopWritesTrigger\ =\ 12;}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{comment}{//\ Maximum\ level\ to\ which\ a\ new\ compacted\ memtable\ is\ pushed\ if\ it}}
+\DoxyCodeLine{00037\ \textcolor{comment}{//\ does\ not\ create\ overlap.\ \ We\ try\ to\ push\ to\ level\ 2\ to\ avoid\ the}}
+\DoxyCodeLine{00038\ \textcolor{comment}{//\ relatively\ expensive\ level\ 0=>1\ compactions\ and\ to\ avoid\ some}}
+\DoxyCodeLine{00039\ \textcolor{comment}{//\ expensive\ manifest\ file\ operations.\ \ We\ do\ not\ push\ all\ the\ way\ to}}
+\DoxyCodeLine{00040\ \textcolor{comment}{//\ the\ largest\ level\ since\ that\ can\ generate\ a\ lot\ of\ wasted\ disk}}
+\DoxyCodeLine{00041\ \textcolor{comment}{//\ space\ if\ the\ same\ key\ space\ is\ being\ repeatedly\ overwritten.}}
+\DoxyCodeLine{00042\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ kMaxMemCompactLevel\ =\ 2;}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \textcolor{comment}{//\ Approximate\ gap\ in\ bytes\ between\ samples\ of\ data\ read\ during\ iteration.}}
+\DoxyCodeLine{00045\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ kReadBytesPeriod\ =\ 1048576;}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ \}\ \ \textcolor{comment}{//\ namespace\ config}}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \textcolor{keyword}{class\ }InternalKey;}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \textcolor{comment}{//\ Value\ types\ encoded\ as\ the\ last\ component\ of\ internal\ keys.}}
+\DoxyCodeLine{00052\ \textcolor{comment}{//\ DO\ NOT\ CHANGE\ THESE\ ENUM\ VALUES:\ they\ are\ embedded\ in\ the\ on-\/disk}}
+\DoxyCodeLine{00053\ \textcolor{comment}{//\ data\ structures.}}
+\DoxyCodeLine{00054\ \textcolor{keyword}{enum}\ ValueType\ \{\ kTypeDeletion\ =\ 0x0,\ kTypeValue\ =\ 0x1\ \};}
+\DoxyCodeLine{00055\ \textcolor{comment}{//\ kValueTypeForSeek\ defines\ the\ ValueType\ that\ should\ be\ passed\ when}}
+\DoxyCodeLine{00056\ \textcolor{comment}{//\ constructing\ a\ ParsedInternalKey\ object\ for\ seeking\ to\ a\ particular}}
+\DoxyCodeLine{00057\ \textcolor{comment}{//\ sequence\ number\ (since\ we\ sort\ sequence\ numbers\ in\ decreasing\ order}}
+\DoxyCodeLine{00058\ \textcolor{comment}{//\ and\ the\ value\ type\ is\ embedded\ as\ the\ low\ 8\ bits\ in\ the\ sequence}}
+\DoxyCodeLine{00059\ \textcolor{comment}{//\ number\ in\ internal\ keys,\ we\ need\ to\ use\ the\ highest-\/numbered}}
+\DoxyCodeLine{00060\ \textcolor{comment}{//\ ValueType,\ not\ the\ lowest).}}
+\DoxyCodeLine{00061\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ ValueType\ kValueTypeForSeek\ =\ kTypeValue;}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \textcolor{keyword}{typedef}\ uint64\_t\ SequenceNumber;}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \textcolor{comment}{//\ We\ leave\ eight\ bits\ empty\ at\ the\ bottom\ so\ a\ type\ and\ sequence\#}}
+\DoxyCodeLine{00066\ \textcolor{comment}{//\ can\ be\ packed\ together\ into\ 64-\/bits.}}
+\DoxyCodeLine{00067\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ SequenceNumber\ kMaxSequenceNumber\ =\ ((0x1ull\ <<\ 56)\ -\/\ 1);}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \textcolor{keyword}{struct\ }ParsedInternalKey\ \{}
+\DoxyCodeLine{00070\ \ \ Slice\ user\_key;}
+\DoxyCodeLine{00071\ \ \ SequenceNumber\ sequence;}
+\DoxyCodeLine{00072\ \ \ ValueType\ type;}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ ParsedInternalKey()\ \{\}\ \ \textcolor{comment}{//\ Intentionally\ left\ uninitialized\ (for\ speed)}}
+\DoxyCodeLine{00075\ \ \ ParsedInternalKey(\textcolor{keyword}{const}\ Slice\&\ u,\ \textcolor{keyword}{const}\ SequenceNumber\&\ seq,\ ValueType\ t)}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ :\ user\_key(u),\ sequence(seq),\ type(t)\ \{\}}
+\DoxyCodeLine{00077\ \ \ std::string\ DebugString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00078\ \};}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \textcolor{comment}{//\ Return\ the\ length\ of\ the\ encoding\ of\ "{}key"{}.}}
+\DoxyCodeLine{00081\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{size\_t}\ InternalKeyEncodingLength(\textcolor{keyword}{const}\ ParsedInternalKey\&\ key)\ \{}
+\DoxyCodeLine{00082\ \ \ \textcolor{keywordflow}{return}\ key.user\_key.size()\ +\ 8;}
+\DoxyCodeLine{00083\ \}}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \textcolor{comment}{//\ Append\ the\ serialization\ of\ "{}key"{}\ to\ *result.}}
+\DoxyCodeLine{00086\ \textcolor{keywordtype}{void}\ AppendInternalKey(std::string*\ result,\ \textcolor{keyword}{const}\ ParsedInternalKey\&\ key);}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \textcolor{comment}{//\ Attempt\ to\ parse\ an\ internal\ key\ from\ "{}internal\_key"{}.\ \ On\ success,}}
+\DoxyCodeLine{00089\ \textcolor{comment}{//\ stores\ the\ parsed\ data\ in\ "{}*result"{},\ and\ returns\ true.}}
+\DoxyCodeLine{00090\ \textcolor{comment}{//}}
+\DoxyCodeLine{00091\ \textcolor{comment}{//\ On\ error,\ returns\ false,\ leaves\ "{}*result"{}\ in\ an\ undefined\ state.}}
+\DoxyCodeLine{00092\ \textcolor{keywordtype}{bool}\ ParseInternalKey(\textcolor{keyword}{const}\ Slice\&\ internal\_key,\ ParsedInternalKey*\ result);}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00094\ \textcolor{comment}{//\ Returns\ the\ user\ key\ portion\ of\ an\ internal\ key.}}
+\DoxyCodeLine{00095\ \textcolor{keyword}{inline}\ Slice\ ExtractUserKey(\textcolor{keyword}{const}\ Slice\&\ internal\_key)\ \{}
+\DoxyCodeLine{00096\ \ \ assert(internal\_key.size()\ >=\ 8);}
+\DoxyCodeLine{00097\ \ \ \textcolor{keywordflow}{return}\ Slice(internal\_key.data(),\ internal\_key.size()\ -\/\ 8);}
+\DoxyCodeLine{00098\ \}}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \textcolor{comment}{//\ A\ comparator\ for\ internal\ keys\ that\ uses\ a\ specified\ comparator\ for}}
+\DoxyCodeLine{00101\ \textcolor{comment}{//\ the\ user\ key\ portion\ and\ breaks\ ties\ by\ decreasing\ sequence\ number.}}
+\DoxyCodeLine{00102\ \textcolor{keyword}{class\ }InternalKeyComparator\ :\ \textcolor{keyword}{public}\ Comparator\ \{}
+\DoxyCodeLine{00103\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00104\ \ \ \textcolor{keyword}{const}\ Comparator*\ user\_comparator\_;}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00107\ \ \ \textcolor{keyword}{explicit}\ InternalKeyComparator(\textcolor{keyword}{const}\ Comparator*\ c)\ :\ user\_comparator\_(c)\ \{\}}
+\DoxyCodeLine{00108\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ Name()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00109\ \ \ \textcolor{keywordtype}{int}\ Compare(\textcolor{keyword}{const}\ Slice\&\ a,\ \textcolor{keyword}{const}\ Slice\&\ b)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00110\ \ \ \textcolor{keywordtype}{void}\ FindShortestSeparator(std::string*\ start,}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Slice\&\ limit)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00112\ \ \ \textcolor{keywordtype}{void}\ FindShortSuccessor(std::string*\ key)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00114\ \ \ \textcolor{keyword}{const}\ Comparator*\ user\_comparator()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ user\_comparator\_;\ \}}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \ \ \textcolor{keywordtype}{int}\ Compare(\textcolor{keyword}{const}\ InternalKey\&\ a,\ \textcolor{keyword}{const}\ InternalKey\&\ b)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00117\ \};}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00119\ \textcolor{comment}{//\ Filter\ policy\ wrapper\ that\ converts\ from\ internal\ keys\ to\ user\ keys}}
+\DoxyCodeLine{00120\ \textcolor{keyword}{class\ }InternalFilterPolicy\ :\ \textcolor{keyword}{public}\ FilterPolicy\ \{}
+\DoxyCodeLine{00121\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00122\ \ \ \textcolor{keyword}{const}\ FilterPolicy*\ \textcolor{keyword}{const}\ user\_policy\_;}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00125\ \ \ \textcolor{keyword}{explicit}\ InternalFilterPolicy(\textcolor{keyword}{const}\ FilterPolicy*\ p)\ :\ user\_policy\_(p)\ \{\}}
+\DoxyCodeLine{00126\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ Name()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00127\ \ \ \textcolor{keywordtype}{void}\ CreateFilter(\textcolor{keyword}{const}\ Slice*\ keys,\ \textcolor{keywordtype}{int}\ n,\ std::string*\ dst)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00128\ \ \ \textcolor{keywordtype}{bool}\ KeyMayMatch(\textcolor{keyword}{const}\ Slice\&\ key,\ \textcolor{keyword}{const}\ Slice\&\ filter)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00129\ \};}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00131\ \textcolor{comment}{//\ Modules\ in\ this\ directory\ should\ keep\ internal\ keys\ wrapped\ inside}}
+\DoxyCodeLine{00132\ \textcolor{comment}{//\ the\ following\ class\ instead\ of\ plain\ strings\ so\ that\ we\ do\ not}}
+\DoxyCodeLine{00133\ \textcolor{comment}{//\ incorrectly\ use\ string\ comparisons\ instead\ of\ an\ InternalKeyComparator.}}
+\DoxyCodeLine{00134\ \textcolor{keyword}{class\ }InternalKey\ \{}
+\DoxyCodeLine{00135\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00136\ \ \ std::string\ rep\_;}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00139\ \ \ InternalKey()\ \{\}\ \ \textcolor{comment}{//\ Leave\ rep\_\ as\ empty\ to\ indicate\ it\ is\ invalid}}
+\DoxyCodeLine{00140\ \ \ InternalKey(\textcolor{keyword}{const}\ Slice\&\ user\_key,\ SequenceNumber\ s,\ ValueType\ t)\ \{}
+\DoxyCodeLine{00141\ \ \ \ \ AppendInternalKey(\&rep\_,\ ParsedInternalKey(user\_key,\ s,\ t));}
+\DoxyCodeLine{00142\ \ \ \}}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00144\ \ \ \textcolor{keywordtype}{bool}\ DecodeFrom(\textcolor{keyword}{const}\ Slice\&\ s)\ \{}
+\DoxyCodeLine{00145\ \ \ \ \ rep\_.assign(s.data(),\ s.size());}
+\DoxyCodeLine{00146\ \ \ \ \ \textcolor{keywordflow}{return}\ !rep\_.empty();}
+\DoxyCodeLine{00147\ \ \ \}}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00149\ \ \ Slice\ Encode()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00150\ \ \ \ \ assert(!rep\_.empty());}
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{keywordflow}{return}\ rep\_;}
+\DoxyCodeLine{00152\ \ \ \}}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \ \ Slice\ user\_key()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ ExtractUserKey(rep\_);\ \}}
+\DoxyCodeLine{00155\ }
+\DoxyCodeLine{00156\ \ \ \textcolor{keywordtype}{void}\ SetFrom(\textcolor{keyword}{const}\ ParsedInternalKey\&\ p)\ \{}
+\DoxyCodeLine{00157\ \ \ \ \ rep\_.clear();}
+\DoxyCodeLine{00158\ \ \ \ \ AppendInternalKey(\&rep\_,\ p);}
+\DoxyCodeLine{00159\ \ \ \}}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00161\ \ \ \textcolor{keywordtype}{void}\ Clear()\ \{\ rep\_.clear();\ \}}
+\DoxyCodeLine{00162\ }
+\DoxyCodeLine{00163\ \ \ std::string\ DebugString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00164\ \};}
+\DoxyCodeLine{00165\ }
+\DoxyCodeLine{00166\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ InternalKeyComparator::Compare(\textcolor{keyword}{const}\ InternalKey\&\ a,}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ InternalKey\&\ b)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00168\ \ \ \textcolor{keywordflow}{return}\ Compare(a.Encode(),\ b.Encode());}
+\DoxyCodeLine{00169\ \}}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00171\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ ParseInternalKey(\textcolor{keyword}{const}\ Slice\&\ internal\_key,}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ParsedInternalKey*\ result)\ \{}
+\DoxyCodeLine{00173\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ n\ =\ internal\_key.size();}
+\DoxyCodeLine{00174\ \ \ \textcolor{keywordflow}{if}\ (n\ <\ 8)\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00175\ \ \ uint64\_t\ num\ =\ DecodeFixed64(internal\_key.data()\ +\ n\ -\/\ 8);}
+\DoxyCodeLine{00176\ \ \ uint8\_t\ c\ =\ num\ \&\ 0xff;}
+\DoxyCodeLine{00177\ \ \ result-\/>sequence\ =\ num\ >>\ 8;}
+\DoxyCodeLine{00178\ \ \ result-\/>type\ =\ \textcolor{keyword}{static\_cast<}ValueType\textcolor{keyword}{>}(c);}
+\DoxyCodeLine{00179\ \ \ result-\/>user\_key\ =\ Slice(internal\_key.data(),\ n\ -\/\ 8);}
+\DoxyCodeLine{00180\ \ \ \textcolor{keywordflow}{return}\ (c\ <=\ \textcolor{keyword}{static\_cast<}uint8\_t\textcolor{keyword}{>}(kTypeValue));}
+\DoxyCodeLine{00181\ \}}
+\DoxyCodeLine{00182\ }
+\DoxyCodeLine{00183\ \textcolor{comment}{//\ A\ helper\ class\ useful\ for\ DBImpl::Get()}}
+\DoxyCodeLine{00184\ \textcolor{keyword}{class\ }LookupKey\ \{}
+\DoxyCodeLine{00185\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00186\ \ \ \textcolor{comment}{//\ Initialize\ *this\ for\ looking\ up\ user\_key\ at\ a\ snapshot\ with}}
+\DoxyCodeLine{00187\ \ \ \textcolor{comment}{//\ the\ specified\ sequence\ number.}}
+\DoxyCodeLine{00188\ \ \ LookupKey(\textcolor{keyword}{const}\ Slice\&\ user\_key,\ SequenceNumber\ sequence);}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00190\ \ \ LookupKey(\textcolor{keyword}{const}\ LookupKey\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00191\ \ \ LookupKey\&\ operator=(\textcolor{keyword}{const}\ LookupKey\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00192\ }
+\DoxyCodeLine{00193\ \ \ \string~LookupKey();}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00195\ \ \ \textcolor{comment}{//\ Return\ a\ key\ suitable\ for\ lookup\ in\ a\ MemTable.}}
+\DoxyCodeLine{00196\ \ \ Slice\ memtable\_key()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Slice(start\_,\ end\_\ -\/\ start\_);\ \}}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00198\ \ \ \textcolor{comment}{//\ Return\ an\ internal\ key\ (suitable\ for\ passing\ to\ an\ internal\ iterator)}}
+\DoxyCodeLine{00199\ \ \ Slice\ internal\_key()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Slice(kstart\_,\ end\_\ -\/\ kstart\_);\ \}}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00201\ \ \ \textcolor{comment}{//\ Return\ the\ user\ key}}
+\DoxyCodeLine{00202\ \ \ Slice\ user\_key()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Slice(kstart\_,\ end\_\ -\/\ kstart\_\ -\/\ 8);\ \}}
+\DoxyCodeLine{00203\ }
+\DoxyCodeLine{00204\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00205\ \ \ \textcolor{comment}{//\ We\ construct\ a\ char\ array\ of\ the\ form:}}
+\DoxyCodeLine{00206\ \ \ \textcolor{comment}{//\ \ \ \ klength\ \ varint32\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <-\/-\/\ start\_}}
+\DoxyCodeLine{00207\ \ \ \textcolor{comment}{//\ \ \ \ userkey\ \ char[klength]\ \ \ \ \ \ \ \ \ \ <-\/-\/\ kstart\_}}
+\DoxyCodeLine{00208\ \ \ \textcolor{comment}{//\ \ \ \ tag\ \ \ \ \ \ uint64}}
+\DoxyCodeLine{00209\ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <-\/-\/\ end\_}}
+\DoxyCodeLine{00210\ \ \ \textcolor{comment}{//\ The\ array\ is\ a\ suitable\ MemTable\ key.}}
+\DoxyCodeLine{00211\ \ \ \textcolor{comment}{//\ The\ suffix\ starting\ with\ "{}userkey"{}\ can\ be\ used\ as\ an\ InternalKey.}}
+\DoxyCodeLine{00212\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ start\_;}
+\DoxyCodeLine{00213\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ kstart\_;}
+\DoxyCodeLine{00214\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ end\_;}
+\DoxyCodeLine{00215\ \ \ \textcolor{keywordtype}{char}\ space\_[200];\ \ \textcolor{comment}{//\ Avoid\ allocation\ for\ short\ keys}}
+\DoxyCodeLine{00216\ \};}
+\DoxyCodeLine{00217\ }
+\DoxyCodeLine{00218\ \textcolor{keyword}{inline}\ LookupKey::\string~LookupKey()\ \{}
+\DoxyCodeLine{00219\ \ \ \textcolor{keywordflow}{if}\ (start\_\ !=\ space\_)\ \textcolor{keyword}{delete}[]\ start\_;}
+\DoxyCodeLine{00220\ \}}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00222\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00223\ }
+\DoxyCodeLine{00224\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_DB\_DBFORMAT\_H\_}}
+
+\end{DoxyCode}

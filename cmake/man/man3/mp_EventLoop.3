@@ -1,0 +1,227 @@
+.TH "EventLoop" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+EventLoop
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <proxy\-io\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBEventLoop\fP (const char *exe_name, \fBLogFn\fP log_fn, void *context=nullptr)"
+.br
+.RI "Construct event loop object with default logging options\&. "
+.ti -1c
+.RI "\fBEventLoop\fP (const char *exe_name, \fBLogOptions\fP log_opts, void *context=nullptr)"
+.br
+.RI "Construct event loop object with specified logging options\&. "
+.ti -1c
+.RI "\fBEventLoop\fP (const char *exe_name, std::function< void(bool, std::string)> old_callback, void *context=nullptr)"
+.br
+.RI "Backwards-compatible constructor for previous (deprecated) logging callback signature\&. "
+.ti -1c
+.RI "\fB~EventLoop\fP ()"
+.br
+.ti -1c
+.RI "void \fBloop\fP ()"
+.br
+.ti -1c
+.RI "void \fBpost\fP (kj::Function< void()> fn)"
+.br
+.ti -1c
+.RI "template<typename Callable> void \fBsync\fP (Callable &&callable)"
+.br
+.ti -1c
+.RI "void \fBaddAsyncCleanup\fP (std::function< void()> fn)"
+.br
+.ti -1c
+.RI "void \fBstartAsyncThread\fP () \fBMP_REQUIRES\fP(\fBm_mutex\fP)"
+.br
+.ti -1c
+.RI "bool \fBdone\fP () const \fBMP_REQUIRES\fP(\fBm_mutex\fP)"
+.br
+.RI "Check if loop should exit\&. "
+.ti -1c
+.RI "kj::Function< void()> *m_post_fn \fBMP_GUARDED_BY\fP (\fBm_mutex\fP)"
+.br
+.RI "Callback function to run on event loop thread during \fBpost()\fP or \fBsync()\fP call\&. "
+.ti -1c
+.RI "std::optional< \fBCleanupList\fP > m_async_fns \fBMP_GUARDED_BY\fP (\fBm_mutex\fP)"
+.br
+.RI "Callback functions to run on async thread\&. "
+.ti -1c
+.RI "int m_num_clients \fBMP_GUARDED_BY\fP (\fBm_mutex\fP)=0"
+.br
+.in -1c
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "const char * \fBm_exe_name\fP"
+.br
+.ti -1c
+.RI "std::thread::id \fBm_thread_id\fP = std::this_thread::get_id()"
+.br
+.RI "ID of the event loop thread\&. "
+.ti -1c
+.RI "std::thread \fBm_async_thread\fP"
+.br
+.ti -1c
+.RI "int \fBm_wait_fd\fP = \-1"
+.br
+.RI "Pipe read handle used to wake up the event loop thread\&. "
+.ti -1c
+.RI "int \fBm_post_fd\fP = \-1"
+.br
+.RI "Pipe write handle used to wake up the event loop thread\&. "
+.ti -1c
+.RI "\fBMutex\fP \fBm_mutex\fP"
+.br
+.ti -1c
+.RI "std::condition_variable \fBm_cv\fP"
+.br
+.ti -1c
+.RI "kj::AsyncIoContext \fBm_io_context\fP"
+.br
+.RI "Capnp IO context\&. "
+.ti -1c
+.RI "\fBLoggingErrorHandler\fP \fBm_error_handler\fP {*this}"
+.br
+.RI "Capnp error handler\&. Needs to outlive m_task_set\&. "
+.ti -1c
+.RI "std::unique_ptr< kj::TaskSet > \fBm_task_set\fP"
+.br
+.RI "Capnp list of pending promises\&. "
+.ti -1c
+.RI "std::list< \fBConnection\fP > \fBm_incoming_connections\fP"
+.br
+.RI "List of connections\&. "
+.ti -1c
+.RI "\fBLogOptions\fP \fBm_log_opts\fP"
+.br
+.RI "Logging options\&. "
+.ti -1c
+.RI "void * \fBm_context\fP"
+.br
+.RI "External context pointer\&. "
+.in -1c
+.SH "Detailed Description"
+.PP 
+Event loop implementation\&.
+
+.PP
+Cap'n Proto threading model is very simple: all I/O operations are asynchronous and must be performed on a single thread\&. This includes:
+
+.PP
+.IP "\(bu" 2
+Code starting an asynchronous operation (calling a function that returns a promise object)
+.IP "\(bu" 2
+Code notifying that an asynchronous operation is complete (code using a fulfiller object)
+.IP "\(bu" 2
+Code handling a completed operation (code chaining or waiting for a promise)
+.PP
+
+.PP
+All of this code needs to access shared state, and there is no mutex that can be acquired to lock this state because Cap'n Proto assumes it will only be accessed from one thread\&. So all this code needs to actually run on one thread, and the \fBEventLoop::loop()\fP method is the entry point for this thread\&. \fBProxyClient\fP and \fBProxyServer\fP objects that use other threads and need to perform I/O operations post to this thread using \fBEventLoop::post()\fP and \fBEventLoop::sync()\fP methods\&.
+
+.PP
+Specifically, because \fBProxyClient\fP methods can be called from arbitrary threads, and \fBProxyServer\fP methods can run on arbitrary threads, \fBProxyClient\fP methods use the \fBEventLoop\fP thread to send requests, and \fBProxyServer\fP methods use the thread to return results\&.
+
+.PP
+Based on https://groups.google.com/d/msg/capnproto/TuQFF1eH2-M/g81sHaTAAQAJ 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "EventLoop (const char * exe_name, \fBLogFn\fP log_fn, void * context = \fRnullptr\fP)\fR [inline]\fP"
+
+.PP
+Construct event loop object with default logging options\&. 
+.SS "EventLoop (const char * exe_name, \fBLogOptions\fP log_opts, void * context = \fRnullptr\fP)"
+
+.PP
+Construct event loop object with specified logging options\&. 
+.SS "EventLoop (const char * exe_name, std::function< void(bool, std::string)> old_callback, void * context = \fRnullptr\fP)\fR [inline]\fP"
+
+.PP
+Backwards-compatible constructor for previous (deprecated) logging callback signature\&. 
+.SS "~\fBEventLoop\fP ()"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "void addAsyncCleanup (std::function< void()> fn)"
+Register cleanup function to run on asynchronous worker thread without blocking the event loop thread\&. 
+.SS "bool done () const"
+
+.PP
+Check if loop should exit\&. 
+.SS "void loop ()"
+Run event loop\&. Does not return until shutdown\&. This should only be called once from the m_thread_id thread\&. This will block until the m_num_clients reference count is 0\&. 
+.SS "std::optional< \fBCleanupList\fP > m_async_fns MP_GUARDED_BY (\fBm_mutex\fP )"
+
+.PP
+Callback functions to run on async thread\&. 
+.SS "kj::Function< void()> *m_post_fn MP_GUARDED_BY (\fBm_mutex\fP )"
+
+.PP
+Callback function to run on event loop thread during \fBpost()\fP or \fBsync()\fP call\&. 
+.SS "int m_num_clients MP_GUARDED_BY (\fBm_mutex\fP )\fR [pure virtual]\fP"
+Number of clients holding references to \fBProxyServerBase\fP objects that reference this event loop\&. 
+.SS "void post (kj::Function< void()> fn)"
+Run function on event loop thread\&. Does not return until function completes\&. Must be called while the \fBloop()\fP function is active\&. 
+.SS "void startAsyncThread ()"
+Start asynchronous worker thread if necessary\&. This is only done if there are \fBProxyServerBase::m_impl\fP objects that need to be destroyed asynchronously, without tying up the event loop thread\&. This can happen when an interface does not declare a destroy() method that would allow the client to wait for the destructor to finish and run it on a dedicated thread\&. It can also happen whenever this is a broken connection and the client is no longer around to call the destructors and the server objects need to be garbage collected\&. In both cases, it is important that ProxyServer::m_impl destructors do not run on the eventloop thread because they may need it to do I/O if they perform other IPC calls\&. 
+.SS "template<typename Callable> void sync (Callable && callable)\fR [inline]\fP"
+\fBWrapper\fP around \fBEventLoop::post\fP that takes advantage of the fact that callable will not go out of scope to avoid requirement that it be copyable\&. 
+.SH "Field Documentation"
+.PP 
+.SS "std::thread m_async_thread"
+Handle of an async worker thread\&. Joined on destruction\&. Unset if async method has not been called\&. 
+.SS "void* m_context"
+
+.PP
+External context pointer\&. 
+.SS "std::condition_variable m_cv"
+
+.SS "\fBLoggingErrorHandler\fP m_error_handler {*this}"
+
+.PP
+Capnp error handler\&. Needs to outlive m_task_set\&. 
+.SS "const char* m_exe_name"
+Process name included in thread names so combined debug output from multiple processes is easier to understand\&. 
+.SS "std::list<\fBConnection\fP> m_incoming_connections"
+
+.PP
+List of connections\&. 
+.SS "kj::AsyncIoContext m_io_context"
+
+.PP
+Capnp IO context\&. 
+.SS "\fBLogOptions\fP m_log_opts"
+
+.PP
+Logging options\&. 
+.SS "\fBMutex\fP m_mutex"
+\fBMutex\fP and condition variable used to post tasks to event loop and async thread\&. 
+.SS "int m_post_fd = \-1"
+
+.PP
+Pipe write handle used to wake up the event loop thread\&. 
+.SS "std::unique_ptr<kj::TaskSet> m_task_set"
+
+.PP
+Capnp list of pending promises\&. 
+.SS "std::thread::id m_thread_id = std::this_thread::get_id()"
+
+.PP
+ID of the event loop thread\&. 
+.SS "int m_wait_fd = \-1"
+
+.PP
+Pipe read handle used to wake up the event loop thread\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

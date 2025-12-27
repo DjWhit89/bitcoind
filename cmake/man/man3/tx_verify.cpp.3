@@ -1,0 +1,119 @@
+.TH "src/consensus/tx_verify.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/consensus/tx_verify.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <consensus/tx_verify\&.h>\fP
+.br
+\fR#include <chain\&.h>\fP
+.br
+\fR#include <coins\&.h>\fP
+.br
+\fR#include <consensus/amount\&.h>\fP
+.br
+\fR#include <consensus/consensus\&.h>\fP
+.br
+\fR#include <consensus/validation\&.h>\fP
+.br
+\fR#include <primitives/transaction\&.h>\fP
+.br
+\fR#include <script/interpreter\&.h>\fP
+.br
+\fR#include <util/check\&.h>\fP
+.br
+\fR#include <util/moneystr\&.h>\fP
+.br
+
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "bool \fBIsFinalTx\fP (const \fBCTransaction\fP &tx, int nBlockHeight, int64_t nBlockTime)"
+.br
+.ti -1c
+.RI "std::pair< int, int64_t > \fBCalculateSequenceLocks\fP (const \fBCTransaction\fP &tx, int \fBflags\fP, std::vector< int > &prevHeights, const \fBCBlockIndex\fP &block)"
+.br
+.ti -1c
+.RI "bool \fBEvaluateSequenceLocks\fP (const \fBCBlockIndex\fP &block, std::pair< int, int64_t > lockPair)"
+.br
+.ti -1c
+.RI "bool \fBSequenceLocks\fP (const \fBCTransaction\fP &tx, int \fBflags\fP, std::vector< int > &prevHeights, const \fBCBlockIndex\fP &block)"
+.br
+.ti -1c
+.RI "unsigned int \fBGetLegacySigOpCount\fP (const \fBCTransaction\fP &tx)"
+.br
+.ti -1c
+.RI "unsigned int \fBGetP2SHSigOpCount\fP (const \fBCTransaction\fP &tx, const \fBCCoinsViewCache\fP &inputs)"
+.br
+.ti -1c
+.RI "int64_t \fBGetTransactionSigOpCost\fP (const \fBCTransaction\fP &tx, const \fBCCoinsViewCache\fP &inputs, \fBscript_verify_flags\fP \fBflags\fP)"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "std::pair< int, int64_t > CalculateSequenceLocks (const \fBCTransaction\fP & tx, int flags, std::vector< int > & prevHeights, const \fBCBlockIndex\fP & block)"
+Calculates the block height and previous block's median time past at which the transaction will be considered final in the context of BIP 68\&. For each input that is not sequence locked, the corresponding entries in prevHeights are set to 0 as they do not affect the calculation\&. 
+.SS "bool EvaluateSequenceLocks (const \fBCBlockIndex\fP & block, std::pair< int, int64_t > lockPair)"
+
+.SS "unsigned int GetLegacySigOpCount (const \fBCTransaction\fP & tx)"
+Auxiliary functions for transaction validation (ideally should not be exposed) Count ECDSA signature operations the old-fashioned (pre-0\&.6) way 
+.PP
+\fBReturns\fP
+.RS 4
+number of sigops this transaction's outputs will produce when spent 
+.RE
+.PP
+\fBSee also\fP
+.RS 4
+CTransaction::FetchInputs 
+.RE
+.PP
+
+.SS "unsigned int GetP2SHSigOpCount (const \fBCTransaction\fP & tx, const \fBCCoinsViewCache\fP & mapInputs)"
+Count ECDSA signature operations in pay-to-script-hash inputs\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fImapInputs\fP Map of previous transactions that have outputs we're spending 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+maximum number of sigops required to validate this transaction's inputs 
+.RE
+.PP
+\fBSee also\fP
+.RS 4
+CTransaction::FetchInputs 
+.RE
+.PP
+
+.SS "int64_t GetTransactionSigOpCost (const \fBCTransaction\fP & tx, const \fBCCoinsViewCache\fP & inputs, \fBscript_verify_flags\fP flags)"
+Compute total signature operation cost of a transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItx\fP Transaction for which we are computing the cost 
+.br
+\fIinputs\fP Map of previous transactions that have outputs we're spending 
+.br
+\fIflags\fP Script verification flags 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Total signature operation cost of tx 
+.RE
+.PP
+
+.SS "bool IsFinalTx (const \fBCTransaction\fP & tx, int nBlockHeight, int64_t nBlockTime)"
+Check if transaction is final and can be included in a block with the specified height and time\&. \fBConsensus\fP critical\&. 
+.SS "bool SequenceLocks (const \fBCTransaction\fP & tx, int flags, std::vector< int > & prevHeights, const \fBCBlockIndex\fP & block)"
+Check if transaction is final per BIP 68 sequence numbers and can be included in a block\&. \fBConsensus\fP critical\&. Takes as input a list of heights at which tx's inputs (in order) confirmed\&. 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

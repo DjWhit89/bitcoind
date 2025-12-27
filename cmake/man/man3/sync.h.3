@@ -1,0 +1,261 @@
+.TH "src/sync.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/sync.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <threadsafety\&.h>\fP
+.br
+\fR#include <util/macros\&.h>\fP
+.br
+\fR#include <cassert>\fP
+.br
+\fR#include <condition_variable>\fP
+.br
+\fR#include <mutex>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <thread>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBAnnotatedMixin< PARENT >\fP"
+.br
+.ti -1c
+.RI "class \fBGlobalMutex\fP"
+.br
+.ti -1c
+.RI "class \fBUniqueLock< MutexType >\fP"
+.br
+.ti -1c
+.RI "class \fBUniqueLock< MutexType >::reverse_lock\fP"
+.br
+.in -1c
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBAssertLockHeld\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "#define \fBAssertLockNotHeld\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "#define \fBREVERSE_LOCK\fP(g,  \fBcs\fP)"
+.br
+.ti -1c
+.RI "#define \fBLOCK\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "#define \fBLOCK2\fP(cs1,  cs2)"
+.br
+.ti -1c
+.RI "#define \fBLOCK_ARGS\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "#define \fBTRY_LOCK\fP(\fBcs\fP,  \fBname\fP)"
+.br
+.ti -1c
+.RI "#define \fBWAIT_LOCK\fP(\fBcs\fP,  \fBname\fP)"
+.br
+.ti -1c
+.RI "#define \fBWITH_LOCK\fP(\fBcs\fP,  code)"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "using \fBRecursiveMutex\fP = \fBAnnotatedMixin\fP<std::recursive_mutex>"
+.br
+.ti -1c
+.RI "using \fBMutex\fP = \fBAnnotatedMixin\fP<std::mutex>"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "template<typename MutexType> void \fBEnterCritical\fP (const char *pszName, const char *pszFile, int nLine, MutexType *\fBcs\fP, bool fTry=false)"
+.br
+.ti -1c
+.RI "void \fBLeaveCritical\fP ()"
+.br
+.ti -1c
+.RI "void \fBCheckLastCritical\fP (void *\fBcs\fP, std::string &lockname, const char *guardname, const char *file, int line)"
+.br
+.ti -1c
+.RI "template<typename MutexType> void \fBAssertLockHeldInternal\fP (const char *pszName, const char *pszFile, int nLine, MutexType *\fBcs\fP) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "template<typename MutexType> void \fBAssertLockNotHeldInternal\fP (const char *pszName, const char *pszFile, int nLine, MutexType *\fBcs\fP) \fBLOCKS_EXCLUDED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBDeleteLock\fP (void *\fBcs\fP)"
+.br
+.ti -1c
+.RI "bool \fBLockStackEmpty\fP ()"
+.br
+.ti -1c
+.RI "void \fBAssertLockNotHeldInline\fP (const char *\fBname\fP, const char *file, int line, \fBMutex\fP *\fBcs\fP) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBAssertLockNotHeldInline\fP (const char *\fBname\fP, const char *file, int line, \fBRecursiveMutex\fP *\fBcs\fP) \fBLOCKS_EXCLUDED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBAssertLockNotHeldInline\fP (const char *\fBname\fP, const char *file, int line, \fBGlobalMutex\fP *\fBcs\fP) \fBLOCKS_EXCLUDED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBMutex\fP & \fBMaybeCheckNotHeld\fP (\fBMutex\fP &\fBcs\fP) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!\fBcs\fP) \fBLOCK_RETURNED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBMutex\fP * \fBMaybeCheckNotHeld\fP (\fBMutex\fP *\fBcs\fP) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!\fBcs\fP) \fBLOCK_RETURNED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "template<typename MutexType> MutexType & \fBMaybeCheckNotHeld\fP (MutexType &m) \fBLOCKS_EXCLUDED\fP(m) \fBLOCK_RETURNED\fP(m)"
+.br
+.ti -1c
+.RI "template<typename MutexType> MutexType * \fBMaybeCheckNotHeld\fP (MutexType *m) \fBLOCKS_EXCLUDED\fP(m) \fBLOCK_RETURNED\fP(m)"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define AssertLockHeld( \fBcs\fP)"
+\fBValue:\fP
+.nf
+AssertLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
+.PP
+.fi
+
+.SS "#define AssertLockNotHeld( \fBcs\fP)"
+\fBValue:\fP
+.nf
+AssertLockNotHeldInline(#cs, __FILE__, __LINE__, &cs)
+.PP
+.fi
+
+.SS "#define LOCK( \fBcs\fP)"
+\fBValue:\fP
+.nf
+UniqueLock UNIQUE_NAME(criticalblock)(MaybeCheckNotHeld(cs), #cs, __FILE__, __LINE__)
+.PP
+.fi
+
+.SS "#define LOCK2( cs1,  cs2)"
+\fBValue:\fP
+.nf
+    UniqueLock criticalblock1(MaybeCheckNotHeld(cs1), #cs1, __FILE__, __LINE__); \\
+    UniqueLock criticalblock2(MaybeCheckNotHeld(cs2), #cs2, __FILE__, __LINE__)
+.PP
+.fi
+
+.SS "#define LOCK_ARGS( \fBcs\fP)"
+\fBValue:\fP
+.nf
+MaybeCheckNotHeld(cs), #cs, __FILE__, __LINE__
+.PP
+.fi
+
+.SS "#define REVERSE_LOCK( g,  \fBcs\fP)"
+\fBValue:\fP
+.nf
+typename std::decay<decltype(g)>::type::reverse_lock UNIQUE_NAME(revlock)(g, cs, #cs, __FILE__, __LINE__)
+.PP
+.fi
+
+.SS "#define TRY_LOCK( \fBcs\fP,  \fBname\fP)"
+\fBValue:\fP
+.nf
+UniqueLock name(LOCK_ARGS(cs), true)
+.PP
+.fi
+
+.SS "#define WAIT_LOCK( \fBcs\fP,  \fBname\fP)"
+\fBValue:\fP
+.nf
+UniqueLock name(LOCK_ARGS(cs))
+.PP
+.fi
+
+.SS "#define WITH_LOCK( \fBcs\fP,  code)"
+\fBValue:\fP
+.nf
+(MaybeCheckNotHeld(cs), [&]() \-> decltype(auto) { LOCK(cs); code; }())
+.PP
+.fi
+Run code while locking a mutex\&.
+
+.PP
+Examples:
+
+.PP
+WITH_LOCK(cs, shared_val = shared_val + 1);
+
+.PP
+int val = \fBWITH_LOCK(cs, return shared_val)\fP;
+
+.PP
+Note:
+
+.PP
+Since the return type deduction follows that of decltype(auto), while the deduced type of:
+
+.PP
+WITH_LOCK(cs, return {int i = 1; return i;});
+
+.PP
+is int, the deduced type of:
+
+.PP
+WITH_LOCK(cs, return {int j = 1; return (j);});
+
+.PP
+is &int, a reference to a local variable
+
+.PP
+The above is detectable at compile-time with the -Wreturn-local-addr flag in gcc and the -Wreturn-stack-address flag in clang, both enabled by default\&. 
+.SH "Typedef Documentation"
+.PP 
+.SS "using \fBMutex\fP = \fBAnnotatedMixin\fP<std::mutex>"
+Wrapped mutex: supports waiting but not recursive locking 
+.SS "using \fBRecursiveMutex\fP = \fBAnnotatedMixin\fP<std::recursive_mutex>"
+Wrapped mutex: supports recursive locking, but no waiting TODO: We should move away from using the recursive lock by default\&. 
+.SH "Function Documentation"
+.PP 
+.SS "template<typename MutexType> void AssertLockHeldInternal (const char * pszName, const char * pszFile, int nLine, MutexType * cs)\fR [inline]\fP"
+
+.SS "void AssertLockNotHeldInline (const char * name, const char * file, int line, \fBGlobalMutex\fP * cs)\fR [inline]\fP"
+
+.SS "void AssertLockNotHeldInline (const char * name, const char * file, int line, \fBMutex\fP * cs)\fR [inline]\fP"
+
+.SS "void AssertLockNotHeldInline (const char * name, const char * file, int line, \fBRecursiveMutex\fP * cs)\fR [inline]\fP"
+
+.SS "template<typename MutexType> void AssertLockNotHeldInternal (const char * pszName, const char * pszFile, int nLine, MutexType * cs)"
+
+.SS "void CheckLastCritical (void * cs, std::string & lockname, const char * guardname, const char * file, int line)\fR [inline]\fP"
+
+.SS "void DeleteLock (void * cs)\fR [inline]\fP"
+
+.SS "template<typename MutexType> void EnterCritical (const char * pszName, const char * pszFile, int nLine, MutexType * cs, bool fTry = \fRfalse\fP)\fR [inline]\fP"
+
+.SS "void LeaveCritical ()\fR [inline]\fP"
+
+.SS "bool LockStackEmpty ()\fR [inline]\fP"
+
+.SS "\fBMutex\fP & MaybeCheckNotHeld (\fBMutex\fP & cs)\fR [inline]\fP"
+
+.SS "\fBMutex\fP * MaybeCheckNotHeld (\fBMutex\fP * cs)\fR [inline]\fP"
+
+.SS "template<typename MutexType> MutexType & MaybeCheckNotHeld (MutexType & m)\fR [inline]\fP"
+
+.SS "template<typename MutexType> MutexType * MaybeCheckNotHeld (MutexType * m)\fR [inline]\fP"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

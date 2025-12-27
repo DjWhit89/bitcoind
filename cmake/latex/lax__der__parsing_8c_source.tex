@@ -1,0 +1,154 @@
+\doxysection{lax\+\_\+der\+\_\+parsing.\+c}
+\label{lax__der__parsing_8c_source}\index{src/secp256k1/contrib/lax\_der\_parsing.c@{src/secp256k1/contrib/lax\_der\_parsing.c}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2015\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <string.h>}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ "{}lax\_der\_parsing.h"{}}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{keywordtype}{int}\ ecdsa\_signature\_parse\_der\_lax(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ secp256k1\_ecdsa\_signature*\ sig,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *input,\ \textcolor{keywordtype}{size\_t}\ inputlen)\ \{}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ rpos,\ rlen,\ spos,\ slen;}
+\DoxyCodeLine{00013\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ pos\ =\ 0;}
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ lenbyte;}
+\DoxyCodeLine{00015\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tmpsig[64]\ =\ \{0\};}
+\DoxyCodeLine{00016\ \ \ \ \ \textcolor{keywordtype}{int}\ overflow\ =\ 0;}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{comment}{/*\ Hack\ to\ initialize\ sig\ with\ a\ correctly-\/parsed\ but\ invalid\ signature.\ */}}
+\DoxyCodeLine{00019\ \ \ \ \ secp256k1\_ecdsa\_signature\_parse\_compact(ctx,\ sig,\ tmpsig);}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{comment}{/*\ Sequence\ tag\ byte\ */}}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ ==\ inputlen\ ||\ input[pos]\ !=\ 0x30)\ \{}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00024\ \ \ \ \ \}}
+\DoxyCodeLine{00025\ \ \ \ \ pos++;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{comment}{/*\ Sequence\ length\ bytes\ */}}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ ==\ inputlen)\ \{}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00030\ \ \ \ \ \}}
+\DoxyCodeLine{00031\ \ \ \ \ lenbyte\ =\ input[pos++];}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordflow}{if}\ (lenbyte\ \&\ 0x80)\ \{}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ lenbyte\ -\/=\ 0x80;}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lenbyte\ >\ inputlen\ -\/\ pos)\ \{}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ pos\ +=\ lenbyte;}
+\DoxyCodeLine{00038\ \ \ \ \ \}}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{comment}{/*\ Integer\ tag\ byte\ for\ R\ */}}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ ==\ inputlen\ ||\ input[pos]\ !=\ 0x02)\ \{}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00043\ \ \ \ \ \}}
+\DoxyCodeLine{00044\ \ \ \ \ pos++;}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{comment}{/*\ Integer\ length\ for\ R\ */}}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ ==\ inputlen)\ \{}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00049\ \ \ \ \ \}}
+\DoxyCodeLine{00050\ \ \ \ \ lenbyte\ =\ input[pos++];}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keywordflow}{if}\ (lenbyte\ \&\ 0x80)\ \{}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ lenbyte\ -\/=\ 0x80;}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lenbyte\ >\ inputlen\ -\/\ pos)\ \{}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (lenbyte\ >\ 0\ \&\&\ input[pos]\ ==\ 0)\ \{}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ pos++;}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ lenbyte-\/-\/;}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lenbyte\ >=\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{size\_t}))\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ rlen\ =\ 0;}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (lenbyte\ >\ 0)\ \{}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \ \ \ \ rlen\ =\ (rlen\ <<\ 8)\ +\ input[pos];}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \ \ \ \ pos++;}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ lenbyte-\/-\/;}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00069\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ rlen\ =\ lenbyte;}
+\DoxyCodeLine{00071\ \ \ \ \ \}}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keywordflow}{if}\ (rlen\ >\ inputlen\ -\/\ pos)\ \{}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00074\ \ \ \ \ \}}
+\DoxyCodeLine{00075\ \ \ \ \ rpos\ =\ pos;}
+\DoxyCodeLine{00076\ \ \ \ \ pos\ +=\ rlen;}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{comment}{/*\ Integer\ tag\ byte\ for\ S\ */}}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ ==\ inputlen\ ||\ input[pos]\ !=\ 0x02)\ \{}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00081\ \ \ \ \ \}}
+\DoxyCodeLine{00082\ \ \ \ \ pos++;}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{comment}{/*\ Integer\ length\ for\ S\ */}}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ ==\ inputlen)\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00087\ \ \ \ \ \}}
+\DoxyCodeLine{00088\ \ \ \ \ lenbyte\ =\ input[pos++];}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordflow}{if}\ (lenbyte\ \&\ 0x80)\ \{}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ lenbyte\ -\/=\ 0x80;}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lenbyte\ >\ inputlen\ -\/\ pos)\ \{}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (lenbyte\ >\ 0\ \&\&\ input[pos]\ ==\ 0)\ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ pos++;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ lenbyte-\/-\/;}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (lenbyte\ >=\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{size\_t}))\ \{}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ slen\ =\ 0;}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (lenbyte\ >\ 0)\ \{}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \ \ \ \ slen\ =\ (slen\ <<\ 8)\ +\ input[pos];}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \ \ \ \ pos++;}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ lenbyte-\/-\/;}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00107\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ slen\ =\ lenbyte;}
+\DoxyCodeLine{00109\ \ \ \ \ \}}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordflow}{if}\ (slen\ >\ inputlen\ -\/\ pos)\ \{}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00112\ \ \ \ \ \}}
+\DoxyCodeLine{00113\ \ \ \ \ spos\ =\ pos;}
+\DoxyCodeLine{00114\ }
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{comment}{/*\ Ignore\ leading\ zeroes\ in\ R\ */}}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keywordflow}{while}\ (rlen\ >\ 0\ \&\&\ input[rpos]\ ==\ 0)\ \{}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ rlen-\/-\/;}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ rpos++;}
+\DoxyCodeLine{00119\ \ \ \ \ \}}
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{comment}{/*\ Copy\ R\ value\ */}}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keywordflow}{if}\ (rlen\ >\ 32)\ \{}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ overflow\ =\ 1;}
+\DoxyCodeLine{00123\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (rlen)\ \{}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ memcpy(tmpsig\ +\ 32\ -\/\ rlen,\ input\ +\ rpos,\ rlen);}
+\DoxyCodeLine{00125\ \ \ \ \ \}}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{comment}{/*\ Ignore\ leading\ zeroes\ in\ S\ */}}
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keywordflow}{while}\ (slen\ >\ 0\ \&\&\ input[spos]\ ==\ 0)\ \{}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ slen-\/-\/;}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ spos++;}
+\DoxyCodeLine{00131\ \ \ \ \ \}}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{comment}{/*\ Copy\ S\ value\ */}}
+\DoxyCodeLine{00133\ \ \ \ \ \textcolor{keywordflow}{if}\ (slen\ >\ 32)\ \{}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ overflow\ =\ 1;}
+\DoxyCodeLine{00135\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (slen)\ \{}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ memcpy(tmpsig\ +\ 64\ -\/\ slen,\ input\ +\ spos,\ slen);}
+\DoxyCodeLine{00137\ \ \ \ \ \}}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00139\ \ \ \ \ \textcolor{keywordflow}{if}\ (!overflow)\ \{}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ overflow\ =\ !secp256k1\_ecdsa\_signature\_parse\_compact(ctx,\ sig,\ tmpsig);}
+\DoxyCodeLine{00141\ \ \ \ \ \}}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keywordflow}{if}\ (overflow)\ \{}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ memset(tmpsig,\ 0,\ 64);}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_signature\_parse\_compact(ctx,\ sig,\ tmpsig);}
+\DoxyCodeLine{00145\ \ \ \ \ \}}
+\DoxyCodeLine{00146\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00147\ \}}
+\DoxyCodeLine{00148\ }
+
+\end{DoxyCode}

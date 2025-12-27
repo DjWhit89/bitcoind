@@ -1,0 +1,304 @@
+\doxysection{hash\+\_\+impl.\+h}
+\label{hash__impl_8h_source}\index{src/secp256k1/src/hash\_impl.h@{src/secp256k1/src/hash\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2014\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_HASH\_IMPL\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_HASH\_IMPL\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}hash.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <stdlib.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <string.h>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#define\ Ch(x,y,z)\ ((z)\ \string^\ ((x)\ \&\ ((y)\ \string^\ (z))))}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#define\ Maj(x,y,z)\ (((x)\ \&\ (y))\ |\ ((z)\ \&\ ((x)\ |\ (y))))}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#define\ Sigma0(x)\ (((x)\ >>\ 2\ |\ (x)\ <<\ 30)\ \string^\ ((x)\ >>\ 13\ |\ (x)\ <<\ 19)\ \string^\ ((x)\ >>\ 22\ |\ (x)\ <<\ 10))}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#define\ Sigma1(x)\ (((x)\ >>\ 6\ |\ (x)\ <<\ 26)\ \string^\ ((x)\ >>\ 11\ |\ (x)\ <<\ 21)\ \string^\ ((x)\ >>\ 25\ |\ (x)\ <<\ 7))}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#define\ sigma0(x)\ (((x)\ >>\ 7\ |\ (x)\ <<\ 25)\ \string^\ ((x)\ >>\ 18\ |\ (x)\ <<\ 14)\ \string^\ ((x)\ >>\ 3))}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#define\ sigma1(x)\ (((x)\ >>\ 17\ |\ (x)\ <<\ 15)\ \string^\ ((x)\ >>\ 19\ |\ (x)\ <<\ 13)\ \string^\ ((x)\ >>\ 10))}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#define\ Round(a,b,c,d,e,f,g,h,k,w)\ do\ \{\ \(\backslash\)}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\ \ \ \ uint32\_t\ t1\ =\ (h)\ +\ Sigma1(e)\ +\ Ch((e),\ (f),\ (g))\ +\ (k)\ +\ (w);\ \(\backslash\)}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\ \ \ \ uint32\_t\ t2\ =\ Sigma0(a)\ +\ Maj((a),\ (b),\ (c));\ \(\backslash\)}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\ \ \ \ (d)\ +=\ t1;\ \(\backslash\)}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\ \ \ \ (h)\ =\ t1\ +\ t2;\ \(\backslash\)}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\}\ while(0)}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_sha256\_initialize(secp256k1\_sha256\ *hash)\ \{}
+\DoxyCodeLine{00032\ \ \ \ \ hash-\/>s[0]\ =\ 0x6a09e667ul;}
+\DoxyCodeLine{00033\ \ \ \ \ hash-\/>s[1]\ =\ 0xbb67ae85ul;}
+\DoxyCodeLine{00034\ \ \ \ \ hash-\/>s[2]\ =\ 0x3c6ef372ul;}
+\DoxyCodeLine{00035\ \ \ \ \ hash-\/>s[3]\ =\ 0xa54ff53aul;}
+\DoxyCodeLine{00036\ \ \ \ \ hash-\/>s[4]\ =\ 0x510e527ful;}
+\DoxyCodeLine{00037\ \ \ \ \ hash-\/>s[5]\ =\ 0x9b05688cul;}
+\DoxyCodeLine{00038\ \ \ \ \ hash-\/>s[6]\ =\ 0x1f83d9abul;}
+\DoxyCodeLine{00039\ \ \ \ \ hash-\/>s[7]\ =\ 0x5be0cd19ul;}
+\DoxyCodeLine{00040\ \ \ \ \ hash-\/>bytes\ =\ 0;}
+\DoxyCodeLine{00041\ \}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00044\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_sha256\_transform(uint32\_t*\ s,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ buf)\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ uint32\_t\ a\ =\ s[0],\ b\ =\ s[1],\ c\ =\ s[2],\ d\ =\ s[3],\ e\ =\ s[4],\ f\ =\ s[5],\ g\ =\ s[6],\ h\ =\ s[7];}
+\DoxyCodeLine{00046\ \ \ \ \ uint32\_t\ w0,\ w1,\ w2,\ w3,\ w4,\ w5,\ w6,\ w7,\ w8,\ w9,\ w10,\ w11,\ w12,\ w13,\ w14,\ w15;}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \ \ Round(a,\ b,\ c,\ d,\ e,\ f,\ g,\ h,\ 0x428a2f98,\ \ w0\ =\ secp256k1\_read\_be32(\&buf[0]));}
+\DoxyCodeLine{00049\ \ \ \ \ Round(h,\ a,\ b,\ c,\ d,\ e,\ f,\ g,\ 0x71374491,\ \ w1\ =\ secp256k1\_read\_be32(\&buf[4]));}
+\DoxyCodeLine{00050\ \ \ \ \ Round(g,\ h,\ a,\ b,\ c,\ d,\ e,\ f,\ 0xb5c0fbcf,\ \ w2\ =\ secp256k1\_read\_be32(\&buf[8]));}
+\DoxyCodeLine{00051\ \ \ \ \ Round(f,\ g,\ h,\ a,\ b,\ c,\ d,\ e,\ 0xe9b5dba5,\ \ w3\ =\ secp256k1\_read\_be32(\&buf[12]));}
+\DoxyCodeLine{00052\ \ \ \ \ Round(e,\ f,\ g,\ h,\ a,\ b,\ c,\ d,\ 0x3956c25b,\ \ w4\ =\ secp256k1\_read\_be32(\&buf[16]));}
+\DoxyCodeLine{00053\ \ \ \ \ Round(d,\ e,\ f,\ g,\ h,\ a,\ b,\ c,\ 0x59f111f1,\ \ w5\ =\ secp256k1\_read\_be32(\&buf[20]));}
+\DoxyCodeLine{00054\ \ \ \ \ Round(c,\ d,\ e,\ f,\ g,\ h,\ a,\ b,\ 0x923f82a4,\ \ w6\ =\ secp256k1\_read\_be32(\&buf[24]));}
+\DoxyCodeLine{00055\ \ \ \ \ Round(b,\ c,\ d,\ e,\ f,\ g,\ h,\ a,\ 0xab1c5ed5,\ \ w7\ =\ secp256k1\_read\_be32(\&buf[28]));}
+\DoxyCodeLine{00056\ \ \ \ \ Round(a,\ b,\ c,\ d,\ e,\ f,\ g,\ h,\ 0xd807aa98,\ \ w8\ =\ secp256k1\_read\_be32(\&buf[32]));}
+\DoxyCodeLine{00057\ \ \ \ \ Round(h,\ a,\ b,\ c,\ d,\ e,\ f,\ g,\ 0x12835b01,\ \ w9\ =\ secp256k1\_read\_be32(\&buf[36]));}
+\DoxyCodeLine{00058\ \ \ \ \ Round(g,\ h,\ a,\ b,\ c,\ d,\ e,\ f,\ 0x243185be,\ w10\ =\ secp256k1\_read\_be32(\&buf[40]));}
+\DoxyCodeLine{00059\ \ \ \ \ Round(f,\ g,\ h,\ a,\ b,\ c,\ d,\ e,\ 0x550c7dc3,\ w11\ =\ secp256k1\_read\_be32(\&buf[44]));}
+\DoxyCodeLine{00060\ \ \ \ \ Round(e,\ f,\ g,\ h,\ a,\ b,\ c,\ d,\ 0x72be5d74,\ w12\ =\ secp256k1\_read\_be32(\&buf[48]));}
+\DoxyCodeLine{00061\ \ \ \ \ Round(d,\ e,\ f,\ g,\ h,\ a,\ b,\ c,\ 0x80deb1fe,\ w13\ =\ secp256k1\_read\_be32(\&buf[52]));}
+\DoxyCodeLine{00062\ \ \ \ \ Round(c,\ d,\ e,\ f,\ g,\ h,\ a,\ b,\ 0x9bdc06a7,\ w14\ =\ secp256k1\_read\_be32(\&buf[56]));}
+\DoxyCodeLine{00063\ \ \ \ \ Round(b,\ c,\ d,\ e,\ f,\ g,\ h,\ a,\ 0xc19bf174,\ w15\ =\ secp256k1\_read\_be32(\&buf[60]));}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \ \ Round(a,\ b,\ c,\ d,\ e,\ f,\ g,\ h,\ 0xe49b69c1,\ w0\ +=\ sigma1(w14)\ +\ w9\ +\ sigma0(w1));}
+\DoxyCodeLine{00066\ \ \ \ \ Round(h,\ a,\ b,\ c,\ d,\ e,\ f,\ g,\ 0xefbe4786,\ w1\ +=\ sigma1(w15)\ +\ w10\ +\ sigma0(w2));}
+\DoxyCodeLine{00067\ \ \ \ \ Round(g,\ h,\ a,\ b,\ c,\ d,\ e,\ f,\ 0x0fc19dc6,\ w2\ +=\ sigma1(w0)\ +\ w11\ +\ sigma0(w3));}
+\DoxyCodeLine{00068\ \ \ \ \ Round(f,\ g,\ h,\ a,\ b,\ c,\ d,\ e,\ 0x240ca1cc,\ w3\ +=\ sigma1(w1)\ +\ w12\ +\ sigma0(w4));}
+\DoxyCodeLine{00069\ \ \ \ \ Round(e,\ f,\ g,\ h,\ a,\ b,\ c,\ d,\ 0x2de92c6f,\ w4\ +=\ sigma1(w2)\ +\ w13\ +\ sigma0(w5));}
+\DoxyCodeLine{00070\ \ \ \ \ Round(d,\ e,\ f,\ g,\ h,\ a,\ b,\ c,\ 0x4a7484aa,\ w5\ +=\ sigma1(w3)\ +\ w14\ +\ sigma0(w6));}
+\DoxyCodeLine{00071\ \ \ \ \ Round(c,\ d,\ e,\ f,\ g,\ h,\ a,\ b,\ 0x5cb0a9dc,\ w6\ +=\ sigma1(w4)\ +\ w15\ +\ sigma0(w7));}
+\DoxyCodeLine{00072\ \ \ \ \ Round(b,\ c,\ d,\ e,\ f,\ g,\ h,\ a,\ 0x76f988da,\ w7\ +=\ sigma1(w5)\ +\ w0\ +\ sigma0(w8));}
+\DoxyCodeLine{00073\ \ \ \ \ Round(a,\ b,\ c,\ d,\ e,\ f,\ g,\ h,\ 0x983e5152,\ w8\ +=\ sigma1(w6)\ +\ w1\ +\ sigma0(w9));}
+\DoxyCodeLine{00074\ \ \ \ \ Round(h,\ a,\ b,\ c,\ d,\ e,\ f,\ g,\ 0xa831c66d,\ w9\ +=\ sigma1(w7)\ +\ w2\ +\ sigma0(w10));}
+\DoxyCodeLine{00075\ \ \ \ \ Round(g,\ h,\ a,\ b,\ c,\ d,\ e,\ f,\ 0xb00327c8,\ w10\ +=\ sigma1(w8)\ +\ w3\ +\ sigma0(w11));}
+\DoxyCodeLine{00076\ \ \ \ \ Round(f,\ g,\ h,\ a,\ b,\ c,\ d,\ e,\ 0xbf597fc7,\ w11\ +=\ sigma1(w9)\ +\ w4\ +\ sigma0(w12));}
+\DoxyCodeLine{00077\ \ \ \ \ Round(e,\ f,\ g,\ h,\ a,\ b,\ c,\ d,\ 0xc6e00bf3,\ w12\ +=\ sigma1(w10)\ +\ w5\ +\ sigma0(w13));}
+\DoxyCodeLine{00078\ \ \ \ \ Round(d,\ e,\ f,\ g,\ h,\ a,\ b,\ c,\ 0xd5a79147,\ w13\ +=\ sigma1(w11)\ +\ w6\ +\ sigma0(w14));}
+\DoxyCodeLine{00079\ \ \ \ \ Round(c,\ d,\ e,\ f,\ g,\ h,\ a,\ b,\ 0x06ca6351,\ w14\ +=\ sigma1(w12)\ +\ w7\ +\ sigma0(w15));}
+\DoxyCodeLine{00080\ \ \ \ \ Round(b,\ c,\ d,\ e,\ f,\ g,\ h,\ a,\ 0x14292967,\ w15\ +=\ sigma1(w13)\ +\ w8\ +\ sigma0(w0));}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \ \ \ \ Round(a,\ b,\ c,\ d,\ e,\ f,\ g,\ h,\ 0x27b70a85,\ w0\ +=\ sigma1(w14)\ +\ w9\ +\ sigma0(w1));}
+\DoxyCodeLine{00083\ \ \ \ \ Round(h,\ a,\ b,\ c,\ d,\ e,\ f,\ g,\ 0x2e1b2138,\ w1\ +=\ sigma1(w15)\ +\ w10\ +\ sigma0(w2));}
+\DoxyCodeLine{00084\ \ \ \ \ Round(g,\ h,\ a,\ b,\ c,\ d,\ e,\ f,\ 0x4d2c6dfc,\ w2\ +=\ sigma1(w0)\ +\ w11\ +\ sigma0(w3));}
+\DoxyCodeLine{00085\ \ \ \ \ Round(f,\ g,\ h,\ a,\ b,\ c,\ d,\ e,\ 0x53380d13,\ w3\ +=\ sigma1(w1)\ +\ w12\ +\ sigma0(w4));}
+\DoxyCodeLine{00086\ \ \ \ \ Round(e,\ f,\ g,\ h,\ a,\ b,\ c,\ d,\ 0x650a7354,\ w4\ +=\ sigma1(w2)\ +\ w13\ +\ sigma0(w5));}
+\DoxyCodeLine{00087\ \ \ \ \ Round(d,\ e,\ f,\ g,\ h,\ a,\ b,\ c,\ 0x766a0abb,\ w5\ +=\ sigma1(w3)\ +\ w14\ +\ sigma0(w6));}
+\DoxyCodeLine{00088\ \ \ \ \ Round(c,\ d,\ e,\ f,\ g,\ h,\ a,\ b,\ 0x81c2c92e,\ w6\ +=\ sigma1(w4)\ +\ w15\ +\ sigma0(w7));}
+\DoxyCodeLine{00089\ \ \ \ \ Round(b,\ c,\ d,\ e,\ f,\ g,\ h,\ a,\ 0x92722c85,\ w7\ +=\ sigma1(w5)\ +\ w0\ +\ sigma0(w8));}
+\DoxyCodeLine{00090\ \ \ \ \ Round(a,\ b,\ c,\ d,\ e,\ f,\ g,\ h,\ 0xa2bfe8a1,\ w8\ +=\ sigma1(w6)\ +\ w1\ +\ sigma0(w9));}
+\DoxyCodeLine{00091\ \ \ \ \ Round(h,\ a,\ b,\ c,\ d,\ e,\ f,\ g,\ 0xa81a664b,\ w9\ +=\ sigma1(w7)\ +\ w2\ +\ sigma0(w10));}
+\DoxyCodeLine{00092\ \ \ \ \ Round(g,\ h,\ a,\ b,\ c,\ d,\ e,\ f,\ 0xc24b8b70,\ w10\ +=\ sigma1(w8)\ +\ w3\ +\ sigma0(w11));}
+\DoxyCodeLine{00093\ \ \ \ \ Round(f,\ g,\ h,\ a,\ b,\ c,\ d,\ e,\ 0xc76c51a3,\ w11\ +=\ sigma1(w9)\ +\ w4\ +\ sigma0(w12));}
+\DoxyCodeLine{00094\ \ \ \ \ Round(e,\ f,\ g,\ h,\ a,\ b,\ c,\ d,\ 0xd192e819,\ w12\ +=\ sigma1(w10)\ +\ w5\ +\ sigma0(w13));}
+\DoxyCodeLine{00095\ \ \ \ \ Round(d,\ e,\ f,\ g,\ h,\ a,\ b,\ c,\ 0xd6990624,\ w13\ +=\ sigma1(w11)\ +\ w6\ +\ sigma0(w14));}
+\DoxyCodeLine{00096\ \ \ \ \ Round(c,\ d,\ e,\ f,\ g,\ h,\ a,\ b,\ 0xf40e3585,\ w14\ +=\ sigma1(w12)\ +\ w7\ +\ sigma0(w15));}
+\DoxyCodeLine{00097\ \ \ \ \ Round(b,\ c,\ d,\ e,\ f,\ g,\ h,\ a,\ 0x106aa070,\ w15\ +=\ sigma1(w13)\ +\ w8\ +\ sigma0(w0));}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ \ \ Round(a,\ b,\ c,\ d,\ e,\ f,\ g,\ h,\ 0x19a4c116,\ w0\ +=\ sigma1(w14)\ +\ w9\ +\ sigma0(w1));}
+\DoxyCodeLine{00100\ \ \ \ \ Round(h,\ a,\ b,\ c,\ d,\ e,\ f,\ g,\ 0x1e376c08,\ w1\ +=\ sigma1(w15)\ +\ w10\ +\ sigma0(w2));}
+\DoxyCodeLine{00101\ \ \ \ \ Round(g,\ h,\ a,\ b,\ c,\ d,\ e,\ f,\ 0x2748774c,\ w2\ +=\ sigma1(w0)\ +\ w11\ +\ sigma0(w3));}
+\DoxyCodeLine{00102\ \ \ \ \ Round(f,\ g,\ h,\ a,\ b,\ c,\ d,\ e,\ 0x34b0bcb5,\ w3\ +=\ sigma1(w1)\ +\ w12\ +\ sigma0(w4));}
+\DoxyCodeLine{00103\ \ \ \ \ Round(e,\ f,\ g,\ h,\ a,\ b,\ c,\ d,\ 0x391c0cb3,\ w4\ +=\ sigma1(w2)\ +\ w13\ +\ sigma0(w5));}
+\DoxyCodeLine{00104\ \ \ \ \ Round(d,\ e,\ f,\ g,\ h,\ a,\ b,\ c,\ 0x4ed8aa4a,\ w5\ +=\ sigma1(w3)\ +\ w14\ +\ sigma0(w6));}
+\DoxyCodeLine{00105\ \ \ \ \ Round(c,\ d,\ e,\ f,\ g,\ h,\ a,\ b,\ 0x5b9cca4f,\ w6\ +=\ sigma1(w4)\ +\ w15\ +\ sigma0(w7));}
+\DoxyCodeLine{00106\ \ \ \ \ Round(b,\ c,\ d,\ e,\ f,\ g,\ h,\ a,\ 0x682e6ff3,\ w7\ +=\ sigma1(w5)\ +\ w0\ +\ sigma0(w8));}
+\DoxyCodeLine{00107\ \ \ \ \ Round(a,\ b,\ c,\ d,\ e,\ f,\ g,\ h,\ 0x748f82ee,\ w8\ +=\ sigma1(w6)\ +\ w1\ +\ sigma0(w9));}
+\DoxyCodeLine{00108\ \ \ \ \ Round(h,\ a,\ b,\ c,\ d,\ e,\ f,\ g,\ 0x78a5636f,\ w9\ +=\ sigma1(w7)\ +\ w2\ +\ sigma0(w10));}
+\DoxyCodeLine{00109\ \ \ \ \ Round(g,\ h,\ a,\ b,\ c,\ d,\ e,\ f,\ 0x84c87814,\ w10\ +=\ sigma1(w8)\ +\ w3\ +\ sigma0(w11));}
+\DoxyCodeLine{00110\ \ \ \ \ Round(f,\ g,\ h,\ a,\ b,\ c,\ d,\ e,\ 0x8cc70208,\ w11\ +=\ sigma1(w9)\ +\ w4\ +\ sigma0(w12));}
+\DoxyCodeLine{00111\ \ \ \ \ Round(e,\ f,\ g,\ h,\ a,\ b,\ c,\ d,\ 0x90befffa,\ w12\ +=\ sigma1(w10)\ +\ w5\ +\ sigma0(w13));}
+\DoxyCodeLine{00112\ \ \ \ \ Round(d,\ e,\ f,\ g,\ h,\ a,\ b,\ c,\ 0xa4506ceb,\ w13\ +=\ sigma1(w11)\ +\ w6\ +\ sigma0(w14));}
+\DoxyCodeLine{00113\ \ \ \ \ Round(c,\ d,\ e,\ f,\ g,\ h,\ a,\ b,\ 0xbef9a3f7,\ w14\ +\ sigma1(w12)\ +\ w7\ +\ sigma0(w15));}
+\DoxyCodeLine{00114\ \ \ \ \ Round(b,\ c,\ d,\ e,\ f,\ g,\ h,\ a,\ 0xc67178f2,\ w15\ +\ sigma1(w13)\ +\ w8\ +\ sigma0(w0));}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \ \ \ \ s[0]\ +=\ a;}
+\DoxyCodeLine{00117\ \ \ \ \ s[1]\ +=\ b;}
+\DoxyCodeLine{00118\ \ \ \ \ s[2]\ +=\ c;}
+\DoxyCodeLine{00119\ \ \ \ \ s[3]\ +=\ d;}
+\DoxyCodeLine{00120\ \ \ \ \ s[4]\ +=\ e;}
+\DoxyCodeLine{00121\ \ \ \ \ s[5]\ +=\ f;}
+\DoxyCodeLine{00122\ \ \ \ \ s[6]\ +=\ g;}
+\DoxyCodeLine{00123\ \ \ \ \ s[7]\ +=\ h;}
+\DoxyCodeLine{00124\ \}}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_sha256\_write(secp256k1\_sha256\ *hash,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *data,\ \textcolor{keywordtype}{size\_t}\ len)\ \{}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ bufsize\ =\ hash-\/>bytes\ \&\ 0x3F;}
+\DoxyCodeLine{00128\ \ \ \ \ hash-\/>bytes\ +=\ len;}
+\DoxyCodeLine{00129\ \ \ \ \ VERIFY\_CHECK(hash-\/>bytes\ >=\ len);}
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keywordflow}{while}\ (len\ >=\ 64\ -\/\ bufsize)\ \{}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Fill\ the\ buffer,\ and\ process\ it.\ */}}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ chunk\_len\ =\ 64\ -\/\ bufsize;}
+\DoxyCodeLine{00133\ \ \ \ \ \ \ \ \ memcpy(hash-\/>buf\ +\ bufsize,\ data,\ chunk\_len);}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ data\ +=\ chunk\_len;}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ len\ -\/=\ chunk\_len;}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ secp256k1\_sha256\_transform(hash-\/>s,\ hash-\/>buf);}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ bufsize\ =\ 0;}
+\DoxyCodeLine{00138\ \ \ \ \ \}}
+\DoxyCodeLine{00139\ \ \ \ \ \textcolor{keywordflow}{if}\ (len)\ \{}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Fill\ the\ buffer\ with\ what\ remains.\ */}}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ memcpy(hash-\/>buf\ +\ bufsize,\ data,\ len);}
+\DoxyCodeLine{00142\ \ \ \ \ \}}
+\DoxyCodeLine{00143\ \}}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_sha256\_finalize(secp256k1\_sha256\ *hash,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *out32)\ \{}
+\DoxyCodeLine{00146\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pad[64]\ =\ \{0x80\};}
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sizedesc[8];}
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{comment}{/*\ The\ maximum\ message\ size\ of\ SHA256\ is\ 2\string^64-\/1\ bits.\ */}}
+\DoxyCodeLine{00150\ \ \ \ \ VERIFY\_CHECK(hash-\/>bytes\ <\ ((uint64\_t)1\ <<\ 61));}
+\DoxyCodeLine{00151\ \ \ \ \ secp256k1\_write\_be32(\&sizedesc[0],\ hash-\/>bytes\ >>\ 29);}
+\DoxyCodeLine{00152\ \ \ \ \ secp256k1\_write\_be32(\&sizedesc[4],\ hash-\/>bytes\ <<\ 3);}
+\DoxyCodeLine{00153\ \ \ \ \ secp256k1\_sha256\_write(hash,\ pad,\ 1\ +\ ((119\ -\/\ (hash-\/>bytes\ \%\ 64))\ \%\ 64));}
+\DoxyCodeLine{00154\ \ \ \ \ secp256k1\_sha256\_write(hash,\ sizedesc,\ 8);}
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 8;\ i++)\ \{}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ secp256k1\_write\_be32(\&out32[4*i],\ hash-\/>s[i]);}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ hash-\/>s[i]\ =\ 0;}
+\DoxyCodeLine{00158\ \ \ \ \ \}}
+\DoxyCodeLine{00159\ \}}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00161\ \textcolor{comment}{/*\ Initializes\ a\ sha256\ struct\ and\ writes\ the\ 64\ byte\ string}}
+\DoxyCodeLine{00162\ \textcolor{comment}{\ *\ SHA256(tag)||SHA256(tag)\ into\ it.\ */}}
+\DoxyCodeLine{00163\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_sha256\_initialize\_tagged(secp256k1\_sha256\ *hash,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *tag,\ \textcolor{keywordtype}{size\_t}\ taglen)\ \{}
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ buf[32];}
+\DoxyCodeLine{00165\ \ \ \ \ secp256k1\_sha256\_initialize(hash);}
+\DoxyCodeLine{00166\ \ \ \ \ secp256k1\_sha256\_write(hash,\ tag,\ taglen);}
+\DoxyCodeLine{00167\ \ \ \ \ secp256k1\_sha256\_finalize(hash,\ buf);}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00169\ \ \ \ \ secp256k1\_sha256\_initialize(hash);}
+\DoxyCodeLine{00170\ \ \ \ \ secp256k1\_sha256\_write(hash,\ buf,\ 32);}
+\DoxyCodeLine{00171\ \ \ \ \ secp256k1\_sha256\_write(hash,\ buf,\ 32);}
+\DoxyCodeLine{00172\ \}}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00174\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_sha256\_clear(secp256k1\_sha256\ *hash)\ \{}
+\DoxyCodeLine{00175\ \ \ \ \ secp256k1\_memclear\_explicit(hash,\ \textcolor{keyword}{sizeof}(*hash));}
+\DoxyCodeLine{00176\ \}}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00178\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_hmac\_sha256\_initialize(secp256k1\_hmac\_sha256\ *hash,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *key,\ \textcolor{keywordtype}{size\_t}\ keylen)\ \{}
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n;}
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ rkey[64];}
+\DoxyCodeLine{00181\ \ \ \ \ \textcolor{keywordflow}{if}\ (keylen\ <=\ \textcolor{keyword}{sizeof}(rkey))\ \{}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ memcpy(rkey,\ key,\ keylen);}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ memset(rkey\ +\ keylen,\ 0,\ \textcolor{keyword}{sizeof}(rkey)\ -\/\ keylen);}
+\DoxyCodeLine{00184\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ secp256k1\_sha256\ sha256;}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ secp256k1\_sha256\_initialize(\&sha256);}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ secp256k1\_sha256\_write(\&sha256,\ key,\ keylen);}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ secp256k1\_sha256\_finalize(\&sha256,\ rkey);}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ memset(rkey\ +\ 32,\ 0,\ 32);}
+\DoxyCodeLine{00190\ \ \ \ \ \}}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00192\ \ \ \ \ secp256k1\_sha256\_initialize(\&hash-\/>outer);}
+\DoxyCodeLine{00193\ \ \ \ \ \textcolor{keywordflow}{for}\ (n\ =\ 0;\ n\ <\ \textcolor{keyword}{sizeof}(rkey);\ n++)\ \{}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ rkey[n]\ \string^=\ 0x5c;}
+\DoxyCodeLine{00195\ \ \ \ \ \}}
+\DoxyCodeLine{00196\ \ \ \ \ secp256k1\_sha256\_write(\&hash-\/>outer,\ rkey,\ \textcolor{keyword}{sizeof}(rkey));}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00198\ \ \ \ \ secp256k1\_sha256\_initialize(\&hash-\/>inner);}
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{keywordflow}{for}\ (n\ =\ 0;\ n\ <\ \textcolor{keyword}{sizeof}(rkey);\ n++)\ \{}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ rkey[n]\ \string^=\ 0x5c\ \string^\ 0x36;}
+\DoxyCodeLine{00201\ \ \ \ \ \}}
+\DoxyCodeLine{00202\ \ \ \ \ secp256k1\_sha256\_write(\&hash-\/>inner,\ rkey,\ \textcolor{keyword}{sizeof}(rkey));}
+\DoxyCodeLine{00203\ \ \ \ \ secp256k1\_memclear\_explicit(rkey,\ \textcolor{keyword}{sizeof}(rkey));}
+\DoxyCodeLine{00204\ \}}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_hmac\_sha256\_write(secp256k1\_hmac\_sha256\ *hash,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *data,\ \textcolor{keywordtype}{size\_t}\ size)\ \{}
+\DoxyCodeLine{00207\ \ \ \ \ secp256k1\_sha256\_write(\&hash-\/>inner,\ data,\ size);}
+\DoxyCodeLine{00208\ \}}
+\DoxyCodeLine{00209\ }
+\DoxyCodeLine{00210\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_hmac\_sha256\_finalize(secp256k1\_hmac\_sha256\ *hash,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *out32)\ \{}
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ temp[32];}
+\DoxyCodeLine{00212\ \ \ \ \ secp256k1\_sha256\_finalize(\&hash-\/>inner,\ temp);}
+\DoxyCodeLine{00213\ \ \ \ \ secp256k1\_sha256\_write(\&hash-\/>outer,\ temp,\ 32);}
+\DoxyCodeLine{00214\ \ \ \ \ secp256k1\_memclear\_explicit(temp,\ \textcolor{keyword}{sizeof}(temp));}
+\DoxyCodeLine{00215\ \ \ \ \ secp256k1\_sha256\_finalize(\&hash-\/>outer,\ out32);}
+\DoxyCodeLine{00216\ \}}
+\DoxyCodeLine{00217\ }
+\DoxyCodeLine{00218\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_hmac\_sha256\_clear(secp256k1\_hmac\_sha256\ *hash)\ \{}
+\DoxyCodeLine{00219\ \ \ \ \ secp256k1\_memclear\_explicit(hash,\ \textcolor{keyword}{sizeof}(*hash));}
+\DoxyCodeLine{00220\ \}}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00222\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_rfc6979\_hmac\_sha256\_initialize(secp256k1\_rfc6979\_hmac\_sha256\ *rng,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *key,\ \textcolor{keywordtype}{size\_t}\ keylen)\ \{}
+\DoxyCodeLine{00223\ \ \ \ \ secp256k1\_hmac\_sha256\ hmac;}
+\DoxyCodeLine{00224\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ zero[1]\ =\ \{0x00\};}
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ one[1]\ =\ \{0x01\};}
+\DoxyCodeLine{00226\ }
+\DoxyCodeLine{00227\ \ \ \ \ memset(rng-\/>v,\ 0x01,\ 32);\ \textcolor{comment}{/*\ RFC6979\ 3.2.b.\ */}}
+\DoxyCodeLine{00228\ \ \ \ \ memset(rng-\/>k,\ 0x00,\ 32);\ \textcolor{comment}{/*\ RFC6979\ 3.2.c.\ */}}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00230\ \ \ \ \ \textcolor{comment}{/*\ RFC6979\ 3.2.d.\ */}}
+\DoxyCodeLine{00231\ \ \ \ \ secp256k1\_hmac\_sha256\_initialize(\&hmac,\ rng-\/>k,\ 32);}
+\DoxyCodeLine{00232\ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ rng-\/>v,\ 32);}
+\DoxyCodeLine{00233\ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ zero,\ 1);}
+\DoxyCodeLine{00234\ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ key,\ keylen);}
+\DoxyCodeLine{00235\ \ \ \ \ secp256k1\_hmac\_sha256\_finalize(\&hmac,\ rng-\/>k);}
+\DoxyCodeLine{00236\ \ \ \ \ secp256k1\_hmac\_sha256\_initialize(\&hmac,\ rng-\/>k,\ 32);}
+\DoxyCodeLine{00237\ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ rng-\/>v,\ 32);}
+\DoxyCodeLine{00238\ \ \ \ \ secp256k1\_hmac\_sha256\_finalize(\&hmac,\ rng-\/>v);}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{comment}{/*\ RFC6979\ 3.2.f.\ */}}
+\DoxyCodeLine{00241\ \ \ \ \ secp256k1\_hmac\_sha256\_initialize(\&hmac,\ rng-\/>k,\ 32);}
+\DoxyCodeLine{00242\ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ rng-\/>v,\ 32);}
+\DoxyCodeLine{00243\ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ one,\ 1);}
+\DoxyCodeLine{00244\ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ key,\ keylen);}
+\DoxyCodeLine{00245\ \ \ \ \ secp256k1\_hmac\_sha256\_finalize(\&hmac,\ rng-\/>k);}
+\DoxyCodeLine{00246\ \ \ \ \ secp256k1\_hmac\_sha256\_initialize(\&hmac,\ rng-\/>k,\ 32);}
+\DoxyCodeLine{00247\ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ rng-\/>v,\ 32);}
+\DoxyCodeLine{00248\ \ \ \ \ secp256k1\_hmac\_sha256\_finalize(\&hmac,\ rng-\/>v);}
+\DoxyCodeLine{00249\ \ \ \ \ rng-\/>retry\ =\ 0;}
+\DoxyCodeLine{00250\ \}}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00252\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_rfc6979\_hmac\_sha256\_generate(secp256k1\_rfc6979\_hmac\_sha256\ *rng,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *out,\ \textcolor{keywordtype}{size\_t}\ outlen)\ \{}
+\DoxyCodeLine{00253\ \ \ \ \ \textcolor{comment}{/*\ RFC6979\ 3.2.h.\ */}}
+\DoxyCodeLine{00254\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ zero[1]\ =\ \{0x00\};}
+\DoxyCodeLine{00255\ \ \ \ \ \textcolor{keywordflow}{if}\ (rng-\/>retry)\ \{}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\ hmac;}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\_initialize(\&hmac,\ rng-\/>k,\ 32);}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ rng-\/>v,\ 32);}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ zero,\ 1);}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\_finalize(\&hmac,\ rng-\/>k);}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\_initialize(\&hmac,\ rng-\/>k,\ 32);}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ rng-\/>v,\ 32);}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\_finalize(\&hmac,\ rng-\/>v);}
+\DoxyCodeLine{00264\ \ \ \ \ \}}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00266\ \ \ \ \ \textcolor{keywordflow}{while}\ (outlen\ >\ 0)\ \{}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\ hmac;}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ now\ =\ outlen;}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\_initialize(\&hmac,\ rng-\/>k,\ 32);}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\_write(\&hmac,\ rng-\/>v,\ 32);}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ secp256k1\_hmac\_sha256\_finalize(\&hmac,\ rng-\/>v);}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (now\ >\ 32)\ \{}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \ \ \ \ now\ =\ 32;}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ memcpy(out,\ rng-\/>v,\ now);}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ out\ +=\ now;}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ outlen\ -\/=\ now;}
+\DoxyCodeLine{00278\ \ \ \ \ \}}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00280\ \ \ \ \ rng-\/>retry\ =\ 1;}
+\DoxyCodeLine{00281\ \}}
+\DoxyCodeLine{00282\ }
+\DoxyCodeLine{00283\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_rfc6979\_hmac\_sha256\_finalize(secp256k1\_rfc6979\_hmac\_sha256\ *rng)\ \{}
+\DoxyCodeLine{00284\ \ \ \ \ (void)\ rng;}
+\DoxyCodeLine{00285\ \}}
+\DoxyCodeLine{00286\ }
+\DoxyCodeLine{00287\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_rfc6979\_hmac\_sha256\_clear(secp256k1\_rfc6979\_hmac\_sha256\ *rng)\ \{}
+\DoxyCodeLine{00288\ \ \ \ \ secp256k1\_memclear\_explicit(rng,\ \textcolor{keyword}{sizeof}(*rng));}
+\DoxyCodeLine{00289\ \}}
+\DoxyCodeLine{00290\ }
+\DoxyCodeLine{00291\ \textcolor{preprocessor}{\#undef\ Round}}
+\DoxyCodeLine{00292\ \textcolor{preprocessor}{\#undef\ sigma1}}
+\DoxyCodeLine{00293\ \textcolor{preprocessor}{\#undef\ sigma0}}
+\DoxyCodeLine{00294\ \textcolor{preprocessor}{\#undef\ Sigma1}}
+\DoxyCodeLine{00295\ \textcolor{preprocessor}{\#undef\ Sigma0}}
+\DoxyCodeLine{00296\ \textcolor{preprocessor}{\#undef\ Maj}}
+\DoxyCodeLine{00297\ \textcolor{preprocessor}{\#undef\ Ch}}
+\DoxyCodeLine{00298\ }
+\DoxyCodeLine{00299\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_HASH\_IMPL\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

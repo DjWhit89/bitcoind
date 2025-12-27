@@ -1,0 +1,202 @@
+\doxysection{db.\+h}
+\label{wallet_2db_8h_source}\index{src/wallet/db.h@{src/wallet/db.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_WALLET\_DB\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_WALLET\_DB\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <clientversion.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <streams.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <support/allocators/secure.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <util/fs.h>}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }ArgsManager;}
+\DoxyCodeLine{00020\ \textcolor{keyword}{struct\ }bilingual\_str;}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00023\ \textcolor{comment}{//\ BytePrefix\ compares\ equality\ with\ other\ byte\ spans\ that\ begin\ with\ the\ same\ prefix.}}
+\DoxyCodeLine{00024\ \textcolor{keyword}{struct\ }BytePrefix\ \{}
+\DoxyCodeLine{00025\ \ \ \ \ std::span<const\ std::byte>\ prefix;}
+\DoxyCodeLine{00026\ \};}
+\DoxyCodeLine{00027\ \textcolor{keywordtype}{bool}\ operator<(BytePrefix\ a,\ std::span<const\ std::byte>\ b);}
+\DoxyCodeLine{00028\ \textcolor{keywordtype}{bool}\ operator<(std::span<const\ std::byte>\ a,\ BytePrefix\ b);}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{keyword}{class\ }DatabaseCursor}
+\DoxyCodeLine{00031\ \{}
+\DoxyCodeLine{00032\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keyword}{explicit}\ DatabaseCursor()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~DatabaseCursor()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \ \ DatabaseCursor(\textcolor{keyword}{const}\ DatabaseCursor\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00037\ \ \ \ \ DatabaseCursor\&\ operator=(\textcolor{keyword}{const}\ DatabaseCursor\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keyword}{enum\ class}\ Status}
+\DoxyCodeLine{00040\ \ \ \ \ \{}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ FAIL,}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ MORE,}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ DONE,}
+\DoxyCodeLine{00044\ \ \ \ \ \};}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keyword}{virtual}\ Status\ Next(DataStream\&\ key,\ DataStream\&\ value)\ \{\ \textcolor{keywordflow}{return}\ Status::FAIL;\ \}}
+\DoxyCodeLine{00047\ \};}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00050\ \textcolor{keyword}{class\ }DatabaseBatch}
+\DoxyCodeLine{00051\ \{}
+\DoxyCodeLine{00052\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ ReadKey(DataStream\&\&\ key,\ DataStream\&\ value)\ =\ 0;}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ WriteKey(DataStream\&\&\ key,\ DataStream\&\&\ value,\ \textcolor{keywordtype}{bool}\ overwrite\ =\ \textcolor{keyword}{true})\ =\ 0;}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ EraseKey(DataStream\&\&\ key)\ =\ 0;}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HasKey(DataStream\&\&\ key)\ =\ 0;}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keyword}{explicit}\ DatabaseBatch()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~DatabaseBatch()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \ \ \ \ DatabaseBatch(\textcolor{keyword}{const}\ DatabaseBatch\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00063\ \ \ \ \ DatabaseBatch\&\ operator=(\textcolor{keyword}{const}\ DatabaseBatch\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Close()\ =\ 0;}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keywordtype}{bool}\ Read(\textcolor{keyword}{const}\ K\&\ key,\ T\&\ value)}
+\DoxyCodeLine{00069\ \ \ \ \ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ DataStream\ ssKey\{\};}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ ssKey.reserve(1000);}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ ssKey\ <<\ key;}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ DataStream\ ssValue\{\};}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!ReadKey(std::move(ssKey),\ ssValue))\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ ssValue\ >>\ value;}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::exception\&)\ \{}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00082\ \ \ \ \ \}}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordtype}{bool}\ Write(\textcolor{keyword}{const}\ K\&\ key,\ \textcolor{keyword}{const}\ T\&\ value,\ \textcolor{keywordtype}{bool}\ fOverwrite\ =\ \textcolor{keyword}{true})}
+\DoxyCodeLine{00086\ \ \ \ \ \{}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ DataStream\ ssKey\{\};}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ ssKey.reserve(1000);}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ ssKey\ <<\ key;}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ DataStream\ ssValue\{\};}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ ssValue.reserve(10000);}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ ssValue\ <<\ value;}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ WriteKey(std::move(ssKey),\ std::move(ssValue),\ fOverwrite);}
+\DoxyCodeLine{00096\ \ \ \ \ \}}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K>}
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{keywordtype}{bool}\ Erase(\textcolor{keyword}{const}\ K\&\ key)}
+\DoxyCodeLine{00100\ \ \ \ \ \{}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ DataStream\ ssKey\{\};}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ ssKey.reserve(1000);}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ ssKey\ <<\ key;}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ EraseKey(std::move(ssKey));}
+\DoxyCodeLine{00106\ \ \ \ \ \}}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K>}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keywordtype}{bool}\ Exists(\textcolor{keyword}{const}\ K\&\ key)}
+\DoxyCodeLine{00110\ \ \ \ \ \{}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ DataStream\ ssKey\{\};}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ ssKey.reserve(1000);}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ ssKey\ <<\ key;}
+\DoxyCodeLine{00114\ }
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ HasKey(std::move(ssKey));}
+\DoxyCodeLine{00116\ \ \ \ \ \}}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ ErasePrefix(std::span<const\ std::byte>\ prefix)\ =\ 0;}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keyword}{virtual}\ std::unique\_ptr<DatabaseCursor>\ GetNewCursor()\ =\ 0;}
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keyword}{virtual}\ std::unique\_ptr<DatabaseCursor>\ GetNewPrefixCursor(std::span<const\ std::byte>\ prefix)\ =\ 0;}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ TxnBegin()\ =\ 0;}
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ TxnCommit()\ =\ 0;}
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ TxnAbort()\ =\ 0;}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HasActiveTxn()\ =\ 0;}
+\DoxyCodeLine{00125\ \};}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00129\ \textcolor{keyword}{class\ }WalletDatabase}
+\DoxyCodeLine{00130\ \{}
+\DoxyCodeLine{00131\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00133\ \ \ \ \ WalletDatabase()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~WalletDatabase()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Open()\ =\ 0;}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00140\ \ \ \ \ std::atomic<int>\ m\_refcount\{0\};}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ Rewrite()\ =\ 0;}
+\DoxyCodeLine{00145\ }
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ Backup(\textcolor{keyword}{const}\ std::string\&\ strDest)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Close()\ =\ 0;}
+\DoxyCodeLine{00154\ }
+\DoxyCodeLine{00156\ \ \ \ \ \textcolor{keyword}{virtual}\ std::string\ Filename()\ =\ 0;}
+\DoxyCodeLine{00157\ }
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{keyword}{virtual}\ std::vector<fs::path>\ Files()\ =\ 0;}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keyword}{virtual}\ std::string\ Format()\ =\ 0;}
+\DoxyCodeLine{00162\ }
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keyword}{virtual}\ std::unique\_ptr<DatabaseBatch>\ MakeBatch()\ =\ 0;}
+\DoxyCodeLine{00165\ \};}
+\DoxyCodeLine{00166\ }
+\DoxyCodeLine{00167\ \textcolor{keyword}{enum\ class}\ DatabaseFormat\ \{}
+\DoxyCodeLine{00168\ \ \ \ \ SQLITE,}
+\DoxyCodeLine{00169\ \ \ \ \ BERKELEY\_RO,}
+\DoxyCodeLine{00170\ \};}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00172\ \textcolor{keyword}{struct\ }DatabaseOptions\ \{}
+\DoxyCodeLine{00173\ \ \ \ \ \textcolor{keywordtype}{bool}\ require\_existing\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keywordtype}{bool}\ require\_create\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00175\ \ \ \ \ std::optional<DatabaseFormat>\ require\_format;}
+\DoxyCodeLine{00176\ \ \ \ \ uint64\_t\ create\_flags\ =\ 0;}
+\DoxyCodeLine{00177\ \ \ \ \ SecureString\ create\_passphrase;}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{comment}{//\ Specialized\ options.\ Not\ every\ option\ is\ supported\ by\ every\ backend.}}
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keywordtype}{bool}\ verify\ =\ \textcolor{keyword}{true};\ \ \ \ \ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00181\ \ \ \ \ \textcolor{keywordtype}{bool}\ use\_unsafe\_sync\ =\ \textcolor{keyword}{false};\ \ \ }
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{keywordtype}{bool}\ use\_shared\_memory\ =\ \textcolor{keyword}{false};\ }
+\DoxyCodeLine{00183\ \ \ \ \ int64\_t\ max\_log\_mb\ =\ 100;\ \ \ \ \ \ \ }
+\DoxyCodeLine{00184\ \};}
+\DoxyCodeLine{00185\ }
+\DoxyCodeLine{00186\ \textcolor{keyword}{enum\ class}\ DatabaseStatus\ \{}
+\DoxyCodeLine{00187\ \ \ \ \ SUCCESS,}
+\DoxyCodeLine{00188\ \ \ \ \ FAILED\_BAD\_PATH,}
+\DoxyCodeLine{00189\ \ \ \ \ FAILED\_BAD\_FORMAT,}
+\DoxyCodeLine{00190\ \ \ \ \ FAILED\_LEGACY\_DISABLED,}
+\DoxyCodeLine{00191\ \ \ \ \ FAILED\_ALREADY\_LOADED,}
+\DoxyCodeLine{00192\ \ \ \ \ FAILED\_ALREADY\_EXISTS,}
+\DoxyCodeLine{00193\ \ \ \ \ FAILED\_NOT\_FOUND,}
+\DoxyCodeLine{00194\ \ \ \ \ FAILED\_CREATE,}
+\DoxyCodeLine{00195\ \ \ \ \ FAILED\_LOAD,}
+\DoxyCodeLine{00196\ \ \ \ \ FAILED\_VERIFY,}
+\DoxyCodeLine{00197\ \ \ \ \ FAILED\_ENCRYPT,}
+\DoxyCodeLine{00198\ \ \ \ \ FAILED\_INVALID\_BACKUP\_FILE,}
+\DoxyCodeLine{00199\ \};}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00202\ std::vector<std::pair<fs::path,\ std::string>>\ ListDatabases(\textcolor{keyword}{const}\ fs::path\&\ path);}
+\DoxyCodeLine{00203\ }
+\DoxyCodeLine{00204\ \textcolor{keywordtype}{void}\ ReadDatabaseArgs(\textcolor{keyword}{const}\ ArgsManager\&\ args,\ DatabaseOptions\&\ options);}
+\DoxyCodeLine{00205\ std::unique\_ptr<WalletDatabase>\ MakeDatabase(\textcolor{keyword}{const}\ fs::path\&\ path,\ \textcolor{keyword}{const}\ DatabaseOptions\&\ options,\ DatabaseStatus\&\ status,\ bilingual\_str\&\ error);}
+\DoxyCodeLine{00206\ }
+\DoxyCodeLine{00207\ fs::path\ BDBDataFile(\textcolor{keyword}{const}\ fs::path\&\ path);}
+\DoxyCodeLine{00208\ fs::path\ SQLiteDataFile(\textcolor{keyword}{const}\ fs::path\&\ path);}
+\DoxyCodeLine{00209\ \textcolor{keywordtype}{bool}\ IsBDBFile(\textcolor{keyword}{const}\ fs::path\&\ path);}
+\DoxyCodeLine{00210\ \textcolor{keywordtype}{bool}\ IsSQLiteFile(\textcolor{keyword}{const}\ fs::path\&\ path);}
+\DoxyCodeLine{00211\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{00212\ }
+\DoxyCodeLine{00213\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_WALLET\_DB\_H}}
+
+\end{DoxyCode}

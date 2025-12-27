@@ -1,0 +1,64 @@
+.TH "src/test/fuzz/secp256k1_ec_seckey_import_export_der.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/test/fuzz/secp256k1_ec_seckey_import_export_der.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <key\&.h>\fP
+.br
+\fR#include <secp256k1\&.h>\fP
+.br
+\fR#include <test/fuzz/FuzzedDataProvider\&.h>\fP
+.br
+\fR#include <test/fuzz/fuzz\&.h>\fP
+.br
+\fR#include <test/fuzz/util\&.h>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "int \fBec_seckey_import_der\fP (const \fBsecp256k1_context\fP *ctx, unsigned char *out32, const unsigned char *seckey, size_t seckeylen)"
+.br
+.ti -1c
+.RI "int \fBec_seckey_export_der\fP (const \fBsecp256k1_context\fP *ctx, unsigned char *seckey, size_t *seckeylen, const unsigned char *key32, bool compressed)"
+.br
+.ti -1c
+.RI "\fBFUZZ_TARGET\fP (secp256k1_ec_seckey_import_export_der)"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "int ec_seckey_export_der (const \fBsecp256k1_context\fP * ctx, unsigned char * seckey, size_t * seckeylen, const unsigned char * key32, bool compressed)"
+This serializes to a DER encoding of the ECPrivateKey type from section C\&.4 of SEC 1 https://www.secg.org/sec1-v2.pdf\&. The optional parameters and publicKey fields are included\&.
+
+.PP
+seckey must point to an output buffer of length at least \fBCKey::SIZE\fP bytes\&. seckeylen must initially be set to the size of the seckey buffer\&. Upon return it will be set to the number of bytes used in the buffer\&. key32 must point to a 32-byte raw private key\&. 
+.SS "int ec_seckey_import_der (const \fBsecp256k1_context\fP * ctx, unsigned char * out32, const unsigned char * seckey, size_t seckeylen)"
+These functions are taken from the libsecp256k1 distribution and are very ugly\&. This parses a format loosely based on a DER encoding of the ECPrivateKey type from section C\&.4 of SEC 1 https://www.secg.org/sec1-v2.pdf, with the following caveats:
+
+.PP
+.IP "\(bu" 2
+The octet-length of the SEQUENCE must be encoded as 1 or 2 octets\&. It is not required to be encoded as one octet if it is less than 256, as DER would require\&.
+.IP "\(bu" 2
+The octet-length of the SEQUENCE must not be greater than the remaining length of the key encoding, but need not match it (i\&.e\&. the encoding may contain junk after the encoded SEQUENCE)\&.
+.IP "\(bu" 2
+The privateKey OCTET STRING is zero-filled on the left to 32 octets\&.
+.IP "\(bu" 2
+Anything after the encoding of the privateKey OCTET STRING is ignored, whether or not it is validly encoded DER\&.
+.PP
+
+.PP
+out32 must point to an output buffer of length at least 32 bytes\&. 
+.SS "FUZZ_TARGET (secp256k1_ec_seckey_import_export_der )"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

@@ -1,0 +1,333 @@
+\doxysection{random.\+h}
+\label{random_8h_source}\index{src/random.h@{src/random.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_RANDOM\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_RANDOM\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <crypto/chacha20.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <crypto/common.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <bit>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <concepts>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \textcolor{comment}{/*\ =============================\ INITIALIZATION\ AND\ ADDING\ ENTROPY\ =============================\ */}}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00083\ \textcolor{keywordtype}{void}\ RandomInit();}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00090\ \textcolor{keywordtype}{void}\ RandAddPeriodic()\ noexcept;}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00098\ \textcolor{keywordtype}{void}\ RandAddEvent(const\ uint32\_t\ event\_info)\ noexcept;}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \textcolor{comment}{/*\ ===========================\ BASE\ RANDOMNESS\ GENERATION\ FUNCTIONS\ ===========================}}
+\DoxyCodeLine{00102\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00103\ \textcolor{comment}{\ *\ All\ produced\ randomness\ is\ eventually\ generated\ by\ one\ of\ these\ functions.}}
+\DoxyCodeLine{00104\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00117\ \textcolor{keywordtype}{void}\ GetRandBytes(std::span<\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}>\ bytes)\ noexcept;}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00129\ \textcolor{keywordtype}{void}\ GetStrongRandBytes(std::span<\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}>\ bytes)\ noexcept;}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \textcolor{comment}{/*\ =============================\ RANDOM\ NUMBER\ GENERATION\ CLASSES\ =============================}}
+\DoxyCodeLine{00133\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00134\ \textcolor{comment}{\ *\ In\ this\ section,\ 3\ classes\ are\ defined:}}
+\DoxyCodeLine{00135\ \textcolor{comment}{\ *\ -\/\ RandomMixin:\ \ \ \ \ \ \ \ \ \ \ \ a\ base\ class\ that\ adds\ functionality\ to\ all\ RNG\ classes.}}
+\DoxyCodeLine{00136\ \textcolor{comment}{\ *\ -\/\ FastRandomContext:\ \ \ \ \ \ a\ cryptographic\ RNG\ (seeded\ through\ GetRandBytes\ in\ its\ default}}
+\DoxyCodeLine{00137\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ constructor).}}
+\DoxyCodeLine{00138\ \textcolor{comment}{\ *\ -\/\ InsecureRandomContext:\ \ a\ non-\/cryptographic,\ very\ fast,\ RNG.}}
+\DoxyCodeLine{00139\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00141\ \textcolor{comment}{//\ Forward\ declaration\ of\ RandomMixin,\ used\ in\ RandomNumberGenerator\ concept.}}
+\DoxyCodeLine{00142\ template<typename\ T>}
+\DoxyCodeLine{00143\ class\ RandomMixin;}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00146\ template<typename\ T>}
+\DoxyCodeLine{00147\ concept\ RandomNumberGenerator\ =\ requires(T\&\ rng,\ std::span<std::\textcolor{keywordtype}{byte}>\ s)\ \{}
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{comment}{//\ A\ random\ number\ generator\ must\ provide\ rand64().}}
+\DoxyCodeLine{00149\ \ \ \ \ \{\ rng.rand64()\ \}\ \textcolor{keyword}{noexcept}\ -\/>\ std::same\_as<uint64\_t>;}
+\DoxyCodeLine{00150\ \ \ \ \ \textcolor{comment}{//\ A\ random\ number\ generator\ must\ derive\ from\ RandomMixin,\ which\ adds\ other\ rand*\ functions.}}
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{keyword}{requires}\ std::derived\_from<std::remove\_reference\_t<T>,\ RandomMixin<std::remove\_reference\_t<T>>>;}
+\DoxyCodeLine{00152\ \};}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00155\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00156\ \textcolor{keyword}{concept\ }StdChronoDuration\ =\ \textcolor{keyword}{requires}\ \{}
+\DoxyCodeLine{00157\ \ \ \ \ []<\textcolor{keyword}{class\ }Rep,\ class\ Period>(std::type\_identity<std::chrono::duration<Rep,\ Period>>)\{\}(}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ std::type\_identity<T>());}
+\DoxyCodeLine{00159\ \};}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00162\ \textcolor{keywordtype}{double}\ MakeExponentiallyDistributed(uint64\_t\ uniform)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00163\ }
+\DoxyCodeLine{00173\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00174\ \textcolor{keyword}{class\ }RandomMixin}
+\DoxyCodeLine{00175\ \{}
+\DoxyCodeLine{00176\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00177\ \ \ \ \ uint64\_t\ bitbuf\{0\};}
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keywordtype}{int}\ bitbuf\_size\{0\};}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00185\ \ \ \ \ RandomNumberGenerator\ \textcolor{keyword}{auto}\&\ Impl()\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}T\&\textcolor{keyword}{>}(*this);\ \}}
+\DoxyCodeLine{00186\ }
+\DoxyCodeLine{00187\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00188\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{void}\ FlushCache()\ noexcept}
+\DoxyCodeLine{00189\ \ \ \ \ \{}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ bitbuf\ =\ 0;}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ bitbuf\_size\ =\ 0;}
+\DoxyCodeLine{00192\ \ \ \ \ \}}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00194\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00195\ \ \ \ \ \textcolor{keyword}{constexpr}\ RandomMixin()\ noexcept\ =\ default;}
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{comment}{//\ Do\ not\ permit\ copying\ or\ moving\ an\ RNG.}}
+\DoxyCodeLine{00198\ \ \ \ \ RandomMixin(const\ RandomMixin\&)\ =\ delete;}
+\DoxyCodeLine{00199\ \ \ \ \ RandomMixin\&\ operator=(const\ RandomMixin\&)\ =\ delete;}
+\DoxyCodeLine{00200\ \ \ \ \ RandomMixin(RandomMixin\&\&)\ =\ delete;}
+\DoxyCodeLine{00201\ \ \ \ \ RandomMixin\&\ operator=(RandomMixin\&\&)\ =\ delete;}
+\DoxyCodeLine{00202\ }
+\DoxyCodeLine{00204\ \ \ \ \ uint64\_t\ randbits(\textcolor{keywordtype}{int}\ bits)\ noexcept}
+\DoxyCodeLine{00205\ \ \ \ \ \{}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ Assume(bits\ <=\ 64);}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Requests\ for\ the\ full\ 64\ bits\ are\ passed\ through.}}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bits\ ==\ 64)\ \textcolor{keywordflow}{return}\ Impl().rand64();}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ uint64\_t\ ret;}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bits\ <=\ bitbuf\_size)\ \{}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ there\ is\ enough\ entropy\ left\ in\ bitbuf,\ return\ its\ bottom\ bits\ bits.}}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \ \ \ \ ret\ =\ bitbuf;}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \ \ \ \ bitbuf\ >>=\ bits;}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \ \ \ \ bitbuf\_size\ -\/=\ bits;}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ not,\ return\ all\ of\ bitbuf,\ supplemented\ with\ the\ (bits\ -\/\ bitbuf\_size)\ bottom}}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ bits\ of\ a\ newly\ generated\ 64-\/bit\ number\ on\ top.\ The\ remainder\ of\ that\ generated}}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ number\ becomes\ the\ new\ bitbuf.}}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ gen\ =\ Impl().rand64();}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \ \ \ \ ret\ =\ (gen\ <<\ bitbuf\_size)\ |\ bitbuf;}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \ \ \ \ bitbuf\ =\ gen\ >>\ (bits\ -\/\ bitbuf\_size);}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \ \ \ \ bitbuf\_size\ =\ 64\ +\ bitbuf\_size\ -\/\ bits;}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Return\ the\ bottom\ bits\ bits\ of\ ret.}}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret\ \&\ ((uint64\_t\{1\}\ <<\ bits)\ -\/\ 1);}
+\DoxyCodeLine{00226\ \ \ \ \ \}}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00229\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{int}\ Bits>}
+\DoxyCodeLine{00230\ \ \ \ \ uint64\_t\ randbits()\ noexcept}
+\DoxyCodeLine{00231\ \ \ \ \ \{}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(Bits\ >=\ 0\ \&\&\ Bits\ <=\ 64);}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (Bits\ ==\ 64)\ \{}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Impl().rand64();}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ ret;}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (Bits\ <=\ bitbuf\_size)\ \{}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ret\ =\ bitbuf;}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bitbuf\ >>=\ Bits;}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bitbuf\_size\ -\/=\ Bits;}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ gen\ =\ Impl().rand64();}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ret\ =\ (gen\ <<\ bitbuf\_size)\ |\ bitbuf;}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bitbuf\ =\ gen\ >>\ (Bits\ -\/\ bitbuf\_size);}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bitbuf\_size\ =\ 64\ +\ bitbuf\_size\ -\/\ Bits;}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ uint64\_t\ MASK\ =\ (uint64\_t\{1\}\ <<\ Bits)\ -\/\ 1;}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret\ \&\ MASK;}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00250\ \ \ \ \ \}}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00253\ \ \ \ \ \textcolor{keyword}{template}<std::\textcolor{keywordtype}{int}egral\ I>}
+\DoxyCodeLine{00254\ \ \ \ \ I\ randrange(I\ range)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00255\ \ \ \ \ \{}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(std::numeric\_limits<I>::max()\ <=\ std::numeric\_limits<uint64\_t>::max());}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ Assume(range\ >\ 0);}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ uint64\_t\ maxval\ =\ range\ -\/\ 1U;}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ bits\ =\ std::bit\_width(maxval);}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ ret\ =\ Impl().randbits(bits);}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ret\ <=\ maxval)\ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00264\ \ \ \ \ \}}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00267\ \ \ \ \ \textcolor{keywordtype}{void}\ fillrand(std::span<std::byte>\ span)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00268\ \ \ \ \ \{}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (span.size()\ >=\ 8)\ \{}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ gen\ =\ Impl().rand64();}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \ \ \ \ WriteLE64(span.data(),\ gen);}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \ \ \ \ span\ =\ span.subspan(8);}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (span.size()\ >=\ 4)\ \{}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \ \ \ \ uint32\_t\ gen\ =\ Impl().rand32();}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \ \ \ \ WriteLE32(span.data(),\ gen);}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ \ \ \ \ span\ =\ span.subspan(4);}
+\DoxyCodeLine{00278\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (span.size())\ \{}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \ \ \ \ span[0]\ =\ std::byte(Impl().\textcolor{keyword}{template}\ randbits<8>());}
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ \ \ \ \ span\ =\ span.subspan(1);}
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00283\ \ \ \ \ \}}
+\DoxyCodeLine{00284\ }
+\DoxyCodeLine{00286\ \ \ \ \ \textcolor{keyword}{template}<std::\textcolor{keywordtype}{int}egral\ I>}
+\DoxyCodeLine{00287\ \ \ \ \ I\ rand()\ noexcept}
+\DoxyCodeLine{00288\ \ \ \ \ \{}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(std::numeric\_limits<I>::max()\ <=\ std::numeric\_limits<uint64\_t>::max());}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ BITS\ =\ std::bit\_width(uint64\_t(std::numeric\_limits<I>::max()));}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(std::numeric\_limits<I>::max()\ ==\ std::numeric\_limits<uint64\_t>::max()\ >>\ (64\ -\/\ BITS));}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ I(Impl().\textcolor{keyword}{template}\ randbits<BITS>());}
+\DoxyCodeLine{00293\ \ \ \ \ \}}
+\DoxyCodeLine{00294\ }
+\DoxyCodeLine{00296\ \ \ \ \ \textcolor{keyword}{template}\ <BasicByte\ B\ =\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}>}
+\DoxyCodeLine{00297\ \ \ \ \ std::vector<B>\ randbytes(\textcolor{keywordtype}{size\_t}\ len)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00298\ \ \ \ \ \{}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ std::vector<B>\ ret(len);}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ Impl().fillrand(MakeWritableByteSpan(ret));}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00302\ \ \ \ \ \}}
+\DoxyCodeLine{00303\ }
+\DoxyCodeLine{00305\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{size\_t}\ N,\ BasicByte\ B\ =\ std::\textcolor{keywordtype}{byte}>}
+\DoxyCodeLine{00306\ \ \ \ \ std::array<B,\ N>\ randbytes()\ noexcept}
+\DoxyCodeLine{00307\ \ \ \ \ \{}
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ std::array<B,\ N>\ ret;}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ Impl().fillrand(MakeWritableByteSpan(ret));}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00311\ \ \ \ \ \}}
+\DoxyCodeLine{00312\ }
+\DoxyCodeLine{00314\ \ \ \ \ uint32\_t\ rand32()\ noexcept\ \{\ \textcolor{keywordflow}{return}\ Impl().template\ randbits<32>();\ \}}
+\DoxyCodeLine{00315\ }
+\DoxyCodeLine{00317\ \ \ \ \ uint256\ rand256()\ noexcept}
+\DoxyCodeLine{00318\ \ \ \ \ \{}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ uint256\ ret;}
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ Impl().fillrand(MakeWritableByteSpan(ret));}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00322\ \ \ \ \ \}}
+\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00325\ \ \ \ \ \textcolor{keywordtype}{bool}\ randbool()\ noexcept\ \{\ \textcolor{keywordflow}{return}\ Impl().template\ randbits<1>();\ \}}
+\DoxyCodeLine{00326\ }
+\DoxyCodeLine{00328\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Tp>}
+\DoxyCodeLine{00329\ \ \ \ \ Tp\ rand\_uniform\_delay(\textcolor{keyword}{const}\ Tp\&\ time,\ \textcolor{keyword}{typename}\ Tp::duration\ range)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00330\ \ \ \ \ \{}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ time\ +\ Impl().template\ rand\_uniform\_duration<Tp>(range);}
+\DoxyCodeLine{00332\ \ \ \ \ \}}
+\DoxyCodeLine{00333\ }
+\DoxyCodeLine{00335\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Chrono>\ \textcolor{keyword}{requires}\ StdChronoDuration<typename\ Chrono::duration>}
+\DoxyCodeLine{00336\ \ \ \ \ \textcolor{keyword}{typename}\ Chrono::duration\ rand\_uniform\_duration(\textcolor{keyword}{typename}\ Chrono::duration\ range)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00337\ \ \ \ \ \{}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }Dur\ =\ \textcolor{keyword}{typename}\ Chrono::duration;}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ range.count()\ >\ 0\ ?\ \textcolor{comment}{/*\ interval\ [0..range)\ */}\ Dur\{Impl().randrange(range.count())\}\ :}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ range.count()\ <\ 0\ ?\ \textcolor{comment}{/*\ interval\ (range..0]\ */}\ -\/Dur\{Impl().randrange(-\/range.count())\}\ :}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ interval\ [0..0]\ */}\ Dur\{0\};}
+\DoxyCodeLine{00342\ \ \ \ \ \};}
+\DoxyCodeLine{00343\ }
+\DoxyCodeLine{00345\ \ \ \ \ \textcolor{keyword}{template}\ <StdChronoDuration\ Dur>}
+\DoxyCodeLine{00346\ \ \ \ \ Dur\ randrange(std::common\_type\_t<Dur>\ range)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00347\ \ \ \ \ \textcolor{comment}{//\ Having\ the\ compiler\ infer\ the\ template\ argument\ from\ the\ function\ argument}}
+\DoxyCodeLine{00348\ \ \ \ \ \textcolor{comment}{//\ is\ dangerous,\ because\ the\ desired\ return\ value\ generally\ has\ a\ different}}
+\DoxyCodeLine{00349\ \ \ \ \ \textcolor{comment}{//\ type\ than\ the\ function\ argument.\ So\ std::common\_type\ is\ used\ to\ force\ the}}
+\DoxyCodeLine{00350\ \ \ \ \ \textcolor{comment}{//\ call\ site\ to\ specify\ the\ type\ of\ the\ return\ value.}}
+\DoxyCodeLine{00351\ \ \ \ \ \{}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Dur\{Impl().randrange(range.count())\};}
+\DoxyCodeLine{00353\ \ \ \ \ \}}
+\DoxyCodeLine{00354\ }
+\DoxyCodeLine{00365\ \ \ \ \ std::chrono::microseconds\ rand\_exp\_duration(std::chrono::microseconds\ mean)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00366\ \ \ \ \ \{}
+\DoxyCodeLine{00367\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ namespace\ }std::chrono\_literals;}
+\DoxyCodeLine{00368\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ unscaled\ =\ MakeExponentiallyDistributed(Impl().rand64());}
+\DoxyCodeLine{00369\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::chrono::duration\_cast<std::chrono::microseconds>(unscaled\ *\ mean\ +\ 0.5us);}
+\DoxyCodeLine{00370\ \ \ \ \ \}}
+\DoxyCodeLine{00371\ }
+\DoxyCodeLine{00372\ \ \ \ \ \textcolor{comment}{//\ Compatibility\ with\ the\ UniformRandomBitGenerator\ concept}}
+\DoxyCodeLine{00373\ \ \ \ \ \textcolor{keyword}{typedef}\ uint64\_t\ result\_type;}
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint64\_t\ min()\ noexcept\ \{\ \textcolor{keywordflow}{return}\ 0;\ \}}
+\DoxyCodeLine{00375\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint64\_t\ max()\ noexcept\ \{\ \textcolor{keywordflow}{return}\ std::numeric\_limits<uint64\_t>::max();\ \}}
+\DoxyCodeLine{00376\ \ \ \ \ \textcolor{keyword}{inline}\ uint64\_t\ operator()()\ noexcept\ \{\ \textcolor{keywordflow}{return}\ Impl().rand64();\ \}}
+\DoxyCodeLine{00377\ \};}
+\DoxyCodeLine{00378\ }
+\DoxyCodeLine{00385\ \textcolor{keyword}{class\ }FastRandomContext\ :\ \textcolor{keyword}{public}\ RandomMixin<FastRandomContext>}
+\DoxyCodeLine{00386\ \{}
+\DoxyCodeLine{00387\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00388\ \ \ \ \ \textcolor{keywordtype}{bool}\ requires\_seed;}
+\DoxyCodeLine{00389\ \ \ \ \ ChaCha20\ rng;}
+\DoxyCodeLine{00390\ }
+\DoxyCodeLine{00391\ \ \ \ \ \textcolor{keywordtype}{void}\ RandomSeed()\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00392\ }
+\DoxyCodeLine{00393\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00395\ \ \ \ \ \textcolor{keyword}{explicit}\ FastRandomContext(\textcolor{keywordtype}{bool}\ fDeterministic\ =\ \textcolor{keyword}{false})\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00396\ }
+\DoxyCodeLine{00398\ \ \ \ \ \textcolor{keyword}{explicit}\ FastRandomContext(\textcolor{keyword}{const}\ uint256\&\ seed)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00399\ }
+\DoxyCodeLine{00401\ \ \ \ \ \textcolor{keywordtype}{void}\ Reseed(\textcolor{keyword}{const}\ uint256\&\ seed)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00402\ }
+\DoxyCodeLine{00404\ \ \ \ \ uint64\_t\ rand64()\ noexcept}
+\DoxyCodeLine{00405\ \ \ \ \ \{}
+\DoxyCodeLine{00406\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (requires\_seed)\ RandomSeed();}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ std::array<std::byte,\ 8>\ buf;}
+\DoxyCodeLine{00408\ \ \ \ \ \ \ \ \ rng.Keystream(buf);}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ReadLE64(buf.data());}
+\DoxyCodeLine{00410\ \ \ \ \ \}}
+\DoxyCodeLine{00411\ }
+\DoxyCodeLine{00413\ \ \ \ \ \textcolor{keywordtype}{void}\ fillrand(std::span<std::byte>\ output)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00414\ \};}
+\DoxyCodeLine{00415\ }
+\DoxyCodeLine{00424\ \textcolor{keyword}{class\ }InsecureRandomContext\ :\ \textcolor{keyword}{public}\ RandomMixin<InsecureRandomContext>}
+\DoxyCodeLine{00425\ \{}
+\DoxyCodeLine{00426\ \ \ \ \ uint64\_t\ m\_s0;}
+\DoxyCodeLine{00427\ \ \ \ \ uint64\_t\ m\_s1;}
+\DoxyCodeLine{00428\ }
+\DoxyCodeLine{00429\ \ \ \ \ [[nodiscard]]\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{static}\ uint64\_t\ SplitMix64(uint64\_t\&\ seedval)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00430\ \ \ \ \ \{}
+\DoxyCodeLine{00431\ \ \ \ \ \ \ \ \ uint64\_t\ z\ =\ (seedval\ +=\ 0x9e3779b97f4a7c15);}
+\DoxyCodeLine{00432\ \ \ \ \ \ \ \ \ z\ =\ (z\ \string^\ (z\ >>\ 30))\ *\ 0xbf58476d1ce4e5b9;}
+\DoxyCodeLine{00433\ \ \ \ \ \ \ \ \ z\ =\ (z\ \string^\ (z\ >>\ 27))\ *\ 0x94d049bb133111eb;}
+\DoxyCodeLine{00434\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ z\ \string^\ (z\ >>\ 31);}
+\DoxyCodeLine{00435\ \ \ \ \ \}}
+\DoxyCodeLine{00436\ }
+\DoxyCodeLine{00437\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00438\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{explicit}\ InsecureRandomContext(uint64\_t\ seedval)\ noexcept}
+\DoxyCodeLine{00439\ \ \ \ \ \ \ \ \ :\ m\_s0(SplitMix64(seedval)),\ m\_s1(SplitMix64(seedval))\ \{\}}
+\DoxyCodeLine{00440\ }
+\DoxyCodeLine{00441\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{void}\ Reseed(uint64\_t\ seedval)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00442\ \ \ \ \ \{}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ FlushCache();}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ m\_s0\ =\ SplitMix64(seedval);}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ m\_s1\ =\ SplitMix64(seedval);}
+\DoxyCodeLine{00446\ \ \ \ \ \}}
+\DoxyCodeLine{00447\ }
+\DoxyCodeLine{00448\ \ \ \ \ \textcolor{keyword}{constexpr}\ uint64\_t\ rand64()\ noexcept}
+\DoxyCodeLine{00449\ \ \ \ \ \{}
+\DoxyCodeLine{00450\ \ \ \ \ \ \ \ \ uint64\_t\ s0\ =\ m\_s0,\ s1\ =\ m\_s1;}
+\DoxyCodeLine{00451\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ result\ =\ std::rotl(s0\ +\ s1,\ 17)\ +\ s0;}
+\DoxyCodeLine{00452\ \ \ \ \ \ \ \ \ s1\ \string^=\ s0;}
+\DoxyCodeLine{00453\ \ \ \ \ \ \ \ \ m\_s0\ =\ std::rotl(s0,\ 49)\ \string^\ s1\ \string^\ (s1\ <<\ 21);}
+\DoxyCodeLine{00454\ \ \ \ \ \ \ \ \ m\_s1\ =\ std::rotl(s1,\ 28);}
+\DoxyCodeLine{00455\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00456\ \ \ \ \ \}}
+\DoxyCodeLine{00457\ \};}
+\DoxyCodeLine{00458\ }
+\DoxyCodeLine{00459\ }
+\DoxyCodeLine{00460\ \textcolor{comment}{/*\ ====================\ CONVENIENCE\ FUNCTIONS\ FOR\ COMMONLY\ USED\ RANDOMNESS\ ====================\ */}}
+\DoxyCodeLine{00461\ }
+\DoxyCodeLine{00463\ \textcolor{keyword}{inline}\ uint256\ GetRandHash()\ noexcept}
+\DoxyCodeLine{00464\ \{}
+\DoxyCodeLine{00465\ \ \ \ \ uint256\ hash;}
+\DoxyCodeLine{00466\ \ \ \ \ GetRandBytes(hash);}
+\DoxyCodeLine{00467\ \ \ \ \ \textcolor{keywordflow}{return}\ hash;}
+\DoxyCodeLine{00468\ \}}
+\DoxyCodeLine{00469\ }
+\DoxyCodeLine{00470\ \textcolor{comment}{/*\ =============================\ MISCELLANEOUS\ TEST-\/ONLY\ FUNCTIONS\ =============================\ */}}
+\DoxyCodeLine{00471\ }
+\DoxyCodeLine{00475\ \textcolor{keywordtype}{bool}\ Random\_SanityCheck();}
+\DoxyCodeLine{00476\ }
+\DoxyCodeLine{00477\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_RANDOM\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,134 @@
+\doxysection{chainstate.\+h}
+\label{test_2util_2chainstate_8h_source}\index{src/test/util/chainstate.h@{src/test/util/chainstate.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2021-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_TEST\_UTIL\_CHAINSTATE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_TEST\_UTIL\_CHAINSTATE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <clientversion.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <logging.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <node/context.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <node/utxo\_snapshot.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <rpc/blockchain.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <test/util/setup\_common.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/fs.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <validation.h>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <univalue.h>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ NoMalleation\ =\ [](AutoFile\&\ file,\ node::SnapshotMetadata\&\ meta)\{\};}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00031\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F\ =\ decltype(NoMalleation)>}
+\DoxyCodeLine{00032\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}}
+\DoxyCodeLine{00033\ CreateAndActivateUTXOSnapshot(}
+\DoxyCodeLine{00034\ \ \ \ \ TestingSetup*\ fixture,}
+\DoxyCodeLine{00035\ \ \ \ \ F\ malleation\ =\ NoMalleation,}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordtype}{bool}\ reset\_chainstate\ =\ \textcolor{keyword}{false},}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{bool}\ in\_memory\_chainstate\ =\ \textcolor{keyword}{false})}
+\DoxyCodeLine{00038\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ node::NodeContext\&\ node\ =\ fixture-\/>m\_node;}
+\DoxyCodeLine{00040\ \ \ \ \ fs::path\ root\ =\ fixture-\/>m\_path\_root;}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{comment}{//\ Write\ out\ a\ snapshot\ to\ the\ test's\ tempdir.}}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordtype}{int}\ height;}
+\DoxyCodeLine{00045\ \ \ \ \ WITH\_LOCK(::cs\_main,\ height\ =\ node.chainman-\/>ActiveHeight());}
+\DoxyCodeLine{00046\ \ \ \ \ fs::path\ snapshot\_path\ =\ root\ /\ fs::u8path(tfm::format(\textcolor{stringliteral}{"{}test\_snapshot.\%d.dat"{}},\ height));}
+\DoxyCodeLine{00047\ \ \ \ \ FILE*\ outfile\{fsbridge::fopen(snapshot\_path,\ \textcolor{stringliteral}{"{}wb"{}})\};}
+\DoxyCodeLine{00048\ \ \ \ \ AutoFile\ auto\_outfile\{outfile\};}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \ \ \ \ UniValue\ result\ =\ CreateUTXOSnapshot(node,}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ node.chainman-\/>ActiveChainstate(),}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::move(auto\_outfile),\ \textcolor{comment}{//\ Will\ close\ auto\_outfile.}}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ snapshot\_path,}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ snapshot\_path);}
+\DoxyCodeLine{00055\ \ \ \ \ LogInfo(\textcolor{stringliteral}{"{}Wrote\ UTXO\ snapshot\ to\ \%s:\ \%s"{}},}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ fs::PathToString(snapshot\_path.make\_preferred()),\ result.write());}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{comment}{//\ Read\ the\ written\ snapshot\ in\ and\ then\ activate\ it.}}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00060\ \ \ \ \ FILE*\ infile\{fsbridge::fopen(snapshot\_path,\ \textcolor{stringliteral}{"{}rb"{}})\};}
+\DoxyCodeLine{00061\ \ \ \ \ AutoFile\ auto\_infile\{infile\};}
+\DoxyCodeLine{00062\ \ \ \ \ node::SnapshotMetadata\ metadata\{node.chainman-\/>GetParams().MessageStart()\};}
+\DoxyCodeLine{00063\ \ \ \ \ auto\_infile\ >>\ metadata;}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \ \ malleation(auto\_infile,\ metadata);}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keywordflow}{if}\ (reset\_chainstate)\ \{}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ What\ follows\ is\ code\ to\ selectively\ reset\ chainstate\ data\ without}}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ disturbing\ the\ existing\ BlockManager\ instance,\ which\ is\ needed\ to}}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ recognize\ the\ headers\ chain\ previously\ generated\ by\ the\ chainstate\ we're}}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ removing.\ Without\ those\ headers,\ we\ can't\ activate\ the\ snapshot\ below.}}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ This\ is\ a\ stripped-\/down\ version\ of\ node::LoadChainstate\ which}}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ preserves\ the\ block\ index.}}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ LOCK(::cs\_main);}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ CBlockIndex\ *orig\_tip\ =\ node.chainman-\/>ActiveChainstate().m\_chain.Tip();}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ uint256\ gen\_hash\ =\ node.chainman-\/>ActiveChainstate().m\_chain[0]-\/>GetBlockHash();}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ \ \ node.chainman-\/>ResetChainstates();}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ node.chainman-\/>InitializeChainstate(node.mempool.get());}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ Chainstate\&\ chain\ =\ node.chainman-\/>ActiveChainstate();}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ Assert(chain.LoadGenesisBlock());}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ These\ cache\ values\ will\ be\ corrected\ shortly\ in\ \`{}MaybeRebalanceCaches`.}}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ chain.InitCoinsDB(1\ <<\ 20,\ \textcolor{comment}{/*in\_memory=*/}\textcolor{keyword}{true},\ \textcolor{comment}{/*should\_wipe=*/}\textcolor{keyword}{false});}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ chain.InitCoinsCache(1\ <<\ 20);}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ chain.CoinsTip().SetBestBlock(gen\_hash);}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ chain.setBlockIndexCandidates.insert(node.chainman-\/>m\_blockman.LookupBlockIndex(gen\_hash));}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ chain.LoadChainTip();}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \ \ \ \ node.chainman-\/>MaybeRebalanceCaches();}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Reset\ the\ HAVE\_DATA\ flags\ below\ the\ snapshot\ height,\ simulating}}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ never-\/having-\/downloaded\ them\ in\ the\ first\ place.}}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ TODO:\ perhaps\ we\ could\ improve\ this\ by\ using\ pruning\ to\ delete}}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ these\ blocks\ instead}}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ CBlockIndex\ *pindex\ =\ orig\_tip;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (pindex\ \&\&\ pindex\ !=\ chain.m\_chain.Tip())\ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Remove\ all\ data\ and\ validity\ flags\ by\ just\ setting}}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ BLOCK\_VALID\_TREE.\ Also\ reset\ transaction\ counts\ and\ sequence}}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ids\ that\ are\ set\ when\ blocks\ are\ received,\ to\ make\ test\ setup}}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ more\ realistic\ and\ satisfy\ consistency\ checks\ in}}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ CheckBlockIndex().}}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(pindex-\/>IsValid(BlockStatus::BLOCK\_VALID\_TREE));}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pindex-\/>nStatus\ =\ BlockStatus::BLOCK\_VALID\_TREE;}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pindex-\/>nTx\ =\ 0;}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pindex-\/>m\_chain\_tx\_count\ =\ 0;}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pindex-\/>nSequenceId\ =\ 0;}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pindex\ =\ pindex-\/>pprev;}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ BlockValidationState\ state;}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!node.chainman-\/>ActiveChainstate().ActivateBestChain(state))\ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(strprintf(\textcolor{stringliteral}{"{}ActivateBestChain\ failed.\ (\%s)"{}},\ state.ToString()));}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ Assert(}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \ \ \ \ 0\ ==\ WITH\_LOCK(node.chainman-\/>GetMutex(),\ \textcolor{keywordflow}{return}\ node.chainman-\/>ActiveHeight()));}
+\DoxyCodeLine{00116\ \ \ \ \ \}}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keyword}{auto}\&\ new\_active\ =\ node.chainman-\/>ActiveChainstate();}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keyword}{auto}*\ tip\ =\ new\_active.m\_chain.Tip();}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{comment}{//\ Disconnect\ a\ block\ so\ that\ the\ snapshot\ chainstate\ will\ be\ ahead,\ otherwise}}
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{comment}{//\ it\ will\ refuse\ to\ activate.}}
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{comment}{//\ TODO\ this\ is\ a\ unittest-\/specific\ hack,\ and\ we\ should\ probably\ rethink\ how\ to}}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{comment}{//\ better\ generate/activate\ snapshots\ in\ unittests.}}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keywordflow}{if}\ (tip-\/>pprev)\ \{}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ new\_active.m\_chain.SetTip(*(tip-\/>pprev));}
+\DoxyCodeLine{00128\ \ \ \ \ \}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keyword}{auto}\ res\ =\ node.chainman-\/>ActivateSnapshot(auto\_infile,\ metadata,\ in\_memory\_chainstate);}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{comment}{//\ Restore\ the\ old\ tip.}}
+\DoxyCodeLine{00133\ \ \ \ \ new\_active.m\_chain.SetTip(*tip);}
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keywordflow}{return}\ !!res;}
+\DoxyCodeLine{00135\ \}}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_TEST\_UTIL\_CHAINSTATE\_H}}
+
+\end{DoxyCode}

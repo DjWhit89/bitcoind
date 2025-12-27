@@ -1,0 +1,123 @@
+\doxysection{poolresourcetester.\+h}
+\label{poolresourcetester_8h_source}\index{src/test/util/poolresourcetester.h@{src/test/util/poolresourcetester.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2022-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_TEST\_UTIL\_POOLRESOURCETESTER\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_TEST\_UTIL\_POOLRESOURCETESTER\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <support/allocators/pool.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00020\ \textcolor{keyword}{class\ }PoolResourceTester}
+\DoxyCodeLine{00021\ \{}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keyword}{struct\ }PtrAndBytes\ \{}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ uintptr\_t\ ptr;}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ std::size\_t\ size;}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ PtrAndBytes(\textcolor{keyword}{const}\ \textcolor{keywordtype}{void}*\ p,\ std::size\_t\ s)}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \ \ \ \ :\ ptr(\textcolor{keyword}{reinterpret\_cast<}uintptr\_t\textcolor{keyword}{>}(p)),\ size(s)}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator<(PtrAndBytes\ \textcolor{keyword}{const}\&\ a,\ PtrAndBytes\ \textcolor{keyword}{const}\&\ b)}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a.ptr\ <\ b.ptr;}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00038\ \ \ \ \ \};}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keyword}{template}\ <std::\textcolor{keywordtype}{size\_t}\ MAX\_BLOCK\_SIZE\_BYTES,\ std::\textcolor{keywordtype}{size\_t}\ ALIGN\_BYTES>}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keyword}{static}\ std::vector<std::size\_t>\ FreeListSizes(\textcolor{keyword}{const}\ PoolResource<MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>\&\ resource)}
+\DoxyCodeLine{00046\ \ \ \ \ \{}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ sizes\ =\ std::vector<std::size\_t>();}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}*\ ptr\ :\ resource.m\_free\_lists)\ \{}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size\ =\ 0;}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (ptr\ !=\ \textcolor{keyword}{nullptr})\ \{}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++size;}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}*\ ptr\_\ =\ ptr;}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_UNPOISON\_MEMORY\_REGION(ptr\_,\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{typename}\ PoolResource<MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>::ListNode));}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ptr\ =\ ptr-\/>m\_next;}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_POISON\_MEMORY\_REGION(ptr\_,\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{typename}\ PoolResource<MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>::ListNode));}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ sizes.push\_back(size);}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ sizes;}
+\DoxyCodeLine{00060\ \ \ \ \ \}}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keyword}{template}\ <std::\textcolor{keywordtype}{size\_t}\ MAX\_BLOCK\_SIZE\_BYTES,\ std::\textcolor{keywordtype}{size\_t}\ ALIGN\_BYTES>}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keyword}{static}\ std::size\_t\ AvailableMemoryFromChunk(\textcolor{keyword}{const}\ PoolResource<MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>\&\ resource)}
+\DoxyCodeLine{00067\ \ \ \ \ \{}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ resource.m\_available\_memory\_end\ -\/\ resource.m\_available\_memory\_it;}
+\DoxyCodeLine{00069\ \ \ \ \ \}}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keyword}{template}\ <std::\textcolor{keywordtype}{size\_t}\ MAX\_BLOCK\_SIZE\_BYTES,\ std::\textcolor{keywordtype}{size\_t}\ ALIGN\_BYTES>}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ CheckAllDataAccountedFor(\textcolor{keyword}{const}\ PoolResource<MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>\&\ resource)}
+\DoxyCodeLine{00080\ \ \ \ \ \{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ collect\ all\ free\ blocks\ by\ iterating\ all\ freelists}}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ std::vector<PtrAndBytes>\ free\_blocks;}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (std::size\_t\ freelist\_idx\ =\ 0;\ freelist\_idx\ <\ resource.m\_free\_lists.size();\ ++freelist\_idx)\ \{}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ std::size\_t\ bytes\ =\ freelist\_idx\ *\ resource.ELEM\_ALIGN\_BYTES;}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}*\ ptr\ =\ resource.m\_free\_lists[freelist\_idx];}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (ptr\ !=\ \textcolor{keyword}{nullptr})\ \{}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ free\_blocks.emplace\_back(ptr,\ bytes);}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}*\ ptr\_\ =\ ptr;}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_UNPOISON\_MEMORY\_REGION(ptr\_,\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{typename}\ PoolResource<MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>::ListNode));}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ptr\ =\ ptr-\/>m\_next;}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_POISON\_MEMORY\_REGION(ptr\_,\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{typename}\ PoolResource<MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>::ListNode));}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ also\ add\ whatever\ has\ not\ yet\ been\ used\ for\ blocks}}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ num\_available\_bytes\ =\ resource.m\_available\_memory\_end\ -\/\ resource.m\_available\_memory\_it;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (num\_available\_bytes\ >\ 0)\ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ free\_blocks.emplace\_back(resource.m\_available\_memory\_it,\ num\_available\_bytes);}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ collect\ all\ chunks}}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ std::vector<PtrAndBytes>\ chunks;}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ std::byte*\ ptr\ :\ resource.m\_allocated\_chunks)\ \{}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \ \ \ \ chunks.emplace\_back(ptr,\ resource.ChunkSizeBytes());}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ now\ we\ have\ all\ the\ data\ from\ all\ freelists\ on\ the\ one\ hand\ side,\ and\ all\ chunks\ on\ the\ other\ hand\ side.}}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ To\ check\ if\ all\ of\ them\ match,\ sort\ by\ address\ and\ iterate.}}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ std::sort(free\_blocks.begin(),\ free\_blocks.end());}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ std::sort(chunks.begin(),\ chunks.end());}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ chunk\_it\ =\ chunks.begin();}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ chunk\_ptr\_remaining\ =\ chunk\_it-\/>ptr;}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ chunk\_size\_remaining\ =\ chunk\_it-\/>size;}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ free\_block\ :\ free\_blocks)\ \{}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (chunk\_size\_remaining\ ==\ 0)\ \{}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(chunk\_it\ !=\ chunks.end());}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++chunk\_it;}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(chunk\_it\ !=\ chunks.end());}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ chunk\_ptr\_remaining\ =\ chunk\_it-\/>ptr;}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ chunk\_size\_remaining\ =\ chunk\_it-\/>size;}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ \ \ \ \ assert(free\_block.ptr\ ==\ chunk\_ptr\_remaining);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ensure\ addresses\ match}}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ \ \ \ \ assert(free\_block.size\ <=\ chunk\_size\_remaining);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ensure\ no\ overflow}}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ \ \ \ \ assert((free\_block.ptr\ \&\ (resource.ELEM\_ALIGN\_BYTES\ -\/\ 1))\ ==\ 0);\ \textcolor{comment}{//\ ensure\ correct\ alignment}}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ \ \ \ \ chunk\_ptr\_remaining\ +=\ free\_block.size;}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ \ \ \ \ chunk\_size\_remaining\ -\/=\ free\_block.size;}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ensure\ we\ are\ at\ the\ end\ of\ the\ chunks}}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ assert(chunk\_ptr\_remaining\ ==\ chunk\_it-\/>ptr\ +\ chunk\_it-\/>size);}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ ++chunk\_it;}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ assert(chunk\_it\ ==\ chunks.end());}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ assert(chunk\_size\_remaining\ ==\ 0);}
+\DoxyCodeLine{00133\ \ \ \ \ \}}
+\DoxyCodeLine{00134\ \};}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00136\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_TEST\_UTIL\_POOLRESOURCETESTER\_H}}
+
+\end{DoxyCode}

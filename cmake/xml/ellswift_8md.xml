@@ -1,0 +1,496 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="ellswift_8md" kind="file" language="Markdown">
+    <compoundname>ellswift.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">#<sp/>ElligatorSwift<sp/>for<sp/>secp256k1<sp/>explained</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">In<sp/>this<sp/>document<sp/>we<sp/>explain<sp/>how<sp/>the<sp/>`ellswift`<sp/>module<sp/>implementation<sp/>is<sp/>related<sp/>to<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">construction<sp/>in<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">[&quot;SwiftEC:<sp/>Shallue–van<sp/>de<sp/>Woestijne<sp/>Indifferentiable<sp/>Function<sp/>To<sp/>Elliptic<sp/>Curves&quot;](https://eprint.iacr.org/2022/759)</highlight></codeline>
+<codeline><highlight class="normal">paper<sp/>by<sp/>Jorge<sp/>Chávez-Saab,<sp/>Francisco<sp/>Rodríguez-Henríquez,<sp/>and<sp/>Mehdi<sp/>Tibouchi.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">*<sp/>[1.<sp/>Introduction](#1-introduction)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>[2.<sp/>The<sp/>decoding<sp/>function](#2-the-decoding-function)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>+<sp/>[2.1<sp/>Decoding<sp/>for<sp/>`secp256k1`](#21-decoding-for-secp256k1)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>[3.<sp/>The<sp/>encoding<sp/>function](#3-the-encoding-function)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>+<sp/>[3.1<sp/>Switching<sp/>to<sp/>*v,<sp/>w*<sp/>coordinates](#31-switching-to-v-w-coordinates)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>+<sp/>[3.2<sp/>Avoiding<sp/>computing<sp/>all<sp/>inverses](#32-avoiding-computing-all-inverses)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>+<sp/>[3.3<sp/>Finding<sp/>the<sp/>inverse](#33-finding-the-inverse)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>+<sp/>[3.4<sp/>Dealing<sp/>with<sp/>special<sp/>cases](#34-dealing-with-special-cases)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>+<sp/>[3.5<sp/>Encoding<sp/>for<sp/>`secp256k1`](#35-encoding-for-secp256k1)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>[4.<sp/>Encoding<sp/>and<sp/>decoding<sp/>full<sp/>*(x,<sp/>y)*<sp/>coordinates](#4-encoding-and-decoding-full-x-y-coordinates)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>+<sp/>[4.1<sp/>Full<sp/>*(x,<sp/>y)*<sp/>coordinates<sp/>for<sp/>`secp256k1`](#41-full-x-y-coordinates-for-secp256k1)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>1.<sp/>Introduction</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>`ellswift`<sp/>module<sp/>effectively<sp/>introduces<sp/>a<sp/>new<sp/>64-byte<sp/>public<sp/>key<sp/>format,<sp/>with<sp/>the<sp/>property</highlight></codeline>
+<codeline><highlight class="normal">that<sp/>(uniformly<sp/>random)<sp/>public<sp/>keys<sp/>can<sp/>be<sp/>encoded<sp/>as<sp/>64-byte<sp/>arrays<sp/>which<sp/>are<sp/>computationally</highlight></codeline>
+<codeline><highlight class="normal">indistinguishable<sp/>from<sp/>uniform<sp/>byte<sp/>arrays.<sp/>The<sp/>module<sp/>provides<sp/>functions<sp/>to<sp/>convert<sp/>public<sp/>keys</highlight></codeline>
+<codeline><highlight class="normal">from<sp/>and<sp/>to<sp/>this<sp/>format,<sp/>as<sp/>well<sp/>as<sp/>convenience<sp/>functions<sp/>for<sp/>key<sp/>generation<sp/>and<sp/>ECDH<sp/>that<sp/>operate</highlight></codeline>
+<codeline><highlight class="normal">directly<sp/>on<sp/>ellswift-encoded<sp/>keys.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>encoding<sp/>consists<sp/>of<sp/>the<sp/>concatenation<sp/>of<sp/>two<sp/>(32-byte<sp/>big<sp/>endian)<sp/>encoded<sp/>field<sp/>elements<sp/>$u$</highlight></codeline>
+<codeline><highlight class="normal">and<sp/>$t.$<sp/>Together<sp/>they<sp/>encode<sp/>an<sp/>x-coordinate<sp/>on<sp/>the<sp/>curve<sp/>$x$,<sp/>or<sp/>(see<sp/>further)<sp/>a<sp/>full<sp/>point<sp/>$(x,<sp/>y)$<sp/>on</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>curve.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Decoding**<sp/>consists<sp/>of<sp/>decoding<sp/>the<sp/>field<sp/>elements<sp/>$u$<sp/>and<sp/>$t$<sp/>(values<sp/>above<sp/>the<sp/>field<sp/>size<sp/>$p$</highlight></codeline>
+<codeline><highlight class="normal">are<sp/>taken<sp/>modulo<sp/>$p$),<sp/>and<sp/>then<sp/>evaluating<sp/>$F_u(t)$,<sp/>which<sp/>for<sp/>every<sp/>$u$<sp/>and<sp/>$t$<sp/>results<sp/>in<sp/>a<sp/>valid</highlight></codeline>
+<codeline><highlight class="normal">x-coordinate<sp/>on<sp/>the<sp/>curve.<sp/>The<sp/>functions<sp/>$F_u$<sp/>will<sp/>be<sp/>defined<sp/>in<sp/>[Section<sp/>2](#2-the-decoding-function).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Encoding**<sp/>a<sp/>given<sp/>$x$<sp/>coordinate<sp/>is<sp/>conceptually<sp/>done<sp/>as<sp/>follows:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Loop:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Pick<sp/>a<sp/>uniformly<sp/>random<sp/>field<sp/>element<sp/>$u.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Compute<sp/>the<sp/>set<sp/>$L<sp/>=<sp/>F_u^{-1}(x)$<sp/>of<sp/>$t$<sp/>values<sp/>for<sp/>which<sp/>$F_u(t)<sp/>=<sp/>x$,<sp/>which<sp/>may<sp/>have<sp/>up<sp/>to<sp/>*8*<sp/>elements.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>With<sp/>probability<sp/>$1<sp/>-<sp/>\dfrac{\\#L}{8}$,<sp/>restart<sp/>the<sp/>loop.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Select<sp/>a<sp/>uniformly<sp/>random<sp/>$t<sp/>\in<sp/>L$<sp/>and<sp/>return<sp/>$(u,<sp/>t).$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>is<sp/>the<sp/>*ElligatorSwift*<sp/>algorithm,<sp/>here<sp/>given<sp/>for<sp/>just<sp/>x-coordinates.<sp/>An<sp/>extension<sp/>to<sp/>full</highlight></codeline>
+<codeline><highlight class="normal">$(x,<sp/>y)$<sp/>points<sp/>will<sp/>be<sp/>given<sp/>in<sp/>[Section<sp/>4](#4-encoding-and-decoding-full-x-y-coordinates).</highlight></codeline>
+<codeline><highlight class="normal">The<sp/>algorithm<sp/>finds<sp/>a<sp/>uniformly<sp/>random<sp/>$(u,<sp/>t)$<sp/>among<sp/>(almost<sp/>all)<sp/>those</highlight></codeline>
+<codeline><highlight class="normal">for<sp/>which<sp/>$F_u(t)<sp/>=<sp/>x.$<sp/>Section<sp/>3.2<sp/>in<sp/>the<sp/>paper<sp/>proves<sp/>that<sp/>the<sp/>number<sp/>of<sp/>such<sp/>encodings<sp/>for</highlight></codeline>
+<codeline><highlight class="normal">almost<sp/>all<sp/>x-coordinates<sp/>on<sp/>the<sp/>curve<sp/>(all<sp/>but<sp/>at<sp/>most<sp/>39)<sp/>is<sp/>close<sp/>to<sp/>two<sp/>times<sp/>the<sp/>field<sp/>size</highlight></codeline>
+<codeline><highlight class="normal">(specifically,<sp/>it<sp/>lies<sp/>in<sp/>the<sp/>range<sp/>$2q<sp/>\pm<sp/>(22\sqrt{q}<sp/>+<sp/>O(1))$,<sp/>where<sp/>$q$<sp/>is<sp/>the<sp/>size<sp/>of<sp/>the<sp/>field).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>2.<sp/>The<sp/>decoding<sp/>function</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">First<sp/>some<sp/>definitions:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>$\mathbb{F}$<sp/>is<sp/>the<sp/>finite<sp/>field<sp/>of<sp/>size<sp/>$q$,<sp/>of<sp/>characteristic<sp/>5<sp/>or<sp/>more,<sp/>and<sp/>$q<sp/>\equiv<sp/>1<sp/>\mod<sp/>3.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>For<sp/>`secp256k1`,<sp/>$q<sp/>=<sp/>2^{256}<sp/>-<sp/>2^{32}<sp/>-<sp/>977$,<sp/>which<sp/>satisfies<sp/>that<sp/>requirement.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$E$<sp/>be<sp/>the<sp/>elliptic<sp/>curve<sp/>of<sp/>points<sp/>$(x,<sp/>y)<sp/>\in<sp/>\mathbb{F}^2$<sp/>for<sp/>which<sp/>$y^2<sp/>=<sp/>x^3<sp/>+<sp/>ax<sp/>+<sp/>b$,<sp/>with<sp/>$a$<sp/>and<sp/>$b$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>public<sp/>constants,<sp/>for<sp/>which<sp/>$\Delta_E<sp/>=<sp/>-16(4a^3<sp/>+<sp/>27b^2)$<sp/>is<sp/>a<sp/>square,<sp/>and<sp/>at<sp/>least<sp/>one<sp/>of<sp/>$(-b<sp/>\pm<sp/>\sqrt{-3<sp/>\Delta_E}<sp/>/<sp/>36)/2$<sp/>is<sp/>a<sp/>square.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>This<sp/>implies<sp/>that<sp/>the<sp/>order<sp/>of<sp/>$E$<sp/>is<sp/>either<sp/>odd,<sp/>or<sp/>a<sp/>multiple<sp/>of<sp/>*4*.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>If<sp/>$a=0$,<sp/>this<sp/>condition<sp/>is<sp/>always<sp/>fulfilled.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>For<sp/>`secp256k1`,<sp/>$a=0$<sp/>and<sp/>$b=7.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>the<sp/>function<sp/>$g(x)<sp/>=<sp/>x^3<sp/>+<sp/>ax<sp/>+<sp/>b$,<sp/>so<sp/>the<sp/>$E$<sp/>curve<sp/>equation<sp/>is<sp/>also<sp/>$y^2<sp/>=<sp/>g(x).$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>the<sp/>function<sp/>$h(x)<sp/>=<sp/>3x^3<sp/>+<sp/>4a.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Define<sp/>$V$<sp/>as<sp/>the<sp/>set<sp/>of<sp/>solutions<sp/>$(x_1,<sp/>x_2,<sp/>x_3,<sp/>z)$<sp/>to<sp/>$z^2<sp/>=<sp/>g(x_1)g(x_2)g(x_3).$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Define<sp/>$S_u$<sp/>as<sp/>the<sp/>set<sp/>of<sp/>solutions<sp/>$(X,<sp/>Y)$<sp/>to<sp/>$X^2<sp/>+<sp/>h(u)Y^2<sp/>=<sp/>-g(u)$<sp/>and<sp/>$Y<sp/>\neq<sp/>0.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>$P_u$<sp/>is<sp/>a<sp/>function<sp/>from<sp/>$\mathbb{F}$<sp/>to<sp/>$S_u$<sp/>that<sp/>will<sp/>be<sp/>defined<sp/>below.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>$\psi_u$<sp/>is<sp/>a<sp/>function<sp/>from<sp/>$S_u$<sp/>to<sp/>$V$<sp/>that<sp/>will<sp/>be<sp/>defined<sp/>below.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Note**:<sp/>In<sp/>the<sp/>paper:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>$F_u$<sp/>corresponds<sp/>to<sp/>$F_{0,u}$<sp/>there.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>$P_u(t)$<sp/>is<sp/>called<sp/>$P$<sp/>there.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>All<sp/>$S_u$<sp/>sets<sp/>together<sp/>correspond<sp/>to<sp/>$S$<sp/>there.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>All<sp/>$\psi_u$<sp/>functions<sp/>together<sp/>(operating<sp/>on<sp/>elements<sp/>of<sp/>$S$)<sp/>correspond<sp/>to<sp/>$\psi$<sp/>there.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Note<sp/>that<sp/>for<sp/>$V$,<sp/>the<sp/>left<sp/>hand<sp/>side<sp/>of<sp/>the<sp/>equation<sp/>$z^2$<sp/>is<sp/>square,<sp/>and<sp/>thus<sp/>the<sp/>right</highlight></codeline>
+<codeline><highlight class="normal">hand<sp/>must<sp/>also<sp/>be<sp/>square.<sp/>As<sp/>multiplying<sp/>non-squares<sp/>results<sp/>in<sp/>a<sp/>square<sp/>in<sp/>$\mathbb{F}$,</highlight></codeline>
+<codeline><highlight class="normal">out<sp/>of<sp/>the<sp/>three<sp/>right-hand<sp/>side<sp/>factors<sp/>an<sp/>even<sp/>number<sp/>must<sp/>be<sp/>non-squares.</highlight></codeline>
+<codeline><highlight class="normal">This<sp/>implies<sp/>that<sp/>exactly<sp/>*1*<sp/>or<sp/>exactly<sp/>*3*<sp/>out<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">$\\{g(x_1),<sp/>g(x_2),<sp/>g(x_3)\\}$<sp/>must<sp/>be<sp/>square,<sp/>and<sp/>thus<sp/>that<sp/>for<sp/>any<sp/>$(x_1,x_2,x_3,z)<sp/>\in<sp/>V$,</highlight></codeline>
+<codeline><highlight class="normal">at<sp/>least<sp/>one<sp/>of<sp/>$\\{x_1,<sp/>x_2,<sp/>x_3\\}$<sp/>must<sp/>be<sp/>a<sp/>valid<sp/>x-coordinate<sp/>on<sp/>$E.$<sp/>There<sp/>is<sp/>one<sp/>exception</highlight></codeline>
+<codeline><highlight class="normal">to<sp/>this,<sp/>namely<sp/>when<sp/>$z=0$,<sp/>but<sp/>even<sp/>then<sp/>one<sp/>of<sp/>the<sp/>three<sp/>values<sp/>is<sp/>a<sp/>valid<sp/>x-coordinate.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>the<sp/>decoding<sp/>function<sp/>$F_u(t)$<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$(x_1,<sp/>x_2,<sp/>x_3,<sp/>z)<sp/>=<sp/>\psi_u(P_u(t)).$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Return<sp/>the<sp/>first<sp/>element<sp/>$x$<sp/>of<sp/>$(x_3,<sp/>x_2,<sp/>x_1)$<sp/>which<sp/>is<sp/>a<sp/>valid<sp/>x-coordinate<sp/>on<sp/>$E$<sp/>(i.e.,<sp/>$g(x)$<sp/>is<sp/>square).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">$P_u(t)<sp/>=<sp/>(X(u,<sp/>t),<sp/>Y(u,<sp/>t))$,<sp/>where:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">$$</highlight></codeline>
+<codeline><highlight class="normal">\begin{array}{lcl}</highlight></codeline>
+<codeline><highlight class="normal">X(u,<sp/>t)<sp/>&amp;<sp/>=<sp/>&amp;<sp/>\left\\{\begin{array}{ll}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>\dfrac{g(u)<sp/>-<sp/>t^2}{2t}<sp/>&amp;<sp/>a<sp/>=<sp/>0<sp/>\\</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>\dfrac{g(u)<sp/>+<sp/>h(u)(Y_0(u)<sp/>-<sp/>X_0(u)t)^2}{X_0(u)(1<sp/>+<sp/>h(u)t^2)}<sp/>&amp;<sp/>a<sp/>\neq<sp/>0</highlight></codeline>
+<codeline><highlight class="normal">\end{array}\right.<sp/>\\</highlight></codeline>
+<codeline><highlight class="normal">Y(u,<sp/>t)<sp/>&amp;<sp/>=<sp/>&amp;<sp/>\left\\{\begin{array}{ll}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>\dfrac{X(u,<sp/>t)<sp/>+<sp/>t}{u<sp/>\sqrt{-3}}<sp/>=<sp/>\dfrac{g(u)<sp/>+<sp/>t^2}{2tu\sqrt{-3}}<sp/>&amp;<sp/>a<sp/>=<sp/>0<sp/>\\</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>Y_0(u)<sp/>+<sp/>t(X(u,<sp/>t)<sp/>-<sp/>X_0(u))<sp/>&amp;<sp/>a<sp/>\neq<sp/>0</highlight></codeline>
+<codeline><highlight class="normal">\end{array}\right.</highlight></codeline>
+<codeline><highlight class="normal">\end{array}</highlight></codeline>
+<codeline><highlight class="normal">$$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">$P_u(t)$<sp/>is<sp/>defined:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>For<sp/>$a=0$,<sp/>unless:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>$u<sp/>=<sp/>0$<sp/>or<sp/>$t<sp/>=<sp/>0$<sp/>(division<sp/>by<sp/>zero)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>$g(u)<sp/>=<sp/>-t^2$<sp/>(would<sp/>give<sp/>$Y=0$).</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>For<sp/>$a<sp/>\neq<sp/>0$,<sp/>unless:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>$X_0(u)<sp/>=<sp/>0$<sp/>or<sp/>$h(u)t^2<sp/>=<sp/>-1$<sp/>(division<sp/>by<sp/>zero)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>$Y_0(u)<sp/>(1<sp/>-<sp/>h(u)t^2)<sp/>=<sp/>2X_0(u)t$<sp/>(would<sp/>give<sp/>$Y=0$).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>functions<sp/>$X_0(u)$<sp/>and<sp/>$Y_0(u)$<sp/>are<sp/>defined<sp/>in<sp/>Appendix<sp/>A<sp/>of<sp/>the<sp/>paper,<sp/>and<sp/>depend<sp/>on<sp/>various<sp/>properties<sp/>of<sp/>$E.$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>function<sp/>$\psi_u$<sp/>is<sp/>the<sp/>same<sp/>for<sp/>all<sp/>curves:<sp/>$\psi_u(X,<sp/>Y)<sp/>=<sp/>(x_1,<sp/>x_2,<sp/>x_3,<sp/>z)$,<sp/>where:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">$$</highlight></codeline>
+<codeline><highlight class="normal">\begin{array}{lcl}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>x_1<sp/>&amp;<sp/>=<sp/>&amp;<sp/>\dfrac{X}{2Y}<sp/>-<sp/>\dfrac{u}{2}<sp/>&amp;&amp;<sp/>\\</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>x_2<sp/>&amp;<sp/>=<sp/>&amp;<sp/>-\dfrac{X}{2Y}<sp/>-<sp/>\dfrac{u}{2}<sp/>&amp;&amp;<sp/>\\</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>x_3<sp/>&amp;<sp/>=<sp/>&amp;<sp/>u<sp/>+<sp/>4Y^2<sp/>&amp;&amp;<sp/>\\</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>z<sp/><sp/><sp/>&amp;<sp/>=<sp/>&amp;<sp/>\dfrac{g(x_3)}{2Y}(u^2<sp/>+<sp/>ux_1<sp/>+<sp/>x_1^2<sp/>+<sp/>a)<sp/>=<sp/>\dfrac{-g(u)g(x_3)}{8Y^3}</highlight></codeline>
+<codeline><highlight class="normal">\end{array}</highlight></codeline>
+<codeline><highlight class="normal">$$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>2.1<sp/>Decoding<sp/>for<sp/>`secp256k1`</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Put<sp/>together<sp/>and<sp/>specialized<sp/>for<sp/>$a=0$<sp/>curves,<sp/>decoding<sp/>$(u,<sp/>t)$<sp/>to<sp/>an<sp/>x-coordinate<sp/>is:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>$F_u(t)$<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$X<sp/>=<sp/>\dfrac{u^3<sp/>+<sp/>b<sp/>-<sp/>t^2}{2t}.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$Y<sp/>=<sp/>\dfrac{X<sp/>+<sp/>t}{u\sqrt{-3}}.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Return<sp/>the<sp/>first<sp/>$x$<sp/>in<sp/>$(u<sp/>+<sp/>4Y^2,<sp/>\dfrac{-X}{2Y}<sp/>-<sp/>\dfrac{u}{2},<sp/>\dfrac{X}{2Y}<sp/>-<sp/>\dfrac{u}{2})$<sp/>for<sp/>which<sp/>$g(x)$<sp/>is<sp/>square.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>make<sp/>sure<sp/>that<sp/>every<sp/>input<sp/>decodes<sp/>to<sp/>a<sp/>valid<sp/>x-coordinate,<sp/>we<sp/>remap<sp/>the<sp/>inputs<sp/>in<sp/>case</highlight></codeline>
+<codeline><highlight class="normal">$P_u$<sp/>is<sp/>not<sp/>defined<sp/>(when<sp/>$u=0$,<sp/>$t=0$,<sp/>or<sp/>$g(u)<sp/>=<sp/>-t^2$):</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>$F_u(t)$<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$u&apos;=u$<sp/>if<sp/>$u<sp/>\neq<sp/>0$;<sp/>$1$<sp/>otherwise<sp/>(guaranteeing<sp/>$u&apos;<sp/>\neq<sp/>0$).</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$t&apos;=t$<sp/>if<sp/>$t<sp/>\neq<sp/>0$;<sp/>$1$<sp/>otherwise<sp/>(guaranteeing<sp/>$t&apos;<sp/>\neq<sp/>0$).</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$t&apos;&apos;=t&apos;$<sp/>if<sp/>$g(u&apos;)<sp/>\neq<sp/>-t&apos;^2$;<sp/>$2t&apos;$<sp/>otherwise<sp/>(guaranteeing<sp/>$t&apos;&apos;<sp/>\neq<sp/>0$<sp/>and<sp/>$g(u&apos;)<sp/>\neq<sp/>-t&apos;&apos;^2$).</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$X<sp/>=<sp/>\dfrac{u&apos;^3<sp/>+<sp/>b<sp/>-<sp/>t&apos;&apos;^2}{2t&apos;&apos;}.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$Y<sp/>=<sp/>\dfrac{X<sp/>+<sp/>t&apos;&apos;}{u&apos;\sqrt{-3}}.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Return<sp/>the<sp/>first<sp/>$x$<sp/>in<sp/>$(u&apos;<sp/>+<sp/>4Y^2,<sp/>\dfrac{-X}{2Y}<sp/>-<sp/>\dfrac{u&apos;}{2},<sp/>\dfrac{X}{2Y}<sp/>-<sp/>\dfrac{u&apos;}{2})$<sp/>for<sp/>which<sp/>$x^3<sp/>+<sp/>b$<sp/>is<sp/>square.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>choices<sp/>here<sp/>are<sp/>not<sp/>strictly<sp/>necessary.<sp/>Just<sp/>returning<sp/>a<sp/>fixed<sp/>constant<sp/>in<sp/>any<sp/>of<sp/>the<sp/>undefined<sp/>cases<sp/>would<sp/>suffice,</highlight></codeline>
+<codeline><highlight class="normal">but<sp/>the<sp/>approach<sp/>here<sp/>is<sp/>simple<sp/>enough<sp/>and<sp/>gives<sp/>fairly<sp/>uniform<sp/>output<sp/>even<sp/>in<sp/>these<sp/>cases.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Note**:<sp/>in<sp/>the<sp/>paper<sp/>these<sp/>conditions<sp/>result<sp/>in<sp/>$\infty$<sp/>as<sp/>output,<sp/>due<sp/>to<sp/>the<sp/>use<sp/>of<sp/>projective<sp/>coordinates<sp/>there.</highlight></codeline>
+<codeline><highlight class="normal">We<sp/>wish<sp/>to<sp/>avoid<sp/>the<sp/>need<sp/>for<sp/>callers<sp/>to<sp/>deal<sp/>with<sp/>this<sp/>special<sp/>case.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>is<sp/>implemented<sp/>in<sp/>`secp256k1_ellswift_xswiftec_frac_var`<sp/>(which<sp/>decodes<sp/>to<sp/>an<sp/>x-coordinate<sp/>represented<sp/>as<sp/>a<sp/>fraction),<sp/>and</highlight></codeline>
+<codeline><highlight class="normal">in<sp/>`secp256k1_ellswift_xswiftec_var`<sp/>(which<sp/>outputs<sp/>the<sp/>actual<sp/>x-coordinate).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>3.<sp/>The<sp/>encoding<sp/>function</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>implement<sp/>$F_u^{-1}(x)$,<sp/>the<sp/>function<sp/>to<sp/>find<sp/>the<sp/>set<sp/>of<sp/>inverses<sp/>$t$<sp/>for<sp/>which<sp/>$F_u(t)<sp/>=<sp/>x$,<sp/>we<sp/>have<sp/>to<sp/>reverse<sp/>the<sp/>process:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Find<sp/>all<sp/>the<sp/>$(X,<sp/>Y)<sp/>\in<sp/>S_u$<sp/>that<sp/>could<sp/>have<sp/>given<sp/>rise<sp/>to<sp/>$x$,<sp/>through<sp/>the<sp/>$x_1$,<sp/>$x_2$,<sp/>or<sp/>$x_3$<sp/>formulas<sp/>in<sp/>$\psi_u.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Map<sp/>those<sp/>$(X,<sp/>Y)$<sp/>solutions<sp/>to<sp/>$t$<sp/>values<sp/>using<sp/>$P_u^{-1}(X,<sp/>Y).$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>For<sp/>each<sp/>of<sp/>the<sp/>found<sp/>$t$<sp/>values,<sp/>verify<sp/>that<sp/>$F_u(t)<sp/>=<sp/>x.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Return<sp/>the<sp/>remaining<sp/>$t$<sp/>values.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>function<sp/>$P_u^{-1}$,<sp/>which<sp/>finds<sp/>$t$<sp/>given<sp/>$(X,<sp/>Y)<sp/>\in<sp/>S_u$,<sp/>is<sp/>significantly<sp/>simpler<sp/>than<sp/>$P_u:$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">$$</highlight></codeline>
+<codeline><highlight class="normal">P_u^{-1}(X,<sp/>Y)<sp/>=<sp/>\left\\{\begin{array}{ll}</highlight></codeline>
+<codeline><highlight class="normal">Yu\sqrt{-3}<sp/>-<sp/>X<sp/>&amp;<sp/>a<sp/>=<sp/>0<sp/>\\</highlight></codeline>
+<codeline><highlight class="normal">\dfrac{Y-Y_0(u)}{X-X_0(u)}<sp/>&amp;<sp/>a<sp/>\neq<sp/>0<sp/>\land<sp/>X<sp/>\neq<sp/>X_0(u)<sp/>\\</highlight></codeline>
+<codeline><highlight class="normal">\dfrac{-X_0(u)}{h(u)Y_0(u)}<sp/>&amp;<sp/>a<sp/>\neq<sp/>0<sp/>\land<sp/>X<sp/>=<sp/>X_0(u)<sp/>\land<sp/>Y<sp/>=<sp/>Y_0(u)</highlight></codeline>
+<codeline><highlight class="normal">\end{array}\right.</highlight></codeline>
+<codeline><highlight class="normal">$$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>third<sp/>step<sp/>above,<sp/>verifying<sp/>that<sp/>$F_u(t)<sp/>=<sp/>x$,<sp/>is<sp/>necessary<sp/>because<sp/>for<sp/>the<sp/>$(X,<sp/>Y)$<sp/>values<sp/>found<sp/>through<sp/>the<sp/>$x_1$<sp/>and<sp/>$x_2$<sp/>expressions,</highlight></codeline>
+<codeline><highlight class="normal">it<sp/>is<sp/>possible<sp/>that<sp/>decoding<sp/>through<sp/>$\psi_u(X,<sp/>Y)$<sp/>yields<sp/>a<sp/>valid<sp/>$x_3$<sp/>on<sp/>the<sp/>curve,<sp/>which<sp/>would<sp/>take<sp/>precedence<sp/>over<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">$x_1$<sp/>or<sp/>$x_2$<sp/>decoding.<sp/>These<sp/>$(X,<sp/>Y)$<sp/>solutions<sp/>must<sp/>be<sp/>rejected.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Since<sp/>we<sp/>know<sp/>that<sp/>exactly<sp/>one<sp/>or<sp/>exactly<sp/>three<sp/>out<sp/>of<sp/>$\\{x_1,<sp/>x_2,<sp/>x_3\\}$<sp/>are<sp/>valid<sp/>x-coordinates<sp/>for<sp/>any<sp/>$t$,</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>case<sp/>where<sp/>either<sp/>$x_1$<sp/>or<sp/>$x_2$<sp/>is<sp/>valid<sp/>and<sp/>in<sp/>addition<sp/>also<sp/>$x_3$<sp/>is<sp/>valid<sp/>must<sp/>mean<sp/>that<sp/>all<sp/>three<sp/>are<sp/>valid.</highlight></codeline>
+<codeline><highlight class="normal">This<sp/>means<sp/>that<sp/>instead<sp/>of<sp/>checking<sp/>whether<sp/>$x_3$<sp/>is<sp/>on<sp/>the<sp/>curve,<sp/>it<sp/>is<sp/>also<sp/>possible<sp/>to<sp/>check<sp/>whether<sp/>the<sp/>other<sp/>one<sp/>out<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">$x_1$<sp/>and<sp/>$x_2$<sp/>is<sp/>on<sp/>the<sp/>curve.<sp/>This<sp/>is<sp/>significantly<sp/>simpler,<sp/>as<sp/>it<sp/>turns<sp/>out.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Observe<sp/>that<sp/>$\psi_u$<sp/>guarantees<sp/>that<sp/>$x_1<sp/>+<sp/>x_2<sp/>=<sp/>-u.$<sp/>So<sp/>given<sp/>either<sp/>$x<sp/>=<sp/>x_1$<sp/>or<sp/>$x<sp/>=<sp/>x_2$,<sp/>the<sp/>other<sp/>one<sp/>of<sp/>the<sp/>two<sp/>can<sp/>be<sp/>computed<sp/>as</highlight></codeline>
+<codeline><highlight class="normal">$-u<sp/>-<sp/>x.$<sp/>Thus,<sp/>when<sp/>encoding<sp/>$x$<sp/>through<sp/>the<sp/>$x_1$<sp/>or<sp/>$x_2$<sp/>expressions,<sp/>one<sp/>can<sp/>simply<sp/>check<sp/>whether<sp/>$g(-u-x)$<sp/>is<sp/>a<sp/>square,</highlight></codeline>
+<codeline><highlight class="normal">and<sp/>if<sp/>so,<sp/>not<sp/>include<sp/>the<sp/>corresponding<sp/>$t$<sp/>values<sp/>in<sp/>the<sp/>returned<sp/>set.<sp/>As<sp/>this<sp/>does<sp/>not<sp/>need<sp/>$X$,<sp/>$Y$,<sp/>or<sp/>$t$,<sp/>this<sp/>condition<sp/>can<sp/>be<sp/>determined</highlight></codeline>
+<codeline><highlight class="normal">before<sp/>those<sp/>values<sp/>are<sp/>computed.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">It<sp/>is<sp/>not<sp/>possible<sp/>that<sp/>an<sp/>encoding<sp/>found<sp/>through<sp/>the<sp/>$x_1$<sp/>expression<sp/>decodes<sp/>to<sp/>a<sp/>different<sp/>valid<sp/>x-coordinate<sp/>using<sp/>$x_2$<sp/>(which<sp/>would</highlight></codeline>
+<codeline><highlight class="normal">take<sp/>precedence),<sp/>for<sp/>the<sp/>same<sp/>reason:<sp/>if<sp/>both<sp/>$x_1$<sp/>and<sp/>$x_2$<sp/>decodings<sp/>were<sp/>valid,<sp/>$x_3$<sp/>would<sp/>be<sp/>valid<sp/>as<sp/>well,<sp/>and<sp/>thus<sp/>take</highlight></codeline>
+<codeline><highlight class="normal">precedence<sp/>over<sp/>both.<sp/>Because<sp/>of<sp/>this,<sp/>the<sp/>$g(-u-x)$<sp/>being<sp/>square<sp/>test<sp/>for<sp/>$x_1$<sp/>and<sp/>$x_2$<sp/>is<sp/>the<sp/>only<sp/>test<sp/>necessary<sp/>to<sp/>guarantee<sp/>the<sp/>found<sp/>$t$</highlight></codeline>
+<codeline><highlight class="normal">values<sp/>round-trip<sp/>back<sp/>to<sp/>the<sp/>input<sp/>$x$<sp/>correctly.<sp/>This<sp/>is<sp/>the<sp/>reason<sp/>for<sp/>choosing<sp/>the<sp/>$(x_3,<sp/>x_2,<sp/>x_1)$<sp/>precedence<sp/>order<sp/>in<sp/>the<sp/>decoder;</highlight></codeline>
+<codeline><highlight class="normal">any<sp/>order<sp/>which<sp/>does<sp/>not<sp/>place<sp/>$x_3$<sp/>first<sp/>requires<sp/>more<sp/>complicated<sp/>round-trip<sp/>checks<sp/>in<sp/>the<sp/>encoder.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>3.1<sp/>Switching<sp/>to<sp/>*v,<sp/>w*<sp/>coordinates</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Before<sp/>working<sp/>out<sp/>the<sp/>formulas<sp/>for<sp/>all<sp/>this,<sp/>we<sp/>switch<sp/>to<sp/>different<sp/>variables<sp/>for<sp/>$S_u.$<sp/>Let<sp/>$v<sp/>=<sp/>(X/Y<sp/>-<sp/>u)/2$,<sp/>and</highlight></codeline>
+<codeline><highlight class="normal">$w<sp/>=<sp/>2Y.$<sp/>Or<sp/>in<sp/>the<sp/>other<sp/>direction,<sp/>$X<sp/>=<sp/>w(u/2<sp/>+<sp/>v)$<sp/>and<sp/>$Y<sp/>=<sp/>w/2:$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>$S_u&apos;$<sp/>becomes<sp/>the<sp/>set<sp/>of<sp/>$(v,<sp/>w)$<sp/>for<sp/>which<sp/>$w^2<sp/>(u^2<sp/>+<sp/>uv<sp/>+<sp/>v^2<sp/>+<sp/>a)<sp/>=<sp/>-g(u)$<sp/>and<sp/>$w<sp/>\neq<sp/>0.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>For<sp/>$a=0$<sp/>curves,<sp/>$P_u^{-1}$<sp/>can<sp/>be<sp/>stated<sp/>for<sp/>$(v,w)$<sp/>as<sp/>$P_u^{&apos;-1}(v,<sp/>w)<sp/>=<sp/>w\left(\frac{\sqrt{-3}-1}{2}u<sp/>-<sp/>v\right).$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>$\psi_u$<sp/>can<sp/>be<sp/>stated<sp/>for<sp/>$(v,<sp/>w)$<sp/>as<sp/>$\psi_u&apos;(v,<sp/>w)<sp/>=<sp/>(x_1,<sp/>x_2,<sp/>x_3,<sp/>z)$,<sp/>where</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">$$</highlight></codeline>
+<codeline><highlight class="normal">\begin{array}{lcl}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>x_1<sp/>&amp;<sp/>=<sp/>&amp;<sp/>v<sp/>\\</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>x_2<sp/>&amp;<sp/>=<sp/>&amp;<sp/>-u<sp/>-<sp/>v<sp/>\\</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>x_3<sp/>&amp;<sp/>=<sp/>&amp;<sp/>u<sp/>+<sp/>w^2<sp/>\\</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>z<sp/><sp/><sp/>&amp;<sp/>=<sp/>&amp;<sp/>\dfrac{g(x_3)}{w}(u^2<sp/>+<sp/>uv<sp/>+<sp/>v^2<sp/>+<sp/>a)<sp/>=<sp/>\dfrac{-g(u)g(x_3)}{w^3}</highlight></codeline>
+<codeline><highlight class="normal">\end{array}</highlight></codeline>
+<codeline><highlight class="normal">$$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">We<sp/>can<sp/>now<sp/>write<sp/>the<sp/>expressions<sp/>for<sp/>finding<sp/>$(v,<sp/>w)$<sp/>given<sp/>$x$<sp/>explicitly,<sp/>by<sp/>solving<sp/>each<sp/>of<sp/>the<sp/>$\\{x_1,<sp/>x_2,<sp/>x_3\\}$</highlight></codeline>
+<codeline><highlight class="normal">expressions<sp/>for<sp/>$v$<sp/>or<sp/>$w$,<sp/>and<sp/>using<sp/>the<sp/>$S_u&apos;$<sp/>equation<sp/>to<sp/>find<sp/>the<sp/>other<sp/>variable:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Assuming<sp/>$x<sp/>=<sp/>x_1$,<sp/>we<sp/>find<sp/>$v<sp/>=<sp/>x$<sp/>and<sp/>$w<sp/>=<sp/>\pm\sqrt{-g(u)/(u^2<sp/>+<sp/>uv<sp/>+<sp/>v^2<sp/>+<sp/>a)}$<sp/>(two<sp/>solutions).</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Assuming<sp/>$x<sp/>=<sp/>x_2$,<sp/>we<sp/>find<sp/>$v<sp/>=<sp/>-u-x$<sp/>and<sp/>$w<sp/>=<sp/>\pm\sqrt{-g(u)/(u^2<sp/>+<sp/>uv<sp/>+<sp/>v^2<sp/>+<sp/>a)}$<sp/>(two<sp/>solutions).</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Assuming<sp/>$x<sp/>=<sp/>x_3$,<sp/>we<sp/>find<sp/>$w<sp/>=<sp/>\pm\sqrt{x-u}$<sp/>and<sp/>$v<sp/>=<sp/>-u/2<sp/>\pm<sp/>\sqrt{-w^2(4g(u)<sp/>+<sp/>w^2h(u))}/(2w^2)$<sp/>(four<sp/>solutions).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>3.2<sp/>Avoiding<sp/>computing<sp/>all<sp/>inverses</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>*ElligatorSwift*<sp/>algorithm<sp/>as<sp/>stated<sp/>in<sp/>Section<sp/>1<sp/>requires<sp/>the<sp/>computation<sp/>of<sp/>$L<sp/>=<sp/>F_u^{-1}(x)$<sp/>(the</highlight></codeline>
+<codeline><highlight class="normal">set<sp/>of<sp/>all<sp/>$t$<sp/>such<sp/>that<sp/>$(u,<sp/>t)$<sp/>decode<sp/>to<sp/>$x$)<sp/>in<sp/>full.<sp/>This<sp/>is<sp/>unnecessary.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Observe<sp/>that<sp/>the<sp/>procedure<sp/>of<sp/>restarting<sp/>with<sp/>probability<sp/>$(1<sp/>-<sp/>\frac{\\#L}{8})$<sp/>and<sp/>otherwise<sp/>returning<sp/>a</highlight></codeline>
+<codeline><highlight class="normal">uniformly<sp/>random<sp/>element<sp/>from<sp/>$L$<sp/>is<sp/>actually<sp/>equivalent<sp/>to<sp/>always<sp/>padding<sp/>$L$<sp/>with<sp/>$\bot$<sp/>values<sp/>up<sp/>to<sp/>length<sp/>8,</highlight></codeline>
+<codeline><highlight class="normal">picking<sp/>a<sp/>uniformly<sp/>random<sp/>element<sp/>from<sp/>that,<sp/>restarting<sp/>whenever<sp/>$\bot$<sp/>is<sp/>picked:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>*ElligatorSwift(x)*<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Loop:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Pick<sp/>a<sp/>uniformly<sp/>random<sp/>field<sp/>element<sp/>$u.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Compute<sp/>the<sp/>set<sp/>$L<sp/>=<sp/>F_u^{-1}(x).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$T$<sp/>be<sp/>the<sp/>8-element<sp/>vector<sp/>consisting<sp/>of<sp/>the<sp/>elements<sp/>of<sp/>$L$,<sp/>plus<sp/>$8<sp/>-<sp/>\\#L$<sp/>times<sp/>$\\{\bot\\}.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Select<sp/>a<sp/>uniformly<sp/>random<sp/>$t<sp/>\in<sp/>T.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$t<sp/>\neq<sp/>\bot$,<sp/>return<sp/>$(u,<sp/>t)$;<sp/>restart<sp/>loop<sp/>otherwise.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Now<sp/>notice<sp/>that<sp/>the<sp/>order<sp/>of<sp/>elements<sp/>in<sp/>$T$<sp/>does<sp/>not<sp/>matter,<sp/>as<sp/>all<sp/>we<sp/>do<sp/>is<sp/>pick<sp/>a<sp/>uniformly</highlight></codeline>
+<codeline><highlight class="normal">random<sp/>element<sp/>in<sp/>it,<sp/>so<sp/>we<sp/>do<sp/>not<sp/>need<sp/>to<sp/>have<sp/>all<sp/>$\bot$<sp/>values<sp/>at<sp/>the<sp/>end.</highlight></codeline>
+<codeline><highlight class="normal">As<sp/>we<sp/>have<sp/>8<sp/>distinct<sp/>formulas<sp/>for<sp/>finding<sp/>$(v,<sp/>w)$<sp/>(taking<sp/>the<sp/>variants<sp/>due<sp/>to<sp/>$\pm$<sp/>into<sp/>account),</highlight></codeline>
+<codeline><highlight class="normal">we<sp/>can<sp/>associate<sp/>every<sp/>index<sp/>in<sp/>$T$<sp/>with<sp/>exactly<sp/>one<sp/>of<sp/>those<sp/>formulas,<sp/>making<sp/>sure<sp/>that:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Formulas<sp/>that<sp/>yield<sp/>no<sp/>solutions<sp/>(due<sp/>to<sp/>division<sp/>by<sp/>zero<sp/>or<sp/>non-existing<sp/>square<sp/>roots)<sp/>or<sp/>invalid<sp/>solutions<sp/>are<sp/>made<sp/>to<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>For<sp/>the<sp/>$x_1$<sp/>and<sp/>$x_2$<sp/>cases,<sp/>if<sp/>$g(-u-x)$<sp/>is<sp/>a<sp/>square,<sp/>$\bot$<sp/>is<sp/>returned<sp/>instead<sp/>(the<sp/>round-trip<sp/>check).</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>In<sp/>case<sp/>multiple<sp/>formulas<sp/>would<sp/>return<sp/>the<sp/>same<sp/>non-<sp/>$\bot$<sp/>result,<sp/>all<sp/>but<sp/>one<sp/>of<sp/>those<sp/>must<sp/>be<sp/>turned<sp/>into<sp/>$\bot$<sp/>to<sp/>avoid<sp/>biasing<sp/>those.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>last<sp/>condition<sp/>above<sp/>only<sp/>occurs<sp/>with<sp/>negligible<sp/>probability<sp/>for<sp/>cryptographically-sized<sp/>curves,<sp/>but<sp/>is<sp/>interesting</highlight></codeline>
+<codeline><highlight class="normal">to<sp/>take<sp/>into<sp/>account<sp/>as<sp/>it<sp/>allows<sp/>exhaustive<sp/>testing<sp/>in<sp/>small<sp/>groups.<sp/>See<sp/>[Section<sp/>3.4](#34-dealing-with-special-cases)</highlight></codeline>
+<codeline><highlight class="normal">for<sp/>an<sp/>analysis<sp/>of<sp/>all<sp/>the<sp/>negligible<sp/>cases.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">If<sp/>we<sp/>define<sp/>$T<sp/>=<sp/>(G_{0,u}(x),<sp/>G_{1,u}(x),<sp/>\ldots,<sp/>G_{7,u}(x))$,<sp/>with<sp/>each<sp/>$G_{i,u}$<sp/>matching<sp/>one<sp/>of<sp/>the<sp/>formulas,</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>loop<sp/>can<sp/>be<sp/>simplified<sp/>to<sp/>only<sp/>compute<sp/>one<sp/>of<sp/>the<sp/>inverses<sp/>instead<sp/>of<sp/>all<sp/>of<sp/>them:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>*ElligatorSwift(x)*<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Loop:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Pick<sp/>a<sp/>uniformly<sp/>random<sp/>field<sp/>element<sp/>$u.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Pick<sp/>a<sp/>uniformly<sp/>random<sp/>integer<sp/>$c$<sp/>in<sp/>$[0,8).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$t<sp/>=<sp/>G_{c,u}(x).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$t<sp/>\neq<sp/>\bot$,<sp/>return<sp/>$(u,<sp/>t)$;<sp/>restart<sp/>loop<sp/>otherwise.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>is<sp/>implemented<sp/>in<sp/>`secp256k1_ellswift_xelligatorswift_var`.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>3.3<sp/>Finding<sp/>the<sp/>inverse</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>implement<sp/>$G_{c,u}$,<sp/>we<sp/>map<sp/>$c=0$<sp/>to<sp/>the<sp/>$x_1$<sp/>formula,<sp/>$c=1$<sp/>to<sp/>the<sp/>$x_2$<sp/>formula,<sp/>and<sp/>$c=2$<sp/>and<sp/>$c=3$<sp/>to<sp/>the<sp/>$x_3$<sp/>formula.</highlight></codeline>
+<codeline><highlight class="normal">Those<sp/>are<sp/>then<sp/>repeated<sp/>as<sp/>$c=4$<sp/>through<sp/>$c=7$<sp/>for<sp/>the<sp/>other<sp/>sign<sp/>of<sp/>$w$<sp/>(noting<sp/>that<sp/>in<sp/>each<sp/>formula,<sp/>$w$<sp/>is<sp/>a<sp/>square<sp/>root<sp/>of<sp/>some<sp/>expression).</highlight></codeline>
+<codeline><highlight class="normal">Ignoring<sp/>the<sp/>negligible<sp/>cases,<sp/>we<sp/>get:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>$G_{c,u}(x)$<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$c<sp/>\in<sp/>\\{0,<sp/>1,<sp/>4,<sp/>5\\}$<sp/>(for<sp/>$x_1$<sp/>and<sp/>$x_2$<sp/>formulas):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$g(-u-x)$<sp/>is<sp/>square,<sp/>return<sp/>$\bot$<sp/>(as<sp/>$x_3$<sp/>would<sp/>be<sp/>valid<sp/>and<sp/>take<sp/>precedence).</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{0,<sp/>4\\}$<sp/>(the<sp/>$x_1$<sp/>formula)<sp/>let<sp/>$v<sp/>=<sp/>x$,<sp/>otherwise<sp/>let<sp/>$v<sp/>=<sp/>-u-x$<sp/>(the<sp/>$x_2$<sp/>formula)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$s<sp/>=<sp/>-g(u)/(u^2<sp/>+<sp/>uv<sp/>+<sp/>v^2<sp/>+<sp/>a)$<sp/>(using<sp/>$s<sp/>=<sp/>w^2$<sp/>in<sp/>what<sp/>follows).</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Otherwise,<sp/>when<sp/>$c<sp/>\in<sp/>\\{2,<sp/>3,<sp/>6,<sp/>7\\}$<sp/>(for<sp/>$x_3$<sp/>formulas):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$s<sp/>=<sp/>x-u.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$r<sp/>=<sp/>\sqrt{-s(4g(u)<sp/>+<sp/>sh(u))}.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$v<sp/>=<sp/>(r/s<sp/>-<sp/>u)/2$<sp/>if<sp/>$c<sp/>\in<sp/>\\{3,<sp/>7\\}$;<sp/>$(-r/s<sp/>-<sp/>u)/2$<sp/>otherwise.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$w<sp/>=<sp/>\sqrt{s}.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Depending<sp/>on<sp/>$c:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{0,<sp/>1,<sp/>2,<sp/>3\\}:$<sp/>return<sp/>$P_u^{&apos;-1}(v,<sp/>w).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{4,<sp/>5,<sp/>6,<sp/>7\\}:$<sp/>return<sp/>$P_u^{&apos;-1}(v,<sp/>-w).$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Whenever<sp/>a<sp/>square<sp/>root<sp/>of<sp/>a<sp/>non-square<sp/>is<sp/>taken,<sp/>$\bot$<sp/>is<sp/>returned;<sp/>for<sp/>both<sp/>square<sp/>roots<sp/>this<sp/>happens<sp/>with<sp/>roughly</highlight></codeline>
+<codeline><highlight class="normal">50%<sp/>on<sp/>random<sp/>inputs.<sp/>Similarly,<sp/>when<sp/>a<sp/>division<sp/>by<sp/>0<sp/>would<sp/>occur,<sp/>$\bot$<sp/>is<sp/>returned<sp/>as<sp/>well;<sp/>this<sp/>will<sp/>only<sp/>happen</highlight></codeline>
+<codeline><highlight class="normal">with<sp/>negligible<sp/>probability.<sp/>A<sp/>division<sp/>by<sp/>0<sp/>in<sp/>the<sp/>first<sp/>branch<sp/>in<sp/>fact<sp/>cannot<sp/>occur<sp/>at<sp/>all,<sp/>because<sp/>$u^2<sp/>+<sp/>uv<sp/>+<sp/>v^2<sp/>+<sp/>a<sp/>=<sp/>0$</highlight></codeline>
+<codeline><highlight class="normal">implies<sp/>$g(-u-x)<sp/>=<sp/>g(x)$<sp/>which<sp/>would<sp/>mean<sp/>the<sp/>$g(-u-x)$<sp/>is<sp/>square<sp/>condition<sp/>has<sp/>triggered</highlight></codeline>
+<codeline><highlight class="normal">and<sp/>$\bot$<sp/>would<sp/>have<sp/>been<sp/>returned<sp/>already.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Note**:<sp/>In<sp/>the<sp/>paper,<sp/>the<sp/>$case$<sp/>variable<sp/>corresponds<sp/>roughly<sp/>to<sp/>the<sp/>$c$<sp/>above,<sp/>but<sp/>only<sp/>takes<sp/>on<sp/>4<sp/>possible<sp/>values<sp/>(1<sp/>to<sp/>4).</highlight></codeline>
+<codeline><highlight class="normal">The<sp/>conditional<sp/>negation<sp/>of<sp/>$w$<sp/>at<sp/>the<sp/>end<sp/>is<sp/>done<sp/>randomly,<sp/>which<sp/>is<sp/>equivalent,<sp/>but<sp/>makes<sp/>testing<sp/>harder.<sp/>We<sp/>choose<sp/>to</highlight></codeline>
+<codeline><highlight class="normal">have<sp/>the<sp/>$G_{c,u}$<sp/>be<sp/>deterministic,<sp/>and<sp/>capture<sp/>all<sp/>choices<sp/>in<sp/>$c.$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Now<sp/>observe<sp/>that<sp/>the<sp/>$c<sp/>\in<sp/>\\{1,<sp/>5\\}$<sp/>and<sp/>$c<sp/>\in<sp/>\\{3,<sp/>7\\}$<sp/>conditions<sp/>effectively<sp/>perform<sp/>the<sp/>same<sp/>$v<sp/>\rightarrow<sp/>-u-v$</highlight></codeline>
+<codeline><highlight class="normal">transformation.<sp/>Furthermore,<sp/>that<sp/>transformation<sp/>has<sp/>no<sp/>effect<sp/>on<sp/>$s$<sp/>in<sp/>the<sp/>first<sp/>branch</highlight></codeline>
+<codeline><highlight class="normal">as<sp/>$u^2<sp/>+<sp/>ux<sp/>+<sp/>x^2<sp/>+<sp/>a<sp/>=<sp/>u^2<sp/>+<sp/>u(-u-x)<sp/>+<sp/>(-u-x)^2<sp/>+<sp/>a.$<sp/>Thus<sp/>we<sp/>can<sp/>extract<sp/>it<sp/>out<sp/>and<sp/>move<sp/>it<sp/>down:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>$G_{c,u}(x)$<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$c<sp/>\in<sp/>\\{0,<sp/>1,<sp/>4,<sp/>5\\}:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$g(-u-x)$<sp/>is<sp/>square,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$s<sp/>=<sp/>-g(u)/(u^2<sp/>+<sp/>ux<sp/>+<sp/>x^2<sp/>+<sp/>a).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$v<sp/>=<sp/>x.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Otherwise,<sp/>when<sp/>$c<sp/>\in<sp/>\\{2,<sp/>3,<sp/>6,<sp/>7\\}:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$s<sp/>=<sp/>x-u.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$r<sp/>=<sp/>\sqrt{-s(4g(u)<sp/>+<sp/>sh(u))}.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$v<sp/>=<sp/>(r/s<sp/>-<sp/>u)/2.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$w<sp/>=<sp/>\sqrt{s}.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Depending<sp/>on<sp/>$c:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{0,<sp/>2\\}:$<sp/>return<sp/>$P_u^{&apos;-1}(v,<sp/>w).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{1,<sp/>3\\}:$<sp/>return<sp/>$P_u^{&apos;-1}(-u-v,<sp/>w).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{4,<sp/>6\\}:$<sp/>return<sp/>$P_u^{&apos;-1}(v,<sp/>-w).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{5,<sp/>7\\}:$<sp/>return<sp/>$P_u^{&apos;-1}(-u-v,<sp/>-w).$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>shows<sp/>there<sp/>will<sp/>always<sp/>be<sp/>exactly<sp/>0,<sp/>4,<sp/>or<sp/>8<sp/>$t$<sp/>values<sp/>for<sp/>a<sp/>given<sp/>$(u,<sp/>x)$<sp/>input.</highlight></codeline>
+<codeline><highlight class="normal">There<sp/>can<sp/>be<sp/>0,<sp/>1,<sp/>or<sp/>2<sp/>$(v,<sp/>w)$<sp/>pairs<sp/>before<sp/>invoking<sp/>$P_u^{&apos;-1}$,<sp/>and<sp/>each<sp/>results<sp/>in<sp/>4<sp/>distinct<sp/>$t$<sp/>values.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>3.4<sp/>Dealing<sp/>with<sp/>special<sp/>cases</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">As<sp/>mentioned<sp/>before<sp/>there<sp/>are<sp/>a<sp/>few<sp/>cases<sp/>to<sp/>deal<sp/>with<sp/>which<sp/>only<sp/>happen<sp/>in<sp/>a<sp/>negligibly<sp/>small<sp/>subset<sp/>of<sp/>inputs.</highlight></codeline>
+<codeline><highlight class="normal">For<sp/>cryptographically<sp/>sized<sp/>fields,<sp/>if<sp/>only<sp/>random<sp/>inputs<sp/>are<sp/>going<sp/>to<sp/>be<sp/>considered,<sp/>it<sp/>is<sp/>unnecessary<sp/>to<sp/>deal<sp/>with<sp/>these.<sp/>Still,<sp/>for<sp/>completeness</highlight></codeline>
+<codeline><highlight class="normal">we<sp/>analyse<sp/>them<sp/>here.<sp/>They<sp/>generally<sp/>fall<sp/>into<sp/>two<sp/>categories:<sp/>cases<sp/>in<sp/>which<sp/>the<sp/>encoder<sp/>would<sp/>produce<sp/>$t$<sp/>values<sp/>that</highlight></codeline>
+<codeline><highlight class="normal">do<sp/>not<sp/>decode<sp/>back<sp/>to<sp/>$x$<sp/>(or<sp/>at<sp/>least<sp/>cannot<sp/>guarantee<sp/>that<sp/>they<sp/>do),<sp/>and<sp/>cases<sp/>in<sp/>which<sp/>the<sp/>encoder<sp/>might<sp/>produce<sp/>the<sp/>same</highlight></codeline>
+<codeline><highlight class="normal">$t$<sp/>value<sp/>for<sp/>multiple<sp/>$c$<sp/>inputs<sp/>(thereby<sp/>biasing<sp/>that<sp/>encoding):</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">*<sp/>In<sp/>the<sp/>branch<sp/>for<sp/>$x_1$<sp/>and<sp/>$x_2$<sp/>(where<sp/>$c<sp/>\in<sp/>\\{0,<sp/>1,<sp/>4,<sp/>5\\}$):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>When<sp/>$g(u)<sp/>=<sp/>0$,<sp/>we<sp/>would<sp/>have<sp/>$s=w=Y=0$,<sp/>which<sp/>is<sp/>not<sp/>on<sp/>$S_u.$<sp/>This<sp/>is<sp/>only<sp/>possible<sp/>on<sp/>even-ordered<sp/>curves.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>Excluding<sp/>this<sp/>also<sp/>removes<sp/>the<sp/>one<sp/>condition<sp/>under<sp/>which<sp/>the<sp/>simplified<sp/>check<sp/>for<sp/>$x_3$<sp/>on<sp/>the<sp/>curve</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>fails<sp/>(namely<sp/>when<sp/>$g(x_1)=g(x_2)=0$<sp/>but<sp/>$g(x_3)$<sp/>is<sp/>not<sp/>square).</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>This<sp/>does<sp/>exclude<sp/>some<sp/>valid<sp/>encodings:<sp/>when<sp/>both<sp/>$g(u)=0$<sp/>and<sp/>$u^2+ux+x^2+a=0$<sp/>(also<sp/>implying<sp/>$g(x)=0$),</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>the<sp/>$S_u&apos;$<sp/>equation<sp/>degenerates<sp/>to<sp/>$0<sp/>=<sp/>0$,<sp/>and<sp/>many<sp/>valid<sp/>$t$<sp/>values<sp/>may<sp/>exist.<sp/>Yet,<sp/>these<sp/>cannot<sp/>be<sp/>targeted<sp/>uniformly<sp/>by<sp/>the</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>encoder<sp/>anyway<sp/>as<sp/>there<sp/>will<sp/>generally<sp/>be<sp/>more<sp/>than<sp/>8.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>When<sp/>$g(x)<sp/>=<sp/>0$,<sp/>the<sp/>same<sp/>$t$<sp/>would<sp/>be<sp/>produced<sp/>as<sp/>in<sp/>the<sp/>$x_3$<sp/>branch<sp/>(where<sp/>$c<sp/>\in<sp/>\\{2,<sp/>3,<sp/>6,<sp/>7\\}$)<sp/>which<sp/>we<sp/>give<sp/>precedence</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>as<sp/>it<sp/>can<sp/>deal<sp/>with<sp/>$g(u)=0$.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>This<sp/>is<sp/>again<sp/>only<sp/>possible<sp/>on<sp/>even-ordered<sp/>curves.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>In<sp/>the<sp/>branch<sp/>for<sp/>$x_3$<sp/>(where<sp/>$c<sp/>\in<sp/>\\{2,<sp/>3,<sp/>6,<sp/>7\\}$):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>When<sp/>$s=0$,<sp/>a<sp/>division<sp/>by<sp/>zero<sp/>would<sp/>occur.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>When<sp/>$v<sp/>=<sp/>-u-v$<sp/>and<sp/>$c<sp/>\in<sp/>\\{3,<sp/>7\\}$,<sp/>the<sp/>same<sp/>$t$<sp/>would<sp/>be<sp/>returned<sp/>as<sp/>in<sp/>the<sp/>$c<sp/>\in<sp/>\\{2,<sp/>6\\}$<sp/>cases.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>It<sp/>is<sp/>equivalent<sp/>to<sp/>checking<sp/>whether<sp/>$r=0$.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>This<sp/>cannot<sp/>occur<sp/>in<sp/>the<sp/>$x_1$<sp/>or<sp/>$x_2$<sp/>branches,<sp/>as<sp/>it<sp/>would<sp/>trigger<sp/>the<sp/>$g(-u-x)$<sp/>is<sp/>square<sp/>condition.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>A<sp/>similar<sp/>concern<sp/>for<sp/>$w<sp/>=<sp/>-w$<sp/>does<sp/>not<sp/>exist,<sp/>as<sp/>$w=0$<sp/>is<sp/>already<sp/>impossible<sp/>in<sp/>both<sp/>branches:<sp/>in<sp/>the<sp/>first</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>it<sp/>requires<sp/>$g(u)=0$<sp/>which<sp/>is<sp/>already<sp/>outlawed<sp/>on<sp/>even-ordered<sp/>curves<sp/>and<sp/>impossible<sp/>on<sp/>others;<sp/>in<sp/>the<sp/>second<sp/>it<sp/>would<sp/>trigger<sp/>division<sp/>by<sp/>zero.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Curve-specific<sp/>special<sp/>cases<sp/>also<sp/>exist<sp/>that<sp/>need<sp/>to<sp/>be<sp/>rejected,<sp/>because<sp/>they<sp/>result<sp/>in<sp/>$(u,t)$<sp/>which<sp/>is<sp/>invalid<sp/>to<sp/>the<sp/>decoder,<sp/>or<sp/>because<sp/>of<sp/>division<sp/>by<sp/>zero<sp/>in<sp/>the<sp/>encoder:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>For<sp/>$a=0$<sp/>curves,<sp/>when<sp/>$u=0$<sp/>or<sp/>when<sp/>$t=0$.<sp/>The<sp/>latter<sp/>can<sp/>only<sp/>be<sp/>reached<sp/>by<sp/>the<sp/>encoder<sp/>when<sp/>$g(u)=0$,<sp/>which<sp/>requires<sp/>an<sp/>even-ordered<sp/>curve.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>For<sp/>$a<sp/>\neq<sp/>0$<sp/>curves,<sp/>when<sp/>$X_0(u)=0$,<sp/>when<sp/>$h(u)t^2<sp/>=<sp/>-1$,<sp/>or<sp/>when<sp/>$w(u<sp/>+<sp/>2v)<sp/>=<sp/>2X_0(u)$<sp/>while<sp/>also<sp/>either<sp/>$w<sp/>\neq<sp/>2Y_0(u)$<sp/>or<sp/>$h(u)=0$.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>a<sp/>version<sp/>of<sp/>$G_{c,u}(x)$<sp/>which<sp/>deals<sp/>with<sp/>all<sp/>these<sp/>cases:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$a=0$<sp/>and<sp/>$u=0$,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$a<sp/>\neq<sp/>0$<sp/>and<sp/>$X_0(u)=0$,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$c<sp/>\in<sp/>\\{0,<sp/>1,<sp/>4,<sp/>5\\}:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$g(u)<sp/>=<sp/>0$<sp/>or<sp/>$g(x)<sp/>=<sp/>0$,<sp/>return<sp/>$\bot$<sp/>(even<sp/>curves<sp/>only).</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$g(-u-x)$<sp/>is<sp/>square,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$s<sp/>=<sp/>-g(u)/(u^2<sp/>+<sp/>ux<sp/>+<sp/>x^2<sp/>+<sp/>a)$<sp/>(cannot<sp/>cause<sp/>division<sp/>by<sp/>zero).</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$v<sp/>=<sp/>x.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Otherwise,<sp/>when<sp/>$c<sp/>\in<sp/>\\{2,<sp/>3,<sp/>6,<sp/>7\\}:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$s<sp/>=<sp/>x-u.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$r<sp/>=<sp/>\sqrt{-s(4g(u)<sp/>+<sp/>sh(u))}$;<sp/>return<sp/>$\bot$<sp/>if<sp/>not<sp/>square.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{3,<sp/>7\\}$<sp/>and<sp/>$r=0$,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$s<sp/>=<sp/>0$,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$v<sp/>=<sp/>(r/s<sp/>-<sp/>u)/2.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$w<sp/>=<sp/>\sqrt{s}$;<sp/>return<sp/>$\bot$<sp/>if<sp/>not<sp/>square.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$a<sp/>\neq<sp/>0$<sp/>and<sp/>$w(u+2v)<sp/>=<sp/>2X_0(u)$<sp/>and<sp/>either<sp/>$w<sp/>\neq<sp/>2Y_0(u)$<sp/>or<sp/>$h(u)<sp/>=<sp/>0$,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Depending<sp/>on<sp/>$c:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{0,<sp/>2\\}$,<sp/>let<sp/>$t<sp/>=<sp/>P_u^{&apos;-1}(v,<sp/>w).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{1,<sp/>3\\}$,<sp/>let<sp/>$t<sp/>=<sp/>P_u^{&apos;-1}(-u-v,<sp/>w).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{4,<sp/>6\\}$,<sp/>let<sp/>$t<sp/>=<sp/>P_u^{&apos;-1}(v,<sp/>-w).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{5,<sp/>7\\}$,<sp/>let<sp/>$t<sp/>=<sp/>P_u^{&apos;-1}(-u-v,<sp/>-w).$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$a=0$<sp/>and<sp/>$t=0$,<sp/>return<sp/>$\bot$<sp/>(even<sp/>curves<sp/>only).</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$a<sp/>\neq<sp/>0$<sp/>and<sp/>$h(u)t^2<sp/>=<sp/>-1$,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Return<sp/>$t.$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Given<sp/>any<sp/>$u$,<sp/>using<sp/>this<sp/>algorithm<sp/>over<sp/>all<sp/>$x$<sp/>and<sp/>$c$<sp/>values,<sp/>every<sp/>$t$<sp/>value<sp/>will<sp/>be<sp/>reached<sp/>exactly<sp/>once,</highlight></codeline>
+<codeline><highlight class="normal">for<sp/>an<sp/>$x$<sp/>for<sp/>which<sp/>$F_u(t)<sp/>=<sp/>x$<sp/>holds,<sp/>except<sp/>for<sp/>these<sp/>cases<sp/>that<sp/>will<sp/>not<sp/>be<sp/>reached:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>All<sp/>cases<sp/>where<sp/>$P_u(t)$<sp/>is<sp/>not<sp/>defined:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>For<sp/>$a=0$<sp/>curves,<sp/>when<sp/>$u=0$,<sp/>$t=0$,<sp/>or<sp/>$g(u)<sp/>=<sp/>-t^2.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>For<sp/>$a<sp/>\neq<sp/>0$<sp/>curves,<sp/>when<sp/>$h(u)t^2<sp/>=<sp/>-1$,<sp/>$X_0(u)<sp/>=<sp/>0$,<sp/>or<sp/>$Y_0(u)<sp/>(1<sp/>-<sp/>h(u)<sp/>t^2)<sp/>=<sp/>2X_0(u)t.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>When<sp/>$g(u)=0$,<sp/>the<sp/>potentially<sp/>many<sp/>$t$<sp/>values<sp/>that<sp/>decode<sp/>to<sp/>an<sp/>$x$<sp/>satisfying<sp/>$g(x)=0$<sp/>using<sp/>the<sp/>$x_2$<sp/>formula.<sp/>These<sp/>were<sp/>excluded<sp/>by<sp/>the<sp/>$g(u)=0$<sp/>condition<sp/>in<sp/>the<sp/>$c<sp/>\in<sp/>\\{0,<sp/>1,<sp/>4,<sp/>5\\}$<sp/>branch.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">These<sp/>cases<sp/>form<sp/>a<sp/>negligible<sp/>subset<sp/>of<sp/>all<sp/>$(u,<sp/>t)$<sp/>for<sp/>cryptographically<sp/>sized<sp/>curves.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>3.5<sp/>Encoding<sp/>for<sp/>`secp256k1`</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Specialized<sp/>for<sp/>odd-ordered<sp/>$a=0$<sp/>curves:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>$G_{c,u}(x)$<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$u=0$,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$c<sp/>\in<sp/>\\{0,<sp/>1,<sp/>4,<sp/>5\\}:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$(-u-x)^3<sp/>+<sp/>b$<sp/>is<sp/>square,<sp/>return<sp/>$\bot$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$s<sp/>=<sp/>-(u^3<sp/>+<sp/>b)/(u^2<sp/>+<sp/>ux<sp/>+<sp/>x^2)$<sp/>(cannot<sp/>cause<sp/>division<sp/>by<sp/>0).</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$v<sp/>=<sp/>x.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Otherwise,<sp/>when<sp/>$c<sp/>\in<sp/>\\{2,<sp/>3,<sp/>6,<sp/>7\\}:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$s<sp/>=<sp/>x-u.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$r<sp/>=<sp/>\sqrt{-s(4(u^3<sp/>+<sp/>b)<sp/>+<sp/>3su^2)}$;<sp/>return<sp/>$\bot$<sp/>if<sp/>not<sp/>square.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{3,<sp/>7\\}$<sp/>and<sp/>$r=0$,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$s<sp/>=<sp/>0$,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$v<sp/>=<sp/>(r/s<sp/>-<sp/>u)/2.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$w<sp/>=<sp/>\sqrt{s}$;<sp/>return<sp/>$\bot$<sp/>if<sp/>not<sp/>square.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Depending<sp/>on<sp/>$c:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{0,<sp/>2\\}:$<sp/>return<sp/>$w(\frac{\sqrt{-3}-1}{2}u<sp/>-<sp/>v).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{1,<sp/>3\\}:$<sp/>return<sp/>$w(\frac{\sqrt{-3}+1}{2}u<sp/>+<sp/>v).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{4,<sp/>6\\}:$<sp/>return<sp/>$w(\frac{-\sqrt{-3}+1}{2}u<sp/>+<sp/>v).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{5,<sp/>7\\}:$<sp/>return<sp/>$w(\frac{-\sqrt{-3}-1}{2}u<sp/>-<sp/>v).$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>is<sp/>implemented<sp/>in<sp/>`secp256k1_ellswift_xswiftec_inv_var`.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">And<sp/>the<sp/>x-only<sp/>ElligatorSwift<sp/>encoding<sp/>algorithm<sp/>is<sp/>still:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>*ElligatorSwift(x)*<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Loop:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Pick<sp/>a<sp/>uniformly<sp/>random<sp/>field<sp/>element<sp/>$u.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Pick<sp/>a<sp/>uniformly<sp/>random<sp/>integer<sp/>$c$<sp/>in<sp/>$[0,8).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$t<sp/>=<sp/>G_{c,u}(x).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$t<sp/>\neq<sp/>\bot$,<sp/>return<sp/>$(u,<sp/>t)$;<sp/>restart<sp/>loop<sp/>otherwise.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Note<sp/>that<sp/>this<sp/>logic<sp/>does<sp/>not<sp/>take<sp/>the<sp/>remapped<sp/>$u=0$,<sp/>$t=0$,<sp/>and<sp/>$g(u)<sp/>=<sp/>-t^2$<sp/>cases<sp/>into<sp/>account;<sp/>it<sp/>just<sp/>avoids<sp/>them.</highlight></codeline>
+<codeline><highlight class="normal">While<sp/>it<sp/>is<sp/>not<sp/>impossible<sp/>to<sp/>make<sp/>the<sp/>encoder<sp/>target<sp/>them,<sp/>this<sp/>would<sp/>increase<sp/>the<sp/>maximum<sp/>number<sp/>of<sp/>$t$<sp/>values<sp/>for<sp/>a<sp/>given<sp/>$(u,<sp/>x)$</highlight></codeline>
+<codeline><highlight class="normal">combination<sp/>beyond<sp/>8,<sp/>and<sp/>thereby<sp/>slow<sp/>down<sp/>the<sp/>ElligatorSwift<sp/>loop<sp/>proportionally,<sp/>for<sp/>a<sp/>negligible<sp/>gain<sp/>in<sp/>uniformity.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>4.<sp/>Encoding<sp/>and<sp/>decoding<sp/>full<sp/>*(x,<sp/>y)*<sp/>coordinates</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">So<sp/>far<sp/>we<sp/>have<sp/>only<sp/>addressed<sp/>encoding<sp/>and<sp/>decoding<sp/>x-coordinates,<sp/>but<sp/>in<sp/>some<sp/>cases<sp/>an<sp/>encoding</highlight></codeline>
+<codeline><highlight class="normal">for<sp/>full<sp/>points<sp/>with<sp/>$(x,<sp/>y)$<sp/>coordinates<sp/>is<sp/>desirable.<sp/>It<sp/>is<sp/>possible<sp/>to<sp/>encode<sp/>this<sp/>information</highlight></codeline>
+<codeline><highlight class="normal">in<sp/>$t$<sp/>as<sp/>well.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Note<sp/>that<sp/>for<sp/>any<sp/>$(X,<sp/>Y)<sp/>\in<sp/>S_u$,<sp/>$(\pm<sp/>X,<sp/>\pm<sp/>Y)$<sp/>are<sp/>all<sp/>on<sp/>$S_u.$<sp/>Moreover,<sp/>all<sp/>of<sp/>these<sp/>are</highlight></codeline>
+<codeline><highlight class="normal">mapped<sp/>to<sp/>the<sp/>same<sp/>x-coordinate.<sp/>Negating<sp/>$X$<sp/>or<sp/>negating<sp/>$Y$<sp/>just<sp/>results<sp/>in<sp/>$x_1$<sp/>and<sp/>$x_2$</highlight></codeline>
+<codeline><highlight class="normal">being<sp/>swapped,<sp/>and<sp/>does<sp/>not<sp/>affect<sp/>$x_3.$<sp/>This<sp/>will<sp/>not<sp/>change<sp/>the<sp/>outcome<sp/>x-coordinate<sp/>as<sp/>the<sp/>order</highlight></codeline>
+<codeline><highlight class="normal">of<sp/>$x_1$<sp/>and<sp/>$x_2$<sp/>only<sp/>matters<sp/>if<sp/>both<sp/>were<sp/>to<sp/>be<sp/>valid,<sp/>and<sp/>in<sp/>that<sp/>case<sp/>$x_3$<sp/>would<sp/>be<sp/>used<sp/>instead.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Still,<sp/>these<sp/>four<sp/>$(X,<sp/>Y)$<sp/>combinations<sp/>all<sp/>correspond<sp/>to<sp/>distinct<sp/>$t$<sp/>values,<sp/>so<sp/>we<sp/>can<sp/>encode</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>sign<sp/>of<sp/>the<sp/>y-coordinate<sp/>in<sp/>the<sp/>sign<sp/>of<sp/>$X$<sp/>or<sp/>the<sp/>sign<sp/>of<sp/>$Y.$<sp/>They<sp/>correspond<sp/>to<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">four<sp/>distinct<sp/>$P_u^{&apos;-1}$<sp/>calls<sp/>in<sp/>the<sp/>definition<sp/>of<sp/>$G_{u,c}.$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Note**:<sp/>In<sp/>the<sp/>paper,<sp/>the<sp/>sign<sp/>of<sp/>the<sp/>y<sp/>coordinate<sp/>is<sp/>encoded<sp/>in<sp/>a<sp/>separately-coded<sp/>bit.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>encode<sp/>the<sp/>sign<sp/>of<sp/>$y$<sp/>in<sp/>the<sp/>sign<sp/>of<sp/>$Y:$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>*Decode(u,<sp/>t)*<sp/>for<sp/>full<sp/>$(x,<sp/>y)$<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$(X,<sp/>Y)<sp/>=<sp/>P_u(t).$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$x$<sp/>be<sp/>the<sp/>first<sp/>value<sp/>in<sp/>$(u<sp/>+<sp/>4Y^2,<sp/>\frac{-X}{2Y}<sp/>-<sp/>\frac{u}{2},<sp/>\frac{X}{2Y}<sp/>-<sp/>\frac{u}{2})$<sp/>for<sp/>which<sp/>$g(x)$<sp/>is<sp/>square.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$y<sp/>=<sp/>\sqrt{g(x)}.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$sign(y)<sp/>=<sp/>sign(Y)$,<sp/>return<sp/>$(x,<sp/>y)$;<sp/>otherwise<sp/>return<sp/>$(x,<sp/>-y).$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">And<sp/>encoding<sp/>would<sp/>be<sp/>done<sp/>using<sp/>a<sp/>$G_{c,u}(x,<sp/>y)$<sp/>function<sp/>defined<sp/>as:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>$G_{c,u}(x,<sp/>y)$<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>If<sp/>$c<sp/>\in<sp/>\\{0,<sp/>1\\}:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$g(u)<sp/>=<sp/>0$<sp/>or<sp/>$g(x)<sp/>=<sp/>0$,<sp/>return<sp/>$\bot$<sp/>(even<sp/>curves<sp/>only).</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$g(-u-x)$<sp/>is<sp/>square,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$s<sp/>=<sp/>-g(u)/(u^2<sp/>+<sp/>ux<sp/>+<sp/>x^2<sp/>+<sp/>a)$<sp/>(cannot<sp/>cause<sp/>division<sp/>by<sp/>zero).</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$v<sp/>=<sp/>x.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Otherwise,<sp/>when<sp/>$c<sp/>\in<sp/>\\{2,<sp/>3\\}:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$s<sp/>=<sp/>x-u.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$r<sp/>=<sp/>\sqrt{-s(4g(u)<sp/>+<sp/>sh(u))}$;<sp/>return<sp/>$\bot$<sp/>if<sp/>not<sp/>square.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>=<sp/>3$<sp/>and<sp/>$r<sp/>=<sp/>0$,<sp/>return<sp/>$\bot.$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Let<sp/>$v<sp/>=<sp/>(r/s<sp/>-<sp/>u)/2.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$w<sp/>=<sp/>\sqrt{s}$;<sp/>return<sp/>$\bot$<sp/>if<sp/>not<sp/>square.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$w&apos;<sp/>=<sp/>w$<sp/>if<sp/>$sign(w/2)<sp/>=<sp/>sign(y)$;<sp/>$-w$<sp/>otherwise.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Depending<sp/>on<sp/>$c:$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{0,<sp/>2\\}:$<sp/>return<sp/>$P_u^{&apos;-1}(v,<sp/>w&apos;).$</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>If<sp/>$c<sp/>\in<sp/>\\{1,<sp/>3\\}:$<sp/>return<sp/>$P_u^{&apos;-1}(-u-v,<sp/>w&apos;).$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Note<sp/>that<sp/>$c$<sp/>now<sp/>only<sp/>ranges<sp/>$[0,4)$,<sp/>as<sp/>the<sp/>sign<sp/>of<sp/>$w&apos;$<sp/>is<sp/>decided<sp/>based<sp/>on<sp/>that<sp/>of<sp/>$y$,<sp/>rather<sp/>than<sp/>on<sp/>$c.$</highlight></codeline>
+<codeline><highlight class="normal">This<sp/>change<sp/>makes<sp/>some<sp/>valid<sp/>encodings<sp/>unreachable:<sp/>when<sp/>$y<sp/>=<sp/>0$<sp/>and<sp/>$sign(Y)<sp/>\neq<sp/>sign(0)$.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">In<sp/>the<sp/>above<sp/>logic,<sp/>$sign$<sp/>can<sp/>be<sp/>implemented<sp/>in<sp/>several<sp/>ways,<sp/>such<sp/>as<sp/>parity<sp/>of<sp/>the<sp/>integer<sp/>representation</highlight></codeline>
+<codeline><highlight class="normal">of<sp/>the<sp/>input<sp/>field<sp/>element<sp/>(for<sp/>prime-sized<sp/>fields)<sp/>or<sp/>the<sp/>quadratic<sp/>residuosity<sp/>(for<sp/>fields<sp/>where</highlight></codeline>
+<codeline><highlight class="normal">$-1$<sp/>is<sp/>not<sp/>square).<sp/>The<sp/>choice<sp/>does<sp/>not<sp/>matter,<sp/>as<sp/>long<sp/>as<sp/>it<sp/>only<sp/>takes<sp/>on<sp/>two<sp/>possible<sp/>values,<sp/>and<sp/>for<sp/>$x<sp/>\neq<sp/>0$<sp/>it<sp/>holds<sp/>that<sp/>$sign(x)<sp/>\neq<sp/>sign(-x)$.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>4.1<sp/>Full<sp/>*(x,<sp/>y)*<sp/>coordinates<sp/>for<sp/>`secp256k1`</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">For<sp/>$a=0$<sp/>curves,<sp/>there<sp/>is<sp/>another<sp/>option.<sp/>Note<sp/>that<sp/>for<sp/>those,</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>$P_u(t)$<sp/>function<sp/>translates<sp/>negations<sp/>of<sp/>$t$<sp/>to<sp/>negations<sp/>of<sp/>(both)<sp/>$X$<sp/>and<sp/>$Y.$<sp/>Thus,<sp/>we<sp/>can<sp/>use<sp/>$sign(t)$<sp/>to</highlight></codeline>
+<codeline><highlight class="normal">encode<sp/>the<sp/>y-coordinate<sp/>directly.<sp/>Combined<sp/>with<sp/>the<sp/>earlier<sp/>remapping<sp/>to<sp/>guarantee<sp/>all<sp/>inputs<sp/>land<sp/>on<sp/>the<sp/>curve,<sp/>we<sp/>get</highlight></codeline>
+<codeline><highlight class="normal">as<sp/>decoder:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**Define**<sp/>*Decode(u,<sp/>t)*<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$u&apos;=u$<sp/>if<sp/>$u<sp/>\neq<sp/>0$;<sp/>$1$<sp/>otherwise.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$t&apos;=t$<sp/>if<sp/>$t<sp/>\neq<sp/>0$;<sp/>$1$<sp/>otherwise.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$t&apos;&apos;=t&apos;$<sp/>if<sp/>$u&apos;^3<sp/>+<sp/>b<sp/>+<sp/>t&apos;^2<sp/>\neq<sp/>0$;<sp/>$2t&apos;$<sp/>otherwise.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$X<sp/>=<sp/>\dfrac{u&apos;^3<sp/>+<sp/>b<sp/>-<sp/>t&apos;&apos;^2}{2t&apos;&apos;}.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$Y<sp/>=<sp/>\dfrac{X<sp/>+<sp/>t&apos;&apos;}{u&apos;\sqrt{-3}}.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$x$<sp/>be<sp/>the<sp/>first<sp/>element<sp/>of<sp/>$(u&apos;<sp/>+<sp/>4Y^2,<sp/>\frac{-X}{2Y}<sp/>-<sp/>\frac{u&apos;}{2},<sp/>\frac{X}{2Y}<sp/>-<sp/>\frac{u&apos;}{2})$<sp/>for<sp/>which<sp/>$g(x)$<sp/>is<sp/>square.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Let<sp/>$y<sp/>=<sp/>\sqrt{g(x)}.$</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Return<sp/>$(x,<sp/>y)$<sp/>if<sp/>$sign(y)<sp/>=<sp/>sign(t)$;<sp/>$(x,<sp/>-y)$<sp/>otherwise.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>is<sp/>implemented<sp/>in<sp/>`secp256k1_ellswift_swiftec_var`.<sp/>The<sp/>used<sp/>$sign(x)$<sp/>function<sp/>is<sp/>the<sp/>parity<sp/>of<sp/>$x$<sp/>when<sp/>represented<sp/>as<sp/>in<sp/>integer<sp/>in<sp/>$[0,q).$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>corresponding<sp/>encoder<sp/>would<sp/>invoke<sp/>the<sp/>x-only<sp/>one,<sp/>but<sp/>negating<sp/>the<sp/>output<sp/>$t$<sp/>if<sp/>$sign(t)<sp/>\neq<sp/>sign(y).$</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>is<sp/>implemented<sp/>in<sp/>`secp256k1_ellswift_elligatorswift_var`.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Note<sp/>that<sp/>this<sp/>is<sp/>only<sp/>intended<sp/>for<sp/>encoding<sp/>points<sp/>where<sp/>both<sp/>the<sp/>x-coordinate<sp/>and<sp/>y-coordinate<sp/>are<sp/>unpredictable.<sp/>When<sp/>encoding<sp/>x-only<sp/>points</highlight></codeline>
+<codeline><highlight class="normal">where<sp/>the<sp/>y-coordinate<sp/>is<sp/>implicitly<sp/>even<sp/>(or<sp/>implicitly<sp/>square,<sp/>or<sp/>implicitly<sp/>in<sp/>$[0,q/2]$),<sp/>the<sp/>encoder<sp/>in</highlight></codeline>
+<codeline><highlight class="normal">[Section<sp/>3.5](#35-encoding-for-secp256k1)<sp/>must<sp/>be<sp/>used,<sp/>or<sp/>a<sp/>bias<sp/>is<sp/>reintroduced<sp/>that<sp/>undoes<sp/>all<sp/>the<sp/>benefit<sp/>of<sp/>using<sp/>ElligatorSwift</highlight></codeline>
+<codeline><highlight class="normal">in<sp/>the<sp/>first<sp/>place.</highlight></codeline>
+    </programlisting>
+    <location file="src/secp256k1/doc/ellswift.md"/>
+  </compounddef>
+</doxygen>

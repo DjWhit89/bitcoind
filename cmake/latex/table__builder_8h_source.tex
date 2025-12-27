@@ -1,0 +1,99 @@
+\doxysection{table\+\_\+builder.\+h}
+\label{table__builder_8h_source}\index{src/leveldb/include/leveldb/table\_builder.h@{src/leveldb/include/leveldb/table\_builder.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ TableBuilder\ provides\ the\ interface\ used\ to\ build\ a\ Table}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//\ (an\ immutable\ and\ sorted\ map\ from\ keys\ to\ values).}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//}}
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ Multiple\ threads\ can\ invoke\ const\ methods\ on\ a\ TableBuilder\ without}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//\ external\ synchronization,\ but\ if\ any\ of\ the\ threads\ may\ call\ a}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//\ non-\/const\ method,\ all\ threads\ accessing\ the\ same\ TableBuilder\ must\ use}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//\ external\ synchronization.}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_TABLE\_BUILDER\_H\_}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_TABLE\_BUILDER\_H\_}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ "{}leveldb/options.h"{}}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ "{}leveldb/status.h"{}}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{class\ }BlockBuilder;}
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }BlockHandle;}
+\DoxyCodeLine{00026\ \textcolor{keyword}{class\ }WritableFile;}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ TableBuilder\ \{}
+\DoxyCodeLine{00029\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00030\ \ \ \textcolor{comment}{//\ Create\ a\ builder\ that\ will\ store\ the\ contents\ of\ the\ table\ it\ is}}
+\DoxyCodeLine{00031\ \ \ \textcolor{comment}{//\ building\ in\ *file.\ \ Does\ not\ close\ the\ file.\ \ It\ is\ up\ to\ the}}
+\DoxyCodeLine{00032\ \ \ \textcolor{comment}{//\ caller\ to\ close\ the\ file\ after\ calling\ Finish().}}
+\DoxyCodeLine{00033\ \ \ TableBuilder(\textcolor{keyword}{const}\ Options\&\ options,\ WritableFile*\ file);}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \ \ TableBuilder(\textcolor{keyword}{const}\ TableBuilder\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00036\ \ \ TableBuilder\&\ operator=(\textcolor{keyword}{const}\ TableBuilder\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \textcolor{comment}{//\ REQUIRES:\ Either\ Finish()\ or\ Abandon()\ has\ been\ called.}}
+\DoxyCodeLine{00039\ \ \ \string~TableBuilder();}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \textcolor{comment}{//\ Change\ the\ options\ used\ by\ this\ builder.\ \ Note:\ only\ some\ of\ the}}
+\DoxyCodeLine{00042\ \ \ \textcolor{comment}{//\ option\ fields\ can\ be\ changed\ after\ construction.\ \ If\ a\ field\ is}}
+\DoxyCodeLine{00043\ \ \ \textcolor{comment}{//\ not\ allowed\ to\ change\ dynamically\ and\ its\ value\ in\ the\ structure}}
+\DoxyCodeLine{00044\ \ \ \textcolor{comment}{//\ passed\ to\ the\ constructor\ is\ different\ from\ its\ value\ in\ the}}
+\DoxyCodeLine{00045\ \ \ \textcolor{comment}{//\ structure\ passed\ to\ this\ method,\ this\ method\ will\ return\ an\ error}}
+\DoxyCodeLine{00046\ \ \ \textcolor{comment}{//\ without\ changing\ any\ fields.}}
+\DoxyCodeLine{00047\ \ \ Status\ ChangeOptions(\textcolor{keyword}{const}\ Options\&\ options);}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \textcolor{comment}{//\ Add\ key,value\ to\ the\ table\ being\ constructed.}}
+\DoxyCodeLine{00050\ \ \ \textcolor{comment}{//\ REQUIRES:\ key\ is\ after\ any\ previously\ added\ key\ according\ to\ comparator.}}
+\DoxyCodeLine{00051\ \ \ \textcolor{comment}{//\ REQUIRES:\ Finish(),\ Abandon()\ have\ not\ been\ called}}
+\DoxyCodeLine{00052\ \ \ \textcolor{keywordtype}{void}\ Add(\textcolor{keyword}{const}\ Slice\&\ key,\ \textcolor{keyword}{const}\ Slice\&\ value);}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \textcolor{comment}{//\ Advanced\ operation:\ flush\ any\ buffered\ key/value\ pairs\ to\ file.}}
+\DoxyCodeLine{00055\ \ \ \textcolor{comment}{//\ Can\ be\ used\ to\ ensure\ that\ two\ adjacent\ entries\ never\ live\ in}}
+\DoxyCodeLine{00056\ \ \ \textcolor{comment}{//\ the\ same\ data\ block.\ \ Most\ clients\ should\ not\ need\ to\ use\ this\ method.}}
+\DoxyCodeLine{00057\ \ \ \textcolor{comment}{//\ REQUIRES:\ Finish(),\ Abandon()\ have\ not\ been\ called}}
+\DoxyCodeLine{00058\ \ \ \textcolor{keywordtype}{void}\ Flush();}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \textcolor{comment}{//\ Return\ non-\/ok\ iff\ some\ error\ has\ been\ detected.}}
+\DoxyCodeLine{00061\ \ \ Status\ status()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \textcolor{comment}{//\ Finish\ building\ the\ table.\ \ Stops\ using\ the\ file\ passed\ to\ the}}
+\DoxyCodeLine{00064\ \ \ \textcolor{comment}{//\ constructor\ after\ this\ function\ returns.}}
+\DoxyCodeLine{00065\ \ \ \textcolor{comment}{//\ REQUIRES:\ Finish(),\ Abandon()\ have\ not\ been\ called}}
+\DoxyCodeLine{00066\ \ \ Status\ Finish();}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \textcolor{comment}{//\ Indicate\ that\ the\ contents\ of\ this\ builder\ should\ be\ abandoned.\ \ Stops}}
+\DoxyCodeLine{00069\ \ \ \textcolor{comment}{//\ using\ the\ file\ passed\ to\ the\ constructor\ after\ this\ function\ returns.}}
+\DoxyCodeLine{00070\ \ \ \textcolor{comment}{//\ If\ the\ caller\ is\ not\ going\ to\ call\ Finish(),\ it\ must\ call\ Abandon()}}
+\DoxyCodeLine{00071\ \ \ \textcolor{comment}{//\ before\ destroying\ this\ builder.}}
+\DoxyCodeLine{00072\ \ \ \textcolor{comment}{//\ REQUIRES:\ Finish(),\ Abandon()\ have\ not\ been\ called}}
+\DoxyCodeLine{00073\ \ \ \textcolor{keywordtype}{void}\ Abandon();}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ \textcolor{comment}{//\ Number\ of\ calls\ to\ Add()\ so\ far.}}
+\DoxyCodeLine{00076\ \ \ uint64\_t\ NumEntries()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ \textcolor{comment}{//\ Size\ of\ the\ file\ generated\ so\ far.\ \ If\ invoked\ after\ a\ successful}}
+\DoxyCodeLine{00079\ \ \ \textcolor{comment}{//\ Finish()\ call,\ returns\ the\ size\ of\ the\ final\ generated\ file.}}
+\DoxyCodeLine{00080\ \ \ uint64\_t\ FileSize()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00083\ \ \ \textcolor{keywordtype}{bool}\ ok()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ status().ok();\ \}}
+\DoxyCodeLine{00084\ \ \ \textcolor{keywordtype}{void}\ WriteBlock(BlockBuilder*\ block,\ BlockHandle*\ handle);}
+\DoxyCodeLine{00085\ \ \ \textcolor{keywordtype}{void}\ WriteRawBlock(\textcolor{keyword}{const}\ Slice\&\ data,\ CompressionType,\ BlockHandle*\ handle);}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \ \ \textcolor{keyword}{struct\ }Rep;}
+\DoxyCodeLine{00088\ \ \ Rep*\ rep\_;}
+\DoxyCodeLine{00089\ \};}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00091\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_INCLUDE\_TABLE\_BUILDER\_H\_}}
+
+\end{DoxyCode}

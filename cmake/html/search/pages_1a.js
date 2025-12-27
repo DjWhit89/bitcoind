@@ -1,0 +1,26 @@
+var searchData=
+[
+  ['read_20performance_0',['Read performance',['../dir_0e00dcde13eab0935c0cec4b76eb97ee.html#autotoc_md80',1,'']]],
+  ['reads_20and_20writes_1',['Reads And Writes',['../md_src_2leveldb_2doc_2index.html#autotoc_md44',1,'']]],
+  ['reconciliation_2',['reconciliation',['../dir_70099abe5db258d8b2b1561b8813f7f0.html#autotoc_md88',1,'Minisketch: a library for [BCH](&lt;a href=&quot;https://en.wikipedia.org/wiki/BCH_code&quot;&gt;https://en.wikipedia.org/wiki/BCH_code&lt;/a&gt;)-based set reconciliation'],['../dir_70099abe5db258d8b2b1561b8813f7f0.html#autotoc_md89',1,'Sketches for set reconciliation']]],
+  ['recordio_20format_3a_3',['recordio format:',['../md_src_2leveldb_2doc_2log__format.html#autotoc_md65',1,'Some benefits over the recordio format:'],['../md_src_2leveldb_2doc_2log__format.html#autotoc_md66',1,'Some downsides compared to recordio format:']]],
+  ['recovery_4',['Recovery',['../md_src_2leveldb_2doc_2impl.html#autotoc_md39',1,'']]],
+  ['reference_5',['CI quick-reference',['../dir_b913f3b33dce7997602be4df0072012c.html#autotoc_md13',1,'']]],
+  ['references_6',['References',['../md_src_2minisketch_2doc_2protocoltips.html#autotoc_md87',1,'References'],['../dir_70099abe5db258d8b2b1561b8813f7f0.html#autotoc_md99',1,'References']]],
+  ['regular_20release_7',['Regular release',['../md_src_2secp256k1_2doc_2release-process.html#autotoc_md200',1,'']]],
+  ['release_8',['release',['../md_src_2secp256k1_2doc_2release-process.html#autotoc_md201',1,'Maintenance release'],['../md_src_2secp256k1_2doc_2release-process.html#autotoc_md200',1,'Regular release']]],
+  ['release_20process_9',['Release process',['../md_src_2secp256k1_2doc_2release-process.html',1,'']]],
+  ['remarks_10',['Remarks',['../remarks.html',1,'']]],
+  ['removed_11',['Removed',['../md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g.html#autotoc_md125',1,'Removed'],['../md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g.html#autotoc_md130',1,'Removed'],['../md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g.html#autotoc_md163',1,'Removed']]],
+  ['reporting_20a_20vulnerability_12',['Reporting a Vulnerability',['../md_src_2secp256k1_2_s_e_c_u_r_i_t_y.html#autotoc_md223',1,'']]],
+  ['reporting_20a_20vulnerability_13',['Reporting a vulnerability',['../dir_44f34d1e62fda08bdb4ca69ab2d205ae.html#autotoc_md220',1,'']]],
+  ['repository_20contents_14',['Repository contents',['../dir_0e00dcde13eab0935c0cec4b76eb97ee.html#autotoc_md81',1,'']]],
+  ['request_15',['Submitting a Pull Request',['../dir_0e00dcde13eab0935c0cec4b76eb97ee.html#autotoc_md76',1,'']]],
+  ['res_16',['res/',['../dir_f0c29a9f5764d78706f34c972e8114d8.html#autotoc_md105',1,'']]],
+  ['review_17',['Review',['../dir_f532fdc9797294eab88d38127608a4a0.html#autotoc_md11',1,'']]],
+  ['review_18',['Contributor workflow &amp;amp; peer review',['../md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g.html#autotoc_md175',1,'']]],
+  ['reviews_19',['Code reviews',['../md_src_2crc32c_2_c_o_n_t_r_i_b_u_t_i_n_g.html#autotoc_md2',1,'']]],
+  ['run_20',['Compile and run',['../dir_f0c29a9f5764d78706f34c972e8114d8.html#autotoc_md101',1,'']]],
+  ['running_20individual_20tests_21',['Running individual tests',['../dir_120ed4da3e3217b1e7fc0b4f48568e79.html#autotoc_md227',1,'']]],
+  ['running_20unit_20tests_22',['Compiling/running unit tests',['../dir_120ed4da3e3217b1e7fc0b4f48568e79.html#autotoc_md226',1,'']]]
+];

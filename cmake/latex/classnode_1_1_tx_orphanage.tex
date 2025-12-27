@@ -1,0 +1,373 @@
+\doxysection{Tx\+Orphanage Class Reference}
+\label{classnode_1_1_tx_orphanage}\index{TxOrphanage@{TxOrphanage}}
+
+
+{\ttfamily \#include $<$txorphanage.\+h$>$}
+
+Inheritance diagram for Tx\+Orphanage\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classnode_1_1_tx_orphanage}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+struct \textbf{ Orphan\+Info}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+using \textbf{ Usage} = int64\+\_\+t
+\item 
+using \textbf{ Count} = unsigned int
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual \textbf{ $\sim$\+Tx\+Orphanage} ()=default
+\item 
+virtual bool \textbf{ Add\+Tx} (const \textbf{ CTransaction\+Ref} \&tx, \textbf{ Node\+Id} peer)=0
+\item 
+virtual bool \textbf{ Add\+Announcer} (const \textbf{ Wtxid} \&wtxid, \textbf{ Node\+Id} peer)=0
+\item 
+virtual \textbf{ CTransaction\+Ref} \textbf{ Get\+Tx} (const \textbf{ Wtxid} \&wtxid) const =0
+\item 
+virtual bool \textbf{ Have\+Tx} (const \textbf{ Wtxid} \&wtxid) const =0
+\item 
+virtual bool \textbf{ Have\+Tx\+From\+Peer} (const \textbf{ Wtxid} \&wtxid, \textbf{ Node\+Id} peer) const =0
+\item 
+virtual \textbf{ CTransaction\+Ref} \textbf{ Get\+Tx\+To\+Reconsider} (\textbf{ Node\+Id} peer)=0
+\item 
+virtual bool \textbf{ Erase\+Tx} (const \textbf{ Wtxid} \&wtxid)=0
+\item 
+virtual void \textbf{ Erase\+For\+Peer} (\textbf{ Node\+Id} peer)=0
+\item 
+virtual void \textbf{ Erase\+For\+Block} (const \textbf{ CBlock} \&block)=0
+\item 
+virtual std\+::vector$<$ std\+::pair$<$ \textbf{ Wtxid}, \textbf{ Node\+Id} $>$ $>$ \textbf{ Add\+Children\+To\+Work\+Set} (const \textbf{ CTransaction} \&tx, \textbf{ Fast\+Random\+Context} \&rng)=0
+\item 
+virtual bool \textbf{ Have\+Tx\+To\+Reconsider} (\textbf{ Node\+Id} peer)=0
+\item 
+virtual std\+::vector$<$ \textbf{ CTransaction\+Ref} $>$ \textbf{ Get\+Children\+From\+Same\+Peer} (const \textbf{ CTransaction\+Ref} \&parent, \textbf{ Node\+Id} nodeid) const =0
+\item 
+virtual std\+::vector$<$ \textbf{ Orphan\+Info} $>$ \textbf{ Get\+Orphan\+Transactions} () const =0
+\item 
+virtual \textbf{ Usage} \textbf{ Total\+Orphan\+Usage} () const =0
+\item 
+virtual \textbf{ Usage} \textbf{ Usage\+By\+Peer} (\textbf{ Node\+Id} peer) const =0
+\item 
+virtual void \textbf{ Sanity\+Check} () const =0
+\item 
+virtual \textbf{ Count} \textbf{ Count\+Announcements} () const =0
+\item 
+virtual \textbf{ Count} \textbf{ Count\+Unique\+Orphans} () const =0
+\item 
+virtual \textbf{ Count} \textbf{ Announcements\+From\+Peer} (\textbf{ Node\+Id} peer) const =0
+\item 
+virtual \textbf{ Count} \textbf{ Latency\+Score\+From\+Peer} (\textbf{ Node\+Id} peer) const =0
+\item 
+virtual \textbf{ Count} \textbf{ Max\+Global\+Latency\+Score} () const =0
+\item 
+virtual \textbf{ Count} \textbf{ Total\+Latency\+Score} () const =0
+\item 
+virtual \textbf{ Usage} \textbf{ Reserved\+Peer\+Usage} () const =0
+\item 
+virtual \textbf{ Count} \textbf{ Max\+Peer\+Latency\+Score} () const =0
+\item 
+virtual \textbf{ Usage} \textbf{ Max\+Global\+Usage} () const =0
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+A class to track orphan transactions (failed on TX\+\_\+\+MISSING\+\_\+\+INPUTS) Since we cannot distinguish orphans from bad transactions with non-\/existent inputs, we heavily limit the amount of announcements (unique (\doxyref{Node\+Id}{p.}{net_8h_aa637b11e18b77724b35db2229cd12788}, wtxid) pairs), the number of inputs, and size of the orphans stored (both individual and summed). We also try to prevent adversaries from churning this data structure\+: once global limits are reached, we continuously evict the oldest announcement (sorting non-\/reconsiderable orphans before reconsiderable ones) from the most resource-\/intensive peer until we are back within limits.
+\begin{DoxyItemize}
+\item Peers can exceed their individual limits (e.\+g. because they are very useful transaction relay peers) as long as the global limits are not exceeded.
+\item As long as the orphan has 1 announcer, it remains in the orphanage.
+\item No peer can trigger the eviction of another peer\textquotesingle{}s orphans.
+\item Peers\textquotesingle{} orphans are effectively protected from eviction as long as they don\textquotesingle{}t exceed their limits. Not thread-\/safe. Requires external synchronization. 
+\end{DoxyItemize}
+
+\label{doc-typedef-members}
+\doxysubsection{Member Typedef Documentation}
+\index{TxOrphanage@{TxOrphanage}!Count@{Count}}
+\index{Count@{Count}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{Count}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_ae64c746440a24b397929dabe92a05f2a} 
+using \textbf{ Count} = unsigned int}
+
+\index{TxOrphanage@{TxOrphanage}!Usage@{Usage}}
+\index{Usage@{Usage}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{Usage}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a9ecb794ec69428768c604c35c07d363c} 
+using \textbf{ Usage} = int64\+\_\+t}
+
+
+
+\label{doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{TxOrphanage@{TxOrphanage}!````~TxOrphanage@{$\sim$TxOrphanage}}
+\index{````~TxOrphanage@{$\sim$TxOrphanage}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{$\sim$TxOrphanage()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a99fde298ba8065eae1392128a966cf20} 
+virtual $\sim$\textbf{ Tx\+Orphanage} (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [virtual]}, {\ttfamily [default]}}
+
+
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{TxOrphanage@{TxOrphanage}!AddAnnouncer@{AddAnnouncer}}
+\index{AddAnnouncer@{AddAnnouncer}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{AddAnnouncer()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_ae3eac48ab71e7cefb180d768f7bb5cc1} 
+virtual bool Add\+Announcer (\begin{DoxyParamCaption}\item[{const \textbf{ Wtxid} \&}]{wtxid}{, }\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Add an additional announcer to an orphan if it exists. Otherwise, do nothing. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_ab3a6d2ce43a18dc83f7c5fc70008751f}.
+
+\index{TxOrphanage@{TxOrphanage}!AddChildrenToWorkSet@{AddChildrenToWorkSet}}
+\index{AddChildrenToWorkSet@{AddChildrenToWorkSet}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{AddChildrenToWorkSet()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a76f9c7940a33f29181b8df2ed682a68f} 
+virtual std\+::vector$<$ std\+::pair$<$ \textbf{ Wtxid}, \textbf{ Node\+Id} $>$ $>$ Add\+Children\+To\+Work\+Set (\begin{DoxyParamCaption}\item[{const \textbf{ CTransaction} \&}]{tx}{, }\item[{\textbf{ Fast\+Random\+Context} \&}]{rng}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Add any orphans that list a particular tx as a parent into the from peer\textquotesingle{}s work set 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_ac7035b4774c2522ffbb2647e678b56f5}.
+
+\index{TxOrphanage@{TxOrphanage}!AddTx@{AddTx}}
+\index{AddTx@{AddTx}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{AddTx()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_aa531657413f08782ad44b53a78e3c8da} 
+virtual bool Add\+Tx (\begin{DoxyParamCaption}\item[{const \textbf{ CTransaction\+Ref} \&}]{tx}{, }\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Add a new orphan transaction 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a6311d1194e412f0b309230a3114861d2}.
+
+\index{TxOrphanage@{TxOrphanage}!AnnouncementsFromPeer@{AnnouncementsFromPeer}}
+\index{AnnouncementsFromPeer@{AnnouncementsFromPeer}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{AnnouncementsFromPeer()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a6f996bbda476e87e49520c74353e7406} 
+virtual \textbf{ Count} Announcements\+From\+Peer (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Number of orphans stored from this peer. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a5b13c903511e599de8d79521a1d53924}.
+
+\index{TxOrphanage@{TxOrphanage}!CountAnnouncements@{CountAnnouncements}}
+\index{CountAnnouncements@{CountAnnouncements}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{CountAnnouncements()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_ac53a36cf19fc6acc0b73fc976cb3e218} 
+virtual \textbf{ Count} Count\+Announcements (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Number of announcements, i.\+e. total size of m\+\_\+orphans. Ones for the same wtxid are not de-\/duplicated. Not the same as \doxyref{Total\+Latency\+Score()}{p.}{classnode_1_1_tx_orphanage_a8a5bf58a85a372e75424bce8b15ecf6b}. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a6a70a93655917625994eac1ced83dea6}.
+
+\index{TxOrphanage@{TxOrphanage}!CountUniqueOrphans@{CountUniqueOrphans}}
+\index{CountUniqueOrphans@{CountUniqueOrphans}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{CountUniqueOrphans()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a75c5c956dccb034646e2829beec1659f} 
+virtual \textbf{ Count} Count\+Unique\+Orphans (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Number of unique orphans (by wtxid). 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a5b7e314fd88b3c5e9c0275b17595fa25}.
+
+\index{TxOrphanage@{TxOrphanage}!EraseForBlock@{EraseForBlock}}
+\index{EraseForBlock@{EraseForBlock}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{EraseForBlock()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_abad7ee1d0e86f38cd0073ee488ba9683} 
+virtual void Erase\+For\+Block (\begin{DoxyParamCaption}\item[{const \textbf{ CBlock} \&}]{block}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Erase all orphans included in or invalidated by a new block 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_aba844ec93c8720893170ef3841c31993}.
+
+\index{TxOrphanage@{TxOrphanage}!EraseForPeer@{EraseForPeer}}
+\index{EraseForPeer@{EraseForPeer}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{EraseForPeer()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_ab26a7d7efe1a139251bd61cb15a83844} 
+virtual void Erase\+For\+Peer (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Maybe erase all orphans announced by a peer (eg, after that peer disconnects). If an orphan has been announced by another peer, don\textquotesingle{}t erase, just remove this peer from the list of announcers. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a63c9f300a9a83739990adeaea107ed53}.
+
+\index{TxOrphanage@{TxOrphanage}!EraseTx@{EraseTx}}
+\index{EraseTx@{EraseTx}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{EraseTx()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a9a5587e663e5254ceff00d332d09762e} 
+virtual bool Erase\+Tx (\begin{DoxyParamCaption}\item[{const \textbf{ Wtxid} \&}]{wtxid}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Erase an orphan by wtxid, including all announcements if there are multiple. Returns true if an orphan was erased, false if no tx with this wtxid exists. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_ad77fb6e86f3273e6a043e1234a44edf7}.
+
+\index{TxOrphanage@{TxOrphanage}!GetChildrenFromSamePeer@{GetChildrenFromSamePeer}}
+\index{GetChildrenFromSamePeer@{GetChildrenFromSamePeer}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{GetChildrenFromSamePeer()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a996808ef7fe314f06050e1830dfb91a8} 
+virtual std\+::vector$<$ \textbf{ CTransaction\+Ref} $>$ Get\+Children\+From\+Same\+Peer (\begin{DoxyParamCaption}\item[{const \textbf{ CTransaction\+Ref} \&}]{parent}{, }\item[{\textbf{ Node\+Id}}]{nodeid}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Get all children that spend from this tx and were received from nodeid. Sorted reconsiderable before non-\/reconsiderable, then from most recent to least recent. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a9a3e662b5788d500ee081c1e31ea225a}.
+
+\index{TxOrphanage@{TxOrphanage}!GetOrphanTransactions@{GetOrphanTransactions}}
+\index{GetOrphanTransactions@{GetOrphanTransactions}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{GetOrphanTransactions()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_af76a7ae7bb57b16ce8866fb918563fcc} 
+virtual std\+::vector$<$ \textbf{ Orphan\+Info} $>$ Get\+Orphan\+Transactions (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Get all orphan transactions 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a4c1120cab86aec07749a1688768c0913}.
+
+\index{TxOrphanage@{TxOrphanage}!GetTx@{GetTx}}
+\index{GetTx@{GetTx}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{GetTx()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_af83b81a4f5c6eaccc68d75d81ed40e23} 
+virtual \textbf{ CTransaction\+Ref} Get\+Tx (\begin{DoxyParamCaption}\item[{const \textbf{ Wtxid} \&}]{wtxid}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Get a transaction by its witness txid 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_ab9b403f36450a721644e04345a2f51e5}.
+
+\index{TxOrphanage@{TxOrphanage}!GetTxToReconsider@{GetTxToReconsider}}
+\index{GetTxToReconsider@{GetTxToReconsider}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{GetTxToReconsider()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a165764ad1929c61b28ea4912700332d7} 
+virtual \textbf{ CTransaction\+Ref} Get\+Tx\+To\+Reconsider (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Extract a transaction from a peer\textquotesingle{}s work set, and flip it back to non-\/reconsiderable. Returns nullptr if there are no transactions to work on. Otherwise returns the transaction reference, and removes it from the work set. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_acf3de1e0a8dfebdaa3daf409b140a35e}.
+
+\index{TxOrphanage@{TxOrphanage}!HaveTx@{HaveTx}}
+\index{HaveTx@{HaveTx}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{HaveTx()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a4516ed2d83873aa37d9b55a51d13f4eb} 
+virtual bool Have\+Tx (\begin{DoxyParamCaption}\item[{const \textbf{ Wtxid} \&}]{wtxid}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Check if we already have an orphan transaction (by wtxid only) 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a4f45559a614ff40b1d31b6b86d85abfb}.
+
+\index{TxOrphanage@{TxOrphanage}!HaveTxFromPeer@{HaveTxFromPeer}}
+\index{HaveTxFromPeer@{HaveTxFromPeer}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{HaveTxFromPeer()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_af6c15a01e9ebce4318f7b146a2814953} 
+virtual bool Have\+Tx\+From\+Peer (\begin{DoxyParamCaption}\item[{const \textbf{ Wtxid} \&}]{wtxid}{, }\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Check if a \{tx, peer\} exists in the orphanage. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a112727cb216a48442a91ce9128e8fcc3}.
+
+\index{TxOrphanage@{TxOrphanage}!HaveTxToReconsider@{HaveTxToReconsider}}
+\index{HaveTxToReconsider@{HaveTxToReconsider}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{HaveTxToReconsider()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a2f7c4f3514fdecd6bb089d2d2f69fc41} 
+virtual bool Have\+Tx\+To\+Reconsider (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Does this peer have any work to do? 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_ae2e9ddbc5f40025f7674e4ae7e7741f4}.
+
+\index{TxOrphanage@{TxOrphanage}!LatencyScoreFromPeer@{LatencyScoreFromPeer}}
+\index{LatencyScoreFromPeer@{LatencyScoreFromPeer}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{LatencyScoreFromPeer()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_aff2ad97a2e114b87c24284f1f2ef8f90} 
+virtual \textbf{ Count} Latency\+Score\+From\+Peer (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Latency score of transactions announced by this peer. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a2c2d4675760152df769173a4ecf90408}.
+
+\index{TxOrphanage@{TxOrphanage}!MaxGlobalLatencyScore@{MaxGlobalLatencyScore}}
+\index{MaxGlobalLatencyScore@{MaxGlobalLatencyScore}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{MaxGlobalLatencyScore()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_ada1ad3e5b3ebc38a71edd1febb2e9e04} 
+virtual \textbf{ Count} Max\+Global\+Latency\+Score (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Get the maximum global latency score allowed 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a503cd86bd86ad37812d0fec65e283e58}.
+
+\index{TxOrphanage@{TxOrphanage}!MaxGlobalUsage@{MaxGlobalUsage}}
+\index{MaxGlobalUsage@{MaxGlobalUsage}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{MaxGlobalUsage()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_ae600e63b5d0f9356d11ecfc5132663db} 
+virtual \textbf{ Usage} Max\+Global\+Usage (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Get the maximum global usage allowed 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a21b70c9610e62a78775200bcdaf13896}.
+
+\index{TxOrphanage@{TxOrphanage}!MaxPeerLatencyScore@{MaxPeerLatencyScore}}
+\index{MaxPeerLatencyScore@{MaxPeerLatencyScore}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{MaxPeerLatencyScore()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_ab9190a80136a26be949e6ae168966bcf} 
+virtual \textbf{ Count} Max\+Peer\+Latency\+Score (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Get the maximum latency score allowed per peer 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_ac5414c7e5fb36ac91ffae05d7b028014}.
+
+\index{TxOrphanage@{TxOrphanage}!ReservedPeerUsage@{ReservedPeerUsage}}
+\index{ReservedPeerUsage@{ReservedPeerUsage}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{ReservedPeerUsage()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a8b268d8ad483f3bda376d81ab09f12a3} 
+virtual \textbf{ Usage} Reserved\+Peer\+Usage (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Get the reserved usage per peer 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a58091790f282f4764cd64eb3c5a3f390}.
+
+\index{TxOrphanage@{TxOrphanage}!SanityCheck@{SanityCheck}}
+\index{SanityCheck@{SanityCheck}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{SanityCheck()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a1578c00743d364ac7613ec06533c3abe} 
+virtual void Sanity\+Check (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Check consistency between Peer\+Orphan\+Info and m\+\_\+orphans. Recalculate counters and ensure they match what is cached. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a7cfa79e5dde0137b76d1741b2f2e01b3}.
+
+\index{TxOrphanage@{TxOrphanage}!TotalLatencyScore@{TotalLatencyScore}}
+\index{TotalLatencyScore@{TotalLatencyScore}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{TotalLatencyScore()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a8a5bf58a85a372e75424bce8b15ecf6b} 
+virtual \textbf{ Count} Total\+Latency\+Score (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Get the total latency score of all orphans 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a8be44c83a1c8b0773976d1f8fadf80e9}.
+
+\index{TxOrphanage@{TxOrphanage}!TotalOrphanUsage@{TotalOrphanUsage}}
+\index{TotalOrphanUsage@{TotalOrphanUsage}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{TotalOrphanUsage()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a8edacb81bb219e9c6dd9777481ca96f4} 
+virtual \textbf{ Usage} Total\+Orphan\+Usage (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Get the total usage (weight) of all orphans. If an orphan has multiple announcers, its usage is only counted once within this total. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a56e11520626b622d295b572d8006cc3c}.
+
+\index{TxOrphanage@{TxOrphanage}!UsageByPeer@{UsageByPeer}}
+\index{UsageByPeer@{UsageByPeer}!TxOrphanage@{TxOrphanage}}
+\doxysubsubsection{UsageByPeer()}
+{\footnotesize\ttfamily \label{classnode_1_1_tx_orphanage_a3fe86e221ae868af1263201a324b5cf1} 
+virtual \textbf{ Usage} Usage\+By\+Peer (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Total usage (weight) of orphans for which this peer is an announcer. If an orphan has multiple announcers, its weight will be accounted for in each Peer\+Orphan\+Info, so the total of all peers\textquotesingle{} \doxyref{Usage\+By\+Peer()}{p.}{classnode_1_1_tx_orphanage_a3fe86e221ae868af1263201a324b5cf1} may be larger than \doxyref{Total\+Orphan\+Usage()}{p.}{classnode_1_1_tx_orphanage_a8edacb81bb219e9c6dd9777481ca96f4}. Similarly, \doxyref{Usage\+By\+Peer()}{p.}{classnode_1_1_tx_orphanage_a3fe86e221ae868af1263201a324b5cf1} may be far higher than \doxyref{Reserved\+Peer\+Usage()}{p.}{classnode_1_1_tx_orphanage_a8b268d8ad483f3bda376d81ab09f12a3}, particularly if many peers have provided the same orphans. 
+
+Implemented in \textbf{ Tx\+Orphanage\+Impl} \doxyref{}{p.}{classnode_1_1_tx_orphanage_impl_a69f99d5762c844c699211e5553b7b14d}.
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/node/\textbf{ txorphanage.\+h}\end{DoxyCompactItemize}

@@ -1,0 +1,261 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="minisketch_2_r_e_a_d_m_e_8md" kind="file" language="Markdown">
+    <compoundname>README.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">#<sp/>Minisketch:<sp/>a<sp/>library<sp/>for<sp/>[BCH](https://en.wikipedia.org/wiki/BCH_code)-based<sp/>set<sp/>reconciliation</highlight></codeline>
+<codeline><highlight class="normal">&lt;img<sp/>align=&quot;right&quot;<sp/>src=&quot;doc/minisketch-vs.png&quot;<sp/>/&gt;</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">`libminisketch`<sp/>is<sp/>an<sp/>optimized<sp/>standalone<sp/>MIT-licensed<sp/>library<sp/>with<sp/>C<sp/>API<sp/>for<sp/>constructing<sp/>and<sp/>decoding<sp/>*set<sp/>sketches*,<sp/>which<sp/>can<sp/>be<sp/>used<sp/>for<sp/>compact<sp/>set<sp/>reconciliation<sp/>and<sp/>other<sp/>applications.</highlight></codeline>
+<codeline><highlight class="normal">It<sp/>is<sp/>an<sp/>implementation<sp/>of<sp/>the<sp/>PinSketch&lt;sup&gt;[[1]](#myfootnote1)&lt;/sup&gt;<sp/>algorithm.<sp/>An<sp/>explanation<sp/>of<sp/>the<sp/>algorithm<sp/>can<sp/>be<sp/>found<sp/>[here](doc/math.md).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Sketches<sp/>for<sp/>set<sp/>reconciliation</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Sketches,<sp/>as<sp/>produced<sp/>by<sp/>this<sp/>library,<sp/>can<sp/>be<sp/>seen<sp/>as<sp/>&quot;set<sp/>checksums&quot;<sp/>with<sp/>two<sp/>peculiar<sp/>properties:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Sketches<sp/>have<sp/>a<sp/>predetermined<sp/>capacity,<sp/>and<sp/>when<sp/>the<sp/>number<sp/>of<sp/>elements<sp/>in<sp/>the<sp/>set<sp/>is<sp/>not<sp/>higher<sp/>than<sp/>the<sp/>capacity,<sp/>`libminisketch`<sp/>will<sp/>always<sp/>recover<sp/>the<sp/>entire<sp/>set<sp/>from<sp/>the<sp/>sketch.<sp/>A<sp/>sketch<sp/>of<sp/>*b*-bit<sp/>elements<sp/>with<sp/>capacity<sp/>*c*<sp/>can<sp/>be<sp/>stored<sp/>in<sp/>*bc*<sp/>bits.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>The<sp/>sketches<sp/>of<sp/>two<sp/>sets<sp/>can<sp/>be<sp/>combined<sp/>by<sp/>adding<sp/>them<sp/>(XOR)<sp/>to<sp/>obtain<sp/>a<sp/>sketch<sp/>of<sp/>the<sp/>[symmetric<sp/>difference](https://en.wikipedia.org/wiki/Symmetric_difference)<sp/>between<sp/>the<sp/>two<sp/>sets<sp/>(*i.e.*,<sp/>all<sp/>elements<sp/>that<sp/>occur<sp/>in<sp/>one<sp/>but<sp/>not<sp/>both<sp/>input<sp/>sets).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>makes<sp/>them<sp/>appropriate<sp/>for<sp/>a<sp/>very<sp/>bandwidth-efficient<sp/>set<sp/>reconciliation<sp/>protocol.<sp/>If<sp/>Alice<sp/>and<sp/>Bob<sp/>each<sp/>have<sp/>a<sp/>set<sp/>of<sp/>elements,<sp/>and<sp/>they<sp/>suspect<sp/>that<sp/>the<sp/>sets<sp/>largely<sp/>but<sp/>not<sp/>entirely<sp/>overlap,</highlight></codeline>
+<codeline><highlight class="normal">they<sp/>can<sp/>use<sp/>the<sp/>following<sp/>protocol<sp/>to<sp/>let<sp/>both<sp/>parties<sp/>learn<sp/>all<sp/>the<sp/>elements:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Alice<sp/>and<sp/>Bob<sp/>both<sp/>compute<sp/>a<sp/>sketch<sp/>of<sp/>their<sp/>set<sp/>elements.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Alice<sp/>sends<sp/>her<sp/>sketch<sp/>to<sp/>Bob.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Bob<sp/>combines<sp/>the<sp/>two<sp/>sketches,<sp/>and<sp/>obtains<sp/>a<sp/>sketch<sp/>of<sp/>the<sp/>symmetric<sp/>difference.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Bob<sp/>tries<sp/>to<sp/>recover<sp/>the<sp/>elements<sp/>from<sp/>the<sp/>difference<sp/>sketch.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Bob<sp/>sends<sp/>every<sp/>element<sp/>in<sp/>the<sp/>difference<sp/>that<sp/>he<sp/>has<sp/>to<sp/>Alice.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>will<sp/>always<sp/>succeed<sp/>when<sp/>the<sp/>size<sp/>of<sp/>the<sp/>difference<sp/>(elements<sp/>that<sp/>Alice<sp/>has<sp/>but<sp/>Bob<sp/>doesn&apos;t<sp/>plus<sp/>elements<sp/>that<sp/>Bob<sp/>has<sp/>but<sp/>Alice<sp/>doesn&apos;t)<sp/>does<sp/>not<sp/>exceed<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">capacity<sp/>of<sp/>the<sp/>sketch<sp/>that<sp/>Alice<sp/>sent.<sp/>The<sp/>interesting<sp/>part<sp/>is<sp/>that<sp/>this<sp/>works<sp/>regardless<sp/>of<sp/>the<sp/>actual<sp/>set<sp/>sizes—only<sp/>the<sp/>difference<sp/>matters.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">If<sp/>the<sp/>elements<sp/>are<sp/>large,<sp/>it<sp/>may<sp/>be<sp/>preferable<sp/>to<sp/>compute<sp/>the<sp/>sketches<sp/>over<sp/>*hashes*<sp/>of<sp/>the<sp/>set<sp/>elements.<sp/>In<sp/>that<sp/>case<sp/>an<sp/>additional<sp/>step<sp/>is<sp/>added<sp/>to<sp/>the<sp/>protocol,<sp/>where<sp/>Bob<sp/>also<sp/>sends<sp/>the<sp/>hash</highlight></codeline>
+<codeline><highlight class="normal">of<sp/>every<sp/>element<sp/>he<sp/>does<sp/>not<sp/>have<sp/>to<sp/>Alice,<sp/>who<sp/>responds<sp/>with<sp/>the<sp/>requested<sp/>elements.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>doc/<sp/>directory<sp/>has<sp/>additional<sp/>[tips<sp/>for<sp/>designing<sp/>reconciliation<sp/>protocols<sp/>using<sp/>libminisketch](doc/protocoltips.md).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Evaluation</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">&lt;img<sp/>src=&quot;doc/plot_capacity.png&quot;<sp/>width=&quot;432&quot;<sp/>height=&quot;324&quot;<sp/>/&gt;<sp/>&lt;img<sp/>src=&quot;doc/plot_diff.png&quot;<sp/>width=&quot;432&quot;<sp/>height=&quot;324&quot;<sp/>/&gt;</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">&lt;img<sp/>src=&quot;doc/plot_size.png&quot;<sp/>width=&quot;432&quot;<sp/>height=&quot;324&quot;<sp/>/&gt;<sp/>&lt;img<sp/>src=&quot;doc/plot_bits.png&quot;<sp/>width=&quot;432&quot;<sp/>height=&quot;324&quot;<sp/>/&gt;</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**The<sp/>first<sp/>graph**<sp/>above<sp/>shows<sp/>a<sp/>benchmark<sp/>of<sp/>`libminisketch`<sp/>against<sp/>three<sp/>other<sp/>set<sp/>reconciliation<sp/>algorithms/implementations.<sp/>The<sp/>benchmarks<sp/>were<sp/>performed<sp/>using<sp/>a<sp/>single<sp/>core<sp/>on<sp/>a<sp/>system<sp/>with<sp/>an<sp/>Intel<sp/>Core<sp/>i7-7820HQ<sp/>CPU<sp/>with<sp/>clock<sp/>speed<sp/>locked<sp/>at<sp/>2.4<sp/>GHz.<sp/>The<sp/>diagram<sp/>shows<sp/>the<sp/>time<sp/>needed<sp/>for<sp/>merging<sp/>of<sp/>two<sp/>sketches<sp/>and<sp/>decoding<sp/>the<sp/>result.<sp/>The<sp/>creation<sp/>of<sp/>a<sp/>sketch<sp/>on<sp/>the<sp/>same<sp/>machine<sp/>takes<sp/>around<sp/>5<sp/>ns<sp/>per<sp/>capacity<sp/>and<sp/>per<sp/>set<sp/>element.<sp/>The<sp/>other<sp/>implementations<sp/>are:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>[`pinsketch`](https://www.cs.bu.edu/~reyzin/code/fuzzy.html),<sp/>the<sp/>original<sp/>PinSketch<sp/>implementation.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>[`cpisync`](https://github.com/trachten/cpisync),<sp/>a<sp/>software<sp/>project<sp/>which<sp/>implements<sp/>a<sp/>number<sp/>of<sp/>set<sp/>reconciliation<sp/>algorithms<sp/>and<sp/>protocols.<sp/>The<sp/>included<sp/>benchmark<sp/>analyzes<sp/>the<sp/>non-probabilistic<sp/>version<sp/>of<sp/>the<sp/>original<sp/>CPISync<sp/>algorithm&lt;sup&gt;[[5]](#myfootnote5)&lt;/sup&gt;<sp/>only.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>A<sp/>high-performance<sp/>custom<sp/>IBLT<sp/>implementation<sp/>using<sp/>4<sp/>hash<sp/>functions<sp/>and<sp/>32-bit<sp/>checksums.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">For<sp/>the<sp/>largest<sp/>sizes<sp/>currently<sp/>of<sp/>interest<sp/>to<sp/>the<sp/>authors,<sp/>such<sp/>as<sp/>a<sp/>set<sp/>of<sp/>capacity<sp/>4096<sp/>with<sp/>1024<sp/>differences,<sp/>`libminisketch`<sp/>is<sp/>forty-nine<sp/>times<sp/>faster<sp/>than<sp/>`pinsketch`<sp/>and<sp/>over<sp/>eight<sp/>thousand<sp/>times<sp/>faster<sp/>than<sp/>`cpisync`.<sp/>`libminisketch`<sp/>is<sp/>fast<sp/>enough<sp/>on<sp/>realistic<sp/>set<sp/>sizes<sp/>for<sp/>use<sp/>on<sp/>high-traffic<sp/>network<sp/>servers<sp/>where<sp/>computational<sp/>resources<sp/>are<sp/>limited.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Even<sp/>where<sp/>performance<sp/>is<sp/>latency-limited,<sp/>small<sp/>minisketches<sp/>can<sp/>be<sp/>fast<sp/>enough<sp/>to<sp/>improve<sp/>performance.<sp/>On<sp/>the<sp/>above<sp/>i7-7820HQ,<sp/>a<sp/>set<sp/>of<sp/>2500<sp/>30-bit<sp/>entries<sp/>with<sp/>a<sp/>difference<sp/>of<sp/>20<sp/>elements<sp/>can<sp/>be<sp/>communicated<sp/>in<sp/>less<sp/>time<sp/>with<sp/>a<sp/>minisketch<sp/>than<sp/>sending<sp/>the<sp/>raw<sp/>set<sp/>so<sp/>long<sp/>as<sp/>the<sp/>communications<sp/>bandwidth<sp/>is<sp/>1<sp/>gigabit<sp/>per<sp/>second<sp/>or<sp/>less;<sp/>an<sp/>eight-element<sp/>difference<sp/>can<sp/>be<sp/>communicated<sp/>in<sp/>better<sp/>than<sp/>one-fifth<sp/>the<sp/>time<sp/>on<sp/>a<sp/>gigabit<sp/>link.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**The<sp/>second<sp/>graph**<sp/>above<sp/>shows<sp/>the<sp/>performance<sp/>of<sp/>the<sp/>same<sp/>algorithms<sp/>on<sp/>the<sp/>same<sp/>system,<sp/>but<sp/>this<sp/>time<sp/>keeping<sp/>the<sp/>capacity<sp/>constant<sp/>at<sp/>128,<sp/>while<sp/>varying<sp/>the<sp/>number<sp/>of<sp/>differences<sp/>to<sp/>reconcile<sp/>between<sp/>1<sp/>and<sp/>128.<sp/>It<sp/>shows<sp/>how<sp/>`cpisync`&apos;s<sp/>reconciliation<sp/>speed<sp/>is<sp/>mostly<sp/>dependent<sp/>on<sp/>capacity,<sp/>while<sp/>`pinsketch`/`libminisketch`<sp/>are<sp/>more<sp/>dependent<sp/>on<sp/>number<sp/>of<sp/>differences.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**The<sp/>third<sp/>graph**<sp/>above<sp/>shows<sp/>the<sp/>size<sp/>overhead<sp/>of<sp/>a<sp/>typical<sp/>IBLT<sp/>scheme<sp/>over<sp/>the<sp/>other<sp/>algorithms<sp/>(which<sp/>are<sp/>near-optimal<sp/>bandwidth),<sp/>for<sp/>various<sp/>levels<sp/>of<sp/>failure<sp/>probability.<sp/>IBLT<sp/>takes<sp/>tens<sp/>of<sp/>times<sp/>the<sp/>bandwidth<sp/>of<sp/>`libminisketch`<sp/>sketches<sp/>when<sp/>the<sp/>set<sp/>difference<sp/>size<sp/>is<sp/>small<sp/>and<sp/>the<sp/>required<sp/>failure<sp/>rate<sp/>is<sp/>low.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**The<sp/>fourth<sp/>graph**<sp/>above<sp/>shows<sp/>the<sp/>effect<sp/>of<sp/>the<sp/>field<sp/>size<sp/>on<sp/>speed<sp/>in<sp/>`libminisketch`.<sp/>The<sp/>three<sp/>lines<sp/>correspond<sp/>to:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>CLMUL<sp/>64-bit:<sp/>Intel<sp/>Core<sp/>i7-7820HQ<sp/>system<sp/>at<sp/>2.4<sp/>GHz</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Generic<sp/>64-bit:<sp/>POWER9<sp/>CP9M06<sp/>system<sp/>at<sp/>2.8<sp/>GHz<sp/>(Talos<sp/>II)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Generic<sp/>32-bit:<sp/>Cortex-A53<sp/>at<sp/>1.2<sp/>GHz<sp/>(Raspberry<sp/>Pi<sp/>3B)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">It<sp/>shows<sp/>how<sp/>CLMUL<sp/>implementations<sp/>are<sp/>faster<sp/>for<sp/>certain<sp/>fields<sp/>(specifically,<sp/>field<sp/>sizes<sp/>for<sp/>which<sp/>an<sp/>irreducible<sp/>polynomial<sp/>of<sp/>the<sp/>form<sp/>*x&lt;sup&gt;b&lt;/sup&gt;<sp/>+<sp/>x<sp/>+<sp/>1*<sp/>over<sp/>*GF(2)*<sp/>exists,<sp/>and<sp/>to<sp/>a<sp/>lesser<sp/>extent,<sp/>fields<sp/>which<sp/>are<sp/>a<sp/>multiple<sp/>of<sp/>8<sp/>bits).<sp/>It<sp/>also<sp/>shows<sp/>how<sp/>(for<sp/>now)<sp/>a<sp/>significant<sp/>performance<sp/>drop<sp/>exists<sp/>for<sp/>fields<sp/>larger<sp/>than<sp/>32<sp/>bits<sp/>on<sp/>32-bit<sp/>platforms.<sp/>Note<sp/>that<sp/>the<sp/>three<sp/>lines<sp/>are<sp/>not<sp/>at<sp/>the<sp/>same<sp/>scale<sp/>(the<sp/>Raspberry<sp/>Pi<sp/>3B<sp/>is<sp/>around<sp/>10x<sp/>slower<sp/>for<sp/>32-bit<sp/>fields<sp/>than<sp/>the<sp/>Core<sp/>i7;<sp/>the<sp/>POWER9<sp/>is<sp/>around<sp/>1.3x<sp/>slower).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Below<sp/>we<sp/>compare<sp/>the<sp/>PinSketch<sp/>algorithm<sp/>(which<sp/>`libminisketch`<sp/>is<sp/>an<sp/>implementation<sp/>of)<sp/>with<sp/>other<sp/>set<sp/>reconciliation<sp/>algorithms:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">|<sp/>Algorithm<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>Sketch<sp/>size<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>Decode<sp/>success<sp/>|<sp/>Decoding<sp/>complexity<sp/>|<sp/>Difference<sp/>type<sp/>|<sp/>Secure<sp/>sketch<sp/>|</highlight></codeline>
+<codeline><highlight class="normal">|<sp/>-----------------------------------------------------<sp/>|<sp/>-------------------------<sp/>|<sp/>---------------|<sp/>-------------------<sp/>|<sp/>---------------<sp/>|<sp/>-------------<sp/>|</highlight></codeline>
+<codeline><highlight class="normal">|<sp/>CPISync&lt;sup&gt;[[2]](#myfootnote2)&lt;/sup&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>*(b+1)c*<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>Always<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>*O(n&lt;sup&gt;3&lt;/sup&gt;)*<sp/><sp/>|<sp/>Both<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>Yes<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|</highlight></codeline>
+<codeline><highlight class="normal">|<sp/>PinSketch&lt;sup&gt;[[1]](#myfootnote1)&lt;/sup&gt;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>*bc*<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>Always<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>*O(n&lt;sup&gt;2&lt;/sup&gt;)*<sp/><sp/>|<sp/>Symmetric<sp/>only<sp/><sp/>|<sp/>Yes<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|</highlight></codeline>
+<codeline><highlight class="normal">|<sp/>IBLT&lt;sup&gt;[[6]](#myfootnote1)[[7]](#myfootnote1)&lt;/sup&gt;<sp/>|<sp/>*&amp;alpha;bc*<sp/>(see<sp/>graph<sp/>3)<sp/>|<sp/>Probabilistic<sp/><sp/>|<sp/>*O(n)*<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>Depends<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|<sp/>No<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>|</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">*<sp/>**Sketch<sp/>size:**<sp/>This<sp/>column<sp/>shows<sp/>the<sp/>size<sp/>in<sp/>bits<sp/>of<sp/>a<sp/>sketch<sp/>designed<sp/>for<sp/>reconciling<sp/>*c*<sp/>different<sp/>*b*-bit<sp/>elements.<sp/>PinSketch<sp/>and<sp/>CPISync<sp/>have<sp/>a<sp/>near-optimal&lt;sup&gt;[[11]](#myfootnote11)&lt;/sup&gt;<sp/>communication<sp/>overhead,<sp/>which<sp/>in<sp/>practice<sp/>means<sp/>the<sp/>sketch<sp/>size<sp/>is<sp/>very<sp/>close<sp/>(or<sp/>equal<sp/>to)<sp/>*bc*<sp/>bits.<sp/>That<sp/>is<sp/>the<sp/>same<sp/>size<sp/>as<sp/>would<sp/>be<sp/>needed<sp/>to<sp/>transfer<sp/>the<sp/>elements<sp/>of<sp/>the<sp/>difference<sp/>naively<sp/>(which<sp/>is<sp/>remarkable,<sp/>as<sp/>the<sp/>difference<sp/>isn&apos;t<sp/>even<sp/>known<sp/>by<sp/>the<sp/>sender).<sp/>For<sp/>IBLT<sp/>there<sp/>is<sp/>an<sp/>overhead<sp/>factor<sp/>*&amp;alpha;*,<sp/>which<sp/>depends<sp/>on<sp/>various<sp/>design<sp/>parameters,<sp/>but<sp/>is<sp/>often<sp/>between<sp/>*2*<sp/>and<sp/>*10*.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>**Decode<sp/>success:**<sp/>Whenever<sp/>a<sp/>sketch<sp/>is<sp/>designed<sp/>with<sp/>a<sp/>capacity<sp/>not<sp/>lower<sp/>than<sp/>the<sp/>actual<sp/>difference<sp/>size,<sp/>CPISync<sp/>and<sp/>PinSketch<sp/>guarantee<sp/>that<sp/>decoding<sp/>of<sp/>the<sp/>difference<sp/>will<sp/>always<sp/>succeed.<sp/>IBLT<sp/>always<sp/>has<sp/>a<sp/>chance<sp/>of<sp/>failure,<sp/>though<sp/>that<sp/>chance<sp/>can<sp/>be<sp/>made<sp/>arbitrarily<sp/>small<sp/>by<sp/>increasing<sp/>the<sp/>communication<sp/>overhead.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>**Decoding<sp/>complexity:**<sp/>The<sp/>space<sp/>savings<sp/>achieved<sp/>by<sp/>near-optimal<sp/>algorithms<sp/>come<sp/>at<sp/>a<sp/>cost<sp/>in<sp/>performance,<sp/>as<sp/>their<sp/>asymptotic<sp/>decode<sp/>complexity<sp/>is<sp/>quadratic<sp/>or<sp/>cubic,<sp/>while<sp/>IBLT<sp/>is<sp/>linear.<sp/>This<sp/>means<sp/>that<sp/>using<sp/>near-optimal<sp/>algorithms<sp/>can<sp/>be<sp/>too<sp/>expensive<sp/>for<sp/>applications<sp/>where<sp/>the<sp/>difference<sp/>is<sp/>sufficiently<sp/>large.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>**Difference<sp/>type:**<sp/>PinSketch<sp/>can<sp/>only<sp/>compute<sp/>the<sp/>symmetric<sp/>difference<sp/>from<sp/>a<sp/>merged<sp/>sketch,<sp/>while<sp/>CPISync<sp/>and<sp/>IBLT<sp/>can<sp/>distinguish<sp/>which<sp/>side<sp/>certain<sp/>elements<sp/>were<sp/>missing<sp/>on.<sp/>When<sp/>the<sp/>decoder<sp/>has<sp/>access<sp/>to<sp/>one<sp/>of<sp/>the<sp/>sets,<sp/>this<sp/>generally<sp/>doesn&apos;t<sp/>matter,<sp/>as<sp/>he<sp/>can<sp/>look<sp/>up<sp/>each<sp/>of<sp/>the<sp/>elements<sp/>in<sp/>the<sp/>symmetric<sp/>difference<sp/>with<sp/>one<sp/>of<sp/>the<sp/>sets.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>**Secure<sp/>sketch:**<sp/>Whether<sp/>the<sp/>sketch<sp/>satisfies<sp/>the<sp/>definition<sp/>of<sp/>a<sp/>secure<sp/>sketch&lt;sup&gt;[[1]](#myfootnote1)&lt;/sup&gt;,<sp/>which<sp/>implies<sp/>a<sp/>minimal<sp/>amount<sp/>about<sp/>a<sp/>set<sp/>can<sp/>be<sp/>extracted<sp/>from<sp/>a<sp/>sketch<sp/>by<sp/>anyone<sp/>who<sp/>does<sp/>not<sp/>know<sp/>most<sp/>of<sp/>the<sp/>elements<sp/>already.<sp/>This<sp/>makes<sp/>the<sp/>algorithm<sp/>appropriate<sp/>for<sp/>applications<sp/>like<sp/>fingerprint<sp/>authentication.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Building<sp/>with<sp/>Autotools</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>build<sp/>system<sp/>is<sp/>very<sp/>rudimentary<sp/>for<sp/>now,<sp/>and<sp/>[improvements](https://github.com/bitcoin-core/minisketch/pulls)<sp/>are<sp/>welcome.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>following<sp/>may<sp/>work<sp/>and<sp/>produce<sp/>a<sp/>`libminisketch.a`<sp/>file<sp/>you<sp/>can<sp/>link<sp/>against:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```bash</highlight></codeline>
+<codeline><highlight class="normal">git<sp/>clone<sp/>https://github.com/bitcoin-core/minisketch</highlight></codeline>
+<codeline><highlight class="normal">cd<sp/>minisketch</highlight></codeline>
+<codeline><highlight class="normal">./autogen.sh<sp/>&amp;&amp;<sp/>./configure<sp/>&amp;&amp;<sp/>make</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Building<sp/>with<sp/>CMake</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>maintain<sp/>a<sp/>pristine<sp/>source<sp/>tree,<sp/>CMake<sp/>encourages<sp/>performing<sp/>an<sp/>out-of-source<sp/>build<sp/>by<sp/>using<sp/>a<sp/>separate<sp/>dedicated<sp/>build<sp/>directory.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Building<sp/>on<sp/>POSIX<sp/>systems</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>following<sp/>commands<sp/>will<sp/>produce<sp/>the<sp/>same<sp/>`libminisketch.a`<sp/>file<sp/>as<sp/>in<sp/>the<sp/>example<sp/>[above](#building-with-autotools):</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```bash</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>-B<sp/>build<sp/>-DCMAKE_CXX_FLAGS=&quot;-g<sp/>-O2&quot;<sp/><sp/>#<sp/>Generate<sp/>a<sp/>build<sp/>system<sp/>in<sp/>subdirectory<sp/>&quot;build&quot;</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>--build<sp/>build<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Run<sp/>the<sp/>actual<sp/>build<sp/>process</highlight></codeline>
+<codeline><highlight class="normal">ctest<sp/>--test-dir<sp/>build<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Run<sp/>the<sp/>test<sp/>suite</highlight></codeline>
+<codeline><highlight class="normal">sudo<sp/>cmake<sp/>--install<sp/>build<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Install<sp/>the<sp/>library<sp/>into<sp/>the<sp/>system<sp/>(optional)</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Run<sp/>`cmake<sp/>-B<sp/>build<sp/>-LH`<sp/>or<sp/>`ccmake<sp/>-B<sp/>build`<sp/>to<sp/>see<sp/>the<sp/>full<sp/>list<sp/>of<sp/>configurable<sp/>build<sp/>options.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Cross<sp/>compiling</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>following<sp/>example<sp/>works<sp/>on<sp/>modern<sp/>Ubuntu/Debian<sp/>systems:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```bash</highlight></codeline>
+<codeline><highlight class="normal">sudo<sp/>apt<sp/>install<sp/>g++-mingw-w64-x86-64-posix</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>-B<sp/>build<sp/>-DCMAKE_SYSTEM_NAME=Windows<sp/>-DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++-posix</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>--build<sp/>build</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Building<sp/>on<sp/>Windows</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>following<sp/>example<sp/>assumes<sp/>the<sp/>use<sp/>of<sp/>Visual<sp/>Studio<sp/>2022<sp/>and<sp/>CMake<sp/>v3.21<sp/>or<sp/>newer.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">In<sp/>&quot;Developer<sp/>Command<sp/>Prompt<sp/>for<sp/>VS<sp/>2022&quot;:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```cmd</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>-B<sp/>build</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>--build<sp/>build<sp/>--config<sp/>Release</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Usage</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">In<sp/>this<sp/>section<sp/>Alice<sp/>and<sp/>Bob<sp/>are<sp/>trying<sp/>to<sp/>find<sp/>the<sp/>difference<sp/>between<sp/>their<sp/>sets.</highlight></codeline>
+<codeline><highlight class="normal">Alice<sp/>has<sp/>the<sp/>set<sp/>*[3000<sp/>...<sp/>3009]*,<sp/>while<sp/>Bob<sp/>has<sp/>*[3002<sp/>...<sp/>3011]*.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">First,<sp/>Alice<sp/>creates<sp/>a<sp/>sketch:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```c</highlight></codeline>
+<codeline><highlight class="normal">#include<sp/>&lt;stdio.h&gt;</highlight></codeline>
+<codeline><highlight class="normal">#include<sp/>&lt;assert.h&gt;</highlight></codeline>
+<codeline><highlight class="normal">#include<sp/>&quot;../include/minisketch.h&quot;</highlight></codeline>
+<codeline><highlight class="normal">int<sp/>main(void)<sp/>{</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/>minisketch<sp/>*sketch_a<sp/>=<sp/>minisketch_create(12,<sp/>0,<sp/>4);</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>arguments<sp/>are:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>The<sp/>field<sp/>size<sp/>*b*,<sp/>which<sp/>specifies<sp/>the<sp/>size<sp/>of<sp/>the<sp/>elements<sp/>being<sp/>reconciled.<sp/>With<sp/>a<sp/>field<sp/>size<sp/>*b*,<sp/>the<sp/>supported<sp/>range<sp/>of<sp/>set<sp/>elements<sp/>is<sp/>the<sp/>integers<sp/>from<sp/>*1*<sp/>to<sp/>*2&lt;sup&gt;b&lt;/sub&gt;*<sp/>*-<sp/>1*,<sp/>inclusive.<sp/>Note<sp/>that<sp/>elements<sp/>cannot<sp/>be<sp/>zero.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>The<sp/>implementation<sp/>number.<sp/>Implementation<sp/>*0*<sp/>is<sp/>always<sp/>supported,<sp/>but<sp/>more<sp/>efficient<sp/>algorithms<sp/>may<sp/>be<sp/>available<sp/>on<sp/>some<sp/>hardware.<sp/>The<sp/>serialized<sp/>form<sp/>of<sp/>a<sp/>sketch<sp/>is<sp/>independent<sp/>of<sp/>the<sp/>implementation,<sp/>so<sp/>different<sp/>implementations<sp/>can<sp/>interoperate.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>The<sp/>capacity<sp/>*c*,<sp/>which<sp/>specifies<sp/>how<sp/>many<sp/>differences<sp/>the<sp/>resulting<sp/>sketch<sp/>can<sp/>reconcile.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Then<sp/>Alice<sp/>adds<sp/>her<sp/>elements<sp/>to<sp/>her<sp/>sketch.<sp/>Note<sp/>that<sp/>adding<sp/>the<sp/>same<sp/>element<sp/>a<sp/>second<sp/>time<sp/>removes<sp/>it<sp/>again,<sp/>as<sp/>sketches<sp/>have<sp/>set<sp/>semantics,<sp/>not<sp/>multiset<sp/>semantics.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```c</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>for<sp/>(int<sp/>i<sp/>=<sp/>3000;<sp/>i<sp/>&lt;<sp/>3010;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>minisketch_add_uint64(sketch_a,<sp/>i);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>next<sp/>step<sp/>is<sp/>serializing<sp/>the<sp/>sketch<sp/>into<sp/>a<sp/>byte<sp/>array:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```c</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>size_t<sp/>sersize<sp/>=<sp/>minisketch_serialized_size(sketch_a);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>assert(sersize<sp/>==<sp/>12<sp/>*<sp/>4<sp/>/<sp/>8);<sp/>//<sp/>4<sp/>12-bit<sp/>values<sp/>is<sp/>6<sp/>bytes.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>unsigned<sp/>char<sp/>*buffer_a<sp/>=<sp/>malloc(sersize);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>minisketch_serialize(sketch_a,<sp/>buffer_a);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>minisketch_destroy(sketch_a);</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>contents<sp/>of<sp/>the<sp/>buffer<sp/>can<sp/>then<sp/>be<sp/>submitted<sp/>to<sp/>Bob,<sp/>who<sp/>can<sp/>create<sp/>his<sp/>own<sp/>sketch:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```c</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>minisketch<sp/>*sketch_b<sp/>=<sp/>minisketch_create(12,<sp/>0,<sp/>4);<sp/>//<sp/>Bob&apos;s<sp/>own<sp/>sketch</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>for<sp/>(int<sp/>i<sp/>=<sp/>3002;<sp/>i<sp/>&lt;<sp/>3012;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>minisketch_add_uint64(sketch_b,<sp/>i);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">After<sp/>Bob<sp/>receives<sp/>Alice&apos;s<sp/>serialized<sp/>sketch,<sp/>he<sp/>can<sp/>reconcile:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```c</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>sketch_a<sp/>=<sp/>minisketch_create(12,<sp/>0,<sp/>4);<sp/><sp/><sp/><sp/><sp/>//<sp/>Alice&apos;s<sp/>sketch</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>minisketch_deserialize(sketch_a,<sp/>buffer_a);<sp/>//<sp/>Load<sp/>Alice&apos;s<sp/>sketch</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>free(buffer_a);</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/>//<sp/>Merge<sp/>the<sp/>elements<sp/>from<sp/>sketch_a<sp/>into<sp/>sketch_b.<sp/>The<sp/>result<sp/>is<sp/>a<sp/>sketch_b</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>//<sp/>which<sp/>contains<sp/>all<sp/>elements<sp/>that<sp/>occurred<sp/>in<sp/>Alice&apos;s<sp/>or<sp/>Bob&apos;s<sp/>sets,<sp/>but<sp/>not</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>//<sp/>in<sp/>both.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>minisketch_merge(sketch_b,<sp/>sketch_a);</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/>uint64_t<sp/>differences[4];</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>ssize_t<sp/>num_differences<sp/>=<sp/>minisketch_decode(sketch_b,<sp/>4,<sp/>differences);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>minisketch_destroy(sketch_a);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>minisketch_destroy(sketch_b);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>if<sp/>(num_differences<sp/>&lt;<sp/>0)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>printf(&quot;More<sp/>than<sp/>4<sp/>differences!\n&quot;);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>}<sp/>else<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>ssize_t<sp/>i;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>for<sp/>(i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>num_differences;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>printf(&quot;%u<sp/>is<sp/>in<sp/>only<sp/>one<sp/>of<sp/>the<sp/>two<sp/>sets\n&quot;,<sp/>(unsigned)differences[i]);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">In<sp/>this<sp/>example<sp/>Bob<sp/>would<sp/>see<sp/>output<sp/>such<sp/>as:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal">$<sp/>gcc<sp/>-std=c99<sp/>-Wall<sp/>-Wextra<sp/>-o<sp/>example<sp/>./doc/example.c<sp/>-Lsrc/<sp/>-lminisketch<sp/>-lstdc++<sp/>&amp;&amp;<sp/>./example</highlight></codeline>
+<codeline><highlight class="normal">3000<sp/>is<sp/>in<sp/>only<sp/>one<sp/>of<sp/>the<sp/>two<sp/>sets</highlight></codeline>
+<codeline><highlight class="normal">3011<sp/>is<sp/>in<sp/>only<sp/>one<sp/>of<sp/>the<sp/>two<sp/>sets</highlight></codeline>
+<codeline><highlight class="normal">3001<sp/>is<sp/>in<sp/>only<sp/>one<sp/>of<sp/>the<sp/>two<sp/>sets</highlight></codeline>
+<codeline><highlight class="normal">3010<sp/>is<sp/>in<sp/>only<sp/>one<sp/>of<sp/>the<sp/>two<sp/>sets</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>order<sp/>of<sp/>the<sp/>output<sp/>is<sp/>arbitrary<sp/>and<sp/>will<sp/>differ<sp/>on<sp/>different<sp/>runs<sp/>of<sp/>minisketch_decode().</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Applications</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Communications<sp/>efficient<sp/>set<sp/>reconciliation<sp/>has<sp/>been<sp/>proposed<sp/>to<sp/>optimize<sp/>Bitcoin<sp/>transaction<sp/>distribution&lt;sup&gt;[[8]](#myfootnote8)&lt;/sup&gt;,<sp/>which<sp/>would<sp/>allow<sp/>Bitcoin<sp/>nodes<sp/>to<sp/>have<sp/>many<sp/>more<sp/>peers<sp/>while<sp/>reducing<sp/>bandwidth<sp/>usage.<sp/>It<sp/>could<sp/>also<sp/>be<sp/>used<sp/>for<sp/>Bitcoin<sp/>block<sp/>distribution&lt;sup&gt;[[9]](#myfootnote9)&lt;/sup&gt;,<sp/>particularly<sp/>for<sp/>very<sp/>low<sp/>bandwidth<sp/>links<sp/>such<sp/>as<sp/>satellite.<sp/><sp/>A<sp/>similar<sp/>approach<sp/>(CPISync)<sp/>is<sp/>used<sp/>by<sp/>PGP<sp/>SKS<sp/>keyservers<sp/>to<sp/>synchronize<sp/>their<sp/>databases<sp/>efficiently.<sp/>Secure<sp/>sketches<sp/>can<sp/>also<sp/>be<sp/>used<sp/>as<sp/>helper<sp/>data<sp/>to<sp/>reliably<sp/>extract<sp/>a<sp/>consistent<sp/>cryptographic<sp/>key<sp/>from<sp/>fuzzy<sp/>biometric<sp/>data<sp/>while<sp/>leaking<sp/>minimal<sp/>information&lt;sup&gt;[[1]](#myfootnote1)&lt;/sup&gt;.<sp/>They<sp/>can<sp/>be<sp/>combined<sp/>with<sp/>[dcnets](https://en.wikipedia.org/wiki/Dining_cryptographers_problem)<sp/>to<sp/>create<sp/>cryptographic<sp/>multiparty<sp/>anonymous<sp/>communication&lt;sup&gt;[[10]](#myfootnote10)&lt;/sup&gt;.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Implementation<sp/>notes</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">`libminisketch`<sp/>is<sp/>written<sp/>in<sp/>C++11,<sp/>but<sp/>has<sp/>a<sp/>[C<sp/>API](include/minisketch.h)<sp/>for<sp/>compatibility<sp/>reasons.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Specific<sp/>algorithms<sp/>and<sp/>optimizations<sp/>used:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Finite<sp/>field<sp/>implementations:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>A<sp/>generic<sp/>implementation<sp/>using<sp/>C<sp/>unsigned<sp/>integer<sp/>bit<sp/>operations,<sp/>and<sp/>one<sp/>using<sp/>the<sp/>[CLMUL<sp/>instruction](https://en.wikipedia.org/wiki/CLMUL_instruction_set)<sp/>where<sp/>available.<sp/>The<sp/>latter<sp/>has<sp/>specializations<sp/>for<sp/>different<sp/>classes<sp/>of<sp/>fields<sp/>that<sp/>permit<sp/>optimizations<sp/>(those<sp/>with<sp/>trinomial<sp/>irreducible<sp/>polynomials,<sp/>and<sp/>those<sp/>whose<sp/>size<sp/>is<sp/>a<sp/>multiple<sp/>of<sp/>8<sp/>bits).</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Precomputed<sp/>tables<sp/>for<sp/>(repeated)<sp/>squaring,<sp/>and<sp/>for<sp/>solving<sp/>equations<sp/>of<sp/>the<sp/>form<sp/>*x&lt;sup&gt;2&lt;/sup&gt;<sp/>+<sp/>x<sp/>=<sp/>a*&lt;sup&gt;[[2]](#myfootnote2)&lt;/sup&gt;.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Inverses<sp/>are<sp/>computed<sp/>using<sp/>an<sp/>[exponentiation<sp/>ladder](https://en.wikipedia.org/w/index.php?title=Exponentiation_by_squaring&amp;oldid=868883860)&lt;sup&gt;[[12]](#myfootnote12)&lt;/sup&gt;<sp/>on<sp/>systems<sp/>where<sp/>multiplications<sp/>are<sp/>relatively<sp/>fast,<sp/>and<sp/>using<sp/>an<sp/>[extended<sp/>GCD<sp/>algorithm](https://en.wikipedia.org/w/index.php?title=Extended_Euclidean_algorithm&amp;oldid=865802511#Computing_multiplicative_inverses_in_modular_structures)<sp/>otherwise.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>Repeated<sp/>multiplications<sp/>are<sp/>accelerated<sp/>using<sp/>runtime<sp/>precomputations<sp/>on<sp/>systems<sp/>where<sp/>multiplications<sp/>are<sp/>relatively<sp/>slow.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*<sp/>The<sp/>serialization<sp/>of<sp/>field<sp/>elements<sp/>always<sp/>represents<sp/>them<sp/>as<sp/>bits<sp/>that<sp/>are<sp/>coefficients<sp/>of<sp/>the<sp/>lowest-weight<sp/>(using<sp/>lexicographic<sp/>order<sp/>as<sp/>tie<sp/>breaker)<sp/>irreducible<sp/>polynomials<sp/>over<sp/>*GF(2)*<sp/>(see<sp/>[this<sp/>list](doc/moduli.md)),<sp/>but<sp/>for<sp/>some<sp/>implementations<sp/>they<sp/>are<sp/>converted<sp/>to<sp/>a<sp/>different<sp/>representation<sp/>internally.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>The<sp/>sketch<sp/>algorithms<sp/>are<sp/>specialized<sp/>for<sp/>each<sp/>separate<sp/>field<sp/>implementation,<sp/>permitting<sp/>inlining<sp/>and<sp/>specific<sp/>optimizations<sp/>while<sp/>avoiding<sp/>dynamic<sp/>allocations<sp/>and<sp/>branching<sp/>costs.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Decoding<sp/>of<sp/>sketches<sp/>uses<sp/>the<sp/>[Berlekamp-Massey<sp/>algorithm](https://en.wikipedia.org/w/index.php?title=Berlekamp%E2%80%93Massey_algorithm&amp;oldid=870768940)&lt;sup&gt;[[3]](#myfootnote3)&lt;/sup&gt;<sp/>to<sp/>compute<sp/>the<sp/>characteristic<sp/>polynomial.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Finding<sp/>the<sp/>roots<sp/>of<sp/>polynomials<sp/>is<sp/>done<sp/>using<sp/>the<sp/>Berlekamp<sp/>trace<sp/>algorithm<sp/>with<sp/>explicit<sp/>formula<sp/>for<sp/>quadratic<sp/>polynomials&lt;sup&gt;[[4]](#myfootnote4)&lt;/sup&gt;.<sp/>The<sp/>root<sp/>finding<sp/>is<sp/>randomized<sp/>to<sp/>prevent<sp/>adversarial<sp/>inputs<sp/>that<sp/>intentionally<sp/>trigger<sp/>worst-case<sp/>decode<sp/>time.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>A<sp/>(possibly)<sp/>novel<sp/>optimization<sp/>combines<sp/>a<sp/>test<sp/>for<sp/>unique<sp/>roots<sp/>with<sp/>the<sp/>Berlekamp<sp/>trace<sp/>algorithm.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Some<sp/>improvements<sp/>that<sp/>are<sp/>still<sp/>TODO:</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Explicit<sp/>formulas<sp/>for<sp/>the<sp/>roots<sp/>of<sp/>polynomials<sp/>of<sp/>higher<sp/>degree<sp/>than<sp/>2</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Subquadratic<sp/>multiplication<sp/>and<sp/>modulus<sp/>algorithms</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>The<sp/>[Half-GCD<sp/>algorithm](http://mathworld.wolfram.com/Half-GCD.html)<sp/>for<sp/>faster<sp/>GCDs</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>An<sp/>interface<sp/>for<sp/>incremental<sp/>decoding:<sp/>most<sp/>of<sp/>the<sp/>computation<sp/>in<sp/>most<sp/>failed<sp/>decodes<sp/>can<sp/>be<sp/>reused<sp/>when<sp/>attempting<sp/>to<sp/>decode<sp/>a<sp/>longer<sp/>sketch<sp/>of<sp/>the<sp/>same<sp/>set</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Platform<sp/>specific<sp/>optimizations<sp/>for<sp/>platforms<sp/>other<sp/>than<sp/>x86</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Avoid<sp/>using<sp/>slow<sp/>uint64_t<sp/>for<sp/>calculations<sp/>on<sp/>32-bit<sp/>hosts</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Optional<sp/>IBLT<sp/>/<sp/>Hybrid<sp/>and<sp/>set<sp/>entropy<sp/>coder<sp/>under<sp/>the<sp/>same<sp/>interface</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>References</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote1&quot;&gt;[1]&lt;/a&gt;<sp/>Dodis,<sp/>Ostrovsky,<sp/>Reyzin<sp/>and<sp/>Smith.<sp/>*Fuzzy<sp/>Extractors:<sp/>How<sp/>to<sp/>Generate<sp/>Strong<sp/>Keys<sp/>from<sp/>Biometrics<sp/>and<sp/>Other<sp/>Noisy<sp/>Data.*<sp/>SIAM<sp/>Journal<sp/>on<sp/>Computing,<sp/>volume<sp/>38,<sp/>number<sp/>1,<sp/>pages<sp/>97-139,<sp/>2008).<sp/>[[URL]](http://eprint.iacr.org/2003/235)<sp/>[[PDF]](https://eprint.iacr.org/2003/235.pdf)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote5&quot;&gt;[5]&lt;/a&gt;<sp/>A.<sp/>Trachtenberg,<sp/>D.<sp/>Starobinski<sp/>and<sp/>S.<sp/>Agarwal.<sp/>*Fast<sp/>PDA<sp/>synchronization<sp/>using<sp/>characteristic<sp/>polynomial<sp/>interpolation.*<sp/>Proceedings,<sp/>Twenty-First<sp/>Annual<sp/>Joint<sp/>Conference<sp/>of<sp/>the<sp/>IEEE<sp/>Computer<sp/>and<sp/>Communications<sp/>Societies,<sp/>New<sp/>York,<sp/>NY,<sp/>USA,<sp/>2002,<sp/>pp.<sp/>1510-1519<sp/>vol.3.<sp/>[[PDF]](https://pdfs.semanticscholar.org/43da/2070b6b7b2320a1fed2fd5e70e87332c9c5e.pdf)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote2&quot;&gt;[2]&lt;/a&gt;<sp/>Cherly,<sp/>Jørgen,<sp/>Luis<sp/>Gallardo,<sp/>Leonid<sp/>Vaserstein,<sp/>and<sp/>Ethel<sp/>Wheland.<sp/>*Solving<sp/>quadratic<sp/>equations<sp/>over<sp/>polynomial<sp/>rings<sp/>of<sp/>characteristic<sp/>two.*<sp/>Publicacions<sp/>Matemàtiques<sp/>(1998):<sp/>131-142.<sp/>[[PDF]](https://www.raco.cat/index.php/PublicacionsMatematiques/article/viewFile/37927/40412)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote3&quot;&gt;[3]&lt;/a&gt;<sp/>J.<sp/>Massey.<sp/>*Shift-register<sp/>synthesis<sp/>and<sp/>BCH<sp/>decoding.*<sp/>IEEE<sp/>Transactions<sp/>on<sp/>Information<sp/>Theory,<sp/>vol.<sp/>15,<sp/>no.<sp/>1,<sp/>pp.<sp/>122-127,<sp/>January<sp/>1969.<sp/>[[PDF]](http://crypto.stanford.edu/~mironov/cs359/massey.pdf)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote4&quot;&gt;[4]&lt;/a&gt;<sp/>Bhaskar<sp/>Biswas,<sp/>Vincent<sp/>Herbert.<sp/>*Efficient<sp/>Root<sp/>Finding<sp/>of<sp/>Polynomials<sp/>over<sp/>Fields<sp/>of<sp/>Characteristic<sp/>2.*<sp/>2009.<sp/>hal-00626997.<sp/>[[URL]](https://hal.archives-ouvertes.fr/hal-00626997)<sp/>[[PDF]](https://hal.archives-ouvertes.fr/hal-00626997/document)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote6&quot;&gt;[6]&lt;/a&gt;<sp/>Eppstein,<sp/>David,<sp/>Michael<sp/>T.<sp/>Goodrich,<sp/>Frank<sp/>Uyeda,<sp/>and<sp/>George<sp/>Varghese.<sp/>*What&apos;s<sp/>the<sp/>difference?:<sp/>efficient<sp/>set<sp/>reconciliation<sp/>without<sp/>prior<sp/>context.*<sp/>ACM<sp/>SIGCOMM<sp/>Computer<sp/>Communication<sp/>Review,<sp/>vol.<sp/>41,<sp/>no.<sp/>4,<sp/>pp.<sp/>218-229.<sp/>ACM,<sp/>2011.<sp/>[[PDF]](https://www.ics.uci.edu/~eppstein/pubs/EppGooUye-SIGCOMM-11.pdf)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote7&quot;&gt;[7]&lt;/a&gt;<sp/>Goodrich,<sp/>Michael<sp/>T.<sp/>and<sp/>Michael<sp/>Mitzenmacher.<sp/>*Invertible<sp/>bloom<sp/>lookup<sp/>tables.*<sp/>2011<sp/>49th<sp/>Annual<sp/>Allerton<sp/>Conference<sp/>on<sp/>Communication,<sp/>Control,<sp/>and<sp/>Computing<sp/>(Allerton)<sp/>(2011):<sp/>792-799.<sp/>[[PDF]](https://arxiv.org/pdf/1101.2245.pdf)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote8&quot;&gt;[8]&lt;/a&gt;<sp/>Maxwell,<sp/>Gregory<sp/>F.<sp/>*[Blocksonly<sp/>mode<sp/>BW<sp/>savings,<sp/>the<sp/>limits<sp/>of<sp/>efficient<sp/>block<sp/>xfer,<sp/>and<sp/>better<sp/>relay](https://bitcointalk.org/index.php?topic=1377345.0)*<sp/>Bitcointalk<sp/>2016,<sp/>*[Technical<sp/>notes<sp/>on<sp/>mempool<sp/>synchronizing<sp/>relay](https://nt4tn.net/tech-notes/2016.mempool_sync_relay.txt)*<sp/>#bitcoin-wizards<sp/>2016.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote9&quot;&gt;[9]&lt;/a&gt;<sp/>Maxwell,<sp/>Gregory<sp/>F.<sp/>*[Block<sp/>network<sp/>coding](https://en.bitcoin.it/wiki/User:Gmaxwell/block_network_coding)*<sp/>Bitcoin<sp/>Wiki<sp/>2014,<sp/>*[Technical<sp/>notes<sp/>on<sp/>efficient<sp/>block<sp/>xfer](https://nt4tn.net/tech-notes/201512.efficient.block.xfer.txt)*<sp/>#bitcoin-wizards<sp/>2015.</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote10&quot;&gt;[10]&lt;/a&gt;<sp/>Ruffing,<sp/>Tim,<sp/>Moreno-Sanchez,<sp/>Pedro,<sp/>Aniket,<sp/>Kate,<sp/>*P2P<sp/>Mixing<sp/>and<sp/>Unlinkable<sp/>Bitcoin<sp/>Transactions*<sp/>NDSS<sp/>Symposium<sp/>2017<sp/>[[URL]](https://eprint.iacr.org/2016/824)<sp/>[[PDF]](https://eprint.iacr.org/2016/824.pdf)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote11&quot;&gt;[11]&lt;/a&gt;<sp/>Y.<sp/>Misky,<sp/>A.<sp/>Trachtenberg,<sp/>R.<sp/>Zippel.<sp/>*Set<sp/>Reconciliation<sp/>with<sp/>Nearly<sp/>Optimal<sp/>Communication<sp/>Complexity.*<sp/>Cornell<sp/>University,<sp/>2000.<sp/>[[URL]](https://ecommons.cornell.edu/handle/1813/5803)<sp/>[[PDF]](https://ecommons.cornell.edu/bitstream/handle/1813/5803/2000-1813.pdf)</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>&lt;a<sp/>name=&quot;myfootnote12&quot;&gt;[12]&lt;/a&gt;<sp/>Itoh,<sp/>Toshiya,<sp/>and<sp/>Shigeo<sp/>Tsujii.<sp/>&quot;A<sp/>fast<sp/>algorithm<sp/>for<sp/>computing<sp/>multiplicative<sp/>inverses<sp/>in<sp/>GF<sp/>(2m)<sp/>using<sp/>normal<sp/>bases.&quot;<sp/>Information<sp/>and<sp/>computation<sp/>78,<sp/>no.<sp/>3<sp/>(1988):<sp/>171-177.<sp/>[[URL]](https://www.sciencedirect.com/science/article/pii/0890540188900247)</highlight></codeline>
+    </programlisting>
+    <location file="src/minisketch/README.md"/>
+  </compounddef>
+</doxygen>

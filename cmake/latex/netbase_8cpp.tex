@@ -1,0 +1,690 @@
+\doxysection{src/netbase.cpp File Reference}
+\label{netbase_8cpp}\index{src/netbase.cpp@{src/netbase.cpp}}
+{\ttfamily \#include $<$bitcoin-\/build-\/config.\+h$>$}\newline
+{\ttfamily \#include $<$netbase.\+h$>$}\newline
+{\ttfamily \#include $<$compat/compat.\+h$>$}\newline
+{\ttfamily \#include $<$logging.\+h$>$}\newline
+{\ttfamily \#include $<$sync.\+h$>$}\newline
+{\ttfamily \#include $<$tinyformat.\+h$>$}\newline
+{\ttfamily \#include $<$util/sock.\+h$>$}\newline
+{\ttfamily \#include $<$util/strencodings.\+h$>$}\newline
+{\ttfamily \#include $<$util/string.\+h$>$}\newline
+{\ttfamily \#include $<$util/time.\+h$>$}\newline
+{\ttfamily \#include $<$atomic$>$}\newline
+{\ttfamily \#include $<$chrono$>$}\newline
+{\ttfamily \#include $<$cstdint$>$}\newline
+{\ttfamily \#include $<$functional$>$}\newline
+{\ttfamily \#include $<$limits$>$}\newline
+{\ttfamily \#include $<$memory$>$}\newline
+\doxysubsubsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+class \textbf{ Tor\+Stream\+Isolation\+Credentials\+Generator}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Enumerations}
+\begin{DoxyCompactItemize}
+\item 
+enum \textbf{ SOCKSVersion} \+: uint8\+\_\+t \{ \textbf{ SOCKS4} = 0x04
+, \textbf{ SOCKS5} = 0x05
+ \}
+\item 
+enum \textbf{ SOCKS5\+Method} \+: uint8\+\_\+t \{ \textbf{ NOAUTH} = 0x00
+, \textbf{ GSSAPI} = 0x01
+, \textbf{ USER\+\_\+\+PASS} = 0x02
+, \textbf{ NO\+\_\+\+ACCEPTABLE} = 0xff
+ \}
+\item 
+enum \textbf{ SOCKS5\+Command} \+: uint8\+\_\+t \{ \textbf{ CONNECT} = 0x01
+, \textbf{ BIND} = 0x02
+, \textbf{ UDP\+\_\+\+ASSOCIATE} = 0x03
+ \}
+\item 
+enum \textbf{ SOCKS5\+Reply} \+: uint8\+\_\+t \{ \newline
+\textbf{ SUCCEEDED} = 0x00
+, \textbf{ GENFAILURE} = 0x01
+, \textbf{ NOTALLOWED} = 0x02
+, \textbf{ NETUNREACHABLE} = 0x03
+, \newline
+\textbf{ HOSTUNREACHABLE} = 0x04
+, \textbf{ CONNREFUSED} = 0x05
+, \textbf{ TTLEXPIRED} = 0x06
+, \textbf{ CMDUNSUPPORTED} = 0x07
+, \newline
+\textbf{ ATYPEUNSUPPORTED} = 0x08
+, \textbf{ TOR\+\_\+\+HS\+\_\+\+DESC\+\_\+\+NOT\+\_\+\+FOUND} = 0xf0
+, \textbf{ TOR\+\_\+\+HS\+\_\+\+DESC\+\_\+\+INVALID} = 0xf1
+, \textbf{ TOR\+\_\+\+HS\+\_\+\+INTRO\+\_\+\+FAILED} = 0xf2
+, \newline
+\textbf{ TOR\+\_\+\+HS\+\_\+\+REND\+\_\+\+FAILED} = 0xf3
+, \textbf{ TOR\+\_\+\+HS\+\_\+\+MISSING\+\_\+\+CLIENT\+\_\+\+AUTH} = 0xf4
+, \textbf{ TOR\+\_\+\+HS\+\_\+\+WRONG\+\_\+\+CLIENT\+\_\+\+AUTH} = 0xf5
+, \textbf{ TOR\+\_\+\+HS\+\_\+\+BAD\+\_\+\+ADDRESS} = 0xf6
+, \newline
+\textbf{ TOR\+\_\+\+HS\+\_\+\+INTRO\+\_\+\+TIMEOUT} = 0xf7
+ \}
+\item 
+enum \textbf{ SOCKS5\+Atyp} \+: uint8\+\_\+t \{ \textbf{ IPV4} = 0x01
+, \textbf{ DOMAINNAME} = 0x03
+, \textbf{ IPV6} = 0x04
+ \}
+\item 
+enum class \textbf{ Intr\+Recv\+Error} \{ \newline
+\textbf{ OK}
+, \textbf{ Timeout}
+, \textbf{ Disconnected}
+, \textbf{ Network\+Error}
+, \newline
+\textbf{ Interrupted}
+ \}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+std\+::vector$<$ \textbf{ CNet\+Addr} $>$ \textbf{ Wrapped\+Get\+Addr\+Info} (const std\+::string \&\textbf{ name}, bool allow\+\_\+lookup)
+\item 
+enum \textbf{ Network} \textbf{ Parse\+Network} (const std\+::string \&net\+\_\+in)
+\item 
+std\+::string \textbf{ Get\+Network\+Name} (enum \textbf{ Network} net)
+\item 
+std\+::vector$<$ std\+::string $>$ \textbf{ Get\+Network\+Names} (bool append\+\_\+unroutable)
+\item 
+std\+::vector$<$ \textbf{ CNet\+Addr} $>$ \textbf{ Lookup\+Host} (const std\+::string \&\textbf{ name}, unsigned int n\+Max\+Solutions, bool f\+Allow\+Lookup, \textbf{ DNSLookup\+Fn} dns\+\_\+lookup\+\_\+function)
+\item 
+std\+::optional$<$ \textbf{ CNet\+Addr} $>$ \textbf{ Lookup\+Host} (const std\+::string \&\textbf{ name}, bool f\+Allow\+Lookup, \textbf{ DNSLookup\+Fn} dns\+\_\+lookup\+\_\+function)
+\item 
+std\+::vector$<$ \textbf{ CService} $>$ \textbf{ Lookup} (const std\+::string \&\textbf{ name}, uint16\+\_\+t port\+Default, bool f\+Allow\+Lookup, unsigned int n\+Max\+Solutions, \textbf{ DNSLookup\+Fn} dns\+\_\+lookup\+\_\+function)
+\item 
+std\+::optional$<$ \textbf{ CService} $>$ \textbf{ Lookup} (const std\+::string \&\textbf{ name}, uint16\+\_\+t port\+Default, bool f\+Allow\+Lookup, \textbf{ DNSLookup\+Fn} dns\+\_\+lookup\+\_\+function)
+\item 
+\textbf{ CService} \textbf{ Lookup\+Numeric} (const std\+::string \&\textbf{ name}, uint16\+\_\+t port\+Default, \textbf{ DNSLookup\+Fn} dns\+\_\+lookup\+\_\+function)
+\item 
+bool \textbf{ Is\+Unix\+Socket\+Path} (const std\+::string \&\textbf{ name})
+\item 
+bool \textbf{ Socks5} (const std\+::string \&str\+Dest, uint16\+\_\+t port, const \textbf{ Proxy\+Credentials} $\ast$auth, const \textbf{ Sock} \&sock)
+\item 
+std\+::unique\+\_\+ptr$<$ \textbf{ Sock} $>$ \textbf{ Create\+Sock\+OS} (int domain, int type, int protocol)
+\item 
+std\+::unique\+\_\+ptr$<$ \textbf{ Sock} $>$ \textbf{ Connect\+Directly} (const \textbf{ CService} \&dest, bool manual\+\_\+connection)
+\item 
+bool \textbf{ Set\+Proxy} (enum \textbf{ Network} net, const \textbf{ Proxy} \&addr\+Proxy)
+\item 
+bool \textbf{ Get\+Proxy} (enum \textbf{ Network} net, \textbf{ Proxy} \&proxy\+Info\+Out)
+\item 
+bool \textbf{ Set\+Name\+Proxy} (const \textbf{ Proxy} \&addr\+Proxy)
+\item 
+bool \textbf{ Get\+Name\+Proxy} (\textbf{ Proxy} \&name\+Proxy\+Out)
+\item 
+bool \textbf{ Have\+Name\+Proxy} ()
+\item 
+bool \textbf{ Is\+Proxy} (const \textbf{ CNet\+Addr} \&addr)
+\item 
+std\+::unique\+\_\+ptr$<$ \textbf{ Sock} $>$ \textbf{ Connect\+Through\+Proxy} (const \textbf{ Proxy} \&proxy, const std\+::string \&dest, uint16\+\_\+t port, bool \&proxy\+\_\+connection\+\_\+failed)
+\item 
+\textbf{ CSub\+Net} \textbf{ Lookup\+Sub\+Net} (const std\+::string \&subnet\+\_\+str)
+\item 
+bool \textbf{ Is\+Bad\+Port} (uint16\+\_\+t port)
+\item 
+\textbf{ CService} \textbf{ Maybe\+Flip\+IPv6to\+CJDNS} (const \textbf{ CService} \&service)
+\item 
+bool \textbf{ Contains\+No\+NUL} (std\+::string\+\_\+view str) noexcept
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+int \textbf{ n\+Connect\+Timeout} = DEFAULT\+\_\+\+CONNECT\+\_\+\+TIMEOUT
+\item 
+bool \textbf{ f\+Name\+Lookup} = DEFAULT\+\_\+\+NAME\+\_\+\+LOOKUP
+\item 
+std\+::chrono\+::milliseconds \textbf{ g\+\_\+socks5\+\_\+recv\+\_\+timeout} = 20s
+\item 
+\textbf{ CThread\+Interrupt} \textbf{ g\+\_\+socks5\+\_\+interrupt}
+\item 
+\textbf{ Reachable\+Nets} \textbf{ g\+\_\+reachable\+\_\+nets}
+\item 
+\textbf{ DNSLookup\+Fn} \textbf{ g\+\_\+dns\+\_\+lookup} \{\textbf{ Wrapped\+Get\+Addr\+Info}\}
+\item 
+std\+::function$<$ std\+::unique\+\_\+ptr$<$ \textbf{ Sock} $>$(int, int, int)$>$ \textbf{ Create\+Sock} = \textbf{ Create\+Sock\+OS}
+\end{DoxyCompactItemize}
+
+
+\label{doc-enum-members}
+\doxysubsection{Enumeration Type Documentation}
+\index{netbase.cpp@{netbase.cpp}!IntrRecvError@{IntrRecvError}}
+\index{IntrRecvError@{IntrRecvError}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{IntrRecvError}
+{\footnotesize\ttfamily \label{netbase_8cpp_a016a344931d1ff79d2489292ad877b37} 
+enum class \textbf{ Intr\+Recv\+Error}\hspace{0.3cm}{\ttfamily [strong]}}
+
+\doxyref{Status}{p.}{class_status} codes that can be returned by Interruptible\+Recv \begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{OK@{OK}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!OK@{OK}}}\label{netbase_8cpp_a016a344931d1ff79d2489292ad877b37ae0aa021e21dddbd6d8cecec71e9cf564} 
+OK&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{Timeout@{Timeout}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!Timeout@{Timeout}}}\label{netbase_8cpp_a016a344931d1ff79d2489292ad877b37ac85a251cc457840f1e032f1b733e9398} 
+Timeout&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{Disconnected@{Disconnected}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!Disconnected@{Disconnected}}}\label{netbase_8cpp_a016a344931d1ff79d2489292ad877b37aef70e46fd3bbc21e3e1f0b6815e750c0} 
+Disconnected&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NetworkError@{NetworkError}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!NetworkError@{NetworkError}}}\label{netbase_8cpp_a016a344931d1ff79d2489292ad877b37a47423b8444592efbe331550c5620e821} 
+Network\+Error&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{Interrupted@{Interrupted}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!Interrupted@{Interrupted}}}\label{netbase_8cpp_a016a344931d1ff79d2489292ad877b37a12c37c4278b8c0db6c2f65052569cd80} 
+Interrupted&\\
+\hline
+
+\end{DoxyEnumFields}
+\index{netbase.cpp@{netbase.cpp}!SOCKS5Atyp@{SOCKS5Atyp}}
+\index{SOCKS5Atyp@{SOCKS5Atyp}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{SOCKS5Atyp}
+{\footnotesize\ttfamily \label{netbase_8cpp_a01938064f13a24e2b97dc4ec66f4d769} 
+enum \textbf{ SOCKS5\+Atyp} \+: uint8\+\_\+t}
+
+Values defined for ATYPE in RFC1928 \begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{IPV4@{IPV4}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!IPV4@{IPV4}}}\label{netbase_8cpp_a01938064f13a24e2b97dc4ec66f4d769acfc4c1053c60b6cc2a7776c60969f31f} 
+IPV4&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{DOMAINNAME@{DOMAINNAME}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!DOMAINNAME@{DOMAINNAME}}}\label{netbase_8cpp_a01938064f13a24e2b97dc4ec66f4d769a973051a74d1f1ba4af4eb7b7794665e0} 
+DOMAINNAME&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{IPV6@{IPV6}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!IPV6@{IPV6}}}\label{netbase_8cpp_a01938064f13a24e2b97dc4ec66f4d769aff712168361fe68b2bb6193df4977d3c} 
+IPV6&\\
+\hline
+
+\end{DoxyEnumFields}
+\index{netbase.cpp@{netbase.cpp}!SOCKS5Command@{SOCKS5Command}}
+\index{SOCKS5Command@{SOCKS5Command}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{SOCKS5Command}
+{\footnotesize\ttfamily \label{netbase_8cpp_a063679a898bf66a0314e922fdf29300f} 
+enum \textbf{ SOCKS5\+Command} \+: uint8\+\_\+t}
+
+Values defined for CMD in RFC1928 \begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{CONNECT@{CONNECT}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!CONNECT@{CONNECT}}}\label{netbase_8cpp_a063679a898bf66a0314e922fdf29300fa20391dd2915a0e64343d24c2f2e40b95} 
+CONNECT&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{BIND@{BIND}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!BIND@{BIND}}}\label{netbase_8cpp_a063679a898bf66a0314e922fdf29300fae6b27a517c1c937b0a945c7393179677} 
+BIND&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{UDP\_ASSOCIATE@{UDP\_ASSOCIATE}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!UDP\_ASSOCIATE@{UDP\_ASSOCIATE}}}\label{netbase_8cpp_a063679a898bf66a0314e922fdf29300fa04232a69108f17b5e5bcad69b51a1466} 
+UDP\+\_\+\+ASSOCIATE&\\
+\hline
+
+\end{DoxyEnumFields}
+\index{netbase.cpp@{netbase.cpp}!SOCKS5Method@{SOCKS5Method}}
+\index{SOCKS5Method@{SOCKS5Method}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{SOCKS5Method}
+{\footnotesize\ttfamily \label{netbase_8cpp_a738c4db0b722cd3846ec7775ad2db20a} 
+enum \textbf{ SOCKS5\+Method} \+: uint8\+\_\+t}
+
+Values defined for METHOD in RFC1928 \begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NOAUTH@{NOAUTH}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!NOAUTH@{NOAUTH}}}\label{netbase_8cpp_a738c4db0b722cd3846ec7775ad2db20aa56b650498c7de89212bf9674bd11e589} 
+NOAUTH&No authentication required. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{GSSAPI@{GSSAPI}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!GSSAPI@{GSSAPI}}}\label{netbase_8cpp_a738c4db0b722cd3846ec7775ad2db20aa197bc074ac3b994d4768585f1227d9e9} 
+GSSAPI&GSSAPI. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{USER\_PASS@{USER\_PASS}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!USER\_PASS@{USER\_PASS}}}\label{netbase_8cpp_a738c4db0b722cd3846ec7775ad2db20aaa02db508fd839fe6357cfd093858f7d8} 
+USER\+\_\+\+PASS&Username/password. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NO\_ACCEPTABLE@{NO\_ACCEPTABLE}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!NO\_ACCEPTABLE@{NO\_ACCEPTABLE}}}\label{netbase_8cpp_a738c4db0b722cd3846ec7775ad2db20aadfaeb63b3dcfe3b6fa773ae8a38ad789} 
+NO\+\_\+\+ACCEPTABLE&No acceptable methods. \\
+\hline
+
+\end{DoxyEnumFields}
+\index{netbase.cpp@{netbase.cpp}!SOCKS5Reply@{SOCKS5Reply}}
+\index{SOCKS5Reply@{SOCKS5Reply}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{SOCKS5Reply}
+{\footnotesize\ttfamily \label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02e} 
+enum \textbf{ SOCKS5\+Reply} \+: uint8\+\_\+t}
+
+Values defined for REP in RFC1928 and {\texttt{https\+://spec.\+torproject.\+org/socks-\/extensions.\+html}} \begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{SUCCEEDED@{SUCCEEDED}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!SUCCEEDED@{SUCCEEDED}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02eac416a0ceff582d19692ee0238278f307} 
+SUCCEEDED&RFC1928\+: Succeeded. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{GENFAILURE@{GENFAILURE}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!GENFAILURE@{GENFAILURE}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02ea7ea8ccc5236c51604d3ef14b17680817} 
+GENFAILURE&RFC1928\+: General failure. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NOTALLOWED@{NOTALLOWED}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!NOTALLOWED@{NOTALLOWED}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02eacf7afb4c9e2797389003dafb32884ea9} 
+NOTALLOWED&RFC1928\+: Connection not allowed by ruleset. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{NETUNREACHABLE@{NETUNREACHABLE}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!NETUNREACHABLE@{NETUNREACHABLE}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02ea52f4169fd4ab94294587e44d04879827} 
+NETUNREACHABLE&RFC1928\+: \doxyref{Network}{p.}{netaddress_8h_acc9a38c714afe79b5035cb36f560dac3} unreachable. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{HOSTUNREACHABLE@{HOSTUNREACHABLE}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!HOSTUNREACHABLE@{HOSTUNREACHABLE}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02eaf08e60a000317826a4a561ae47cfbba7} 
+HOSTUNREACHABLE&RFC1928\+: \doxyref{Network}{p.}{netaddress_8h_acc9a38c714afe79b5035cb36f560dac3} unreachable. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{CONNREFUSED@{CONNREFUSED}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!CONNREFUSED@{CONNREFUSED}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02ea97890bdcbb2a92d614c7ff0339ec4364} 
+CONNREFUSED&RFC1928\+: Connection refused. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{TTLEXPIRED@{TTLEXPIRED}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!TTLEXPIRED@{TTLEXPIRED}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02ea103bc9724a5da28730002dd9fcbceee1} 
+TTLEXPIRED&RFC1928\+: TTL expired. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{CMDUNSUPPORTED@{CMDUNSUPPORTED}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!CMDUNSUPPORTED@{CMDUNSUPPORTED}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02ea2562399b277a126368560f2475da2f80} 
+CMDUNSUPPORTED&RFC1928\+: Command not supported. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{ATYPEUNSUPPORTED@{ATYPEUNSUPPORTED}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!ATYPEUNSUPPORTED@{ATYPEUNSUPPORTED}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02eacde5ab08ece724d10ae17010257bf356} 
+ATYPEUNSUPPORTED&RFC1928\+: Address type not supported. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{TOR\_HS\_DESC\_NOT\_FOUND@{TOR\_HS\_DESC\_NOT\_FOUND}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!TOR\_HS\_DESC\_NOT\_FOUND@{TOR\_HS\_DESC\_NOT\_FOUND}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02eaddfde3ede2921ec3da0bb98d6f5f6a49} 
+TOR\+\_\+\+HS\+\_\+\+DESC\+\_\+\+NOT\+\_\+\+FOUND&Tor\+: Onion service descriptor can not be found. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{TOR\_HS\_DESC\_INVALID@{TOR\_HS\_DESC\_INVALID}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!TOR\_HS\_DESC\_INVALID@{TOR\_HS\_DESC\_INVALID}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02ea4f87f61e0552c4410e0e0c5212112b21} 
+TOR\+\_\+\+HS\+\_\+\+DESC\+\_\+\+INVALID&Tor\+: Onion service descriptor is invalid. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{TOR\_HS\_INTRO\_FAILED@{TOR\_HS\_INTRO\_FAILED}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!TOR\_HS\_INTRO\_FAILED@{TOR\_HS\_INTRO\_FAILED}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02eadb95efa20be63e83ddc7ec0faa4b4e6a} 
+TOR\+\_\+\+HS\+\_\+\+INTRO\+\_\+\+FAILED&Tor\+: Onion service introduction failed. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{TOR\_HS\_REND\_FAILED@{TOR\_HS\_REND\_FAILED}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!TOR\_HS\_REND\_FAILED@{TOR\_HS\_REND\_FAILED}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02eaf90f707b3ded2b734569aade86bfab99} 
+TOR\+\_\+\+HS\+\_\+\+REND\+\_\+\+FAILED&Tor\+: Onion service rendezvous failed. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{TOR\_HS\_MISSING\_CLIENT\_AUTH@{TOR\_HS\_MISSING\_CLIENT\_AUTH}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!TOR\_HS\_MISSING\_CLIENT\_AUTH@{TOR\_HS\_MISSING\_CLIENT\_AUTH}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02ea8a27e9392cbfd48ecc801399eb40e2c5} 
+TOR\+\_\+\+HS\+\_\+\+MISSING\+\_\+\+CLIENT\+\_\+\+AUTH&Tor\+: Onion service missing client authorization. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{TOR\_HS\_WRONG\_CLIENT\_AUTH@{TOR\_HS\_WRONG\_CLIENT\_AUTH}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!TOR\_HS\_WRONG\_CLIENT\_AUTH@{TOR\_HS\_WRONG\_CLIENT\_AUTH}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02ea261f631fefe0887f2327ae3672a44454} 
+TOR\+\_\+\+HS\+\_\+\+WRONG\+\_\+\+CLIENT\+\_\+\+AUTH&Tor\+: Onion service wrong client authorization. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{TOR\_HS\_BAD\_ADDRESS@{TOR\_HS\_BAD\_ADDRESS}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!TOR\_HS\_BAD\_ADDRESS@{TOR\_HS\_BAD\_ADDRESS}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02eabd922077b976c9f16cc4ea966a9c7b75} 
+TOR\+\_\+\+HS\+\_\+\+BAD\+\_\+\+ADDRESS&Tor\+: Onion service invalid address. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{TOR\_HS\_INTRO\_TIMEOUT@{TOR\_HS\_INTRO\_TIMEOUT}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!TOR\_HS\_INTRO\_TIMEOUT@{TOR\_HS\_INTRO\_TIMEOUT}}}\label{netbase_8cpp_a97f842edf4ac3c020601432e9418c02eaf53bc9941c48b740fd28b214e4ffd2b2} 
+TOR\+\_\+\+HS\+\_\+\+INTRO\+\_\+\+TIMEOUT&Tor\+: Onion service introduction timed out. \\
+\hline
+
+\end{DoxyEnumFields}
+\index{netbase.cpp@{netbase.cpp}!SOCKSVersion@{SOCKSVersion}}
+\index{SOCKSVersion@{SOCKSVersion}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{SOCKSVersion}
+{\footnotesize\ttfamily \label{netbase_8cpp_a4350f026c66bf05a4aa5e9f67067a234} 
+enum \textbf{ SOCKSVersion} \+: uint8\+\_\+t}
+
+SOCKS version \begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{SOCKS4@{SOCKS4}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!SOCKS4@{SOCKS4}}}\label{netbase_8cpp_a4350f026c66bf05a4aa5e9f67067a234a373141c2c1e64b1adeb35fcf5618fa63} 
+SOCKS4&\\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{SOCKS5@{SOCKS5}!netbase.cpp@{netbase.cpp}}\index{netbase.cpp@{netbase.cpp}!SOCKS5@{SOCKS5}}}\label{netbase_8cpp_a4350f026c66bf05a4aa5e9f67067a234a8c9618d95ba78a6d8138358129c1e316} 
+SOCKS5&\\
+\hline
+
+\end{DoxyEnumFields}
+
+
+\label{doc-func-members}
+\doxysubsection{Function Documentation}
+\index{netbase.cpp@{netbase.cpp}!ConnectDirectly@{ConnectDirectly}}
+\index{ConnectDirectly@{ConnectDirectly}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{ConnectDirectly()}
+{\footnotesize\ttfamily \label{netbase_8cpp_a15888ecb4a624a2e65b8e7e1add1a02d} 
+std\+::unique\+\_\+ptr$<$ \textbf{ Sock} $>$ Connect\+Directly (\begin{DoxyParamCaption}\item[{const \textbf{ CService} \&}]{dest}{, }\item[{bool}]{manual\+\_\+connection}{}\end{DoxyParamCaption})}
+
+Create a socket and try to connect to the specified service.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em dest} & The service to which to connect. \\
+\hline
+\mbox{\texttt{in}}  & {\em manual\+\_\+connection} & Whether or not the connection was manually requested (e.\+g. through the addnode RPC)\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the connected socket if the operation succeeded, empty unique\+\_\+ptr otherwise 
+\end{DoxyReturn}
+\index{netbase.cpp@{netbase.cpp}!ConnectThroughProxy@{ConnectThroughProxy}}
+\index{ConnectThroughProxy@{ConnectThroughProxy}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{ConnectThroughProxy()}
+{\footnotesize\ttfamily \label{netbase_8cpp_adee415f025feff9da3b5627136896334} 
+std\+::unique\+\_\+ptr$<$ \textbf{ Sock} $>$ Connect\+Through\+Proxy (\begin{DoxyParamCaption}\item[{const \textbf{ Proxy} \&}]{proxy}{, }\item[{const std\+::string \&}]{dest}{, }\item[{uint16\+\_\+t}]{port}{, }\item[{bool \&}]{proxy\+\_\+connection\+\_\+failed}{}\end{DoxyParamCaption})}
+
+Connect to a specified destination service through a SOCKS5 proxy by first connecting to the SOCKS5 proxy.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em proxy} & The SOCKS5 proxy. \\
+\hline
+\mbox{\texttt{in}}  & {\em dest} & The destination service to which to connect. \\
+\hline
+\mbox{\texttt{in}}  & {\em port} & The destination port. \\
+\hline
+\mbox{\texttt{out}}  & {\em proxy\+\_\+connection\+\_\+failed} & Whether or not the connection to the SOCKS5 proxy failed.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the connected socket if the operation succeeded. Otherwise an empty unique\+\_\+ptr. 
+\end{DoxyReturn}
+\index{netbase.cpp@{netbase.cpp}!ContainsNoNUL@{ContainsNoNUL}}
+\index{ContainsNoNUL@{ContainsNoNUL}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{ContainsNoNUL()}
+{\footnotesize\ttfamily \label{netbase_8cpp_ae88ae9c1bf5ad674e847402ac896b434} 
+bool Contains\+No\+NUL (\begin{DoxyParamCaption}\item[{std\+::string\+\_\+view}]{str}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [nodiscard]}, {\ttfamily [noexcept]}}
+
+Check if a string does not contain any embedded NUL (\textbackslash{}0) characters \index{netbase.cpp@{netbase.cpp}!CreateSockOS@{CreateSockOS}}
+\index{CreateSockOS@{CreateSockOS}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{CreateSockOS()}
+{\footnotesize\ttfamily \label{netbase_8cpp_ab18d9e9a7accb34c66570cd3d5f4367b} 
+std\+::unique\+\_\+ptr$<$ \textbf{ Sock} $>$ Create\+Sock\+OS (\begin{DoxyParamCaption}\item[{int}]{domain}{, }\item[{int}]{type}{, }\item[{int}]{protocol}{}\end{DoxyParamCaption})}
+
+Create a real socket from the operating system. 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em domain} & Communications domain, first argument to the socket(2) syscall. \\
+\hline
+\mbox{\texttt{in}}  & {\em type} & Type of the socket, second argument to the socket(2) syscall. \\
+\hline
+\mbox{\texttt{in}}  & {\em protocol} & The particular protocol to be used with the socket, third argument to the socket(2) syscall. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+pointer to the created \doxyref{Sock}{p.}{class_sock} object or unique\+\_\+ptr that owns nothing in case of failure 
+\end{DoxyReturn}
+\index{netbase.cpp@{netbase.cpp}!GetNameProxy@{GetNameProxy}}
+\index{GetNameProxy@{GetNameProxy}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{GetNameProxy()}
+{\footnotesize\ttfamily \label{netbase_8cpp_ae38ba4802e4913dc6c824a42d2b317dd} 
+bool Get\+Name\+Proxy (\begin{DoxyParamCaption}\item[{\textbf{ Proxy} \&}]{name\+Proxy\+Out}{}\end{DoxyParamCaption})}
+
+\index{netbase.cpp@{netbase.cpp}!GetNetworkName@{GetNetworkName}}
+\index{GetNetworkName@{GetNetworkName}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{GetNetworkName()}
+{\footnotesize\ttfamily \label{netbase_8cpp_a3ac9f57de577413ec3a720f0ef520921} 
+std\+::string Get\+Network\+Name (\begin{DoxyParamCaption}\item[{enum \textbf{ Network}}]{net}{}\end{DoxyParamCaption})}
+
+\index{netbase.cpp@{netbase.cpp}!GetNetworkNames@{GetNetworkNames}}
+\index{GetNetworkNames@{GetNetworkNames}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{GetNetworkNames()}
+{\footnotesize\ttfamily \label{netbase_8cpp_afce09ac112758f89ea8a5bd76a230781} 
+std\+::vector$<$ std\+::string $>$ Get\+Network\+Names (\begin{DoxyParamCaption}\item[{bool}]{append\+\_\+unroutable}{ = {\ttfamily false}}\end{DoxyParamCaption})}
+
+Return a vector of publicly routable \doxyref{Network}{p.}{netaddress_8h_acc9a38c714afe79b5035cb36f560dac3} names; optionally append NET\+\_\+\+UNROUTABLE. \index{netbase.cpp@{netbase.cpp}!GetProxy@{GetProxy}}
+\index{GetProxy@{GetProxy}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{GetProxy()}
+{\footnotesize\ttfamily \label{netbase_8cpp_abd14078cb1be051963239a4141ded520} 
+bool Get\+Proxy (\begin{DoxyParamCaption}\item[{enum \textbf{ Network}}]{net}{, }\item[{\textbf{ Proxy} \&}]{proxy\+Info\+Out}{}\end{DoxyParamCaption})}
+
+\index{netbase.cpp@{netbase.cpp}!HaveNameProxy@{HaveNameProxy}}
+\index{HaveNameProxy@{HaveNameProxy}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{HaveNameProxy()}
+{\footnotesize\ttfamily \label{netbase_8cpp_a4a0df7ebe15572508e61c38406e49732} 
+bool Have\+Name\+Proxy (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+\index{netbase.cpp@{netbase.cpp}!IsBadPort@{IsBadPort}}
+\index{IsBadPort@{IsBadPort}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{IsBadPort()}
+{\footnotesize\ttfamily \label{netbase_8cpp_af0cfdd85ce07d32684fddf5ebe335221} 
+bool Is\+Bad\+Port (\begin{DoxyParamCaption}\item[{uint16\+\_\+t}]{port}{}\end{DoxyParamCaption})}
+
+Determine if a port is "{}bad"{} from the perspective of attempting to connect to a node on that port. \begin{DoxySeeAlso}{See also}
+doc/p2p-\/bad-\/ports.\+md 
+\end{DoxySeeAlso}
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em port} & Port to check. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+whether the port is bad 
+\end{DoxyReturn}
+\index{netbase.cpp@{netbase.cpp}!IsProxy@{IsProxy}}
+\index{IsProxy@{IsProxy}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{IsProxy()}
+{\footnotesize\ttfamily \label{netbase_8cpp_aef250c1632d217d8f3b752ddeacc0368} 
+bool Is\+Proxy (\begin{DoxyParamCaption}\item[{const \textbf{ CNet\+Addr} \&}]{addr}{}\end{DoxyParamCaption})}
+
+\index{netbase.cpp@{netbase.cpp}!IsUnixSocketPath@{IsUnixSocketPath}}
+\index{IsUnixSocketPath@{IsUnixSocketPath}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{IsUnixSocketPath()}
+{\footnotesize\ttfamily \label{netbase_8cpp_ae2f2f55cbee1b39ccb45260257e79409} 
+bool Is\+Unix\+Socket\+Path (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{name}{}\end{DoxyParamCaption})}
+
+Check if a string is a valid UNIX domain socket path
+
+
+\begin{DoxyParams}{Parameters}
+{\em name} & The string provided by the user representing a local path\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Whether the string has proper format, length, and points to an existing file path 
+\end{DoxyReturn}
+\index{netbase.cpp@{netbase.cpp}!Lookup@{Lookup}}
+\index{Lookup@{Lookup}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{Lookup()\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily \label{netbase_8cpp_a9388f3c060a6b7264045e03d11f7e932} 
+std\+::optional$<$ \textbf{ CService} $>$ Lookup (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{name}{, }\item[{uint16\+\_\+t}]{port\+Default}{, }\item[{bool}]{f\+Allow\+Lookup}{, }\item[{\textbf{ DNSLookup\+Fn}}]{dns\+\_\+lookup\+\_\+function}{ = {\ttfamily \textbf{ g\+\_\+dns\+\_\+lookup}}}\end{DoxyParamCaption})}
+
+Resolve a service string to its first corresponding service.
+
+\begin{DoxySeeAlso}{See also}
+\doxyref{Lookup(const std\+::string\&, uint16\+\_\+t, bool, unsigned int, DNSLookup\+Fn)}{p.}{netbase_8h_a6781eaebae3760d3f36bf16616104d6d} \doxyref{for}{p.}{arith__uint256__tests_8cpp_aec8e239ec13a0a2253be548812b40c53} additional parameter descriptions. 
+\end{DoxySeeAlso}
+\index{netbase.cpp@{netbase.cpp}!Lookup@{Lookup}}
+\index{Lookup@{Lookup}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{Lookup()\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily \label{netbase_8cpp_a8da5675115ffbf04e579997076c1e68f} 
+std\+::vector$<$ \textbf{ CService} $>$ Lookup (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{name}{, }\item[{uint16\+\_\+t}]{port\+Default}{, }\item[{bool}]{f\+Allow\+Lookup}{, }\item[{unsigned int}]{n\+Max\+Solutions}{, }\item[{\textbf{ DNSLookup\+Fn}}]{dns\+\_\+lookup\+\_\+function}{ = {\ttfamily \textbf{ g\+\_\+dns\+\_\+lookup}}}\end{DoxyParamCaption})}
+
+Resolve a service string to its corresponding service.
+
+
+\begin{DoxyParams}{Parameters}
+{\em name} & The string representing a service. Could be a name or a numerical IP address (IPv6 addresses should be in their disambiguated bracketed form), optionally followed by a uint16\+\_\+t port number. (e.\+g. example.\+com\+:8333 or\\
+\hline
+{\em port\+Default} & The default port for resulting services if not specified by the service string. \\
+\hline
+{\em f\+Allow\+Lookup} & Whether or not hostname lookups are permitted. If yes, external queries may be performed. \\
+\hline
+{\em n\+Max\+Solutions} & The maximum number of results we want, specifying 0 means "{}as many solutions as we get."{}\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The resulting services to which the specified service string resolved. 
+\end{DoxyReturn}
+\index{netbase.cpp@{netbase.cpp}!LookupHost@{LookupHost}}
+\index{LookupHost@{LookupHost}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{LookupHost()\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily \label{netbase_8cpp_a8332c3960dfe640c483a3025fda5f445} 
+std\+::optional$<$ \textbf{ CNet\+Addr} $>$ Lookup\+Host (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{name}{, }\item[{bool}]{f\+Allow\+Lookup}{, }\item[{\textbf{ DNSLookup\+Fn}}]{dns\+\_\+lookup\+\_\+function}{ = {\ttfamily \textbf{ g\+\_\+dns\+\_\+lookup}}}\end{DoxyParamCaption})}
+
+Resolve a host string to its first corresponding network address.
+
+\begin{DoxyReturn}{Returns}
+The resulting network address to which the specified host string resolved or std\+::nullopt if host does not resolve to an address.
+\end{DoxyReturn}
+\begin{DoxySeeAlso}{See also}
+\doxyref{Lookup\+Host(const std\+::string\&, unsigned int, bool, DNSLookup\+Fn)}{p.}{netbase_8h_aaea70ed279de41be1a3faf9a0279021e} \doxyref{for}{p.}{arith__uint256__tests_8cpp_aec8e239ec13a0a2253be548812b40c53} additional parameter descriptions. 
+\end{DoxySeeAlso}
+\index{netbase.cpp@{netbase.cpp}!LookupHost@{LookupHost}}
+\index{LookupHost@{LookupHost}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{LookupHost()\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily \label{netbase_8cpp_a1ffa791c989b26b3f02b857bcd6bacc3} 
+std\+::vector$<$ \textbf{ CNet\+Addr} $>$ Lookup\+Host (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{name}{, }\item[{unsigned int}]{n\+Max\+Solutions}{, }\item[{bool}]{f\+Allow\+Lookup}{, }\item[{\textbf{ DNSLookup\+Fn}}]{dns\+\_\+lookup\+\_\+function}{ = {\ttfamily \textbf{ g\+\_\+dns\+\_\+lookup}}}\end{DoxyParamCaption})}
+
+Resolve a host string to its corresponding network addresses.
+
+
+\begin{DoxyParams}{Parameters}
+{\em name} & The string representing a host. Could be a name or a numerical IP address (IPv6 addresses in their bracketed form are allowed).\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+The resulting network addresses to which the specified host string resolved.
+\end{DoxyReturn}
+\begin{DoxySeeAlso}{See also}
+\doxyref{Lookup(const std\+::string\&, uint16\+\_\+t, bool, unsigned int, DNSLookup\+Fn)}{p.}{netbase_8h_a6781eaebae3760d3f36bf16616104d6d} \doxyref{for}{p.}{arith__uint256__tests_8cpp_aec8e239ec13a0a2253be548812b40c53} additional parameter descriptions. 
+\end{DoxySeeAlso}
+\index{netbase.cpp@{netbase.cpp}!LookupNumeric@{LookupNumeric}}
+\index{LookupNumeric@{LookupNumeric}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{LookupNumeric()}
+{\footnotesize\ttfamily \label{netbase_8cpp_ae6fcf05041086b7dd0bb4c938b1cf92e} 
+\textbf{ CService} Lookup\+Numeric (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{name}{, }\item[{uint16\+\_\+t}]{port\+Default}{ = {\ttfamily 0}, }\item[{\textbf{ DNSLookup\+Fn}}]{dns\+\_\+lookup\+\_\+function}{ = {\ttfamily \textbf{ g\+\_\+dns\+\_\+lookup}}}\end{DoxyParamCaption})}
+
+Resolve a service string with a numeric IP to its first corresponding service.
+
+\begin{DoxyReturn}{Returns}
+The resulting \doxyref{CService}{p.}{class_c_service} if the resolution was successful, [\+::]\+:0 otherwise.
+\end{DoxyReturn}
+\begin{DoxySeeAlso}{See also}
+\doxyref{Lookup(const std\+::string\&, uint16\+\_\+t, bool, unsigned int, DNSLookup\+Fn)}{p.}{netbase_8h_a6781eaebae3760d3f36bf16616104d6d} \doxyref{for}{p.}{arith__uint256__tests_8cpp_aec8e239ec13a0a2253be548812b40c53} additional parameter descriptions. 
+\end{DoxySeeAlso}
+\index{netbase.cpp@{netbase.cpp}!LookupSubNet@{LookupSubNet}}
+\index{LookupSubNet@{LookupSubNet}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{LookupSubNet()}
+{\footnotesize\ttfamily \label{netbase_8cpp_a01bb22997f9a177d963c329f552bcd3c} 
+\textbf{ CSub\+Net} Lookup\+Sub\+Net (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{subnet\+\_\+str}{}\end{DoxyParamCaption})}
+
+Parse and resolve a specified subnet string into the appropriate internal representation.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em subnet\+\_\+str} & A string representation of a subnet of the form {\ttfamily network address [ "{}/"{}, ( CIDR-\/style suffix $\vert$ netmask ) ]} e.\+g. "{}2001\+:db8\+::/32"{}, "{}192.\+0.\+2.\+0/255.\+255.\+255.\+0"{} or "{}8.\+8.\+8.\+8"{}. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+a \doxyref{CSub\+Net}{p.}{class_c_sub_net} object (that may or may not be valid). 
+\end{DoxyReturn}
+\index{netbase.cpp@{netbase.cpp}!MaybeFlipIPv6toCJDNS@{MaybeFlipIPv6toCJDNS}}
+\index{MaybeFlipIPv6toCJDNS@{MaybeFlipIPv6toCJDNS}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{MaybeFlipIPv6toCJDNS()}
+{\footnotesize\ttfamily \label{netbase_8cpp_aa0d388812dee65a6371a4bdff962dfa4} 
+\textbf{ CService} Maybe\+Flip\+IPv6to\+CJDNS (\begin{DoxyParamCaption}\item[{const \textbf{ CService} \&}]{service}{}\end{DoxyParamCaption})}
+
+If an IPv6 address belongs to the address range used by the CJDNS network and the CJDNS network is reachable (-\/cjdnsreachable config is set), then change the type from NET\+\_\+\+IPV6 to NET\+\_\+\+CJDNS. 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em service} & Address to potentially convert. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+a copy of {\ttfamily service} either unmodified or changed to CJDNS. 
+\end{DoxyReturn}
+\index{netbase.cpp@{netbase.cpp}!ParseNetwork@{ParseNetwork}}
+\index{ParseNetwork@{ParseNetwork}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{ParseNetwork()}
+{\footnotesize\ttfamily \label{netbase_8cpp_a692bdf31b5d2f5a5270364cf4a090633} 
+enum \textbf{ Network} Parse\+Network (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{net\+\_\+in}{}\end{DoxyParamCaption})}
+
+\index{netbase.cpp@{netbase.cpp}!SetNameProxy@{SetNameProxy}}
+\index{SetNameProxy@{SetNameProxy}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{SetNameProxy()}
+{\footnotesize\ttfamily \label{netbase_8cpp_a51a7f08a45b54a927ca6f0d3ce5cf43d} 
+bool Set\+Name\+Proxy (\begin{DoxyParamCaption}\item[{const \textbf{ Proxy} \&}]{addr\+Proxy}{}\end{DoxyParamCaption})}
+
+Set the name proxy to use for all connections to nodes specified by a hostname. After setting this proxy, connecting to a node specified by a hostname won\textquotesingle{}t result in a local lookup of said hostname, rather, connect to the node by asking the name proxy for a proxy connection to the hostname, effectively delegating the hostname lookup to the specified proxy.
+
+This delegation increases privacy for those who set the name proxy as they no longer leak their external hostname queries to their DNS servers.
+
+\begin{DoxyReturn}{Returns}
+Whether or not the operation succeeded.
+\end{DoxyReturn}
+\begin{DoxyNote}{Note}
+SOCKS5\textquotesingle{}s support for UDP-\/over-\/\+SOCKS5 has been considered, but no SOCK5 server in common use (most notably Tor) actually implements UDP support, and a DNS resolver is beyond the scope of this project. 
+\end{DoxyNote}
+\index{netbase.cpp@{netbase.cpp}!SetProxy@{SetProxy}}
+\index{SetProxy@{SetProxy}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{SetProxy()}
+{\footnotesize\ttfamily \label{netbase_8cpp_a8a37e5574d7e2be5c6aa6b4cdddd8312} 
+bool Set\+Proxy (\begin{DoxyParamCaption}\item[{enum \textbf{ Network}}]{net}{, }\item[{const \textbf{ Proxy} \&}]{addr\+Proxy}{}\end{DoxyParamCaption})}
+
+\index{netbase.cpp@{netbase.cpp}!Socks5@{Socks5}}
+\index{Socks5@{Socks5}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{Socks5()}
+{\footnotesize\ttfamily \label{netbase_8cpp_a7959036c75dd2e198028ce89665d6112} 
+bool Socks5 (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{str\+Dest}{, }\item[{uint16\+\_\+t}]{port}{, }\item[{const \textbf{ Proxy\+Credentials} $\ast$}]{auth}{, }\item[{const \textbf{ Sock} \&}]{socket}{}\end{DoxyParamCaption})}
+
+Connect to a specified destination service through an already connected SOCKS5 proxy.
+
+
+\begin{DoxyParams}{Parameters}
+{\em str\+Dest} & The destination fully-\/qualified domain name. \\
+\hline
+{\em port} & The destination port. \\
+\hline
+{\em auth} & The credentials with which to authenticate with the specified SOCKS5 proxy. \\
+\hline
+{\em socket} & The SOCKS5 proxy socket.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Whether or not the operation succeeded.
+\end{DoxyReturn}
+\begin{DoxyNote}{Note}
+The specified SOCKS5 proxy socket must already be connected to the SOCKS5 proxy.
+\end{DoxyNote}
+\begin{DoxySeeAlso}{See also}
+{\texttt{RFC1928\+: SOCKS Protocol Version 5}} 
+\end{DoxySeeAlso}
+\index{netbase.cpp@{netbase.cpp}!WrappedGetAddrInfo@{WrappedGetAddrInfo}}
+\index{WrappedGetAddrInfo@{WrappedGetAddrInfo}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{WrappedGetAddrInfo()}
+{\footnotesize\ttfamily \label{netbase_8cpp_af251b6d32ca51d672f3c20a56f8c5a59} 
+std\+::vector$<$ \textbf{ CNet\+Addr} $>$ Wrapped\+Get\+Addr\+Info (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{name}{, }\item[{bool}]{allow\+\_\+lookup}{}\end{DoxyParamCaption})}
+
+\doxyref{Wrapper}{p.}{class_wrapper} for getaddrinfo(3). Do not use directly\+: call Lookup/\+Lookup\+Host/\+Lookup\+Numeric/\+Lookup\+Sub\+Net. 
+
+\label{doc-var-members}
+\doxysubsection{Variable Documentation}
+\index{netbase.cpp@{netbase.cpp}!CreateSock@{CreateSock}}
+\index{CreateSock@{CreateSock}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{CreateSock}
+{\footnotesize\ttfamily \label{netbase_8cpp_ae0a040134849ed822e283537c1c902cd} 
+std\+::function$<$std\+::unique\+\_\+ptr$<$\textbf{ Sock}$>$(int, int, int)$>$ Create\+Sock = \textbf{ Create\+Sock\+OS}}
+
+Socket factory. Defaults to {\ttfamily \doxyref{Create\+Sock\+OS()}{p.}{netbase_8h_ab18d9e9a7accb34c66570cd3d5f4367b}}, but can be overridden by unit tests. \index{netbase.cpp@{netbase.cpp}!fNameLookup@{fNameLookup}}
+\index{fNameLookup@{fNameLookup}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{fNameLookup}
+{\footnotesize\ttfamily \label{netbase_8cpp_ab5335ec17aee4d4fdd4c735b85707b56} 
+bool f\+Name\+Lookup = DEFAULT\+\_\+\+NAME\+\_\+\+LOOKUP}
+
+\index{netbase.cpp@{netbase.cpp}!g\_dns\_lookup@{g\_dns\_lookup}}
+\index{g\_dns\_lookup@{g\_dns\_lookup}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{g\_dns\_lookup}
+{\footnotesize\ttfamily \label{netbase_8cpp_af5eb6bd96ec783519dc2d3704aa7f22e} 
+\textbf{ DNSLookup\+Fn} g\+\_\+dns\+\_\+lookup \{\textbf{ Wrapped\+Get\+Addr\+Info}\}}
+
+\index{netbase.cpp@{netbase.cpp}!g\_reachable\_nets@{g\_reachable\_nets}}
+\index{g\_reachable\_nets@{g\_reachable\_nets}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{g\_reachable\_nets}
+{\footnotesize\ttfamily \label{netbase_8cpp_aafd55770725b866c8a3129d37dca0244} 
+\textbf{ Reachable\+Nets} g\+\_\+reachable\+\_\+nets}
+
+\index{netbase.cpp@{netbase.cpp}!g\_socks5\_interrupt@{g\_socks5\_interrupt}}
+\index{g\_socks5\_interrupt@{g\_socks5\_interrupt}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{g\_socks5\_interrupt}
+{\footnotesize\ttfamily \label{netbase_8cpp_a40d6faad4f29fb9a4181781578c4c306} 
+\textbf{ CThread\+Interrupt} g\+\_\+socks5\+\_\+interrupt}
+
+Interrupt SOCKS5 reads or writes. \index{netbase.cpp@{netbase.cpp}!g\_socks5\_recv\_timeout@{g\_socks5\_recv\_timeout}}
+\index{g\_socks5\_recv\_timeout@{g\_socks5\_recv\_timeout}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{g\_socks5\_recv\_timeout}
+{\footnotesize\ttfamily \label{netbase_8cpp_a27e9dcc6827285149c18a62f116ec2f0} 
+std\+::chrono\+::milliseconds g\+\_\+socks5\+\_\+recv\+\_\+timeout = 20s}
+
+\index{netbase.cpp@{netbase.cpp}!nConnectTimeout@{nConnectTimeout}}
+\index{nConnectTimeout@{nConnectTimeout}!netbase.cpp@{netbase.cpp}}
+\doxysubsubsection{nConnectTimeout}
+{\footnotesize\ttfamily \label{netbase_8cpp_ac8115c6e2874217f2e487b5391cbe963} 
+int n\+Connect\+Timeout = DEFAULT\+\_\+\+CONNECT\+\_\+\+TIMEOUT}
+

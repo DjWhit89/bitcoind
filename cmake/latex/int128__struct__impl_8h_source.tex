@@ -1,0 +1,211 @@
+\doxysection{int128\+\_\+struct\+\_\+impl.\+h}
+\label{int128__struct__impl_8h_source}\index{src/secp256k1/src/int128\_struct\_impl.h@{src/secp256k1/src/int128\_struct\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_INT128\_STRUCT\_IMPL\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ SECP256K1\_INT128\_STRUCT\_IMPL\_H}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}int128.h"{}}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#if\ defined(\_MSC\_VER)\ \&\&\ (defined(\_M\_X64)\ ||\ defined(\_M\_ARM64))\ }\textcolor{comment}{/*\ MSVC\ */}\textcolor{preprocessor}{}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#\ \ \ \ include\ <intrin.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#\ \ \ \ if\ defined(\_M\_ARM64)\ ||\ defined(SECP256K1\_MSVC\_MULH\_TEST\_OVERRIDE)}}
+\DoxyCodeLine{00010\ \textcolor{comment}{/*\ On\ ARM64\ MSVC,\ use\ \_\_(u)mulh\ for\ the\ upper\ half\ of\ 64x64\ multiplications.}}
+\DoxyCodeLine{00011\ \textcolor{comment}{\ \ \ (Define\ SECP256K1\_MSVC\_MULH\_TEST\_OVERRIDE\ to\ test\ this\ code\ path\ on\ X64,}}
+\DoxyCodeLine{00012\ \textcolor{comment}{\ \ \ which\ supports\ both\ \_\_(u)mulh\ and\ \_umul128.)\ */}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#\ \ \ \ \ \ \ \ if\ defined(SECP256K1\_MSVC\_MULH\_TEST\_OVERRIDE)}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#\ \ \ \ \ \ \ \ \ \ \ \ pragma\ message(\_\_FILE\_\_\ "{}:\ SECP256K1\_MSVC\_MULH\_TEST\_OVERRIDE\ is\ defined,\ forcing\ use\ of\ \_\_(u)mulh."{})}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#\ \ \ \ \ \ \ \ endif}}
+\DoxyCodeLine{00016\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ uint64\_t\ secp256k1\_umul128(uint64\_t\ a,\ uint64\_t\ b,\ uint64\_t*\ hi)\ \{}
+\DoxyCodeLine{00017\ \ \ \ \ *hi\ =\ \_\_umulh(a,\ b);}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordflow}{return}\ a\ *\ b;}
+\DoxyCodeLine{00019\ \}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ int64\_t\ secp256k1\_mul128(int64\_t\ a,\ int64\_t\ b,\ int64\_t*\ hi)\ \{}
+\DoxyCodeLine{00022\ \ \ \ \ *hi\ =\ \_\_mulh(a,\ b);}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordflow}{return}\ (uint64\_t)a\ *\ (uint64\_t)b;}
+\DoxyCodeLine{00024\ \}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#\ \ \ \ else}}
+\DoxyCodeLine{00026\ \textcolor{comment}{/*\ On\ x84\_64\ MSVC,\ use\ native\ \_(u)mul128\ for\ 64x64-\/>128\ multiplications.\ */}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#\ \ \ \ \ \ \ \ define\ secp256k1\_umul128\ \_umul128}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#\ \ \ \ \ \ \ \ define\ secp256k1\_mul128\ \_mul128}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#\ \ \ \ endif}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00031\ \textcolor{comment}{/*\ On\ other\ systems,\ emulate\ 64x64-\/>128\ multiplications\ using\ 32x32-\/>64\ multiplications.\ */}}
+\DoxyCodeLine{00032\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ uint64\_t\ secp256k1\_umul128(uint64\_t\ a,\ uint64\_t\ b,\ uint64\_t*\ hi)\ \{}
+\DoxyCodeLine{00033\ \ \ \ \ uint64\_t\ ll\ =\ (uint64\_t)(uint32\_t)a\ *\ (uint32\_t)b;}
+\DoxyCodeLine{00034\ \ \ \ \ uint64\_t\ lh\ =\ (uint32\_t)a\ *\ (b\ >>\ 32);}
+\DoxyCodeLine{00035\ \ \ \ \ uint64\_t\ hl\ =\ (a\ >>\ 32)\ *\ (uint32\_t)b;}
+\DoxyCodeLine{00036\ \ \ \ \ uint64\_t\ hh\ =\ (a\ >>\ 32)\ *\ (b\ >>\ 32);}
+\DoxyCodeLine{00037\ \ \ \ \ uint64\_t\ mid34\ =\ (ll\ >>\ 32)\ +\ (uint32\_t)lh\ +\ (uint32\_t)hl;}
+\DoxyCodeLine{00038\ \ \ \ \ *hi\ =\ hh\ +\ (lh\ >>\ 32)\ +\ (hl\ >>\ 32)\ +\ (mid34\ >>\ 32);}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordflow}{return}\ (mid34\ <<\ 32)\ +\ (uint32\_t)ll;}
+\DoxyCodeLine{00040\ \}}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ int64\_t\ secp256k1\_mul128(int64\_t\ a,\ int64\_t\ b,\ int64\_t*\ hi)\ \{}
+\DoxyCodeLine{00043\ \ \ \ \ uint64\_t\ ll\ =\ (uint64\_t)(uint32\_t)a\ *\ (uint32\_t)b;}
+\DoxyCodeLine{00044\ \ \ \ \ int64\_t\ lh\ =\ (uint32\_t)a\ *\ (b\ >>\ 32);}
+\DoxyCodeLine{00045\ \ \ \ \ int64\_t\ hl\ =\ (a\ >>\ 32)\ *\ (uint32\_t)b;}
+\DoxyCodeLine{00046\ \ \ \ \ int64\_t\ hh\ =\ (a\ >>\ 32)\ *\ (b\ >>\ 32);}
+\DoxyCodeLine{00047\ \ \ \ \ uint64\_t\ mid34\ =\ (ll\ >>\ 32)\ +\ (uint32\_t)lh\ +\ (uint32\_t)hl;}
+\DoxyCodeLine{00048\ \ \ \ \ *hi\ =\ hh\ +\ (lh\ >>\ 32)\ +\ (hl\ >>\ 32)\ +\ (mid34\ >>\ 32);}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordflow}{return}\ (mid34\ <<\ 32)\ +\ (uint32\_t)ll;}
+\DoxyCodeLine{00050\ \}}
+\DoxyCodeLine{00051\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_u128\_load(secp256k1\_uint128\ *r,\ uint64\_t\ hi,\ uint64\_t\ lo)\ \{}
+\DoxyCodeLine{00054\ \ \ \ \ r-\/>hi\ =\ hi;}
+\DoxyCodeLine{00055\ \ \ \ \ r-\/>lo\ =\ lo;}
+\DoxyCodeLine{00056\ \}}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_u128\_mul(secp256k1\_uint128\ *r,\ uint64\_t\ a,\ uint64\_t\ b)\ \{}
+\DoxyCodeLine{00059\ \ \ \ r-\/>lo\ =\ secp256k1\_umul128(a,\ b,\ \&r-\/>hi);}
+\DoxyCodeLine{00060\ \}}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_u128\_accum\_mul(secp256k1\_uint128\ *r,\ uint64\_t\ a,\ uint64\_t\ b)\ \{}
+\DoxyCodeLine{00063\ \ \ \ uint64\_t\ lo,\ hi;}
+\DoxyCodeLine{00064\ \ \ \ lo\ =\ secp256k1\_umul128(a,\ b,\ \&hi);}
+\DoxyCodeLine{00065\ \ \ \ r-\/>lo\ +=\ lo;}
+\DoxyCodeLine{00066\ \ \ \ r-\/>hi\ +=\ hi\ +\ (r-\/>lo\ <\ lo);}
+\DoxyCodeLine{00067\ \}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_u128\_accum\_u64(secp256k1\_uint128\ *r,\ uint64\_t\ a)\ \{}
+\DoxyCodeLine{00070\ \ \ \ r-\/>lo\ +=\ a;}
+\DoxyCodeLine{00071\ \ \ \ r-\/>hi\ +=\ r-\/>lo\ <\ a;}
+\DoxyCodeLine{00072\ \}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \textcolor{comment}{/*\ Unsigned\ (logical)\ right\ shift.}}
+\DoxyCodeLine{00075\ \textcolor{comment}{\ *\ Non-\/constant\ time\ in\ n.}}
+\DoxyCodeLine{00076\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00077\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_u128\_rshift(secp256k1\_uint128\ *r,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ n)\ \{}
+\DoxyCodeLine{00078\ \ \ \ VERIFY\_CHECK(n\ <\ 128);}
+\DoxyCodeLine{00079\ \ \ \ \textcolor{keywordflow}{if}\ (n\ >=\ 64)\ \{}
+\DoxyCodeLine{00080\ \ \ \ \ \ r-\/>lo\ =\ r-\/>hi\ >>\ (n-\/64);}
+\DoxyCodeLine{00081\ \ \ \ \ \ r-\/>hi\ =\ 0;}
+\DoxyCodeLine{00082\ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ >\ 0)\ \{}
+\DoxyCodeLine{00083\ \textcolor{preprocessor}{\#if\ defined(\_MSC\_VER)\ \&\&\ defined(\_M\_X64)}}
+\DoxyCodeLine{00084\ \ \ \ \ \ VERIFY\_CHECK(n\ <\ 64);}
+\DoxyCodeLine{00085\ \ \ \ \ \ r-\/>lo\ =\ \_\_shiftright128(r-\/>lo,\ r-\/>hi,\ n);}
+\DoxyCodeLine{00086\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00087\ \ \ \ \ \ r-\/>lo\ =\ ((1U\ *\ r-\/>hi)\ <<\ (64-\/n))\ |\ r-\/>lo\ >>\ n;}
+\DoxyCodeLine{00088\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00089\ \ \ \ \ \ r-\/>hi\ >>=\ n;}
+\DoxyCodeLine{00090\ \ \ \ \}}
+\DoxyCodeLine{00091\ \}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ uint64\_t\ secp256k1\_u128\_to\_u64(\textcolor{keyword}{const}\ secp256k1\_uint128\ *a)\ \{}
+\DoxyCodeLine{00094\ \ \ \ \textcolor{keywordflow}{return}\ a-\/>lo;}
+\DoxyCodeLine{00095\ \}}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00097\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ uint64\_t\ secp256k1\_u128\_hi\_u64(\textcolor{keyword}{const}\ secp256k1\_uint128\ *a)\ \{}
+\DoxyCodeLine{00098\ \ \ \ \textcolor{keywordflow}{return}\ a-\/>hi;}
+\DoxyCodeLine{00099\ \}}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_u128\_from\_u64(secp256k1\_uint128\ *r,\ uint64\_t\ a)\ \{}
+\DoxyCodeLine{00102\ \ \ \ r-\/>hi\ =\ 0;}
+\DoxyCodeLine{00103\ \ \ \ r-\/>lo\ =\ a;}
+\DoxyCodeLine{00104\ \}}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{int}\ secp256k1\_u128\_check\_bits(\textcolor{keyword}{const}\ secp256k1\_uint128\ *r,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ n)\ \{}
+\DoxyCodeLine{00107\ \ \ \ VERIFY\_CHECK(n\ <\ 128);}
+\DoxyCodeLine{00108\ \ \ \ \textcolor{keywordflow}{return}\ n\ >=\ 64\ ?\ r-\/>hi\ >>\ (n\ -\/\ 64)\ ==\ 0}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ :\ r-\/>hi\ ==\ 0\ \&\&\ r-\/>lo\ >>\ n\ ==\ 0;}
+\DoxyCodeLine{00110\ \}}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_i128\_load(secp256k1\_int128\ *r,\ int64\_t\ hi,\ uint64\_t\ lo)\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ r-\/>hi\ =\ hi;}
+\DoxyCodeLine{00114\ \ \ \ \ r-\/>lo\ =\ lo;}
+\DoxyCodeLine{00115\ \}}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_i128\_mul(secp256k1\_int128\ *r,\ int64\_t\ a,\ int64\_t\ b)\ \{}
+\DoxyCodeLine{00118\ \ \ \ int64\_t\ hi;}
+\DoxyCodeLine{00119\ \ \ \ r-\/>lo\ =\ (uint64\_t)secp256k1\_mul128(a,\ b,\ \&hi);}
+\DoxyCodeLine{00120\ \ \ \ r-\/>hi\ =\ (uint64\_t)hi;}
+\DoxyCodeLine{00121\ \}}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_i128\_accum\_mul(secp256k1\_int128\ *r,\ int64\_t\ a,\ int64\_t\ b)\ \{}
+\DoxyCodeLine{00124\ \ \ \ int64\_t\ hi;}
+\DoxyCodeLine{00125\ \ \ \ uint64\_t\ lo\ =\ (uint64\_t)secp256k1\_mul128(a,\ b,\ \&hi);}
+\DoxyCodeLine{00126\ \ \ \ r-\/>lo\ +=\ lo;}
+\DoxyCodeLine{00127\ \ \ \ hi\ +=\ r-\/>lo\ <\ lo;}
+\DoxyCodeLine{00128\ \ \ \ \textcolor{comment}{/*\ Verify\ no\ overflow.}}
+\DoxyCodeLine{00129\ \textcolor{comment}{\ \ \ \ *\ If\ r\ represents\ a\ positive\ value\ (the\ sign\ bit\ is\ not\ set)\ and\ the\ value\ we\ are\ adding\ is\ a\ positive\ value\ (the\ sign\ bit\ is\ not\ set),}}
+\DoxyCodeLine{00130\ \textcolor{comment}{\ \ \ \ *\ then\ we\ require\ that\ the\ resulting\ value\ also\ be\ positive\ (the\ sign\ bit\ is\ not\ set).}}
+\DoxyCodeLine{00131\ \textcolor{comment}{\ \ \ \ *\ Note\ that\ (X\ <=\ Y)\ means\ (X\ implies\ Y)\ when\ X\ and\ Y\ are\ boolean\ values\ (i.e.\ 0\ or\ 1).}}
+\DoxyCodeLine{00132\ \textcolor{comment}{\ \ \ \ */}}
+\DoxyCodeLine{00133\ \ \ \ VERIFY\_CHECK((r-\/>hi\ <=\ 0x7fffffffffffffffu\ \&\&\ (uint64\_t)hi\ <=\ 0x7fffffffffffffffu)\ <=\ (r-\/>hi\ +\ (uint64\_t)hi\ <=\ 0x7fffffffffffffffu));}
+\DoxyCodeLine{00134\ \ \ \ \textcolor{comment}{/*\ Verify\ no\ underflow.}}
+\DoxyCodeLine{00135\ \textcolor{comment}{\ \ \ \ *\ If\ r\ represents\ a\ negative\ value\ (the\ sign\ bit\ is\ set)\ and\ the\ value\ we\ are\ adding\ is\ a\ negative\ value\ (the\ sign\ bit\ is\ set),}}
+\DoxyCodeLine{00136\ \textcolor{comment}{\ \ \ \ *\ then\ we\ require\ that\ the\ resulting\ value\ also\ be\ negative\ (the\ sign\ bit\ is\ set).}}
+\DoxyCodeLine{00137\ \textcolor{comment}{\ \ \ \ */}}
+\DoxyCodeLine{00138\ \ \ \ VERIFY\_CHECK((r-\/>hi\ >\ 0x7fffffffffffffffu\ \&\&\ (uint64\_t)hi\ >\ 0x7fffffffffffffffu)\ <=\ (r-\/>hi\ +\ (uint64\_t)hi\ >\ 0x7fffffffffffffffu));}
+\DoxyCodeLine{00139\ \ \ \ r-\/>hi\ +=\ hi;}
+\DoxyCodeLine{00140\ \}}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00142\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_i128\_dissip\_mul(secp256k1\_int128\ *r,\ int64\_t\ a,\ int64\_t\ b)\ \{}
+\DoxyCodeLine{00143\ \ \ \ int64\_t\ hi;}
+\DoxyCodeLine{00144\ \ \ \ uint64\_t\ lo\ =\ (uint64\_t)secp256k1\_mul128(a,\ b,\ \&hi);}
+\DoxyCodeLine{00145\ \ \ \ hi\ +=\ r-\/>lo\ <\ lo;}
+\DoxyCodeLine{00146\ \ \ \ \textcolor{comment}{/*\ Verify\ no\ overflow.}}
+\DoxyCodeLine{00147\ \textcolor{comment}{\ \ \ \ *\ If\ r\ represents\ a\ positive\ value\ (the\ sign\ bit\ is\ not\ set)\ and\ the\ value\ we\ are\ subtracting\ is\ a\ negative\ value\ (the\ sign\ bit\ is\ set),}}
+\DoxyCodeLine{00148\ \textcolor{comment}{\ \ \ \ *\ then\ we\ require\ that\ the\ resulting\ value\ also\ be\ positive\ (the\ sign\ bit\ is\ not\ set).}}
+\DoxyCodeLine{00149\ \textcolor{comment}{\ \ \ \ */}}
+\DoxyCodeLine{00150\ \ \ \ VERIFY\_CHECK((r-\/>hi\ <=\ 0x7fffffffffffffffu\ \&\&\ (uint64\_t)hi\ >\ 0x7fffffffffffffffu)\ <=\ (r-\/>hi\ -\/\ (uint64\_t)hi\ <=\ 0x7fffffffffffffffu));}
+\DoxyCodeLine{00151\ \ \ \ \textcolor{comment}{/*\ Verify\ no\ underflow.}}
+\DoxyCodeLine{00152\ \textcolor{comment}{\ \ \ \ *\ If\ r\ represents\ a\ negative\ value\ (the\ sign\ bit\ is\ set)\ and\ the\ value\ we\ are\ subtracting\ is\ a\ positive\ value\ (the\ sign\ sign\ bit\ is\ not\ set),}}
+\DoxyCodeLine{00153\ \textcolor{comment}{\ \ \ \ *\ then\ we\ require\ that\ the\ resulting\ value\ also\ be\ negative\ (the\ sign\ bit\ is\ set).}}
+\DoxyCodeLine{00154\ \textcolor{comment}{\ \ \ \ */}}
+\DoxyCodeLine{00155\ \ \ \ VERIFY\_CHECK((r-\/>hi\ >\ 0x7fffffffffffffffu\ \&\&\ (uint64\_t)hi\ <=\ 0x7fffffffffffffffu)\ <=\ (r-\/>hi\ -\/\ (uint64\_t)hi\ >\ 0x7fffffffffffffffu));}
+\DoxyCodeLine{00156\ \ \ \ r-\/>hi\ -\/=\ hi;}
+\DoxyCodeLine{00157\ \ \ \ r-\/>lo\ -\/=\ lo;}
+\DoxyCodeLine{00158\ \}}
+\DoxyCodeLine{00159\ }
+\DoxyCodeLine{00160\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_i128\_det(secp256k1\_int128\ *r,\ int64\_t\ a,\ int64\_t\ b,\ int64\_t\ c,\ int64\_t\ d)\ \{}
+\DoxyCodeLine{00161\ \ \ \ secp256k1\_i128\_mul(r,\ a,\ d);}
+\DoxyCodeLine{00162\ \ \ \ secp256k1\_i128\_dissip\_mul(r,\ b,\ c);}
+\DoxyCodeLine{00163\ \}}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \textcolor{comment}{/*\ Signed\ (arithmetic)\ right\ shift.}}
+\DoxyCodeLine{00166\ \textcolor{comment}{\ *\ Non-\/constant\ time\ in\ n.}}
+\DoxyCodeLine{00167\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00168\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_i128\_rshift(secp256k1\_int128\ *r,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ n)\ \{}
+\DoxyCodeLine{00169\ \ \ \ VERIFY\_CHECK(n\ <\ 128);}
+\DoxyCodeLine{00170\ \ \ \ \textcolor{keywordflow}{if}\ (n\ >=\ 64)\ \{}
+\DoxyCodeLine{00171\ \ \ \ \ \ r-\/>lo\ =\ (uint64\_t)((int64\_t)(r-\/>hi)\ >>\ (n-\/64));}
+\DoxyCodeLine{00172\ \ \ \ \ \ r-\/>hi\ =\ (uint64\_t)((int64\_t)(r-\/>hi)\ >>\ 63);}
+\DoxyCodeLine{00173\ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ >\ 0)\ \{}
+\DoxyCodeLine{00174\ \ \ \ \ \ r-\/>lo\ =\ ((1U\ *\ r-\/>hi)\ <<\ (64-\/n))\ |\ r-\/>lo\ >>\ n;}
+\DoxyCodeLine{00175\ \ \ \ \ \ r-\/>hi\ =\ (uint64\_t)((int64\_t)(r-\/>hi)\ >>\ n);}
+\DoxyCodeLine{00176\ \ \ \ \}}
+\DoxyCodeLine{00177\ \}}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00179\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ uint64\_t\ secp256k1\_i128\_to\_u64(\textcolor{keyword}{const}\ secp256k1\_int128\ *a)\ \{}
+\DoxyCodeLine{00180\ \ \ \ \textcolor{keywordflow}{return}\ a-\/>lo;}
+\DoxyCodeLine{00181\ \}}
+\DoxyCodeLine{00182\ }
+\DoxyCodeLine{00183\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ int64\_t\ secp256k1\_i128\_to\_i64(\textcolor{keyword}{const}\ secp256k1\_int128\ *a)\ \{}
+\DoxyCodeLine{00184\ \ \ \ \textcolor{comment}{/*\ Verify\ that\ a\ represents\ a\ 64\ bit\ signed\ value\ by\ checking\ that\ the\ high\ bits\ are\ a\ sign\ extension\ of\ the\ low\ bits.\ */}}
+\DoxyCodeLine{00185\ \ \ \ VERIFY\_CHECK(a-\/>hi\ ==\ -\/(a-\/>lo\ >>\ 63));}
+\DoxyCodeLine{00186\ \ \ \ \textcolor{keywordflow}{return}\ (int64\_t)secp256k1\_i128\_to\_u64(a);}
+\DoxyCodeLine{00187\ \}}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00189\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_i128\_from\_i64(secp256k1\_int128\ *r,\ int64\_t\ a)\ \{}
+\DoxyCodeLine{00190\ \ \ \ r-\/>hi\ =\ (uint64\_t)(a\ >>\ 63);}
+\DoxyCodeLine{00191\ \ \ \ r-\/>lo\ =\ (uint64\_t)a;}
+\DoxyCodeLine{00192\ \}}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00194\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{int}\ secp256k1\_i128\_eq\_var(\textcolor{keyword}{const}\ secp256k1\_int128\ *a,\ \textcolor{keyword}{const}\ secp256k1\_int128\ *b)\ \{}
+\DoxyCodeLine{00195\ \ \ \ \textcolor{keywordflow}{return}\ a-\/>hi\ ==\ b-\/>hi\ \&\&\ a-\/>lo\ ==\ b-\/>lo;}
+\DoxyCodeLine{00196\ \}}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00198\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{int}\ secp256k1\_i128\_check\_pow2(\textcolor{keyword}{const}\ secp256k1\_int128\ *r,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ n,\ \textcolor{keywordtype}{int}\ sign)\ \{}
+\DoxyCodeLine{00199\ \ \ \ \ VERIFY\_CHECK(n\ <\ 127);}
+\DoxyCodeLine{00200\ \ \ \ \ VERIFY\_CHECK(sign\ ==\ 1\ ||\ sign\ ==\ -\/1);}
+\DoxyCodeLine{00201\ \ \ \ \ \textcolor{keywordflow}{return}\ n\ >=\ 64\ ?\ r-\/>hi\ ==\ (uint64\_t)sign\ <<\ (n\ -\/\ 64)\ \&\&\ r-\/>lo\ ==\ 0}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ :\ r-\/>hi\ ==\ (uint64\_t)(sign\ >>\ 1)\ \&\&\ r-\/>lo\ ==\ (uint64\_t)sign\ <<\ n;}
+\DoxyCodeLine{00203\ \}}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

@@ -1,0 +1,1264 @@
+\doxysection{subprocess.\+h}
+\label{subprocess_8h_source}\index{src/util/subprocess.h@{src/util/subprocess.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Based\ on\ the\ https://github.com/arun11299/cpp-\/subprocess\ project.}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_SUBPROCESS\_H}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_SUBPROCESS\_H}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#include\ <util/syserror.h>}}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00043\ \textcolor{preprocessor}{\#include\ <csignal>}}
+\DoxyCodeLine{00044\ \textcolor{preprocessor}{\#include\ <cstdio>}}
+\DoxyCodeLine{00045\ \textcolor{preprocessor}{\#include\ <cstdlib>}}
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\#include\ <exception>}}
+\DoxyCodeLine{00048\ \textcolor{preprocessor}{\#include\ <future>}}
+\DoxyCodeLine{00049\ \textcolor{preprocessor}{\#include\ <initializer\_list>}}
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{00051\ \textcolor{preprocessor}{\#include\ <locale>}}
+\DoxyCodeLine{00052\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00053\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00054\ \textcolor{preprocessor}{\#include\ <sstream>}}
+\DoxyCodeLine{00055\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00056\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \textcolor{preprocessor}{\#if\ (defined\ \_MSC\_VER)\ ||\ (defined\ \_\_MINGW32\_\_)}}
+\DoxyCodeLine{00059\ \textcolor{preprocessor}{\ \ \#define\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{00060\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \textcolor{preprocessor}{\#ifdef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{00063\ \textcolor{preprocessor}{\ \ \#include\ <codecvt>}}
+\DoxyCodeLine{00064\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \textcolor{keyword}{extern}\ \textcolor{stringliteral}{"{}C"{}}\ \{}
+\DoxyCodeLine{00067\ \textcolor{preprocessor}{\#ifdef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{00068\ \textcolor{preprocessor}{\ \ \#include\ <windows.h>}}
+\DoxyCodeLine{00069\ \textcolor{preprocessor}{\ \ \#include\ <io.h>}}
+\DoxyCodeLine{00070\ \textcolor{preprocessor}{\ \ \#include\ <cwchar>}}
+\DoxyCodeLine{00071\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00072\ \textcolor{preprocessor}{\ \ \#include\ <sys/wait.h>}}
+\DoxyCodeLine{00073\ \textcolor{preprocessor}{\ \ \#include\ <unistd.h>}}
+\DoxyCodeLine{00074\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00075\ \textcolor{preprocessor}{\ \ \#include\ <csignal>}}
+\DoxyCodeLine{00076\ \textcolor{preprocessor}{\ \ \#include\ <fcntl.h>}}
+\DoxyCodeLine{00077\ \textcolor{preprocessor}{\ \ \#include\ <sys/types.h>}}
+\DoxyCodeLine{00078\ \}}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \textcolor{comment}{//\ The\ Microsoft\ C++\ compiler\ issues\ deprecation\ warnings}}
+\DoxyCodeLine{00081\ \textcolor{comment}{//\ for\ the\ standard\ POSIX\ function\ names.}}
+\DoxyCodeLine{00082\ \textcolor{comment}{//\ Its\ preferred\ implementations\ have\ a\ leading\ underscore.}}
+\DoxyCodeLine{00083\ \textcolor{comment}{//\ See:\ https://learn.microsoft.com/en-\/us/cpp/c-\/runtime-\/library/compatibility.}}
+\DoxyCodeLine{00084\ \textcolor{preprocessor}{\#if\ (defined\ \_MSC\_VER)}}
+\DoxyCodeLine{00085\ \textcolor{preprocessor}{\ \ \#define\ subprocess\_close\ \_close}}
+\DoxyCodeLine{00086\ \textcolor{preprocessor}{\ \ \#define\ subprocess\_fileno\ \_fileno}}
+\DoxyCodeLine{00087\ \textcolor{preprocessor}{\ \ \#define\ subprocess\_open\ \_open}}
+\DoxyCodeLine{00088\ \textcolor{preprocessor}{\ \ \#define\ subprocess\_write\ \_write}}
+\DoxyCodeLine{00089\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00090\ \textcolor{preprocessor}{\ \ \#define\ subprocess\_close\ close}}
+\DoxyCodeLine{00091\ \textcolor{preprocessor}{\ \ \#define\ subprocess\_fileno\ fileno}}
+\DoxyCodeLine{00092\ \textcolor{preprocessor}{\ \ \#define\ subprocess\_open\ open}}
+\DoxyCodeLine{00093\ \textcolor{preprocessor}{\ \ \#define\ subprocess\_write\ write}}
+\DoxyCodeLine{00094\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00119\ \textcolor{keyword}{namespace\ }subprocess\ \{}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \textcolor{comment}{//\ Max\ buffer\ size\ allocated\ on\ stack\ for\ read\ error}}
+\DoxyCodeLine{00122\ \textcolor{comment}{//\ from\ pipe}}
+\DoxyCodeLine{00123\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ SP\_MAX\_ERR\_BUF\_SIZ\ =\ 1024;}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00125\ \textcolor{comment}{//\ Default\ buffer\ capacity\ for\ OutBuffer\ and\ ErrBuffer.}}
+\DoxyCodeLine{00126\ \textcolor{comment}{//\ If\ the\ data\ exceeds\ this\ capacity,\ the\ buffer\ size\ is\ grown}}
+\DoxyCodeLine{00127\ \textcolor{comment}{//\ by\ 1.5\ times\ its\ previous\ capacity}}
+\DoxyCodeLine{00128\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ DEFAULT\_BUF\_CAP\_BYTES\ =\ 8192;}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00131\ \textcolor{comment}{/*-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00132\ \textcolor{comment}{\ *\ \ \ \ EXCEPTION\ CLASSES}}
+\DoxyCodeLine{00133\ \textcolor{comment}{\ *-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00134\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00143\ \textcolor{keyword}{class\ }CalledProcessError:\ \textcolor{keyword}{public}\ std::runtime\_error}
+\DoxyCodeLine{00144\ \{}
+\DoxyCodeLine{00145\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00146\ \ \ \textcolor{keywordtype}{int}\ retcode;}
+\DoxyCodeLine{00147\ \ \ CalledProcessError(\textcolor{keyword}{const}\ std::string\&\ error\_msg,\ \textcolor{keywordtype}{int}\ retcode):}
+\DoxyCodeLine{00148\ \ \ \ \ std::runtime\_error(error\_msg),\ retcode(retcode)}
+\DoxyCodeLine{00149\ \ \ \{\}}
+\DoxyCodeLine{00150\ \};}
+\DoxyCodeLine{00151\ }
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00163\ \textcolor{keyword}{class\ }OSError:\ \textcolor{keyword}{public}\ std::runtime\_error}
+\DoxyCodeLine{00164\ \{}
+\DoxyCodeLine{00165\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00166\ \ \ OSError(\textcolor{keyword}{const}\ std::string\&\ err\_msg,\ \textcolor{keywordtype}{int}\ err\_code):}
+\DoxyCodeLine{00167\ \ \ \ \ std::runtime\_error(err\_msg\ +\ \textcolor{stringliteral}{"{}:\ "{}}\ +\ SysErrorString(err\_code))}
+\DoxyCodeLine{00168\ \ \ \{\}}
+\DoxyCodeLine{00169\ \};}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00171\ \textcolor{comment}{//-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00172\ \textcolor{keyword}{namespace\ }util}
+\DoxyCodeLine{00173\ \{}
+\DoxyCodeLine{00174\ \textcolor{preprocessor}{\#ifdef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{00175\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ quote\_argument(\textcolor{keyword}{const}\ std::wstring\ \&argument,\ std::wstring\ \&command\_line,}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ force)}
+\DoxyCodeLine{00177\ \ \ \{}
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{comment}{//\ Unless\ we're\ told\ otherwise,\ don't\ quote\ unless\ we\ actually}}
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{comment}{//\ need\ to\ do\ so\ -\/-\/-\/\ hopefully\ avoid\ problems\ if\ programs\ won't}}
+\DoxyCodeLine{00181\ \ \ \ \ \textcolor{comment}{//\ parse\ quotes\ properly}}
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00184\ \ \ \ \ \textcolor{keywordflow}{if}\ (force\ ==\ \textcolor{keyword}{false}\ \&\&\ argument.empty()\ ==\ \textcolor{keyword}{false}\ \&\&}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ argument.find\_first\_of(L\textcolor{stringliteral}{"{}\ \(\backslash\)t\(\backslash\)n\(\backslash\)v"{}})\ ==\ argument.npos)\ \{}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ command\_line.append(argument);}
+\DoxyCodeLine{00187\ \ \ \ \ \}}
+\DoxyCodeLine{00188\ \ \ \ \ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ command\_line.push\_back(L\textcolor{charliteral}{'"{}'});}
+\DoxyCodeLine{00190\ }
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ it\ =\ argument.begin();;\ ++it)\ \{}
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ number\_backslashes\ =\ 0;}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (it\ !=\ argument.end()\ \&\&\ *it\ ==\ L\textcolor{charliteral}{'\(\backslash\)\(\backslash\)'})\ \{}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \ \ ++it;}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ \ \ ++number\_backslashes;}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00198\ }
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (it\ ==\ argument.end())\ \{}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Escape\ all\ backslashes,\ but\ let\ the\ terminating}}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ double\ quotation\ mark\ we\ add\ below\ be\ interpreted}}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ as\ a\ metacharacter.}}
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00206\ }
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \ \ command\_line.append(number\_backslashes\ *\ 2,\ L\textcolor{charliteral}{'\(\backslash\)\(\backslash\)'});}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (*it\ ==\ L\textcolor{charliteral}{'"{}'})\ \{}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Escape\ all\ backslashes\ and\ the\ following}}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ double\ quotation\ mark.}}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \ \ command\_line.append(number\_backslashes\ *\ 2\ +\ 1,\ L\textcolor{charliteral}{'\(\backslash\)\(\backslash\)'});}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \ \ command\_line.push\_back(*it);}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Backslashes\ aren't\ special\ here.}}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00225\ }
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \ \ command\_line.append(number\_backslashes,\ L\textcolor{charliteral}{'\(\backslash\)\(\backslash\)'});}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \ \ command\_line.push\_back(*it);}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00230\ }
+\DoxyCodeLine{00231\ \ \ \ \ \ \ command\_line.push\_back(L\textcolor{charliteral}{'"{}'});}
+\DoxyCodeLine{00232\ \ \ \ \ \}}
+\DoxyCodeLine{00233\ \ \ \}}
+\DoxyCodeLine{00234\ }
+\DoxyCodeLine{00235\ \ \ \textcolor{keyword}{inline}\ std::string\ get\_last\_error(DWORD\ errorMessageID)}
+\DoxyCodeLine{00236\ \ \ \{}
+\DoxyCodeLine{00237\ \ \ \ \ \textcolor{keywordflow}{if}\ (errorMessageID\ ==\ 0)}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::string();}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \ \ \ \ LPSTR\ messageBuffer\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00241\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size\ =\ FormatMessageA(}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ FORMAT\_MESSAGE\_ALLOCATE\_BUFFER\ |\ FORMAT\_MESSAGE\_FROM\_SYSTEM\ |}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \ \ \ \ FORMAT\_MESSAGE\_IGNORE\_INSERTS\ |\ FORMAT\_MESSAGE\_MAX\_WIDTH\_MASK,}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ NULL,\ errorMessageID,\ MAKELANGID(LANG\_NEUTRAL,\ SUBLANG\_DEFAULT),}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ (LPSTR)\&messageBuffer,\ 0,\ NULL);}
+\DoxyCodeLine{00246\ }
+\DoxyCodeLine{00247\ \ \ \ \ std::string\ message(messageBuffer,\ size);}
+\DoxyCodeLine{00248\ }
+\DoxyCodeLine{00249\ \ \ \ \ LocalFree(messageBuffer);}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00251\ \ \ \ \ \textcolor{keywordflow}{return}\ message;}
+\DoxyCodeLine{00252\ \ \ \}}
+\DoxyCodeLine{00253\ }
+\DoxyCodeLine{00254\ \ \ \textcolor{keyword}{inline}\ FILE\ *file\_from\_handle(HANDLE\ h,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *mode)}
+\DoxyCodeLine{00255\ \ \ \{}
+\DoxyCodeLine{00256\ \ \ \ \ \textcolor{keywordtype}{int}\ md;}
+\DoxyCodeLine{00257\ \ \ \ \ \textcolor{keywordflow}{if}\ (!mode)\ \{}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}invalid\_mode"{}},\ 0);}
+\DoxyCodeLine{00259\ \ \ \ \ \}}
+\DoxyCodeLine{00260\ }
+\DoxyCodeLine{00261\ \ \ \ \ \textcolor{keywordflow}{if}\ (mode[0]\ ==\ \textcolor{charliteral}{'w'})\ \{}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ md\ =\ \_O\_WRONLY;}
+\DoxyCodeLine{00263\ \ \ \ \ \}}
+\DoxyCodeLine{00264\ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (mode[0]\ ==\ \textcolor{charliteral}{'r'})\ \{}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ md\ =\ \_O\_RDONLY;}
+\DoxyCodeLine{00266\ \ \ \ \ \}}
+\DoxyCodeLine{00267\ \ \ \ \ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}file\_from\_handle"{}},\ 0);}
+\DoxyCodeLine{00269\ \ \ \ \ \}}
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00271\ \ \ \ \ \textcolor{keywordtype}{int}\ os\_fhandle\ =\ \_open\_osfhandle((intptr\_t)h,\ md);}
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{keywordflow}{if}\ (os\_fhandle\ ==\ -\/1)\ \{}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ CloseHandle(h);}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}\_open\_osfhandle"{}},\ 0);}
+\DoxyCodeLine{00275\ \ \ \ \ \}}
+\DoxyCodeLine{00276\ }
+\DoxyCodeLine{00277\ \ \ \ \ FILE\ *fp\ =\ \_fdopen(os\_fhandle,\ mode);}
+\DoxyCodeLine{00278\ \ \ \ \ \textcolor{keywordflow}{if}\ (fp\ ==\ 0)\ \{}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ subprocess\_close(os\_fhandle);}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}\_fdopen"{}},\ 0);}
+\DoxyCodeLine{00281\ \ \ \ \ \}}
+\DoxyCodeLine{00282\ }
+\DoxyCodeLine{00283\ \ \ \ \ \textcolor{keywordflow}{return}\ fp;}
+\DoxyCodeLine{00284\ \ \ \}}
+\DoxyCodeLine{00285\ }
+\DoxyCodeLine{00286\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ configure\_pipe(HANDLE*\ read\_handle,\ HANDLE*\ write\_handle,\ HANDLE*\ child\_handle)}
+\DoxyCodeLine{00287\ \ \ \{}
+\DoxyCodeLine{00288\ \ \ \ \ SECURITY\_ATTRIBUTES\ saAttr;}
+\DoxyCodeLine{00289\ }
+\DoxyCodeLine{00290\ \ \ \ \ \textcolor{comment}{//\ Set\ the\ bInheritHandle\ flag\ so\ pipe\ handles\ are\ inherited.}}
+\DoxyCodeLine{00291\ \ \ \ \ saAttr.nLength\ =\ \textcolor{keyword}{sizeof}(SECURITY\_ATTRIBUTES);}
+\DoxyCodeLine{00292\ \ \ \ \ saAttr.bInheritHandle\ =\ TRUE;}
+\DoxyCodeLine{00293\ \ \ \ \ saAttr.lpSecurityDescriptor\ =\ NULL;}
+\DoxyCodeLine{00294\ }
+\DoxyCodeLine{00295\ \ \ \ \ \textcolor{comment}{//\ Create\ a\ pipe\ for\ the\ child\ process's\ STDIN.}}
+\DoxyCodeLine{00296\ \ \ \ \ \textcolor{keywordflow}{if}\ (!CreatePipe(read\_handle,\ write\_handle,\ \&saAttr,0))}
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}CreatePipe"{}},\ 0);}
+\DoxyCodeLine{00298\ }
+\DoxyCodeLine{00299\ \ \ \ \ \textcolor{comment}{//\ Ensure\ the\ write\ handle\ to\ the\ pipe\ for\ STDIN\ is\ not\ inherited.}}
+\DoxyCodeLine{00300\ \ \ \ \ \textcolor{keywordflow}{if}\ (!SetHandleInformation(*child\_handle,\ HANDLE\_FLAG\_INHERIT,\ 0))}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}SetHandleInformation"{}},\ 0);}
+\DoxyCodeLine{00302\ \ \ \}}
+\DoxyCodeLine{00303\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00304\ }
+\DoxyCodeLine{00314\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ std::vector<std::string>}
+\DoxyCodeLine{00315\ \ \ split(\textcolor{keyword}{const}\ std::string\&\ str,\ \textcolor{keyword}{const}\ std::string\&\ delims=\textcolor{stringliteral}{"{}\ \(\backslash\)t"{}})}
+\DoxyCodeLine{00316\ \ \ \{}
+\DoxyCodeLine{00317\ \ \ \ \ std::vector<std::string>\ res;}
+\DoxyCodeLine{00318\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ init\ =\ 0;}
+\DoxyCodeLine{00319\ }
+\DoxyCodeLine{00320\ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \textcolor{keyword}{auto}\ pos\ =\ str.find\_first\_of(delims,\ init);}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ ==\ std::string::npos)\ \{}
+\DoxyCodeLine{00323\ \ \ \ \ \ \ \ \ res.emplace\_back(str.substr(init,\ str.length()));}
+\DoxyCodeLine{00324\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00326\ \ \ \ \ \ \ res.emplace\_back(str.substr(init,\ pos\ -\/\ init));}
+\DoxyCodeLine{00327\ \ \ \ \ \ \ pos++;}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ init\ =\ pos;}
+\DoxyCodeLine{00329\ \ \ \ \ \}}
+\DoxyCodeLine{00330\ }
+\DoxyCodeLine{00331\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{00332\ \ \ \}}
+\DoxyCodeLine{00333\ }
+\DoxyCodeLine{00334\ }
+\DoxyCodeLine{00335\ \textcolor{preprocessor}{\#ifndef\ \_\_USING\_WINDOWS\_\_}\textcolor{preprocessor}{}}
+\DoxyCodeLine{00345\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}}
+\DoxyCodeLine{00346\ \ \ \textcolor{keywordtype}{void}\ set\_clo\_on\_exec(\textcolor{keywordtype}{int}\ fd,\ \textcolor{keywordtype}{bool}\ set\ =\ \textcolor{keyword}{true})}
+\DoxyCodeLine{00347\ \ \ \{}
+\DoxyCodeLine{00348\ \ \ \ \ \textcolor{keywordtype}{int}\ flags\ =\ fcntl(fd,\ F\_GETFD,\ 0);}
+\DoxyCodeLine{00349\ \ \ \ \ \textcolor{keywordflow}{if}\ (flags\ ==\ -\/1)\ \{}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}fcntl\ F\_GETFD\ failed"{}},\ errno);}
+\DoxyCodeLine{00351\ \ \ \ \ \}}
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{keywordflow}{if}\ (set)\ flags\ |=\ FD\_CLOEXEC;}
+\DoxyCodeLine{00353\ \ \ \ \ \textcolor{keywordflow}{else}\ flags\ \&=\ \string~FD\_CLOEXEC;}
+\DoxyCodeLine{00354\ \ \ \ \ \textcolor{keywordflow}{if}\ (fcntl(fd,\ F\_SETFD,\ flags)\ ==\ -\/1)\ \{}
+\DoxyCodeLine{00355\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}fcntl\ F\_SETFD\ failed"{}},\ errno);}
+\DoxyCodeLine{00356\ \ \ \ \ \}}
+\DoxyCodeLine{00357\ \ \ \}}
+\DoxyCodeLine{00358\ }
+\DoxyCodeLine{00359\ }
+\DoxyCodeLine{00369\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}}
+\DoxyCodeLine{00370\ \ \ std::pair<int,\ int>\ pipe\_cloexec()\ \textcolor{keyword}{noexcept}(\textcolor{keyword}{false})}
+\DoxyCodeLine{00371\ \ \ \{}
+\DoxyCodeLine{00372\ \ \ \ \ \textcolor{keywordtype}{int}\ pipe\_fds[2];}
+\DoxyCodeLine{00373\ \ \ \ \ \textcolor{keywordtype}{int}\ res\ =\ pipe(pipe\_fds);}
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keywordflow}{if}\ (res)\ \{}
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}pipe\ failure"{}},\ errno);}
+\DoxyCodeLine{00376\ \ \ \ \ \}}
+\DoxyCodeLine{00377\ }
+\DoxyCodeLine{00378\ \ \ \ \ set\_clo\_on\_exec(pipe\_fds[0]);}
+\DoxyCodeLine{00379\ \ \ \ \ set\_clo\_on\_exec(pipe\_fds[1]);}
+\DoxyCodeLine{00380\ }
+\DoxyCodeLine{00381\ \ \ \ \ \textcolor{keywordflow}{return}\ std::make\_pair(pipe\_fds[0],\ pipe\_fds[1]);}
+\DoxyCodeLine{00382\ \ \ \}}
+\DoxyCodeLine{00383\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00384\ }
+\DoxyCodeLine{00385\ }
+\DoxyCodeLine{00397\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}}
+\DoxyCodeLine{00398\ \ \ \textcolor{keywordtype}{int}\ write\_n(\textcolor{keywordtype}{int}\ fd,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ buf,\ \textcolor{keywordtype}{size\_t}\ length)}
+\DoxyCodeLine{00399\ \ \ \{}
+\DoxyCodeLine{00400\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ nwritten\ =\ 0;}
+\DoxyCodeLine{00401\ \ \ \ \ \textcolor{keywordflow}{while}\ (nwritten\ <\ length)\ \{}
+\DoxyCodeLine{00402\ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ written\ =\ subprocess\_write(fd,\ buf\ +\ nwritten,\ length\ -\/\ nwritten);}
+\DoxyCodeLine{00403\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (written\ ==\ -\/1)\ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00404\ \ \ \ \ \ \ nwritten\ +=\ written;}
+\DoxyCodeLine{00405\ \ \ \ \ \}}
+\DoxyCodeLine{00406\ \ \ \ \ \textcolor{keywordflow}{return}\ nwritten;}
+\DoxyCodeLine{00407\ \ \ \}}
+\DoxyCodeLine{00408\ }
+\DoxyCodeLine{00409\ }
+\DoxyCodeLine{00424\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}}
+\DoxyCodeLine{00425\ \ \ \textcolor{keywordtype}{int}\ read\_atmost\_n(FILE*\ fp,\ \textcolor{keywordtype}{char}*\ buf,\ \textcolor{keywordtype}{size\_t}\ read\_upto)}
+\DoxyCodeLine{00426\ \ \ \{}
+\DoxyCodeLine{00427\ \textcolor{preprocessor}{\#ifdef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{00428\ \ \ \ \ \textcolor{keywordflow}{return}\ (\textcolor{keywordtype}{int})fread(buf,\ 1,\ read\_upto,\ fp);}
+\DoxyCodeLine{00429\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00430\ \ \ \ \ \textcolor{keywordtype}{int}\ fd\ =\ subprocess\_fileno(fp);}
+\DoxyCodeLine{00431\ \ \ \ \ \textcolor{keywordtype}{int}\ rbytes\ =\ 0;}
+\DoxyCodeLine{00432\ \ \ \ \ \textcolor{keywordtype}{int}\ eintr\_cnter\ =\ 0;}
+\DoxyCodeLine{00433\ }
+\DoxyCodeLine{00434\ \ \ \ \ \textcolor{keywordflow}{while}\ (1)\ \{}
+\DoxyCodeLine{00435\ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ read\_bytes\ =\ read(fd,\ buf\ +\ rbytes,\ read\_upto\ -\/\ rbytes);}
+\DoxyCodeLine{00436\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (read\_bytes\ ==\ -\/1)\ \{}
+\DoxyCodeLine{00437\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (errno\ ==\ EINTR)\ \{}
+\DoxyCodeLine{00438\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (eintr\_cnter\ >=\ 50)\ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00439\ \ \ \ \ \ \ \ \ \ \ eintr\_cnter++;}
+\DoxyCodeLine{00440\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00441\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (read\_bytes\ ==\ 0)\ \textcolor{keywordflow}{return}\ rbytes;}
+\DoxyCodeLine{00445\ }
+\DoxyCodeLine{00446\ \ \ \ \ \ \ rbytes\ +=\ read\_bytes;}
+\DoxyCodeLine{00447\ \ \ \ \ \}}
+\DoxyCodeLine{00448\ \ \ \ \ \textcolor{keywordflow}{return}\ rbytes;}
+\DoxyCodeLine{00449\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00450\ \ \ \}}
+\DoxyCodeLine{00451\ }
+\DoxyCodeLine{00452\ }
+\DoxyCodeLine{00465\ }
+\DoxyCodeLine{00466\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ read\_all(FILE*\ fp,\ std::vector<char>\&\ buf)}
+\DoxyCodeLine{00467\ \ \ \{}
+\DoxyCodeLine{00468\ \ \ \ \ \textcolor{keyword}{auto}\ buffer\ =\ buf.data();}
+\DoxyCodeLine{00469\ \ \ \ \ \textcolor{keywordtype}{int}\ total\_bytes\_read\ =\ 0;}
+\DoxyCodeLine{00470\ \ \ \ \ \textcolor{keywordtype}{int}\ fill\_sz\ =\ buf.size();}
+\DoxyCodeLine{00471\ }
+\DoxyCodeLine{00472\ \ \ \ \ \textcolor{keywordflow}{while}\ (1)\ \{}
+\DoxyCodeLine{00473\ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ rd\_bytes\ =\ read\_atmost\_n(fp,\ buffer,\ fill\_sz);}
+\DoxyCodeLine{00474\ }
+\DoxyCodeLine{00475\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (rd\_bytes\ ==\ -\/1)\ \{\ \textcolor{comment}{//\ Read\ finished}}
+\DoxyCodeLine{00476\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (total\_bytes\_read\ ==\ 0)\ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00477\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00478\ }
+\DoxyCodeLine{00479\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (rd\_bytes\ ==\ fill\_sz)\ \{\ \textcolor{comment}{//\ Buffer\ full}}
+\DoxyCodeLine{00480\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ orig\_sz\ =\ buf.size();}
+\DoxyCodeLine{00481\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ new\_sz\ =\ orig\_sz\ *\ 2;}
+\DoxyCodeLine{00482\ \ \ \ \ \ \ \ \ buf.resize(new\_sz);}
+\DoxyCodeLine{00483\ \ \ \ \ \ \ \ \ fill\_sz\ =\ new\_sz\ -\/\ orig\_sz;}
+\DoxyCodeLine{00484\ }
+\DoxyCodeLine{00485\ \ \ \ \ \ \ \ \ \textcolor{comment}{//update\ the\ buffer\ pointer}}
+\DoxyCodeLine{00486\ \ \ \ \ \ \ \ \ buffer\ =\ buf.data();}
+\DoxyCodeLine{00487\ \ \ \ \ \ \ \ \ total\_bytes\_read\ +=\ rd\_bytes;}
+\DoxyCodeLine{00488\ \ \ \ \ \ \ \ \ buffer\ +=\ total\_bytes\_read;}
+\DoxyCodeLine{00489\ }
+\DoxyCodeLine{00490\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{\ \textcolor{comment}{//\ Partial\ data\ ?\ Continue\ reading}}
+\DoxyCodeLine{00491\ \ \ \ \ \ \ \ \ total\_bytes\_read\ +=\ rd\_bytes;}
+\DoxyCodeLine{00492\ \ \ \ \ \ \ \ \ fill\_sz\ -\/=\ rd\_bytes;}
+\DoxyCodeLine{00493\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00494\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00495\ \ \ \ \ \}}
+\DoxyCodeLine{00496\ \ \ \ \ buf.erase(buf.begin()+total\_bytes\_read,\ buf.end());\ \textcolor{comment}{//\ remove\ extra\ nulls}}
+\DoxyCodeLine{00497\ \ \ \ \ \textcolor{keywordflow}{return}\ total\_bytes\_read;}
+\DoxyCodeLine{00498\ \ \ \}}
+\DoxyCodeLine{00499\ }
+\DoxyCodeLine{00500\ \textcolor{preprocessor}{\#ifndef\ \_\_USING\_WINDOWS\_\_}\textcolor{preprocessor}{}}
+\DoxyCodeLine{00514\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}}
+\DoxyCodeLine{00515\ \ \ std::pair<int,\ int>\ wait\_for\_child\_exit(\textcolor{keywordtype}{int}\ pid)}
+\DoxyCodeLine{00516\ \ \ \{}
+\DoxyCodeLine{00517\ \ \ \ \ \textcolor{keywordtype}{int}\ status\ =\ 0;}
+\DoxyCodeLine{00518\ \ \ \ \ \textcolor{keywordtype}{int}\ ret\ =\ -\/1;}
+\DoxyCodeLine{00519\ \ \ \ \ \textcolor{keywordflow}{while}\ (1)\ \{}
+\DoxyCodeLine{00520\ \ \ \ \ \ \ ret\ =\ waitpid(pid,\ \&status,\ 0);}
+\DoxyCodeLine{00521\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ret\ ==\ -\/1)\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00522\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ret\ ==\ 0)\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00523\ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::make\_pair(ret,\ status);}
+\DoxyCodeLine{00524\ \ \ \ \ \}}
+\DoxyCodeLine{00525\ }
+\DoxyCodeLine{00526\ \ \ \ \ \textcolor{keywordflow}{return}\ std::make\_pair(ret,\ status);}
+\DoxyCodeLine{00527\ \ \ \}}
+\DoxyCodeLine{00528\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00529\ }
+\DoxyCodeLine{00530\ \}\ \textcolor{comment}{//\ end\ namespace\ util}}
+\DoxyCodeLine{00531\ }
+\DoxyCodeLine{00532\ }
+\DoxyCodeLine{00533\ }
+\DoxyCodeLine{00534\ \textcolor{comment}{/*\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00535\ \textcolor{comment}{\ *\ \ \ \ \ Popen\ Arguments}}
+\DoxyCodeLine{00536\ \textcolor{comment}{\ *\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00537\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00538\ }
+\DoxyCodeLine{00542\ \textcolor{keyword}{struct\ }string\_arg}
+\DoxyCodeLine{00543\ \{}
+\DoxyCodeLine{00544\ \ \ string\_arg(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ arg):\ arg\_value(arg)\ \{\}}
+\DoxyCodeLine{00545\ \ \ string\_arg(std::string\&\&\ arg):\ arg\_value(std::move(arg))\ \{\}}
+\DoxyCodeLine{00546\ \ \ string\_arg(\textcolor{keyword}{const}\ std::string\&\ arg):\ arg\_value(arg)\ \{\}}
+\DoxyCodeLine{00547\ \ \ std::string\ arg\_value;}
+\DoxyCodeLine{00548\ \};}
+\DoxyCodeLine{00549\ }
+\DoxyCodeLine{00558\ \textcolor{keyword}{struct\ }executable:\ string\_arg}
+\DoxyCodeLine{00559\ \{}
+\DoxyCodeLine{00560\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00561\ \ \ executable(T\&\&\ arg):\ string\_arg(std::forward<T>(arg))\ \{\}}
+\DoxyCodeLine{00562\ \};}
+\DoxyCodeLine{00563\ }
+\DoxyCodeLine{00567\ \textcolor{keyword}{enum}\ IOTYPE\ \{}
+\DoxyCodeLine{00568\ \ \ STDOUT\ =\ 1,}
+\DoxyCodeLine{00569\ \ \ STDERR,}
+\DoxyCodeLine{00570\ \ \ PIPE,}
+\DoxyCodeLine{00571\ \};}
+\DoxyCodeLine{00572\ }
+\DoxyCodeLine{00573\ \textcolor{comment}{//TODO:\ A\ common\ base/interface\ for\ below\ stream\ structures\ ??}}
+\DoxyCodeLine{00574\ }
+\DoxyCodeLine{00586\ \textcolor{keyword}{struct\ }input}
+\DoxyCodeLine{00587\ \{}
+\DoxyCodeLine{00588\ \ \ \textcolor{comment}{//\ For\ an\ already\ existing\ file\ descriptor.}}
+\DoxyCodeLine{00589\ \ \ \textcolor{keyword}{explicit}\ input(\textcolor{keywordtype}{int}\ fd):\ rd\_ch\_(fd)\ \{\}}
+\DoxyCodeLine{00590\ }
+\DoxyCodeLine{00591\ \ \ \textcolor{comment}{//\ FILE\ pointer.}}
+\DoxyCodeLine{00592\ \ \ \textcolor{keyword}{explicit}\ input\ (FILE*\ fp):input(subprocess\_fileno(fp))\ \{\ assert(fp);\ \}}
+\DoxyCodeLine{00593\ }
+\DoxyCodeLine{00594\ \ \ \textcolor{keyword}{explicit}\ input(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ filename)\ \{}
+\DoxyCodeLine{00595\ \ \ \ \ \textcolor{keywordtype}{int}\ fd\ =\ subprocess\_open(filename,\ O\_RDONLY);}
+\DoxyCodeLine{00596\ \ \ \ \ \textcolor{keywordflow}{if}\ (fd\ ==\ -\/1)\ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}File\ not\ found:\ "{}},\ errno);}
+\DoxyCodeLine{00597\ \ \ \ \ rd\_ch\_\ =\ fd;}
+\DoxyCodeLine{00598\ \ \ \}}
+\DoxyCodeLine{00599\ \ \ \textcolor{keyword}{explicit}\ input(IOTYPE\ typ)\ \{}
+\DoxyCodeLine{00600\ \ \ \ \ assert\ (typ\ ==\ PIPE\ \&\&\ \textcolor{stringliteral}{"{}STDOUT/STDERR\ not\ allowed"{}});}
+\DoxyCodeLine{00601\ \textcolor{preprocessor}{\#ifndef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{00602\ \ \ \ \ std::tie(rd\_ch\_,\ wr\_ch\_)\ =\ util::pipe\_cloexec();}
+\DoxyCodeLine{00603\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00604\ \ \ \}}
+\DoxyCodeLine{00605\ }
+\DoxyCodeLine{00606\ \ \ \textcolor{keywordtype}{int}\ rd\_ch\_\ =\ -\/1;}
+\DoxyCodeLine{00607\ \ \ \textcolor{keywordtype}{int}\ wr\_ch\_\ =\ -\/1;}
+\DoxyCodeLine{00608\ \};}
+\DoxyCodeLine{00609\ }
+\DoxyCodeLine{00610\ }
+\DoxyCodeLine{00621\ \textcolor{keyword}{struct\ }output}
+\DoxyCodeLine{00622\ \{}
+\DoxyCodeLine{00623\ \ \ \textcolor{keyword}{explicit}\ output(\textcolor{keywordtype}{int}\ fd):\ wr\_ch\_(fd)\ \{\}}
+\DoxyCodeLine{00624\ }
+\DoxyCodeLine{00625\ \ \ \textcolor{keyword}{explicit}\ output\ (FILE*\ fp):output(subprocess\_fileno(fp))\ \{\ assert(fp);\ \}}
+\DoxyCodeLine{00626\ }
+\DoxyCodeLine{00627\ \ \ \textcolor{keyword}{explicit}\ output(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ filename)\ \{}
+\DoxyCodeLine{00628\ \ \ \ \ \textcolor{keywordtype}{int}\ fd\ =\ subprocess\_open(filename,\ O\_APPEND\ |\ O\_CREAT\ |\ O\_RDWR,\ 0640);}
+\DoxyCodeLine{00629\ \ \ \ \ \textcolor{keywordflow}{if}\ (fd\ ==\ -\/1)\ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}File\ not\ found:\ "{}},\ errno);}
+\DoxyCodeLine{00630\ \ \ \ \ wr\_ch\_\ =\ fd;}
+\DoxyCodeLine{00631\ \ \ \}}
+\DoxyCodeLine{00632\ \ \ \textcolor{keyword}{explicit}\ output(IOTYPE\ typ)\ \{}
+\DoxyCodeLine{00633\ \ \ \ \ assert\ (typ\ ==\ PIPE\ \&\&\ \textcolor{stringliteral}{"{}STDOUT/STDERR\ not\ allowed"{}});}
+\DoxyCodeLine{00634\ \textcolor{preprocessor}{\#ifndef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{00635\ \ \ \ \ std::tie(rd\_ch\_,\ wr\_ch\_)\ =\ util::pipe\_cloexec();}
+\DoxyCodeLine{00636\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00637\ \ \ \}}
+\DoxyCodeLine{00638\ }
+\DoxyCodeLine{00639\ \ \ \textcolor{keywordtype}{int}\ rd\_ch\_\ =\ -\/1;}
+\DoxyCodeLine{00640\ \ \ \textcolor{keywordtype}{int}\ wr\_ch\_\ =\ -\/1;}
+\DoxyCodeLine{00641\ \};}
+\DoxyCodeLine{00642\ }
+\DoxyCodeLine{00643\ }
+\DoxyCodeLine{00652\ \textcolor{keyword}{struct\ }error}
+\DoxyCodeLine{00653\ \{}
+\DoxyCodeLine{00654\ \ \ \textcolor{keyword}{explicit}\ error(\textcolor{keywordtype}{int}\ fd):\ wr\_ch\_(fd)\ \{\}}
+\DoxyCodeLine{00655\ }
+\DoxyCodeLine{00656\ \ \ \textcolor{keyword}{explicit}\ error(FILE*\ fp):error(subprocess\_fileno(fp))\ \{\ assert(fp);\ \}}
+\DoxyCodeLine{00657\ }
+\DoxyCodeLine{00658\ \ \ \textcolor{keyword}{explicit}\ error(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ filename)\ \{}
+\DoxyCodeLine{00659\ \ \ \ \ \textcolor{keywordtype}{int}\ fd\ =\ subprocess\_open(filename,\ O\_APPEND\ |\ O\_CREAT\ |\ O\_RDWR,\ 0640);}
+\DoxyCodeLine{00660\ \ \ \ \ \textcolor{keywordflow}{if}\ (fd\ ==\ -\/1)\ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}File\ not\ found:\ "{}},\ errno);}
+\DoxyCodeLine{00661\ \ \ \ \ wr\_ch\_\ =\ fd;}
+\DoxyCodeLine{00662\ \ \ \}}
+\DoxyCodeLine{00663\ \ \ \textcolor{keyword}{explicit}\ error(IOTYPE\ typ)\ \{}
+\DoxyCodeLine{00664\ \ \ \ \ assert\ ((typ\ ==\ PIPE\ ||\ typ\ ==\ STDOUT)\ \&\&\ \textcolor{stringliteral}{"{}STDERR\ not\ allowed"{}});}
+\DoxyCodeLine{00665\ \ \ \ \ \textcolor{keywordflow}{if}\ (typ\ ==\ PIPE)\ \{}
+\DoxyCodeLine{00666\ \textcolor{preprocessor}{\#ifndef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{00667\ \ \ \ \ \ \ std::tie(rd\_ch\_,\ wr\_ch\_)\ =\ util::pipe\_cloexec();}
+\DoxyCodeLine{00668\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00669\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00670\ \ \ \ \ \ \ \textcolor{comment}{//\ Need\ to\ defer\ it\ till\ we\ have\ checked\ all\ arguments}}
+\DoxyCodeLine{00671\ \ \ \ \ \ \ deferred\_\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00672\ \ \ \ \ \}}
+\DoxyCodeLine{00673\ \ \ \}}
+\DoxyCodeLine{00674\ }
+\DoxyCodeLine{00675\ \ \ \textcolor{keywordtype}{bool}\ deferred\_\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00676\ \ \ \textcolor{keywordtype}{int}\ rd\_ch\_\ =\ -\/1;}
+\DoxyCodeLine{00677\ \ \ \textcolor{keywordtype}{int}\ wr\_ch\_\ =\ -\/1;}
+\DoxyCodeLine{00678\ \};}
+\DoxyCodeLine{00679\ }
+\DoxyCodeLine{00680\ \textcolor{comment}{//\ \string~\string~\string~\string~\ End\ Popen\ Args\ \string~\string~\string~\string~}}
+\DoxyCodeLine{00681\ }
+\DoxyCodeLine{00682\ }
+\DoxyCodeLine{00694\ \textcolor{keyword}{class\ }Buffer}
+\DoxyCodeLine{00695\ \{}
+\DoxyCodeLine{00696\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00697\ \ \ Buffer()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00698\ \ \ \textcolor{keyword}{explicit}\ Buffer(\textcolor{keywordtype}{size\_t}\ cap)\ \{\ buf.resize(cap);\ \}}
+\DoxyCodeLine{00699\ \ \ \textcolor{keywordtype}{void}\ add\_cap(\textcolor{keywordtype}{size\_t}\ cap)\ \{\ buf.resize(cap);\ \}}
+\DoxyCodeLine{00700\ }
+\DoxyCodeLine{00701\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00702\ \ \ std::vector<char>\ buf;}
+\DoxyCodeLine{00703\ \ \ \textcolor{keywordtype}{size\_t}\ length\ =\ 0;}
+\DoxyCodeLine{00704\ \};}
+\DoxyCodeLine{00705\ }
+\DoxyCodeLine{00706\ \textcolor{comment}{//\ Buffer\ for\ storing\ output\ written\ to\ output\ fd}}
+\DoxyCodeLine{00707\ \textcolor{keyword}{using\ }OutBuffer\ =\ Buffer;}
+\DoxyCodeLine{00708\ \textcolor{comment}{//\ Buffer\ for\ storing\ output\ written\ to\ error\ fd}}
+\DoxyCodeLine{00709\ \textcolor{keyword}{using\ }ErrBuffer\ =\ Buffer;}
+\DoxyCodeLine{00710\ }
+\DoxyCodeLine{00711\ }
+\DoxyCodeLine{00712\ \textcolor{comment}{//\ Fwd\ Decl.}}
+\DoxyCodeLine{00713\ \textcolor{keyword}{class\ }Popen;}
+\DoxyCodeLine{00714\ }
+\DoxyCodeLine{00715\ \textcolor{comment}{/*-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00716\ \textcolor{comment}{\ *\ \ \ \ \ \ DETAIL\ NAMESPACE}}
+\DoxyCodeLine{00717\ \textcolor{comment}{\ *-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00718\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00719\ }
+\DoxyCodeLine{00720\ \textcolor{keyword}{namespace\ }detail\ \{}
+\DoxyCodeLine{00728\ \textcolor{keyword}{struct\ }ArgumentDeducer}
+\DoxyCodeLine{00729\ \{}
+\DoxyCodeLine{00730\ \ \ ArgumentDeducer(Popen*\ p):\ popen\_(p)\ \{\}}
+\DoxyCodeLine{00731\ }
+\DoxyCodeLine{00732\ \ \ \textcolor{keywordtype}{void}\ set\_option(executable\&\&\ exe);}
+\DoxyCodeLine{00733\ \ \ \textcolor{keywordtype}{void}\ set\_option(input\&\&\ inp);}
+\DoxyCodeLine{00734\ \ \ \textcolor{keywordtype}{void}\ set\_option(output\&\&\ out);}
+\DoxyCodeLine{00735\ \ \ \textcolor{keywordtype}{void}\ set\_option(error\&\&\ err);}
+\DoxyCodeLine{00736\ }
+\DoxyCodeLine{00737\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00738\ \ \ Popen*\ popen\_\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00739\ \};}
+\DoxyCodeLine{00740\ }
+\DoxyCodeLine{00746\ \textcolor{keyword}{class\ }Child}
+\DoxyCodeLine{00747\ \{}
+\DoxyCodeLine{00748\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00749\ \ \ Child(Popen*\ p,\ \textcolor{keywordtype}{int}\ err\_wr\_pipe):}
+\DoxyCodeLine{00750\ \ \ \ \ parent\_(p),}
+\DoxyCodeLine{00751\ \ \ \ \ err\_wr\_pipe\_(err\_wr\_pipe)}
+\DoxyCodeLine{00752\ \ \ \{\}}
+\DoxyCodeLine{00753\ }
+\DoxyCodeLine{00754\ \ \ \textcolor{keywordtype}{void}\ execute\_child();}
+\DoxyCodeLine{00755\ }
+\DoxyCodeLine{00756\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00757\ \ \ \textcolor{comment}{//\ Lets\ call\ it\ parent\ even\ though}}
+\DoxyCodeLine{00758\ \ \ \textcolor{comment}{//\ technically\ a\ bit\ incorrect}}
+\DoxyCodeLine{00759\ \ \ Popen*\ parent\_\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00760\ \ \ \textcolor{keywordtype}{int}\ err\_wr\_pipe\_\ =\ -\/1;}
+\DoxyCodeLine{00761\ \};}
+\DoxyCodeLine{00762\ }
+\DoxyCodeLine{00763\ \textcolor{comment}{//\ Fwd\ Decl.}}
+\DoxyCodeLine{00764\ \textcolor{keyword}{class\ }Streams;}
+\DoxyCodeLine{00765\ }
+\DoxyCodeLine{00772\ \textcolor{keyword}{class\ }Communication}
+\DoxyCodeLine{00773\ \{}
+\DoxyCodeLine{00774\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00775\ \ \ Communication(Streams*\ stream):\ stream\_(stream)}
+\DoxyCodeLine{00776\ \ \ \{\}}
+\DoxyCodeLine{00777\ \ \ Communication(\textcolor{keyword}{const}\ Communication\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00778\ \ \ Communication\&\ operator=(\textcolor{keyword}{const}\ Communication\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00779\ \ \ Communication(Communication\&\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00780\ \ \ Communication\&\ operator=(Communication\&\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00781\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00782\ \ \ \textcolor{keywordtype}{int}\ send(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ msg,\ \textcolor{keywordtype}{size\_t}\ length);}
+\DoxyCodeLine{00783\ \ \ \textcolor{keywordtype}{int}\ send(\textcolor{keyword}{const}\ std::vector<char>\&\ msg);}
+\DoxyCodeLine{00784\ }
+\DoxyCodeLine{00785\ \ \ std::pair<OutBuffer,\ ErrBuffer>\ communicate(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ msg,\ \textcolor{keywordtype}{size\_t}\ length);}
+\DoxyCodeLine{00786\ \ \ std::pair<OutBuffer,\ ErrBuffer>\ communicate(\textcolor{keyword}{const}\ std::vector<char>\&\ msg)}
+\DoxyCodeLine{00787\ \ \ \{\ \textcolor{keywordflow}{return}\ communicate(msg.data(),\ msg.size());\ \}}
+\DoxyCodeLine{00788\ }
+\DoxyCodeLine{00789\ \ \ \textcolor{keywordtype}{void}\ set\_out\_buf\_cap(\textcolor{keywordtype}{size\_t}\ cap)\ \{\ out\_buf\_cap\_\ =\ cap;\ \}}
+\DoxyCodeLine{00790\ \ \ \textcolor{keywordtype}{void}\ set\_err\_buf\_cap(\textcolor{keywordtype}{size\_t}\ cap)\ \{\ err\_buf\_cap\_\ =\ cap;\ \}}
+\DoxyCodeLine{00791\ }
+\DoxyCodeLine{00792\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00793\ \ \ std::pair<OutBuffer,\ ErrBuffer>\ communicate\_threaded(}
+\DoxyCodeLine{00794\ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ msg,\ \textcolor{keywordtype}{size\_t}\ length);}
+\DoxyCodeLine{00795\ }
+\DoxyCodeLine{00796\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00797\ \ \ Streams*\ stream\_;}
+\DoxyCodeLine{00798\ \ \ \textcolor{keywordtype}{size\_t}\ out\_buf\_cap\_\ =\ DEFAULT\_BUF\_CAP\_BYTES;}
+\DoxyCodeLine{00799\ \ \ \textcolor{keywordtype}{size\_t}\ err\_buf\_cap\_\ =\ DEFAULT\_BUF\_CAP\_BYTES;}
+\DoxyCodeLine{00800\ \};}
+\DoxyCodeLine{00801\ }
+\DoxyCodeLine{00802\ }
+\DoxyCodeLine{00803\ }
+\DoxyCodeLine{00813\ \textcolor{keyword}{class\ }Streams}
+\DoxyCodeLine{00814\ \{}
+\DoxyCodeLine{00815\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00816\ \ \ Streams():comm\_(this)\ \{\}}
+\DoxyCodeLine{00817\ \ \ Streams(\textcolor{keyword}{const}\ Streams\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00818\ \ \ Streams\&\ operator=(\textcolor{keyword}{const}\ Streams\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00819\ \ \ Streams(Streams\&\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00820\ \ \ Streams\&\ operator=(Streams\&\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00821\ }
+\DoxyCodeLine{00822\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00823\ \ \ \textcolor{keywordtype}{void}\ setup\_comm\_channels();}
+\DoxyCodeLine{00824\ }
+\DoxyCodeLine{00825\ \ \ \textcolor{keywordtype}{void}\ cleanup\_fds()}
+\DoxyCodeLine{00826\ \ \ \{}
+\DoxyCodeLine{00827\ \ \ \ \ \textcolor{keywordflow}{if}\ (write\_to\_child\_\ !=\ -\/1\ \&\&\ read\_from\_parent\_\ !=\ -\/1)\ \{}
+\DoxyCodeLine{00828\ \ \ \ \ \ \ subprocess\_close(write\_to\_child\_);}
+\DoxyCodeLine{00829\ \ \ \ \ \}}
+\DoxyCodeLine{00830\ \ \ \ \ \textcolor{keywordflow}{if}\ (write\_to\_parent\_\ !=\ -\/1\ \&\&\ read\_from\_child\_\ !=\ -\/1)\ \{}
+\DoxyCodeLine{00831\ \ \ \ \ \ \ subprocess\_close(read\_from\_child\_);}
+\DoxyCodeLine{00832\ \ \ \ \ \}}
+\DoxyCodeLine{00833\ \ \ \ \ \textcolor{keywordflow}{if}\ (err\_write\_\ !=\ -\/1\ \&\&\ err\_read\_\ !=\ -\/1)\ \{}
+\DoxyCodeLine{00834\ \ \ \ \ \ \ subprocess\_close(err\_read\_);}
+\DoxyCodeLine{00835\ \ \ \ \ \}}
+\DoxyCodeLine{00836\ \ \ \}}
+\DoxyCodeLine{00837\ }
+\DoxyCodeLine{00838\ \ \ \textcolor{keywordtype}{void}\ close\_parent\_fds()}
+\DoxyCodeLine{00839\ \ \ \{}
+\DoxyCodeLine{00840\ \ \ \ \ \textcolor{keywordflow}{if}\ (write\_to\_child\_\ !=\ -\/1)\ \ subprocess\_close(write\_to\_child\_);}
+\DoxyCodeLine{00841\ \ \ \ \ \textcolor{keywordflow}{if}\ (read\_from\_child\_\ !=\ -\/1)\ subprocess\_close(read\_from\_child\_);}
+\DoxyCodeLine{00842\ \ \ \ \ \textcolor{keywordflow}{if}\ (err\_read\_\ !=\ -\/1)\ \ \ \ \ \ \ \ subprocess\_close(err\_read\_);}
+\DoxyCodeLine{00843\ \ \ \}}
+\DoxyCodeLine{00844\ }
+\DoxyCodeLine{00845\ \ \ \textcolor{keywordtype}{void}\ close\_child\_fds()}
+\DoxyCodeLine{00846\ \ \ \{}
+\DoxyCodeLine{00847\ \ \ \ \ \textcolor{keywordflow}{if}\ (write\_to\_parent\_\ !=\ -\/1)\ \ subprocess\_close(write\_to\_parent\_);}
+\DoxyCodeLine{00848\ \ \ \ \ \textcolor{keywordflow}{if}\ (read\_from\_parent\_\ !=\ -\/1)\ subprocess\_close(read\_from\_parent\_);}
+\DoxyCodeLine{00849\ \ \ \ \ \textcolor{keywordflow}{if}\ (err\_write\_\ !=\ -\/1)\ \ \ \ \ \ \ \ subprocess\_close(err\_write\_);}
+\DoxyCodeLine{00850\ \ \ \}}
+\DoxyCodeLine{00851\ }
+\DoxyCodeLine{00852\ \ \ FILE*\ input()\ \ \{\ \textcolor{keywordflow}{return}\ input\_.get();\ \}}
+\DoxyCodeLine{00853\ \ \ FILE*\ output()\ \{\ \textcolor{keywordflow}{return}\ output\_.get();\ \}}
+\DoxyCodeLine{00854\ \ \ FILE*\ error()\ \ \{\ \textcolor{keywordflow}{return}\ error\_.get();\ \}}
+\DoxyCodeLine{00855\ }
+\DoxyCodeLine{00856\ \ \ \textcolor{keywordtype}{void}\ input(FILE*\ fp)\ \ \{\ input\_.reset(fp,\ fclose);\ \}}
+\DoxyCodeLine{00857\ \ \ \textcolor{keywordtype}{void}\ output(FILE*\ fp)\ \{\ output\_.reset(fp,\ fclose);\ \}}
+\DoxyCodeLine{00858\ \ \ \textcolor{keywordtype}{void}\ error(FILE*\ fp)\ \ \{\ error\_.reset(fp,\ fclose);\ \}}
+\DoxyCodeLine{00859\ }
+\DoxyCodeLine{00860\ \ \ \textcolor{keywordtype}{void}\ set\_out\_buf\_cap(\textcolor{keywordtype}{size\_t}\ cap)\ \{\ comm\_.set\_out\_buf\_cap(cap);\ \}}
+\DoxyCodeLine{00861\ \ \ \textcolor{keywordtype}{void}\ set\_err\_buf\_cap(\textcolor{keywordtype}{size\_t}\ cap)\ \{\ comm\_.set\_err\_buf\_cap(cap);\ \}}
+\DoxyCodeLine{00862\ }
+\DoxyCodeLine{00863\ \textcolor{keyword}{public}:\ \textcolor{comment}{/*\ Communication\ forwarding\ API's\ */}}
+\DoxyCodeLine{00864\ \ \ \textcolor{keywordtype}{int}\ send(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ msg,\ \textcolor{keywordtype}{size\_t}\ length)}
+\DoxyCodeLine{00865\ \ \ \{\ \textcolor{keywordflow}{return}\ comm\_.send(msg,\ length);\ \}}
+\DoxyCodeLine{00866\ }
+\DoxyCodeLine{00867\ \ \ \textcolor{keywordtype}{int}\ send(\textcolor{keyword}{const}\ std::vector<char>\&\ msg)}
+\DoxyCodeLine{00868\ \ \ \{\ \textcolor{keywordflow}{return}\ comm\_.send(msg);\ \}}
+\DoxyCodeLine{00869\ }
+\DoxyCodeLine{00870\ \ \ std::pair<OutBuffer,\ ErrBuffer>\ communicate(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ msg,\ \textcolor{keywordtype}{size\_t}\ length)}
+\DoxyCodeLine{00871\ \ \ \{\ \textcolor{keywordflow}{return}\ comm\_.communicate(msg,\ length);\ \}}
+\DoxyCodeLine{00872\ }
+\DoxyCodeLine{00873\ \ \ std::pair<OutBuffer,\ ErrBuffer>\ communicate(\textcolor{keyword}{const}\ std::vector<char>\&\ msg)}
+\DoxyCodeLine{00874\ \ \ \{\ \textcolor{keywordflow}{return}\ comm\_.communicate(msg);\ \}}
+\DoxyCodeLine{00875\ }
+\DoxyCodeLine{00876\ }
+\DoxyCodeLine{00877\ \textcolor{keyword}{public}:\textcolor{comment}{//\ Yes\ they\ are\ public}}
+\DoxyCodeLine{00878\ }
+\DoxyCodeLine{00879\ \ \ std::shared\_ptr<FILE>\ input\_\ \ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00880\ \ \ std::shared\_ptr<FILE>\ output\_\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00881\ \ \ std::shared\_ptr<FILE>\ error\_\ \ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00882\ }
+\DoxyCodeLine{00883\ \textcolor{preprocessor}{\#ifdef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{00884\ \ \ HANDLE\ g\_hChildStd\_IN\_Rd\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00885\ \ \ HANDLE\ g\_hChildStd\_IN\_Wr\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00886\ \ \ HANDLE\ g\_hChildStd\_OUT\_Rd\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00887\ \ \ HANDLE\ g\_hChildStd\_OUT\_Wr\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00888\ \ \ HANDLE\ g\_hChildStd\_ERR\_Rd\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00889\ \ \ HANDLE\ g\_hChildStd\_ERR\_Wr\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00890\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00891\ }
+\DoxyCodeLine{00892\ \ \ \textcolor{comment}{//\ Pipes\ for\ communicating\ with\ child}}
+\DoxyCodeLine{00893\ }
+\DoxyCodeLine{00894\ \ \ \textcolor{comment}{//\ Emulates\ stdin}}
+\DoxyCodeLine{00895\ \ \ \textcolor{keywordtype}{int}\ write\_to\_child\_\ \ \ =\ -\/1;\ \textcolor{comment}{//\ Parent\ owned\ descriptor}}
+\DoxyCodeLine{00896\ \ \ \textcolor{keywordtype}{int}\ read\_from\_parent\_\ =\ -\/1;\ \textcolor{comment}{//\ Child\ owned\ descriptor}}
+\DoxyCodeLine{00897\ }
+\DoxyCodeLine{00898\ \ \ \textcolor{comment}{//\ Emulates\ stdout}}
+\DoxyCodeLine{00899\ \ \ \textcolor{keywordtype}{int}\ write\_to\_parent\_\ =\ -\/1;\ \textcolor{comment}{//\ Child\ owned\ descriptor}}
+\DoxyCodeLine{00900\ \ \ \textcolor{keywordtype}{int}\ read\_from\_child\_\ =\ -\/1;\ \textcolor{comment}{//\ Parent\ owned\ descriptor}}
+\DoxyCodeLine{00901\ }
+\DoxyCodeLine{00902\ \ \ \textcolor{comment}{//\ Emulates\ stderr}}
+\DoxyCodeLine{00903\ \ \ \textcolor{keywordtype}{int}\ err\_write\_\ =\ -\/1;\ \textcolor{comment}{//\ Write\ error\ to\ parent\ (Child\ owned)}}
+\DoxyCodeLine{00904\ \ \ \textcolor{keywordtype}{int}\ err\_read\_\ \ =\ -\/1;\ \textcolor{comment}{//\ Read\ error\ from\ child\ (Parent\ owned)}}
+\DoxyCodeLine{00905\ }
+\DoxyCodeLine{00906\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00907\ \ \ Communication\ comm\_;}
+\DoxyCodeLine{00908\ \};}
+\DoxyCodeLine{00909\ }
+\DoxyCodeLine{00910\ \}\ \textcolor{comment}{//\ end\ namespace\ detail}}
+\DoxyCodeLine{00911\ }
+\DoxyCodeLine{00912\ }
+\DoxyCodeLine{00913\ }
+\DoxyCodeLine{00931\ \textcolor{keyword}{class\ }Popen}
+\DoxyCodeLine{00932\ \{}
+\DoxyCodeLine{00933\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00934\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{struct\ }detail::ArgumentDeducer;}
+\DoxyCodeLine{00935\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }detail::Child;}
+\DoxyCodeLine{00936\ }
+\DoxyCodeLine{00937\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00938\ \ \ Popen(\textcolor{keyword}{const}\ std::string\&\ cmd\_args,\ Args\&\&\ ...args):}
+\DoxyCodeLine{00939\ \ \ \ \ args\_(cmd\_args)}
+\DoxyCodeLine{00940\ \ \ \{}
+\DoxyCodeLine{00941\ \ \ \ \ vargs\_\ =\ util::split(cmd\_args);}
+\DoxyCodeLine{00942\ \ \ \ \ init\_args(std::forward<Args>(args)...);}
+\DoxyCodeLine{00943\ }
+\DoxyCodeLine{00944\ \ \ \ \ \textcolor{comment}{//\ Setup\ the\ communication\ channels\ of\ the\ Popen\ class}}
+\DoxyCodeLine{00945\ \ \ \ \ stream\_.setup\_comm\_channels();}
+\DoxyCodeLine{00946\ }
+\DoxyCodeLine{00947\ \ \ \ \ execute\_process();}
+\DoxyCodeLine{00948\ \ \ \}}
+\DoxyCodeLine{00949\ }
+\DoxyCodeLine{00950\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00951\ \ \ Popen(std::initializer\_list<const\ char*>\ cmd\_args,\ Args\&\&\ ...args)}
+\DoxyCodeLine{00952\ \ \ \{}
+\DoxyCodeLine{00953\ \ \ \ \ vargs\_.insert(vargs\_.end(),\ cmd\_args.begin(),\ cmd\_args.end());}
+\DoxyCodeLine{00954\ \ \ \ \ init\_args(std::forward<Args>(args)...);}
+\DoxyCodeLine{00955\ }
+\DoxyCodeLine{00956\ \ \ \ \ \textcolor{comment}{//\ Setup\ the\ communication\ channels\ of\ the\ Popen\ class}}
+\DoxyCodeLine{00957\ \ \ \ \ stream\_.setup\_comm\_channels();}
+\DoxyCodeLine{00958\ }
+\DoxyCodeLine{00959\ \ \ \ \ execute\_process();}
+\DoxyCodeLine{00960\ \ \ \}}
+\DoxyCodeLine{00961\ }
+\DoxyCodeLine{00962\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00963\ \ \ Popen(std::vector<std::string>\ vargs\_,\ Args\ \&\&...\ args)\ :\ vargs\_(vargs\_)}
+\DoxyCodeLine{00964\ \ \ \{}
+\DoxyCodeLine{00965\ \ \ \ \ init\_args(std::forward<Args>(args)...);}
+\DoxyCodeLine{00966\ }
+\DoxyCodeLine{00967\ \ \ \ \ \textcolor{comment}{//\ Setup\ the\ communication\ channels\ of\ the\ Popen\ class}}
+\DoxyCodeLine{00968\ \ \ \ \ stream\_.setup\_comm\_channels();}
+\DoxyCodeLine{00969\ }
+\DoxyCodeLine{00970\ \ \ \ \ execute\_process();}
+\DoxyCodeLine{00971\ \ \ \}}
+\DoxyCodeLine{00972\ }
+\DoxyCodeLine{00973\ \ \ \textcolor{keywordtype}{int}\ retcode()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ retcode\_;\ \}}
+\DoxyCodeLine{00974\ }
+\DoxyCodeLine{00975\ \ \ \textcolor{keywordtype}{int}\ wait()\ noexcept(false);}
+\DoxyCodeLine{00976\ }
+\DoxyCodeLine{00977\ \ \ \textcolor{keywordtype}{void}\ set\_out\_buf\_cap(\textcolor{keywordtype}{size\_t}\ cap)\ \{\ stream\_.set\_out\_buf\_cap(cap);\ \}}
+\DoxyCodeLine{00978\ }
+\DoxyCodeLine{00979\ \ \ \textcolor{keywordtype}{void}\ set\_err\_buf\_cap(\textcolor{keywordtype}{size\_t}\ cap)\ \{\ stream\_.set\_err\_buf\_cap(cap);\ \}}
+\DoxyCodeLine{00980\ }
+\DoxyCodeLine{00981\ \ \ \textcolor{keywordtype}{int}\ send(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ msg,\ \textcolor{keywordtype}{size\_t}\ length)}
+\DoxyCodeLine{00982\ \ \ \{\ \textcolor{keywordflow}{return}\ stream\_.send(msg,\ length);\ \}}
+\DoxyCodeLine{00983\ }
+\DoxyCodeLine{00984\ \ \ \textcolor{keywordtype}{int}\ send(\textcolor{keyword}{const}\ std::string\&\ msg)}
+\DoxyCodeLine{00985\ \ \ \{\ \textcolor{keywordflow}{return}\ send(msg.c\_str(),\ msg.size());\ \}}
+\DoxyCodeLine{00986\ }
+\DoxyCodeLine{00987\ \ \ \textcolor{keywordtype}{int}\ send(\textcolor{keyword}{const}\ std::vector<char>\&\ msg)}
+\DoxyCodeLine{00988\ \ \ \{\ \textcolor{keywordflow}{return}\ stream\_.send(msg);\ \}}
+\DoxyCodeLine{00989\ }
+\DoxyCodeLine{00990\ \ \ std::pair<OutBuffer,\ ErrBuffer>\ communicate(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ msg,\ \textcolor{keywordtype}{size\_t}\ length)}
+\DoxyCodeLine{00991\ \ \ \{}
+\DoxyCodeLine{00992\ \ \ \ \ \textcolor{keyword}{auto}\ res\ =\ stream\_.communicate(msg,\ length);}
+\DoxyCodeLine{00993\ \ \ \ \ retcode\_\ =\ wait();}
+\DoxyCodeLine{00994\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{00995\ \ \ \}}
+\DoxyCodeLine{00996\ }
+\DoxyCodeLine{00997\ \ \ std::pair<OutBuffer,\ ErrBuffer>\ communicate(\textcolor{keyword}{const}\ std::string\&\ msg)}
+\DoxyCodeLine{00998\ \ \ \{}
+\DoxyCodeLine{00999\ \ \ \ \ \textcolor{keywordflow}{return}\ communicate(msg.c\_str(),\ msg.size());}
+\DoxyCodeLine{01000\ \ \ \}}
+\DoxyCodeLine{01001\ }
+\DoxyCodeLine{01002\ \ \ std::pair<OutBuffer,\ ErrBuffer>\ communicate(\textcolor{keyword}{const}\ std::vector<char>\&\ msg)}
+\DoxyCodeLine{01003\ \ \ \{}
+\DoxyCodeLine{01004\ \ \ \ \ \textcolor{keyword}{auto}\ res\ =\ stream\_.communicate(msg);}
+\DoxyCodeLine{01005\ \ \ \ \ retcode\_\ =\ wait();}
+\DoxyCodeLine{01006\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{01007\ \ \ \}}
+\DoxyCodeLine{01008\ }
+\DoxyCodeLine{01009\ \ \ std::pair<OutBuffer,\ ErrBuffer>\ communicate()}
+\DoxyCodeLine{01010\ \ \ \{}
+\DoxyCodeLine{01011\ \ \ \ \ \textcolor{keywordflow}{return}\ communicate(\textcolor{keyword}{nullptr},\ 0);}
+\DoxyCodeLine{01012\ \ \ \}}
+\DoxyCodeLine{01013\ }
+\DoxyCodeLine{01014\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{01015\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ F,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{01016\ \ \ \textcolor{keywordtype}{void}\ init\_args(F\&\&\ farg,\ Args\&\&...\ args);}
+\DoxyCodeLine{01017\ \ \ \textcolor{keywordtype}{void}\ init\_args();}
+\DoxyCodeLine{01018\ \ \ \textcolor{keywordtype}{void}\ populate\_c\_argv();}
+\DoxyCodeLine{01019\ \ \ \textcolor{keywordtype}{void}\ execute\_process()\ noexcept(false);}
+\DoxyCodeLine{01020\ }
+\DoxyCodeLine{01021\ private:}
+\DoxyCodeLine{01022\ \ \ detail::Streams\ stream\_;}
+\DoxyCodeLine{01023\ }
+\DoxyCodeLine{01024\ \textcolor{preprocessor}{\#ifdef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{01025\ \ \ HANDLE\ process\_handle\_;}
+\DoxyCodeLine{01026\ \ \ std::future<void>\ cleanup\_future\_;}
+\DoxyCodeLine{01027\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{01028\ }
+\DoxyCodeLine{01029\ \ \ std::string\ exe\_name\_;}
+\DoxyCodeLine{01030\ }
+\DoxyCodeLine{01031\ \ \ \textcolor{comment}{//\ Command\ in\ string\ format}}
+\DoxyCodeLine{01032\ \ \ std::string\ args\_;}
+\DoxyCodeLine{01033\ \ \ \textcolor{comment}{//\ Command\ provided\ as\ sequence}}
+\DoxyCodeLine{01034\ \ \ std::vector<std::string>\ vargs\_;}
+\DoxyCodeLine{01035\ \ \ std::vector<char*>\ cargv\_;}
+\DoxyCodeLine{01036\ }
+\DoxyCodeLine{01037\ \ \ \textcolor{comment}{//\ Pid\ of\ the\ child\ process}}
+\DoxyCodeLine{01038\ \ \ \textcolor{keywordtype}{int}\ child\_pid\_\ =\ -\/1;}
+\DoxyCodeLine{01039\ }
+\DoxyCodeLine{01040\ \ \ \textcolor{keywordtype}{int}\ retcode\_\ =\ -\/1;}
+\DoxyCodeLine{01041\ \};}
+\DoxyCodeLine{01042\ }
+\DoxyCodeLine{01043\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Popen::init\_args()\ \{}
+\DoxyCodeLine{01044\ \ \ populate\_c\_argv();}
+\DoxyCodeLine{01045\ \}}
+\DoxyCodeLine{01046\ }
+\DoxyCodeLine{01047\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ F,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{01048\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Popen::init\_args(F\&\&\ farg,\ Args\&\&...\ args)}
+\DoxyCodeLine{01049\ \{}
+\DoxyCodeLine{01050\ \ \ detail::ArgumentDeducer\ argd(\textcolor{keyword}{this});}
+\DoxyCodeLine{01051\ \ \ argd.set\_option(std::forward<F>(farg));}
+\DoxyCodeLine{01052\ \ \ init\_args(std::forward<Args>(args)...);}
+\DoxyCodeLine{01053\ \}}
+\DoxyCodeLine{01054\ }
+\DoxyCodeLine{01055\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Popen::populate\_c\_argv()}
+\DoxyCodeLine{01056\ \{}
+\DoxyCodeLine{01057\ \ \ cargv\_.clear();}
+\DoxyCodeLine{01058\ \ \ cargv\_.reserve(vargs\_.size()\ +\ 1);}
+\DoxyCodeLine{01059\ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ arg\ :\ vargs\_)\ cargv\_.push\_back(\&arg[0]);}
+\DoxyCodeLine{01060\ \ \ cargv\_.push\_back(\textcolor{keyword}{nullptr});}
+\DoxyCodeLine{01061\ \}}
+\DoxyCodeLine{01062\ }
+\DoxyCodeLine{01063\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ Popen::wait()\ noexcept(false)}
+\DoxyCodeLine{01064\ \{}
+\DoxyCodeLine{01065\ \textcolor{preprocessor}{\#ifdef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{01066\ \ \ \textcolor{keywordtype}{int}\ ret\ =\ WaitForSingleObject(process\_handle\_,\ INFINITE);}
+\DoxyCodeLine{01067\ }
+\DoxyCodeLine{01068\ \ \ \textcolor{comment}{//\ WaitForSingleObject\ with\ INFINITE\ should\ only\ return\ when\ process\ has\ signaled}}
+\DoxyCodeLine{01069\ \ \ \textcolor{keywordflow}{if}\ (ret\ !=\ WAIT\_OBJECT\_0)\ \{}
+\DoxyCodeLine{01070\ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}Unexpected\ return\ code\ from\ WaitForSingleObject"{}},\ 0);}
+\DoxyCodeLine{01071\ \ \ \}}
+\DoxyCodeLine{01072\ }
+\DoxyCodeLine{01073\ \ \ DWORD\ dretcode\_;}
+\DoxyCodeLine{01074\ }
+\DoxyCodeLine{01075\ \ \ \textcolor{keywordflow}{if}\ (FALSE\ ==\ GetExitCodeProcess(process\_handle\_,\ \&dretcode\_))}
+\DoxyCodeLine{01076\ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}Failed\ during\ call\ to\ GetExitCodeProcess"{}},\ 0);}
+\DoxyCodeLine{01077\ }
+\DoxyCodeLine{01078\ \ \ CloseHandle(process\_handle\_);}
+\DoxyCodeLine{01079\ }
+\DoxyCodeLine{01080\ \ \ \textcolor{keywordflow}{return}\ (\textcolor{keywordtype}{int})dretcode\_;}
+\DoxyCodeLine{01081\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{01082\ \ \ \textcolor{keywordtype}{int}\ ret,\ status;}
+\DoxyCodeLine{01083\ \ \ std::tie(ret,\ status)\ =\ util::wait\_for\_child\_exit(child\_pid\_);}
+\DoxyCodeLine{01084\ \ \ \textcolor{keywordflow}{if}\ (ret\ ==\ -\/1)\ \{}
+\DoxyCodeLine{01085\ \ \ \ \ \textcolor{keywordflow}{if}\ (errno\ !=\ ECHILD)\ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}waitpid\ failed"{}},\ errno);}
+\DoxyCodeLine{01086\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{01087\ \ \ \}}
+\DoxyCodeLine{01088\ \ \ \textcolor{keywordflow}{if}\ (WIFEXITED(status))\ \textcolor{keywordflow}{return}\ WEXITSTATUS(status);}
+\DoxyCodeLine{01089\ \ \ \textcolor{keywordflow}{if}\ (WIFSIGNALED(status))\ \textcolor{keywordflow}{return}\ WTERMSIG(status);}
+\DoxyCodeLine{01090\ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{return}\ 255;}
+\DoxyCodeLine{01091\ }
+\DoxyCodeLine{01092\ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{01093\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{01094\ \}}
+\DoxyCodeLine{01095\ }
+\DoxyCodeLine{01096\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Popen::execute\_process()\ noexcept(false)}
+\DoxyCodeLine{01097\ \{}
+\DoxyCodeLine{01098\ \textcolor{preprocessor}{\#ifdef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{01099\ \ \ \textcolor{keywordflow}{if}\ (exe\_name\_.length())\ \{}
+\DoxyCodeLine{01100\ \ \ \ \ this-\/>vargs\_.insert(this-\/>vargs\_.begin(),\ this-\/>exe\_name\_);}
+\DoxyCodeLine{01101\ \ \ \ \ this-\/>populate\_c\_argv();}
+\DoxyCodeLine{01102\ \ \ \}}
+\DoxyCodeLine{01103\ \ \ this-\/>exe\_name\_\ =\ vargs\_[0];}
+\DoxyCodeLine{01104\ }
+\DoxyCodeLine{01105\ \ \ std::wstring\_convert<std::codecvt\_utf8\_utf16<wchar\_t>>\ converter;}
+\DoxyCodeLine{01106\ \ \ std::wstring\ argument;}
+\DoxyCodeLine{01107\ \ \ std::wstring\ command\_line;}
+\DoxyCodeLine{01108\ \ \ \textcolor{keywordtype}{bool}\ first\_arg\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{01109\ }
+\DoxyCodeLine{01110\ \ \ for\ (\textcolor{keyword}{auto}\ arg\ :\ this-\/>vargs\_)\ \{}
+\DoxyCodeLine{01111\ \ \ \ \ \textcolor{keywordflow}{if}\ (!first\_arg)\ \{}
+\DoxyCodeLine{01112\ \ \ \ \ \ \ command\_line\ +=\ L\textcolor{stringliteral}{"{}\ "{}};}
+\DoxyCodeLine{01113\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{01114\ \ \ \ \ \ \ first\_arg\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{01115\ \ \ \ \ \}}
+\DoxyCodeLine{01116\ \ \ \ \ argument\ =\ converter.from\_bytes(arg);}
+\DoxyCodeLine{01117\ \ \ \ \ util::quote\_argument(argument,\ command\_line,\ \textcolor{keyword}{false});}
+\DoxyCodeLine{01118\ \ \ \}}
+\DoxyCodeLine{01119\ }
+\DoxyCodeLine{01120\ \ \ \textcolor{comment}{//\ CreateProcessW\ can\ modify\ szCmdLine\ so\ we\ allocate\ needed\ memory}}
+\DoxyCodeLine{01121\ \ \ \textcolor{keywordtype}{wchar\_t}\ *szCmdline\ =\ \textcolor{keyword}{new}\ \textcolor{keywordtype}{wchar\_t}[command\_line.size()\ +\ 1];}
+\DoxyCodeLine{01122\ \ \ wcscpy\_s(szCmdline,\ command\_line.size()\ +\ 1,\ command\_line.c\_str());}
+\DoxyCodeLine{01123\ \ \ PROCESS\_INFORMATION\ piProcInfo;}
+\DoxyCodeLine{01124\ \ \ STARTUPINFOW\ siStartInfo;}
+\DoxyCodeLine{01125\ \ \ BOOL\ bSuccess\ =\ FALSE;}
+\DoxyCodeLine{01126\ \ \ DWORD\ creation\_flags\ =\ CREATE\_UNICODE\_ENVIRONMENT\ |\ CREATE\_NO\_WINDOW;}
+\DoxyCodeLine{01127\ }
+\DoxyCodeLine{01128\ \ \ \textcolor{comment}{//\ Set\ up\ members\ of\ the\ PROCESS\_INFORMATION\ structure.}}
+\DoxyCodeLine{01129\ \ \ ZeroMemory(\&piProcInfo,\ \textcolor{keyword}{sizeof}(PROCESS\_INFORMATION));}
+\DoxyCodeLine{01130\ }
+\DoxyCodeLine{01131\ \ \ \textcolor{comment}{//\ Set\ up\ members\ of\ the\ STARTUPINFOW\ structure.}}
+\DoxyCodeLine{01132\ \ \ \textcolor{comment}{//\ This\ structure\ specifies\ the\ STDIN\ and\ STDOUT\ handles\ for\ redirection.}}
+\DoxyCodeLine{01133\ }
+\DoxyCodeLine{01134\ \ \ ZeroMemory(\&siStartInfo,\ \textcolor{keyword}{sizeof}(STARTUPINFOW));}
+\DoxyCodeLine{01135\ \ \ siStartInfo.cb\ =\ \textcolor{keyword}{sizeof}(STARTUPINFOW);}
+\DoxyCodeLine{01136\ }
+\DoxyCodeLine{01137\ \ \ siStartInfo.hStdError\ =\ this-\/>stream\_.g\_hChildStd\_ERR\_Wr;}
+\DoxyCodeLine{01138\ \ \ siStartInfo.hStdOutput\ =\ this-\/>stream\_.g\_hChildStd\_OUT\_Wr;}
+\DoxyCodeLine{01139\ \ \ siStartInfo.hStdInput\ =\ this-\/>stream\_.g\_hChildStd\_IN\_Rd;}
+\DoxyCodeLine{01140\ }
+\DoxyCodeLine{01141\ \ \ siStartInfo.dwFlags\ |=\ STARTF\_USESTDHANDLES;}
+\DoxyCodeLine{01142\ }
+\DoxyCodeLine{01143\ \ \ \textcolor{comment}{//\ Create\ the\ child\ process.}}
+\DoxyCodeLine{01144\ \ \ bSuccess\ =\ CreateProcessW(NULL,}
+\DoxyCodeLine{01145\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ szCmdline,\ \ \ \ \textcolor{comment}{//\ command\ line}}
+\DoxyCodeLine{01146\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ NULL,\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ process\ security\ attributes}}
+\DoxyCodeLine{01147\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ NULL,\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ primary\ thread\ security\ attributes}}
+\DoxyCodeLine{01148\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ TRUE,\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ handles\ are\ inherited}}
+\DoxyCodeLine{01149\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ creation\_flags,\ \textcolor{comment}{//\ creation\ flags}}
+\DoxyCodeLine{01150\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ NULL,\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ use\ parent's\ environment}}
+\DoxyCodeLine{01151\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ NULL,\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ use\ parent's\ current\ directory}}
+\DoxyCodeLine{01152\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&siStartInfo,\ \textcolor{comment}{//\ STARTUPINFOW\ pointer}}
+\DoxyCodeLine{01153\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&piProcInfo);\ \textcolor{comment}{//\ receives\ PROCESS\_INFORMATION}}
+\DoxyCodeLine{01154\ }
+\DoxyCodeLine{01155\ \ \ \textcolor{comment}{//\ If\ an\ error\ occurs,\ exit\ the\ application.}}
+\DoxyCodeLine{01156\ \ \ \textcolor{keywordflow}{if}\ (!bSuccess)\ \{}
+\DoxyCodeLine{01157\ \ \ \ \ DWORD\ errorMessageID\ =\ ::GetLastError();}
+\DoxyCodeLine{01158\ \ \ \ \ \textcolor{keywordflow}{throw}\ CalledProcessError(\textcolor{stringliteral}{"{}CreateProcess\ failed:\ "{}}\ +\ util::get\_last\_error(errorMessageID),\ errorMessageID);}
+\DoxyCodeLine{01159\ \ \ \}}
+\DoxyCodeLine{01160\ }
+\DoxyCodeLine{01161\ \ \ CloseHandle(piProcInfo.hThread);}
+\DoxyCodeLine{01162\ }
+\DoxyCodeLine{01163\ \ \ \textcolor{comment}{/*}}
+\DoxyCodeLine{01164\ \textcolor{comment}{\ \ \ \ TODO:\ use\ common\ apis\ to\ close\ linux\ handles}}
+\DoxyCodeLine{01165\ \textcolor{comment}{\ \ */}}
+\DoxyCodeLine{01166\ }
+\DoxyCodeLine{01167\ \ \ this-\/>process\_handle\_\ =\ piProcInfo.hProcess;}
+\DoxyCodeLine{01168\ }
+\DoxyCodeLine{01169\ \ \ this-\/>cleanup\_future\_\ =\ std::async(std::launch::async,\ [\textcolor{keyword}{this}]\ \{}
+\DoxyCodeLine{01170\ \ \ \ \ WaitForSingleObject(this-\/>process\_handle\_,\ INFINITE);}
+\DoxyCodeLine{01171\ }
+\DoxyCodeLine{01172\ \ \ \ \ CloseHandle(this-\/>stream\_.g\_hChildStd\_ERR\_Wr);}
+\DoxyCodeLine{01173\ \ \ \ \ CloseHandle(this-\/>stream\_.g\_hChildStd\_OUT\_Wr);}
+\DoxyCodeLine{01174\ \ \ \ \ CloseHandle(this-\/>stream\_.g\_hChildStd\_IN\_Rd);}
+\DoxyCodeLine{01175\ \ \ \});}
+\DoxyCodeLine{01176\ }
+\DoxyCodeLine{01177\ \textcolor{comment}{/*}}
+\DoxyCodeLine{01178\ \textcolor{comment}{\ \ NOTE:\ In\ the\ linux\ version,\ there\ is\ a\ check\ to\ make\ sure\ that\ the\ process}}
+\DoxyCodeLine{01179\ \textcolor{comment}{\ \ \ \ \ \ \ \ has\ been\ started.\ Here,\ we\ do\ nothing\ because\ CreateProcess\ will\ throw}}
+\DoxyCodeLine{01180\ \textcolor{comment}{\ \ \ \ \ \ \ \ if\ we\ fail\ to\ create\ the\ process.}}
+\DoxyCodeLine{01181\ \textcolor{comment}{*/}}
+\DoxyCodeLine{01182\ }
+\DoxyCodeLine{01183\ }
+\DoxyCodeLine{01184\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{01185\ }
+\DoxyCodeLine{01186\ \ \ \textcolor{keywordtype}{int}\ err\_rd\_pipe,\ err\_wr\_pipe;}
+\DoxyCodeLine{01187\ \ \ std::tie(err\_rd\_pipe,\ err\_wr\_pipe)\ =\ util::pipe\_cloexec();}
+\DoxyCodeLine{01188\ }
+\DoxyCodeLine{01189\ \ \ \textcolor{keywordflow}{if}\ (exe\_name\_.length())\ \{}
+\DoxyCodeLine{01190\ \ \ \ \ vargs\_.insert(vargs\_.begin(),\ exe\_name\_);}
+\DoxyCodeLine{01191\ \ \ \ \ populate\_c\_argv();}
+\DoxyCodeLine{01192\ \ \ \}}
+\DoxyCodeLine{01193\ \ \ exe\_name\_\ =\ vargs\_[0];}
+\DoxyCodeLine{01194\ }
+\DoxyCodeLine{01195\ \ \ child\_pid\_\ =\ fork();}
+\DoxyCodeLine{01196\ }
+\DoxyCodeLine{01197\ \ \ \textcolor{keywordflow}{if}\ (child\_pid\_\ <\ 0)\ \{}
+\DoxyCodeLine{01198\ \ \ \ \ subprocess\_close(err\_rd\_pipe);}
+\DoxyCodeLine{01199\ \ \ \ \ subprocess\_close(err\_wr\_pipe);}
+\DoxyCodeLine{01200\ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}fork\ failed"{}},\ errno);}
+\DoxyCodeLine{01201\ \ \ \}}
+\DoxyCodeLine{01202\ }
+\DoxyCodeLine{01203\ \ \ \textcolor{keywordflow}{if}\ (child\_pid\_\ ==\ 0)}
+\DoxyCodeLine{01204\ \ \ \{}
+\DoxyCodeLine{01205\ \ \ \ \ \textcolor{comment}{//\ Close\ descriptors\ belonging\ to\ parent}}
+\DoxyCodeLine{01206\ \ \ \ \ stream\_.close\_parent\_fds();}
+\DoxyCodeLine{01207\ }
+\DoxyCodeLine{01208\ \ \ \ \ \textcolor{comment}{//Close\ the\ read\ end\ of\ the\ error\ pipe}}
+\DoxyCodeLine{01209\ \ \ \ \ subprocess\_close(err\_rd\_pipe);}
+\DoxyCodeLine{01210\ }
+\DoxyCodeLine{01211\ \ \ \ \ detail::Child\ chld(\textcolor{keyword}{this},\ err\_wr\_pipe);}
+\DoxyCodeLine{01212\ \ \ \ \ chld.execute\_child();}
+\DoxyCodeLine{01213\ \ \ \}}
+\DoxyCodeLine{01214\ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{01215\ \ \ \{}
+\DoxyCodeLine{01216\ \ \ \ \ subprocess\_close(err\_wr\_pipe);\textcolor{comment}{//\ close\ child\ side\ of\ pipe,\ else\ get\ stuck\ in\ read\ below}}
+\DoxyCodeLine{01217\ }
+\DoxyCodeLine{01218\ \ \ \ \ stream\_.close\_child\_fds();}
+\DoxyCodeLine{01219\ }
+\DoxyCodeLine{01220\ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{01221\ \ \ \ \ \ \ \textcolor{keywordtype}{char}\ err\_buf[SP\_MAX\_ERR\_BUF\_SIZ]\ =\ \{0,\};}
+\DoxyCodeLine{01222\ }
+\DoxyCodeLine{01223\ \ \ \ \ \ \ FILE*\ err\_fp\ =\ fdopen(err\_rd\_pipe,\ \textcolor{stringliteral}{"{}r"{}});}
+\DoxyCodeLine{01224\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!err\_fp)\ \{}
+\DoxyCodeLine{01225\ \ \ \ \ \ \ \ \ \ \ subprocess\_close(err\_rd\_pipe);}
+\DoxyCodeLine{01226\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}fdopen\ failed"{}},\ errno);}
+\DoxyCodeLine{01227\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01228\ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ read\_bytes\ =\ util::read\_atmost\_n(err\_fp,\ err\_buf,\ SP\_MAX\_ERR\_BUF\_SIZ);}
+\DoxyCodeLine{01229\ \ \ \ \ \ \ fclose(err\_fp);}
+\DoxyCodeLine{01230\ }
+\DoxyCodeLine{01231\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (read\_bytes\ ||\ strlen(err\_buf))\ \{}
+\DoxyCodeLine{01232\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Call\ waitpid\ to\ reap\ the\ child\ process}}
+\DoxyCodeLine{01233\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ waitpid\ suspends\ the\ calling\ process\ until\ the}}
+\DoxyCodeLine{01234\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ child\ terminates.}}
+\DoxyCodeLine{01235\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ retcode\ =\ wait();}
+\DoxyCodeLine{01236\ }
+\DoxyCodeLine{01237\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Throw\ whatever\ information\ we\ have\ about\ child\ failure}}
+\DoxyCodeLine{01238\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ CalledProcessError(err\_buf,\ retcode);}
+\DoxyCodeLine{01239\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01240\ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (std::exception\&\ exp)\ \{}
+\DoxyCodeLine{01241\ \ \ \ \ \ \ stream\_.cleanup\_fds();}
+\DoxyCodeLine{01242\ \ \ \ \ \ \ \textcolor{keywordflow}{throw};}
+\DoxyCodeLine{01243\ \ \ \ \ \}}
+\DoxyCodeLine{01244\ }
+\DoxyCodeLine{01245\ \ \ \}}
+\DoxyCodeLine{01246\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{01247\ \}}
+\DoxyCodeLine{01248\ }
+\DoxyCodeLine{01249\ \textcolor{keyword}{namespace\ }detail\ \{}
+\DoxyCodeLine{01250\ }
+\DoxyCodeLine{01251\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ArgumentDeducer::set\_option(executable\&\&\ exe)\ \{}
+\DoxyCodeLine{01252\ \ \ \ \ popen\_-\/>exe\_name\_\ =\ std::move(exe.arg\_value);}
+\DoxyCodeLine{01253\ \ \ \}}
+\DoxyCodeLine{01254\ }
+\DoxyCodeLine{01255\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ArgumentDeducer::set\_option(input\&\&\ inp)\ \{}
+\DoxyCodeLine{01256\ \ \ \ \ \textcolor{keywordflow}{if}\ (inp.rd\_ch\_\ !=\ -\/1)\ popen\_-\/>stream\_.read\_from\_parent\_\ =\ inp.rd\_ch\_;}
+\DoxyCodeLine{01257\ \ \ \ \ \textcolor{keywordflow}{if}\ (inp.wr\_ch\_\ !=\ -\/1)\ popen\_-\/>stream\_.write\_to\_child\_\ =\ inp.wr\_ch\_;}
+\DoxyCodeLine{01258\ \ \ \}}
+\DoxyCodeLine{01259\ }
+\DoxyCodeLine{01260\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ArgumentDeducer::set\_option(output\&\&\ out)\ \{}
+\DoxyCodeLine{01261\ \ \ \ \ \textcolor{keywordflow}{if}\ (out.wr\_ch\_\ !=\ -\/1)\ popen\_-\/>stream\_.write\_to\_parent\_\ =\ out.wr\_ch\_;}
+\DoxyCodeLine{01262\ \ \ \ \ \textcolor{keywordflow}{if}\ (out.rd\_ch\_\ !=\ -\/1)\ popen\_-\/>stream\_.read\_from\_child\_\ =\ out.rd\_ch\_;}
+\DoxyCodeLine{01263\ \ \ \}}
+\DoxyCodeLine{01264\ }
+\DoxyCodeLine{01265\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ArgumentDeducer::set\_option(error\&\&\ err)\ \{}
+\DoxyCodeLine{01266\ \ \ \ \ \textcolor{keywordflow}{if}\ (err.deferred\_)\ \{}
+\DoxyCodeLine{01267\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (popen\_-\/>stream\_.write\_to\_parent\_)\ \{}
+\DoxyCodeLine{01268\ \ \ \ \ \ \ \ \ popen\_-\/>stream\_.err\_write\_\ =\ popen\_-\/>stream\_.write\_to\_parent\_;}
+\DoxyCodeLine{01269\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{01270\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}Set\ output\ before\ redirecting\ error\ to\ output"{}});}
+\DoxyCodeLine{01271\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01272\ \ \ \ \ \}}
+\DoxyCodeLine{01273\ \ \ \ \ \textcolor{keywordflow}{if}\ (err.wr\_ch\_\ !=\ -\/1)\ popen\_-\/>stream\_.err\_write\_\ =\ err.wr\_ch\_;}
+\DoxyCodeLine{01274\ \ \ \ \ \textcolor{keywordflow}{if}\ (err.rd\_ch\_\ !=\ -\/1)\ popen\_-\/>stream\_.err\_read\_\ =\ err.rd\_ch\_;}
+\DoxyCodeLine{01275\ \ \ \}}
+\DoxyCodeLine{01276\ }
+\DoxyCodeLine{01277\ }
+\DoxyCodeLine{01278\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Child::execute\_child()\ \{}
+\DoxyCodeLine{01279\ \textcolor{preprocessor}{\#ifndef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{01280\ \ \ \ \ \textcolor{keywordtype}{int}\ sys\_ret\ =\ -\/1;}
+\DoxyCodeLine{01281\ \ \ \ \ \textcolor{keyword}{auto}\&\ stream\ =\ parent\_-\/>stream\_;}
+\DoxyCodeLine{01282\ }
+\DoxyCodeLine{01283\ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{01284\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (stream.write\_to\_parent\_\ ==\ 0)}
+\DoxyCodeLine{01285\ \ \ \ \ \ \ \ \ stream.write\_to\_parent\_\ =\ dup(stream.write\_to\_parent\_);}
+\DoxyCodeLine{01286\ }
+\DoxyCodeLine{01287\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (stream.err\_write\_\ ==\ 0\ ||\ stream.err\_write\_\ ==\ 1)}
+\DoxyCodeLine{01288\ \ \ \ \ \ \ \ \ stream.err\_write\_\ =\ dup(stream.err\_write\_);}
+\DoxyCodeLine{01289\ }
+\DoxyCodeLine{01290\ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ the\ child\ owned\ descriptors\ as\ the}}
+\DoxyCodeLine{01291\ \ \ \ \ \ \ \textcolor{comment}{//\ stdin,\ stdout\ and\ stderr\ for\ the\ child\ process}}
+\DoxyCodeLine{01292\ \ \ \ \ \ \ \textcolor{keyword}{auto}\ \_dup2\_\ =\ [](\textcolor{keywordtype}{int}\ fd,\ \textcolor{keywordtype}{int}\ to\_fd)\ \{}
+\DoxyCodeLine{01293\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fd\ ==\ to\_fd)\ \{}
+\DoxyCodeLine{01294\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ dup2\ syscall\ does\ not\ reset\ the}}
+\DoxyCodeLine{01295\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ CLOEXEC\ flag\ if\ the\ descriptors}}
+\DoxyCodeLine{01296\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ provided\ to\ it\ are\ same.}}
+\DoxyCodeLine{01297\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ But,\ we\ need\ to\ reset\ the\ CLOEXEC}}
+\DoxyCodeLine{01298\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ flag\ as\ the\ provided\ descriptors}}
+\DoxyCodeLine{01299\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ are\ now\ going\ to\ be\ the\ standard}}
+\DoxyCodeLine{01300\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ input,\ output\ and\ error}}
+\DoxyCodeLine{01301\ \ \ \ \ \ \ \ \ \ \ util::set\_clo\_on\_exec(fd,\ \textcolor{keyword}{false});}
+\DoxyCodeLine{01302\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}(fd\ !=\ -\/1)\ \{}
+\DoxyCodeLine{01303\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ res\ =\ dup2(fd,\ to\_fd);}
+\DoxyCodeLine{01304\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (res\ ==\ -\/1)\ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}dup2\ failed"{}},\ errno);}
+\DoxyCodeLine{01305\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01306\ \ \ \ \ \ \ \};}
+\DoxyCodeLine{01307\ }
+\DoxyCodeLine{01308\ \ \ \ \ \ \ \textcolor{comment}{//\ Create\ the\ standard\ streams}}
+\DoxyCodeLine{01309\ \ \ \ \ \ \ \_dup2\_(stream.read\_from\_parent\_,\ 0);\ \textcolor{comment}{//\ Input\ stream}}
+\DoxyCodeLine{01310\ \ \ \ \ \ \ \_dup2\_(stream.write\_to\_parent\_,\ \ 1);\ \textcolor{comment}{//\ Output\ stream}}
+\DoxyCodeLine{01311\ \ \ \ \ \ \ \_dup2\_(stream.err\_write\_,\ \ \ \ \ \ \ \ 2);\ \textcolor{comment}{//\ Error\ stream}}
+\DoxyCodeLine{01312\ }
+\DoxyCodeLine{01313\ \ \ \ \ \ \ \textcolor{comment}{//\ Close\ the\ duped\ descriptors}}
+\DoxyCodeLine{01314\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (stream.read\_from\_parent\_\ !=\ -\/1\ \&\&\ stream.read\_from\_parent\_\ >\ 2)}
+\DoxyCodeLine{01315\ \ \ \ \ \ \ \ \ subprocess\_close(stream.read\_from\_parent\_);}
+\DoxyCodeLine{01316\ }
+\DoxyCodeLine{01317\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (stream.write\_to\_parent\_\ !=\ -\/1\ \&\&\ stream.write\_to\_parent\_\ >\ 2)}
+\DoxyCodeLine{01318\ \ \ \ \ \ \ \ \ subprocess\_close(stream.write\_to\_parent\_);}
+\DoxyCodeLine{01319\ }
+\DoxyCodeLine{01320\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (stream.err\_write\_\ !=\ -\/1\ \&\&\ stream.err\_write\_\ >\ 2)}
+\DoxyCodeLine{01321\ \ \ \ \ \ \ \ \ subprocess\_close(stream.err\_write\_);}
+\DoxyCodeLine{01322\ }
+\DoxyCodeLine{01323\ \ \ \ \ \ \ \textcolor{comment}{//\ Replace\ the\ current\ image\ with\ the\ executable}}
+\DoxyCodeLine{01324\ \ \ \ \ \ \ sys\_ret\ =\ execvp(parent\_-\/>exe\_name\_.c\_str(),\ parent\_-\/>cargv\_.data());}
+\DoxyCodeLine{01325\ }
+\DoxyCodeLine{01326\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sys\_ret\ ==\ -\/1)\ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}execve\ failed"{}},\ errno);}
+\DoxyCodeLine{01327\ }
+\DoxyCodeLine{01328\ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ OSError\&\ exp)\ \{}
+\DoxyCodeLine{01329\ \ \ \ \ \ \ \textcolor{comment}{//\ Just\ write\ the\ exception\ message}}
+\DoxyCodeLine{01330\ \ \ \ \ \ \ \textcolor{comment}{//\ TODO:\ Give\ back\ stack\ trace\ ?}}
+\DoxyCodeLine{01331\ \ \ \ \ \ \ std::string\ err\_msg(exp.what());}
+\DoxyCodeLine{01332\ \ \ \ \ \ \ \textcolor{comment}{//ATTN:\ Can\ we\ do\ something\ on\ error\ here\ ?}}
+\DoxyCodeLine{01333\ \ \ \ \ \ \ util::write\_n(err\_wr\_pipe\_,\ err\_msg.c\_str(),\ err\_msg.length());}
+\DoxyCodeLine{01334\ \ \ \ \ \}}
+\DoxyCodeLine{01335\ }
+\DoxyCodeLine{01336\ \ \ \ \ \textcolor{comment}{//\ Calling\ application\ would\ not\ get\ this}}
+\DoxyCodeLine{01337\ \ \ \ \ \textcolor{comment}{//\ exit\ failure}}
+\DoxyCodeLine{01338\ \ \ \ \ \_exit\ (EXIT\_FAILURE);}
+\DoxyCodeLine{01339\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{01340\ \ \ \}}
+\DoxyCodeLine{01341\ }
+\DoxyCodeLine{01342\ }
+\DoxyCodeLine{01343\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Streams::setup\_comm\_channels()}
+\DoxyCodeLine{01344\ \ \ \{}
+\DoxyCodeLine{01345\ \textcolor{preprocessor}{\#ifdef\ \_\_USING\_WINDOWS\_\_}}
+\DoxyCodeLine{01346\ \ \ \ \ util::configure\_pipe(\&this-\/>g\_hChildStd\_IN\_Rd,\ \&this-\/>g\_hChildStd\_IN\_Wr,\ \&this-\/>g\_hChildStd\_IN\_Wr);}
+\DoxyCodeLine{01347\ \ \ \ \ this-\/>input(util::file\_from\_handle(this-\/>g\_hChildStd\_IN\_Wr,\ \textcolor{stringliteral}{"{}w"{}}));}
+\DoxyCodeLine{01348\ \ \ \ \ this-\/>write\_to\_child\_\ =\ subprocess\_fileno(this-\/>input());}
+\DoxyCodeLine{01349\ }
+\DoxyCodeLine{01350\ \ \ \ \ util::configure\_pipe(\&this-\/>g\_hChildStd\_OUT\_Rd,\ \&this-\/>g\_hChildStd\_OUT\_Wr,\ \&this-\/>g\_hChildStd\_OUT\_Rd);}
+\DoxyCodeLine{01351\ \ \ \ \ this-\/>output(util::file\_from\_handle(this-\/>g\_hChildStd\_OUT\_Rd,\ \textcolor{stringliteral}{"{}r"{}}));}
+\DoxyCodeLine{01352\ \ \ \ \ this-\/>read\_from\_child\_\ =\ subprocess\_fileno(this-\/>output());}
+\DoxyCodeLine{01353\ }
+\DoxyCodeLine{01354\ \ \ \ \ util::configure\_pipe(\&this-\/>g\_hChildStd\_ERR\_Rd,\ \&this-\/>g\_hChildStd\_ERR\_Wr,\ \&this-\/>g\_hChildStd\_ERR\_Rd);}
+\DoxyCodeLine{01355\ \ \ \ \ this-\/>error(util::file\_from\_handle(this-\/>g\_hChildStd\_ERR\_Rd,\ \textcolor{stringliteral}{"{}r"{}}));}
+\DoxyCodeLine{01356\ \ \ \ \ this-\/>err\_read\_\ =\ subprocess\_fileno(this-\/>error());}
+\DoxyCodeLine{01357\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{01358\ }
+\DoxyCodeLine{01359\ \ \ \ \ \textcolor{keywordflow}{if}\ (write\_to\_child\_\ !=\ -\/1)\ \ input(fdopen(write\_to\_child\_,\ \textcolor{stringliteral}{"{}wb"{}}));}
+\DoxyCodeLine{01360\ \ \ \ \ \textcolor{keywordflow}{if}\ (read\_from\_child\_\ !=\ -\/1)\ output(fdopen(read\_from\_child\_,\ \textcolor{stringliteral}{"{}rb"{}}));}
+\DoxyCodeLine{01361\ \ \ \ \ \textcolor{keywordflow}{if}\ (err\_read\_\ !=\ -\/1)\ \ \ \ \ \ \ \ error(fdopen(err\_read\_,\ \textcolor{stringliteral}{"{}rb"{}}));}
+\DoxyCodeLine{01362\ }
+\DoxyCodeLine{01363\ \ \ \ \ \textcolor{keyword}{auto}\ handles\ =\ \{input(),\ output(),\ error()\};}
+\DoxyCodeLine{01364\ }
+\DoxyCodeLine{01365\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ h\ :\ handles)\ \{}
+\DoxyCodeLine{01366\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (h\ ==\ \textcolor{keyword}{nullptr})\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{01367\ \ \ \ \ \ \ setvbuf(h,\ \textcolor{keyword}{nullptr},\ \_IONBF,\ BUFSIZ);}
+\DoxyCodeLine{01368\ \ \ \ \ \}}
+\DoxyCodeLine{01369\ \textcolor{preprocessor}{\ \ \#endif}}
+\DoxyCodeLine{01370\ \ \ \}}
+\DoxyCodeLine{01371\ }
+\DoxyCodeLine{01372\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ Communication::send(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ msg,\ \textcolor{keywordtype}{size\_t}\ length)}
+\DoxyCodeLine{01373\ \ \ \{}
+\DoxyCodeLine{01374\ \ \ \ \ \textcolor{keywordflow}{if}\ (stream\_-\/>input()\ ==\ \textcolor{keyword}{nullptr})\ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{01375\ \ \ \ \ \textcolor{keywordflow}{return}\ std::fwrite(msg,\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{char}),\ length,\ stream\_-\/>input());}
+\DoxyCodeLine{01376\ \ \ \}}
+\DoxyCodeLine{01377\ }
+\DoxyCodeLine{01378\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ Communication::send(\textcolor{keyword}{const}\ std::vector<char>\&\ msg)}
+\DoxyCodeLine{01379\ \ \ \{}
+\DoxyCodeLine{01380\ \ \ \ \ \textcolor{keywordflow}{return}\ send(msg.data(),\ msg.size());}
+\DoxyCodeLine{01381\ \ \ \}}
+\DoxyCodeLine{01382\ }
+\DoxyCodeLine{01383\ \ \ \textcolor{keyword}{inline}\ std::pair<OutBuffer,\ ErrBuffer>}
+\DoxyCodeLine{01384\ \ \ Communication::communicate(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ msg,\ \textcolor{keywordtype}{size\_t}\ length)}
+\DoxyCodeLine{01385\ \ \ \{}
+\DoxyCodeLine{01386\ \ \ \ \ \textcolor{comment}{//\ Optimization\ from\ subprocess.py}}
+\DoxyCodeLine{01387\ \ \ \ \ \textcolor{comment}{//\ If\ we\ are\ using\ one\ pipe,\ or\ no\ pipe}}
+\DoxyCodeLine{01388\ \ \ \ \ \textcolor{comment}{//\ at\ all,\ using\ select()\ or\ threads\ is\ unnecessary.}}
+\DoxyCodeLine{01389\ \ \ \ \ \textcolor{keyword}{auto}\ hndls\ =\ \{stream\_-\/>input(),\ stream\_-\/>output(),\ stream\_-\/>error()\};}
+\DoxyCodeLine{01390\ \ \ \ \ \textcolor{keywordtype}{int}\ count\ =\ std::count(std::begin(hndls),\ std::end(hndls),\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{01391\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ len\_conv\ =\ length;}
+\DoxyCodeLine{01392\ }
+\DoxyCodeLine{01393\ \ \ \ \ \textcolor{keywordflow}{if}\ (count\ >=\ 2)\ \{}
+\DoxyCodeLine{01394\ \ \ \ \ \ \ OutBuffer\ obuf;}
+\DoxyCodeLine{01395\ \ \ \ \ \ \ ErrBuffer\ ebuf;}
+\DoxyCodeLine{01396\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (stream\_-\/>input())\ \{}
+\DoxyCodeLine{01397\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (msg)\ \{}
+\DoxyCodeLine{01398\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ wbytes\ =\ std::fwrite(msg,\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{char}),\ length,\ stream\_-\/>input());}
+\DoxyCodeLine{01399\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (wbytes\ <\ len\_conv)\ \{}
+\DoxyCodeLine{01400\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (errno\ !=\ EPIPE\ \&\&\ errno\ !=\ EINVAL)\ \{}
+\DoxyCodeLine{01401\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}fwrite\ error"{}},\ errno);}
+\DoxyCodeLine{01402\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01403\ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01404\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01405\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Close\ the\ input\ stream}}
+\DoxyCodeLine{01406\ \ \ \ \ \ \ \ \ stream\_-\/>input\_.reset();}
+\DoxyCodeLine{01407\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (stream\_-\/>output())\ \{}
+\DoxyCodeLine{01408\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ till\ EOF}}
+\DoxyCodeLine{01409\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ATTN:\ This\ could\ be\ blocking,\ if\ the\ process}}
+\DoxyCodeLine{01410\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ at\ the\ other\ end\ screws\ up,\ we\ get\ screwed\ as\ well}}
+\DoxyCodeLine{01411\ \ \ \ \ \ \ \ \ obuf.add\_cap(out\_buf\_cap\_);}
+\DoxyCodeLine{01412\ }
+\DoxyCodeLine{01413\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ rbytes\ =\ util::read\_all(}
+\DoxyCodeLine{01414\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ stream\_-\/>output(),}
+\DoxyCodeLine{01415\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ obuf.buf);}
+\DoxyCodeLine{01416\ }
+\DoxyCodeLine{01417\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (rbytes\ ==\ -\/1)\ \{}
+\DoxyCodeLine{01418\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}read\ to\ obuf\ failed"{}},\ errno);}
+\DoxyCodeLine{01419\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01420\ }
+\DoxyCodeLine{01421\ \ \ \ \ \ \ \ \ obuf.length\ =\ rbytes;}
+\DoxyCodeLine{01422\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Close\ the\ output\ stream}}
+\DoxyCodeLine{01423\ \ \ \ \ \ \ \ \ stream\_-\/>output\_.reset();}
+\DoxyCodeLine{01424\ }
+\DoxyCodeLine{01425\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (stream\_-\/>error())\ \{}
+\DoxyCodeLine{01426\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Same\ screwness\ applies\ here\ as\ well}}
+\DoxyCodeLine{01427\ \ \ \ \ \ \ \ \ ebuf.add\_cap(err\_buf\_cap\_);}
+\DoxyCodeLine{01428\ }
+\DoxyCodeLine{01429\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ rbytes\ =\ util::read\_atmost\_n(}
+\DoxyCodeLine{01430\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ stream\_-\/>error(),}
+\DoxyCodeLine{01431\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ebuf.buf.data(),}
+\DoxyCodeLine{01432\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ebuf.buf.size());}
+\DoxyCodeLine{01433\ }
+\DoxyCodeLine{01434\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (rbytes\ ==\ -\/1)\ \{}
+\DoxyCodeLine{01435\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}read\ to\ ebuf\ failed"{}},\ errno);}
+\DoxyCodeLine{01436\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01437\ }
+\DoxyCodeLine{01438\ \ \ \ \ \ \ \ \ ebuf.length\ =\ rbytes;}
+\DoxyCodeLine{01439\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Close\ the\ error\ stream}}
+\DoxyCodeLine{01440\ \ \ \ \ \ \ \ \ stream\_-\/>error\_.reset();}
+\DoxyCodeLine{01441\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01442\ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::make\_pair(std::move(obuf),\ std::move(ebuf));}
+\DoxyCodeLine{01443\ \ \ \ \ \}}
+\DoxyCodeLine{01444\ }
+\DoxyCodeLine{01445\ \ \ \ \ \textcolor{keywordflow}{return}\ communicate\_threaded(msg,\ length);}
+\DoxyCodeLine{01446\ \ \ \}}
+\DoxyCodeLine{01447\ }
+\DoxyCodeLine{01448\ }
+\DoxyCodeLine{01449\ \ \ \textcolor{keyword}{inline}\ std::pair<OutBuffer,\ ErrBuffer>}
+\DoxyCodeLine{01450\ \ \ Communication::communicate\_threaded(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ msg,\ \textcolor{keywordtype}{size\_t}\ length)}
+\DoxyCodeLine{01451\ \ \ \{}
+\DoxyCodeLine{01452\ \ \ \ \ OutBuffer\ obuf;}
+\DoxyCodeLine{01453\ \ \ \ \ ErrBuffer\ ebuf;}
+\DoxyCodeLine{01454\ \ \ \ \ std::future<int>\ out\_fut,\ err\_fut;}
+\DoxyCodeLine{01455\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ length\_conv\ =\ length;}
+\DoxyCodeLine{01456\ }
+\DoxyCodeLine{01457\ \ \ \ \ \textcolor{keywordflow}{if}\ (stream\_-\/>output())\ \{}
+\DoxyCodeLine{01458\ \ \ \ \ \ \ obuf.add\_cap(out\_buf\_cap\_);}
+\DoxyCodeLine{01459\ }
+\DoxyCodeLine{01460\ \ \ \ \ \ \ out\_fut\ =\ std::async(std::launch::async,}
+\DoxyCodeLine{01461\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ [\&obuf,\ \textcolor{keyword}{this}]\ \{}
+\DoxyCodeLine{01462\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ util::read\_all(this-\/>stream\_-\/>output(),\ obuf.buf);}
+\DoxyCodeLine{01463\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \});}
+\DoxyCodeLine{01464\ \ \ \ \ \}}
+\DoxyCodeLine{01465\ \ \ \ \ \textcolor{keywordflow}{if}\ (stream\_-\/>error())\ \{}
+\DoxyCodeLine{01466\ \ \ \ \ \ \ ebuf.add\_cap(err\_buf\_cap\_);}
+\DoxyCodeLine{01467\ }
+\DoxyCodeLine{01468\ \ \ \ \ \ \ err\_fut\ =\ std::async(std::launch::async,}
+\DoxyCodeLine{01469\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ [\&ebuf,\ \textcolor{keyword}{this}]\ \{}
+\DoxyCodeLine{01470\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ util::read\_all(this-\/>stream\_-\/>error(),\ ebuf.buf);}
+\DoxyCodeLine{01471\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \});}
+\DoxyCodeLine{01472\ \ \ \ \ \}}
+\DoxyCodeLine{01473\ \ \ \ \ \textcolor{keywordflow}{if}\ (stream\_-\/>input())\ \{}
+\DoxyCodeLine{01474\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (msg)\ \{}
+\DoxyCodeLine{01475\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ wbytes\ =\ std::fwrite(msg,\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{char}),\ length,\ stream\_-\/>input());}
+\DoxyCodeLine{01476\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (wbytes\ <\ length\_conv)\ \{}
+\DoxyCodeLine{01477\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (errno\ !=\ EPIPE\ \&\&\ errno\ !=\ EINVAL)\ \{}
+\DoxyCodeLine{01478\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ OSError(\textcolor{stringliteral}{"{}fwrite\ error"{}},\ errno);}
+\DoxyCodeLine{01479\ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01480\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01481\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01482\ \ \ \ \ \ \ stream\_-\/>input\_.reset();}
+\DoxyCodeLine{01483\ \ \ \ \ \}}
+\DoxyCodeLine{01484\ }
+\DoxyCodeLine{01485\ \ \ \ \ \textcolor{keywordflow}{if}\ (out\_fut.valid())\ \{}
+\DoxyCodeLine{01486\ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ res\ =\ out\_fut.get();}
+\DoxyCodeLine{01487\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (res\ !=\ -\/1)\ obuf.length\ =\ res;}
+\DoxyCodeLine{01488\ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ obuf.length\ =\ 0;}
+\DoxyCodeLine{01489\ \ \ \ \ \}}
+\DoxyCodeLine{01490\ \ \ \ \ \textcolor{keywordflow}{if}\ (err\_fut.valid())\ \{}
+\DoxyCodeLine{01491\ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ res\ =\ err\_fut.get();}
+\DoxyCodeLine{01492\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (res\ !=\ -\/1)\ ebuf.length\ =\ res;}
+\DoxyCodeLine{01493\ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ ebuf.length\ =\ 0;}
+\DoxyCodeLine{01494\ \ \ \ \ \}}
+\DoxyCodeLine{01495\ }
+\DoxyCodeLine{01496\ \ \ \ \ \textcolor{keywordflow}{return}\ std::make\_pair(std::move(obuf),\ std::move(ebuf));}
+\DoxyCodeLine{01497\ \ \ \}}
+\DoxyCodeLine{01498\ }
+\DoxyCodeLine{01499\ \}\ \textcolor{comment}{//\ end\ namespace\ detail}}
+\DoxyCodeLine{01500\ }
+\DoxyCodeLine{01501\ \}}
+\DoxyCodeLine{01502\ }
+\DoxyCodeLine{01503\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_SUBPROCESS\_H}}
+
+\end{DoxyCode}

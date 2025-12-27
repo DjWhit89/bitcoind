@@ -1,0 +1,114 @@
+.TH "src/policy/truc_policy.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/policy/truc_policy.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <consensus/amount\&.h>\fP
+.br
+\fR#include <policy/packages\&.h>\fP
+.br
+\fR#include <policy/policy\&.h>\fP
+.br
+\fR#include <primitives/transaction\&.h>\fP
+.br
+\fR#include <txmempool\&.h>\fP
+.br
+\fR#include <util/result\&.h>\fP
+.br
+\fR#include <set>\fP
+.br
+\fR#include <string>\fP
+.br
+
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "std::optional< std::pair< std::string, \fBCTransactionRef\fP > > \fBSingleTRUCChecks\fP (const \fBCTxMemPool\fP &pool, const \fBCTransactionRef\fP &ptx, const std::vector< \fBCTxMemPoolEntry::CTxMemPoolEntryRef\fP > &mempool_parents, const std::set< \fBTxid\fP > &direct_conflicts, int64_t vsize) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBpool\&.cs\fP)"
+.br
+.ti -1c
+.RI "std::optional< std::string > \fBPackageTRUCChecks\fP (const \fBCTxMemPool\fP &pool, const \fBCTransactionRef\fP &ptx, int64_t vsize, const \fBPackage\fP &package, const std::vector< \fBCTxMemPoolEntry::CTxMemPoolEntryRef\fP > &mempool_parents) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBpool\&.cs\fP)"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "std::optional< std::string > PackageTRUCChecks (const \fBCTxMemPool\fP & pool, const \fBCTransactionRef\fP & ptx, int64_t vsize, const \fBPackage\fP & package, const std::vector< \fBCTxMemPoolEntry::CTxMemPoolEntryRef\fP > & mempool_parents)"
+Must be called for every transaction that is submitted within a package, even if not TRUC\&.
+
+.PP
+For each transaction in a package: If it's not a TRUC transaction, verify it has no direct TRUC parents in the mempool or the package\&.
+
+.PP
+If it is a TRUC transaction, verify that any direct parents in the mempool or the package are TRUC\&. If such a parent exists, verify that parent has no other children in the package or the mempool, and that the transaction itself has no children in the package\&.
+
+.PP
+If any TRUC violations in the package exist, this test will fail for one of them:
+.IP "\(bu" 2
+if a TRUC transaction T has a parent in the mempool and a child in the package, then PTRUCC(T) will fail
+.IP "\(bu" 2
+if a TRUC transaction T has a parent in the package and a child in the package, then PTRUCC(T) will fail
+.IP "\(bu" 2
+if a TRUC transaction T and a TRUC (sibling) transaction U have some parent in the mempool, then PTRUCC(T) and PTRUCC(U) will fail
+.IP "\(bu" 2
+if a TRUC transaction T and a TRUC (sibling) transaction U have some parent in the package, then PTRUCC(T) and PTRUCC(U) will fail
+.IP "\(bu" 2
+if a TRUC transaction T has a parent P and a grandparent G in the package, then PTRUCC(P) will fail (though PTRUCC(G) and PTRUCC(T) might succeed)\&.
+.PP
+
+.PP
+\fBReturns\fP
+.RS 4
+debug string if an error occurs, std::nullopt otherwise\&. 
+.RE
+.PP
+
+.SS "std::optional< std::pair< std::string, \fBCTransactionRef\fP > > SingleTRUCChecks (const \fBCTxMemPool\fP & pool, const \fBCTransactionRef\fP & ptx, const std::vector< \fBCTxMemPoolEntry::CTxMemPoolEntryRef\fP > & mempool_parents, const std::set< \fBTxid\fP > & direct_conflicts, int64_t vsize)"
+Must be called for every transaction, even if not TRUC\&. Not strictly necessary for transactions accepted through AcceptMultipleTransactions\&.
+
+.PP
+Checks the following rules:
+.IP "1." 4
+A TRUC tx must only have TRUC unconfirmed ancestors\&.
+.IP "2." 4
+A non-TRUC tx must only have non-TRUC unconfirmed ancestors\&.
+.IP "3." 4
+A TRUC's ancestor set, including itself, must be within TRUC_ANCESTOR_LIMIT\&.
+.IP "4." 4
+A TRUC's descendant set, including itself, must be within TRUC_DESCENDANT_LIMIT\&.
+.IP "5." 4
+If a TRUC tx has any unconfirmed ancestors, the tx's sigop-adjusted vsize must be within TRUC_CHILD_MAX_VSIZE\&.
+.IP "6." 4
+A TRUC tx must be within TRUC_MAX_VSIZE\&.
+.PP
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIpool\fP A reference to the mempool\&. 
+.br
+\fImempool_parents\fP The in-mempool ancestors of ptx\&. 
+.br
+\fIdirect_conflicts\fP In-mempool transactions this tx conflicts with\&. These conflicts are used to more accurately calculate the resulting descendant count of in-mempool ancestors\&. 
+.br
+\fIvsize\fP The sigop-adjusted virtual size of ptx\&.
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+3 possibilities:
+.IP "\(bu" 2
+std::nullopt if all TRUC checks were applied successfully
+.IP "\(bu" 2
+debug string + pointer to a mempool sibling if this transaction would be the second child in a 1-parent-1-child cluster; the caller may consider evicting the specified sibling or return an error with the debug string\&.
+.IP "\(bu" 2
+debug string + nullptr if this transaction violates some TRUC rule and sibling eviction is not applicable\&. 
+.PP
+.RE
+.PP
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

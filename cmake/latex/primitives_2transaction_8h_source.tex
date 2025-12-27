@@ -1,0 +1,337 @@
+\doxysection{transaction.\+h}
+\label{primitives_2transaction_8h_source}\index{src/primitives/transaction.h@{src/primitives/transaction.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_PRIMITIVES\_TRANSACTION\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_PRIMITIVES\_TRANSACTION\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <primitives/transaction\_identifier.h>}\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <script/script.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <ios>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <numeric>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <tuple>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{class\ }COutPoint}
+\DoxyCodeLine{00029\ \{}
+\DoxyCodeLine{00030\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00031\ \ \ \ \ Txid\ hash;}
+\DoxyCodeLine{00032\ \ \ \ \ uint32\_t\ n;}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint32\_t\ NULL\_INDEX\ =\ std::numeric\_limits<uint32\_t>::max();}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \ \ COutPoint():\ n(NULL\_INDEX)\ \{\ \}}
+\DoxyCodeLine{00037\ \ \ \ \ COutPoint(\textcolor{keyword}{const}\ Txid\&\ hashIn,\ uint32\_t\ nIn):\ hash(hashIn),\ n(nIn)\ \{\ \}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ SERIALIZE\_METHODS(COutPoint,\ obj)\ \{\ READWRITE(obj.hash,\ obj.n);\ \}}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordtype}{void}\ SetNull()\ \{\ hash.SetNull();\ n\ =\ NULL\_INDEX;\ \}}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsNull()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (hash.IsNull()\ \&\&\ n\ ==\ NULL\_INDEX);\ \}}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator<(\textcolor{keyword}{const}\ COutPoint\&\ a,\ \textcolor{keyword}{const}\ COutPoint\&\ b)}
+\DoxyCodeLine{00045\ \ \ \ \ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::tie(a.hash,\ a.n)\ <\ std::tie(b.hash,\ b.n);}
+\DoxyCodeLine{00047\ \ \ \ \ \}}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ COutPoint\&\ a,\ \textcolor{keyword}{const}\ COutPoint\&\ b)}
+\DoxyCodeLine{00050\ \ \ \ \ \{}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (a.hash\ ==\ b.hash\ \&\&\ a.n\ ==\ b.n);}
+\DoxyCodeLine{00052\ \ \ \ \ \}}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \ \ std::string\ ToString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00055\ \};}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00061\ \textcolor{keyword}{class\ }CTxIn}
+\DoxyCodeLine{00062\ \{}
+\DoxyCodeLine{00063\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00064\ \ \ \ \ COutPoint\ prevout;}
+\DoxyCodeLine{00065\ \ \ \ \ CScript\ scriptSig;}
+\DoxyCodeLine{00066\ \ \ \ \ uint32\_t\ nSequence;}
+\DoxyCodeLine{00067\ \ \ \ \ CScriptWitness\ scriptWitness;\ }
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint32\_t\ SEQUENCE\_FINAL\ =\ 0xffffffff;}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint32\_t\ MAX\_SEQUENCE\_NONFINAL\{SEQUENCE\_FINAL\ -\/\ 1\};}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{comment}{//\ Below\ flags\ apply\ in\ the\ context\ of\ BIP\ 68.\ BIP\ 68\ requires\ the\ tx}}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{comment}{//\ version\ to\ be\ set\ to\ 2,\ or\ higher.}}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint32\_t\ SEQUENCE\_LOCKTIME\_DISABLE\_FLAG\ =\ (1U\ <<\ 31);}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint32\_t\ SEQUENCE\_LOCKTIME\_TYPE\_FLAG\ =\ (1\ <<\ 22);}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint32\_t\ SEQUENCE\_LOCKTIME\_MASK\ =\ 0x0000ffff;}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ SEQUENCE\_LOCKTIME\_GRANULARITY\ =\ 9;}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \ \ \ \ CTxIn()}
+\DoxyCodeLine{00117\ \ \ \ \ \{}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ nSequence\ =\ SEQUENCE\_FINAL;}
+\DoxyCodeLine{00119\ \ \ \ \ \}}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keyword}{explicit}\ CTxIn(COutPoint\ prevoutIn,\ CScript\ scriptSigIn=CScript(),\ uint32\_t\ nSequenceIn=SEQUENCE\_FINAL);}
+\DoxyCodeLine{00122\ \ \ \ \ CTxIn(Txid\ hashPrevTx,\ uint32\_t\ nOut,\ CScript\ scriptSigIn=CScript(),\ uint32\_t\ nSequenceIn=SEQUENCE\_FINAL);}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \ \ \ \ SERIALIZE\_METHODS(CTxIn,\ obj)\ \{\ READWRITE(obj.prevout,\ obj.scriptSig,\ obj.nSequence);\ \}}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ CTxIn\&\ a,\ \textcolor{keyword}{const}\ CTxIn\&\ b)}
+\DoxyCodeLine{00127\ \ \ \ \ \{}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (a.prevout\ \ \ ==\ b.prevout\ \&\&}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ a.scriptSig\ ==\ b.scriptSig\ \&\&}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ a.nSequence\ ==\ b.nSequence);}
+\DoxyCodeLine{00131\ \ \ \ \ \}}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00133\ \ \ \ \ std::string\ ToString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00134\ \};}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00139\ \textcolor{keyword}{class\ }CTxOut}
+\DoxyCodeLine{00140\ \{}
+\DoxyCodeLine{00141\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00142\ \ \ \ \ CAmount\ nValue;}
+\DoxyCodeLine{00143\ \ \ \ \ CScript\ scriptPubKey;}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ \ \ \ \ CTxOut()}
+\DoxyCodeLine{00146\ \ \ \ \ \{}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ SetNull();}
+\DoxyCodeLine{00148\ \ \ \ \ \}}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00150\ \ \ \ \ CTxOut(\textcolor{keyword}{const}\ CAmount\&\ nValueIn,\ CScript\ scriptPubKeyIn);}
+\DoxyCodeLine{00151\ }
+\DoxyCodeLine{00152\ \ \ \ \ SERIALIZE\_METHODS(CTxOut,\ obj)\ \{\ READWRITE(obj.nValue,\ obj.scriptPubKey);\ \}}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \ \ \ \ \textcolor{keywordtype}{void}\ SetNull()}
+\DoxyCodeLine{00155\ \ \ \ \ \{}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ nValue\ =\ -\/1;}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ scriptPubKey.clear();}
+\DoxyCodeLine{00158\ \ \ \ \ \}}
+\DoxyCodeLine{00159\ }
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsNull()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00161\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (nValue\ ==\ -\/1);}
+\DoxyCodeLine{00163\ \ \ \ \ \}}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ CTxOut\&\ a,\ \textcolor{keyword}{const}\ CTxOut\&\ b)}
+\DoxyCodeLine{00166\ \ \ \ \ \{}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (a.nValue\ \ \ \ \ \ \ ==\ b.nValue\ \&\&}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ a.scriptPubKey\ ==\ b.scriptPubKey);}
+\DoxyCodeLine{00169\ \ \ \ \ \}}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00171\ \ \ \ \ std::string\ ToString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00172\ \};}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00174\ \textcolor{keyword}{struct\ }CMutableTransaction;}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ \textcolor{keyword}{struct\ }TransactionSerParams\ \{}
+\DoxyCodeLine{00177\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ allow\_witness;}
+\DoxyCodeLine{00178\ \ \ \ \ SER\_PARAMS\_OPFUNC}
+\DoxyCodeLine{00179\ \};}
+\DoxyCodeLine{00180\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ TransactionSerParams\ TX\_WITH\_WITNESS\{.allow\_witness\ =\ \textcolor{keyword}{true}\};}
+\DoxyCodeLine{00181\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ TransactionSerParams\ TX\_NO\_WITNESS\{.allow\_witness\ =\ \textcolor{keyword}{false}\};}
+\DoxyCodeLine{00182\ }
+\DoxyCodeLine{00200\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ TxType>}
+\DoxyCodeLine{00201\ \textcolor{keywordtype}{void}\ UnserializeTransaction(TxType\&\ tx,\ Stream\&\ s,\ \textcolor{keyword}{const}\ TransactionSerParams\&\ params)}
+\DoxyCodeLine{00202\ \{}
+\DoxyCodeLine{00203\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ fAllowWitness\ =\ params.allow\_witness;}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \ \ \ \ s\ >>\ tx.version;}
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ flags\ =\ 0;}
+\DoxyCodeLine{00207\ \ \ \ \ tx.vin.clear();}
+\DoxyCodeLine{00208\ \ \ \ \ tx.vout.clear();}
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{comment}{/*\ Try\ to\ read\ the\ vin.\ In\ case\ the\ dummy\ is\ there,\ this\ will\ be\ read\ as\ an\ empty\ vector.\ */}}
+\DoxyCodeLine{00210\ \ \ \ \ s\ >>\ tx.vin;}
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{keywordflow}{if}\ (tx.vin.size()\ ==\ 0\ \&\&\ fAllowWitness)\ \{}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ We\ read\ a\ dummy\ or\ an\ empty\ vin.\ */}}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ s\ >>\ flags;}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (flags\ !=\ 0)\ \{}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ tx.vin;}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ tx.vout;}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00218\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ We\ read\ a\ non-\/empty\ vin.\ Assume\ a\ normal\ vout\ follows.\ */}}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ s\ >>\ tx.vout;}
+\DoxyCodeLine{00221\ \ \ \ \ \}}
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{keywordflow}{if}\ ((flags\ \&\ 1)\ \&\&\ fAllowWitness)\ \{}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ The\ witness\ flag\ is\ present,\ and\ we\ support\ witnesses.\ */}}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ flags\ \string^=\ 1;}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ tx.vin.size();\ i++)\ \{}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ tx.vin[i].scriptWitness.stack;}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!tx.HasWitness())\ \{}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ It's\ illegal\ to\ encode\ witnesses\ when\ all\ witness\ stacks\ are\ empty.\ */}}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Superfluous\ witness\ record"{}});}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00232\ \ \ \ \ \}}
+\DoxyCodeLine{00233\ \ \ \ \ \textcolor{keywordflow}{if}\ (flags)\ \{}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Unknown\ flag\ in\ the\ serialization\ */}}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Unknown\ transaction\ optional\ data"{}});}
+\DoxyCodeLine{00236\ \ \ \ \ \}}
+\DoxyCodeLine{00237\ \ \ \ \ s\ >>\ tx.nLockTime;}
+\DoxyCodeLine{00238\ \}}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ TxType>}
+\DoxyCodeLine{00241\ \textcolor{keywordtype}{void}\ SerializeTransaction(\textcolor{keyword}{const}\ TxType\&\ tx,\ Stream\&\ s,\ \textcolor{keyword}{const}\ TransactionSerParams\&\ params)}
+\DoxyCodeLine{00242\ \{}
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ fAllowWitness\ =\ params.allow\_witness;}
+\DoxyCodeLine{00244\ }
+\DoxyCodeLine{00245\ \ \ \ \ s\ <<\ tx.version;}
+\DoxyCodeLine{00246\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ flags\ =\ 0;}
+\DoxyCodeLine{00247\ \ \ \ \ \textcolor{comment}{//\ Consistency\ check}}
+\DoxyCodeLine{00248\ \ \ \ \ \textcolor{keywordflow}{if}\ (fAllowWitness)\ \{}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ whether\ witnesses\ need\ to\ be\ serialized.\ */}}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (tx.HasWitness())\ \{}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \ \ \ \ flags\ |=\ 1;}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00253\ \ \ \ \ \}}
+\DoxyCodeLine{00254\ \ \ \ \ \textcolor{keywordflow}{if}\ (flags)\ \{}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Use\ extended\ format\ in\ case\ witnesses\ are\ to\ be\ serialized.\ */}}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ std::vector<CTxIn>\ vinDummy;}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ s\ <<\ vinDummy;}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ s\ <<\ flags;}
+\DoxyCodeLine{00259\ \ \ \ \ \}}
+\DoxyCodeLine{00260\ \ \ \ \ s\ <<\ tx.vin;}
+\DoxyCodeLine{00261\ \ \ \ \ s\ <<\ tx.vout;}
+\DoxyCodeLine{00262\ \ \ \ \ \textcolor{keywordflow}{if}\ (flags\ \&\ 1)\ \{}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ tx.vin.size();\ i++)\ \{}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ tx.vin[i].scriptWitness.stack;}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00266\ \ \ \ \ \}}
+\DoxyCodeLine{00267\ \ \ \ \ s\ <<\ tx.nLockTime;}
+\DoxyCodeLine{00268\ \}}
+\DoxyCodeLine{00269\ }
+\DoxyCodeLine{00270\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ TxType>}
+\DoxyCodeLine{00271\ \textcolor{keyword}{inline}\ CAmount\ CalculateOutputValue(\textcolor{keyword}{const}\ TxType\&\ tx)}
+\DoxyCodeLine{00272\ \{}
+\DoxyCodeLine{00273\ \ \ \ \ \textcolor{keywordflow}{return}\ std::accumulate(tx.vout.cbegin(),\ tx.vout.cend(),\ CAmount\{0\},\ [](CAmount\ sum,\ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ txout)\ \{\ return\ sum\ +\ txout.nValue;\ \});}
+\DoxyCodeLine{00274\ \}}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00276\ }
+\DoxyCodeLine{00280\ \textcolor{keyword}{class\ }CTransaction}
+\DoxyCodeLine{00281\ \{}
+\DoxyCodeLine{00282\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00283\ \ \ \ \ \textcolor{comment}{//\ Default\ transaction\ version.}}
+\DoxyCodeLine{00284\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint32\_t\ CURRENT\_VERSION\{2\};}
+\DoxyCodeLine{00285\ }
+\DoxyCodeLine{00286\ \ \ \ \ \textcolor{comment}{//\ The\ local\ variables\ are\ made\ const\ to\ prevent\ unintended\ modification}}
+\DoxyCodeLine{00287\ \ \ \ \ \textcolor{comment}{//\ without\ updating\ the\ cached\ hash\ value.\ However,\ CTransaction\ is\ not}}
+\DoxyCodeLine{00288\ \ \ \ \ \textcolor{comment}{//\ actually\ immutable;\ deserialization\ and\ assignment\ are\ implemented,}}
+\DoxyCodeLine{00289\ \ \ \ \ \textcolor{comment}{//\ and\ bypass\ the\ constness.\ This\ is\ safe,\ as\ they\ update\ the\ entire}}
+\DoxyCodeLine{00290\ \ \ \ \ \textcolor{comment}{//\ structure,\ including\ the\ hash.}}
+\DoxyCodeLine{00291\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<CTxIn>\ vin;}
+\DoxyCodeLine{00292\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<CTxOut>\ vout;}
+\DoxyCodeLine{00293\ \ \ \ \ \textcolor{keyword}{const}\ uint32\_t\ version;}
+\DoxyCodeLine{00294\ \ \ \ \ \textcolor{keyword}{const}\ uint32\_t\ nLockTime;}
+\DoxyCodeLine{00295\ }
+\DoxyCodeLine{00296\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00298\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ m\_has\_witness;}
+\DoxyCodeLine{00299\ \ \ \ \ \textcolor{keyword}{const}\ Txid\ hash;}
+\DoxyCodeLine{00300\ \ \ \ \ \textcolor{keyword}{const}\ Wtxid\ m\_witness\_hash;}
+\DoxyCodeLine{00301\ }
+\DoxyCodeLine{00302\ \ \ \ \ Txid\ ComputeHash()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00303\ \ \ \ \ Wtxid\ ComputeWitnessHash()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00304\ }
+\DoxyCodeLine{00305\ \ \ \ \ \textcolor{keywordtype}{bool}\ ComputeHasWitness()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00306\ }
+\DoxyCodeLine{00307\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00309\ \ \ \ \ \textcolor{keyword}{explicit}\ CTransaction(\textcolor{keyword}{const}\ CMutableTransaction\&\ tx);}
+\DoxyCodeLine{00310\ \ \ \ \ \textcolor{keyword}{explicit}\ CTransaction(CMutableTransaction\&\&\ tx);}
+\DoxyCodeLine{00311\ }
+\DoxyCodeLine{00312\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00313\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ SerializeTransaction(*\textcolor{keyword}{this},\ s,\ s.template\ GetParams<TransactionSerParams>());}
+\DoxyCodeLine{00315\ \ \ \ \ \}}
+\DoxyCodeLine{00316\ }
+\DoxyCodeLine{00319\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00320\ \ \ \ \ CTransaction(deserialize\_type,\ \textcolor{keyword}{const}\ TransactionSerParams\&\ params,\ Stream\&\ s)\ :\ CTransaction(CMutableTransaction(deserialize,\ params,\ s))\ \{\}}
+\DoxyCodeLine{00321\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00322\ \ \ \ \ CTransaction(deserialize\_type,\ Stream\&\ s)\ :\ CTransaction(CMutableTransaction(deserialize,\ s))\ \{\}}
+\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00324\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsNull()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ vin.empty()\ \&\&\ vout.empty();}
+\DoxyCodeLine{00326\ \ \ \ \ \}}
+\DoxyCodeLine{00327\ }
+\DoxyCodeLine{00328\ \ \ \ \ \textcolor{keyword}{const}\ Txid\&\ GetHash()\ const\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ hash;\ \}}
+\DoxyCodeLine{00329\ \ \ \ \ \textcolor{keyword}{const}\ Wtxid\&\ GetWitnessHash()\ const\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ m\_witness\_hash;\ \};}
+\DoxyCodeLine{00330\ }
+\DoxyCodeLine{00331\ \ \ \ \ \textcolor{comment}{//\ Return\ sum\ of\ txouts.}}
+\DoxyCodeLine{00332\ \ \ \ \ CAmount\ GetValueOut()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00333\ }
+\DoxyCodeLine{00339\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ GetTotalSize()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00340\ }
+\DoxyCodeLine{00341\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsCoinBase()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00342\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (vin.size()\ ==\ 1\ \&\&\ vin[0].prevout.IsNull());}
+\DoxyCodeLine{00344\ \ \ \ \ \}}
+\DoxyCodeLine{00345\ }
+\DoxyCodeLine{00346\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ CTransaction\&\ a,\ \textcolor{keyword}{const}\ CTransaction\&\ b)}
+\DoxyCodeLine{00347\ \ \ \ \ \{}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a.GetWitnessHash()\ ==\ b.GetWitnessHash();}
+\DoxyCodeLine{00349\ \ \ \ \ \}}
+\DoxyCodeLine{00350\ }
+\DoxyCodeLine{00351\ \ \ \ \ std::string\ ToString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00352\ }
+\DoxyCodeLine{00353\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasWitness()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_has\_witness;\ \}}
+\DoxyCodeLine{00354\ \};}
+\DoxyCodeLine{00355\ }
+\DoxyCodeLine{00357\ \textcolor{keyword}{struct\ }CMutableTransaction}
+\DoxyCodeLine{00358\ \{}
+\DoxyCodeLine{00359\ \ \ \ \ std::vector<CTxIn>\ vin;}
+\DoxyCodeLine{00360\ \ \ \ \ std::vector<CTxOut>\ vout;}
+\DoxyCodeLine{00361\ \ \ \ \ uint32\_t\ version;}
+\DoxyCodeLine{00362\ \ \ \ \ uint32\_t\ nLockTime;}
+\DoxyCodeLine{00363\ }
+\DoxyCodeLine{00364\ \ \ \ \ \textcolor{keyword}{explicit}\ CMutableTransaction();}
+\DoxyCodeLine{00365\ \ \ \ \ \textcolor{keyword}{explicit}\ CMutableTransaction(\textcolor{keyword}{const}\ CTransaction\&\ tx);}
+\DoxyCodeLine{00366\ }
+\DoxyCodeLine{00367\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00368\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00369\ \ \ \ \ \ \ \ \ SerializeTransaction(*\textcolor{keyword}{this},\ s,\ s.template\ GetParams<TransactionSerParams>());}
+\DoxyCodeLine{00370\ \ \ \ \ \}}
+\DoxyCodeLine{00371\ }
+\DoxyCodeLine{00372\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00373\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)\ \{}
+\DoxyCodeLine{00374\ \ \ \ \ \ \ \ \ UnserializeTransaction(*\textcolor{keyword}{this},\ s,\ s.template\ GetParams<TransactionSerParams>());}
+\DoxyCodeLine{00375\ \ \ \ \ \}}
+\DoxyCodeLine{00376\ }
+\DoxyCodeLine{00377\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00378\ \ \ \ \ CMutableTransaction(deserialize\_type,\ \textcolor{keyword}{const}\ TransactionSerParams\&\ params,\ Stream\&\ s)\ \{}
+\DoxyCodeLine{00379\ \ \ \ \ \ \ \ \ UnserializeTransaction(*\textcolor{keyword}{this},\ s,\ params);}
+\DoxyCodeLine{00380\ \ \ \ \ \}}
+\DoxyCodeLine{00381\ }
+\DoxyCodeLine{00382\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00383\ \ \ \ \ CMutableTransaction(deserialize\_type,\ Stream\&\ s)\ \{}
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ Unserialize(s);}
+\DoxyCodeLine{00385\ \ \ \ \ \}}
+\DoxyCodeLine{00386\ }
+\DoxyCodeLine{00390\ \ \ \ \ Txid\ GetHash()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00391\ }
+\DoxyCodeLine{00392\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasWitness()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00393\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ vin.size();\ i++)\ \{}
+\DoxyCodeLine{00395\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!vin[i].scriptWitness.IsNull())\ \{}
+\DoxyCodeLine{00396\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00397\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00398\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00400\ \ \ \ \ \}}
+\DoxyCodeLine{00401\ \};}
+\DoxyCodeLine{00402\ }
+\DoxyCodeLine{00403\ \textcolor{keyword}{typedef}\ std::shared\_ptr<const\ CTransaction>\ CTransactionRef;}
+\DoxyCodeLine{00404\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Tx>\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ CTransactionRef\ MakeTransactionRef(Tx\&\&\ txIn)\ \{\ \textcolor{keywordflow}{return}\ std::make\_shared<const\ CTransaction>(std::forward<Tx>(txIn));\ \}}
+\DoxyCodeLine{00405\ }
+\DoxyCodeLine{00406\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_PRIMITIVES\_TRANSACTION\_H}}
+
+\end{DoxyCode}

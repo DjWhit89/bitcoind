@@ -1,0 +1,113 @@
+\doxysection{false\+\_\+positives.\+h}
+\label{false__positives_8h_source}\index{src/minisketch/src/false\_positives.h@{src/minisketch/src/false\_positives.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/**********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2020\ Pieter\ Wuille,\ Greg\ Maxwell,\ Gleb\ Naumenko\ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ LICENSE\ or\ http://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ **********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ \_MINISKETCH\_FALSE\_POSITIVES\_H\_}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ \_MINISKETCH\_FALSE\_POSITIVES\_H\_}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}int\_utils.h"{}}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{keyword}{namespace\ }\{}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00019\ uint64\_t\ Log2Factorial(uint32\_t\ x)\ \{}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ T[32]\ =\ \{}
+\DoxyCodeLine{00022\ \ \ \ \ \ \ \ \ 0,\ 4,\ 9,\ 13,\ 18,\ 22,\ 26,\ 30,\ 34,\ 37,\ 41,\ 45,\ 48,\ 52,\ 55,\ 58,\ 62,\ 65,\ 68,}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ 71,\ 74,\ 77,\ 80,\ 82,\ 85,\ 88,\ 90,\ 93,\ 96,\ 98,\ 101,\ 103}
+\DoxyCodeLine{00024\ \ \ \ \ \};}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keywordtype}{int}\ bits\ =\ CountBits(x,\ 32);}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{comment}{//\ Compute\ an\ (under)estimate\ of\ floor(106*log2(x)).}}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{comment}{//\ This\ works\ by\ relying\ on\ floor(log2(x))\ =\ countbits(x)-\/1,\ and\ adding}}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{comment}{//\ precision\ using\ the\ top\ 6\ bits\ of\ x\ (the\ highest\ one\ of\ which\ is\ always}}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{comment}{//\ one).}}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ l2\_106\ =\ 106\ *\ (bits\ -\/\ 1)\ +\ T[((x\ <<\ (32\ -\/\ bits))\ >>\ 26)\ \&\ 31];}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{comment}{//\ Based\ on\ Stirling\ approximation\ for\ log2(x!):}}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{comment}{//\ \ \ log2(x!)\ =\ log(x!)\ /\ log(2)}}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ =\ ((x\ +\ 1/2)\ *\ log(x)\ -\/\ x\ +\ log(2*pi)/2\ +\ ...)\ /\ log(2)}}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ =\ (x\ +\ 1/2)\ *\ log2(x)\ -\/\ x/log(2)\ +\ log2(2*pi)/2\ +\ ...}}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ =\ 1/2*(2*x+1)*log2(x)\ -\/\ (1/log(2))*x\ +\ log2(2*pi)/2\ +\ ...}}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ =\ 1/212*(2*x+1)*(106*log2(x))\ +\ (-\/1/log(2))*x\ +\ log2(2*pi)/2\ +\ ...}}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{comment}{//\ where\ 418079/88632748\ is\ exactly\ 1/212}}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ -\/127870026/88632748\ is\ slightly\ less\ than\ -\/1/log(2)}}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ 117504694/88632748\ is\ less\ than\ log2(2*pi)/2}}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{comment}{//\ A\ correction\ term\ is\ only\ needed\ for\ x\ <\ 3.}}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{comment}{//\ See\ doc/log2\_factorial.sage\ for\ how\ these\ constants\ were\ obtained.}}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keywordflow}{return}\ (418079\ *\ (2\ *\ uint64\_t\{x\}\ +\ 1)\ *\ l2\_106\ -\/\ 127870026\ *\ uint64\_t\{x\}\ +\ 117504694\ +\ 88632748\ *\ (x\ <\ 3))\ /\ 88632748;}
+\DoxyCodeLine{00044\ \}}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00049\ uint64\_t\ BaseFPBits(uint32\_t\ bits,\ uint32\_t\ capacity)\ \{}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{comment}{//\ Correction\ table\ for\ low\ bits/capacities}}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ ADD5[]\ =\ \{1,\ 1,\ 1,\ 1,\ 2,\ 2,\ 2,\ 3,\ 4,\ 4,\ 5,\ 5,\ 6,\ 7,\ 8,\ 8,\ 9,\ 10,\ 10,\ 10,\ 11,\ 11,\ 11,\ 12,\ 12,\ 12,\ 12\};}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ ADD6[]\ =\ \{1,\ 0,\ 0,\ 0,\ 1,\ 1,\ 1,\ 2,\ 2,\ 2,\ 2,\ 3,\ 3,\ 4,\ 4,\ 4,\ 5,\ 6,\ 6,\ 6,\ 7,\ 8,\ 8,\ 10,\ 10,\ 11,\ 12,\ 12,\ 13,\ 14,\ 15,\ 15,\ 16,\ 17,\ 18,\ 18,\ 19,\ 20,\ 20,\ 21,\ 21,\ 22,\ 22,\ 23,\ 23,\ 23,\ 24,\ 24,\ 24,\ 24\};}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ ADD7[]\ =\ \{1,\ 0,\ 0,\ 0,\ 0,\ 1,\ 0,\ 1,\ 1,\ 1,\ 1,\ 1,\ 1,\ 2,\ 2,\ 2,\ 2,\ 3,\ 3,\ 3,\ 4,\ 4,\ 4,\ 5,\ 5,\ 5,\ 6,\ 6,\ 7,\ 7,\ 8,\ 7,\ 8,\ 9,\ 9,\ 9,\ 10,\ 11,\ 11,\ 12,\ 12,\ 13,\ 13,\ 15,\ 15,\ 15,\ 16,\ 17,\ 17,\ 18,\ 19,\ 20,\ 20\};}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ ADD8[]\ =\ \{1,\ 0,\ 1,\ 0,\ 0,\ 0,\ 0,\ 1,\ 1,\ 1,\ 1,\ 1,\ 2,\ 1,\ 1,\ 2,\ 2,\ 2,\ 3,\ 3,\ 3,\ 3,\ 3,\ 3,\ 4,\ 4,\ 3,\ 4,\ 4,\ 5,\ 4,\ 5,\ 5,\ 5,\ 6,\ 6,\ 6,\ 6,\ 7,\ 7,\ 7,\ 8,\ 8,\ 8,\ 8,\ 9,\ 9\};}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ ADD9[]\ =\ \{1,\ 0,\ 0,\ 0,\ 0,\ 0,\ 0,\ 1,\ 0,\ 1,\ 1,\ 1,\ 0,\ 1,\ 1,\ 1,\ 2,\ 1,\ 1,\ 1,\ 2,\ 2,\ 2,\ 2,\ 1,\ 2,\ 2,\ 2,\ 2,\ 2,\ 3,\ 2,\ 3,\ 3,\ 3,\ 3,\ 4,\ 3,\ 3,\ 4,\ 4,\ 4,\ 4\};}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordflow}{if}\ (capacity\ ==\ 0)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00058\ \ \ \ \ uint64\_t\ ret\ =\ 0;}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keywordflow}{if}\ (bits\ <\ 32\ \&\&\ capacity\ >=\ (1U\ <<\ bits))\ \{}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ ret\ =\ uint64\_t\{bits\}\ *\ (capacity\ -\/\ (1U\ <<\ bits)\ +\ 1);}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ capacity\ =\ (1U\ <<\ bits)\ -\/\ 1;}
+\DoxyCodeLine{00062\ \ \ \ \ \}}
+\DoxyCodeLine{00063\ \ \ \ \ ret\ +=\ Log2Factorial(capacity);}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordflow}{switch}\ (bits)\ \{}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 2:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 2\ ?\ 0\ :\ 1);}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 3:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 2\ ?\ 0\ :\ (0x2a5\ >>\ 2\ *\ (capacity\ -\/\ 3))\ \&\ 3);}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 4:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 3\ ?\ 0\ :\ (0xb6d91a449\ >>\ 3\ *\ (capacity\ -\/\ 4))\ \&\ 7);}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 5:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 4\ ?\ 0\ :\ ADD5[capacity\ -\/\ 5]);}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 6:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 4\ ?\ 0\ :\ capacity\ >\ 54\ ?\ 25\ :\ ADD6[capacity\ -\/\ 5]);}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 7:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 4\ ?\ 0\ :\ capacity\ >\ 57\ ?\ 21\ :\ ADD7[capacity\ -\/\ 5]);}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 8:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 9\ ?\ 0\ :\ capacity\ >\ 56\ ?\ 10\ :\ ADD8[capacity\ -\/\ 10]);}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 9:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 11\ ?\ 0\ :\ capacity\ >\ 54\ ?\ 5\ :\ ADD9[capacity\ -\/\ 12]);}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 10:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 21\ ?\ 0\ :\ capacity\ >\ 50\ ?\ 2\ :\ (0x1a6665545555041\ >>\ 2\ *\ (capacity\ -\/\ 22))\ \&\ 3);}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 11:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 21\ ?\ 0\ :\ capacity\ >\ 45\ ?\ 1\ :\ (0x5b3dc1\ >>\ (capacity\ -\/\ 22))\ \&\ 1);}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 12:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 21\ ?\ 0\ :\ capacity\ >\ 57\ ?\ 0\ :\ (0xe65522041\ >>\ (capacity\ -\/\ 22))\ \&\ 1);}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 13:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 27\ ?\ 0\ :\ capacity\ >\ 55\ ?\ 0\ :\ (0x8904081\ >>\ (capacity\ -\/\ 28))\ \&\ 1);}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 14:\ \textcolor{keywordflow}{return}\ ret\ +\ (capacity\ <=\ 47\ ?\ 0\ :\ capacity\ >\ 48\ ?\ 0\ :\ 1);}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{default}:\ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00079\ \ \ \ \ \}}
+\DoxyCodeLine{00080\ \}}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \textcolor{keywordtype}{size\_t}\ ComputeCapacity(uint32\_t\ bits,\ \textcolor{keywordtype}{size\_t}\ max\_elements,\ uint32\_t\ fpbits)\ \{}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordflow}{if}\ (bits\ ==\ 0)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keywordflow}{if}\ (max\_elements\ >\ 0xffffffff)\ \textcolor{keywordflow}{return}\ max\_elements;}
+\DoxyCodeLine{00085\ \ \ \ \ uint64\_t\ base\_fpbits\ =\ BaseFPBits(bits,\ \textcolor{keyword}{static\_cast<}uint32\_t\textcolor{keyword}{>}(max\_elements));}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{comment}{//\ The\ fpbits\ provided\ by\ the\ base\ max\_elements==capacity\ case\ are\ sufficient.}}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{keywordflow}{if}\ (base\_fpbits\ >=\ fpbits)\ \textcolor{keywordflow}{return}\ max\_elements;}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{comment}{//\ Otherwise,\ increment\ capacity\ by\ ceil(fpbits\ /\ bits)\ beyond\ that.}}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordflow}{return}\ max\_elements\ +\ (fpbits\ -\/\ base\_fpbits\ +\ bits\ -\/\ 1)\ /\ bits;}
+\DoxyCodeLine{00090\ \}}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \textcolor{keywordtype}{size\_t}\ ComputeMaxElements(uint32\_t\ bits,\ \textcolor{keywordtype}{size\_t}\ capacity,\ uint32\_t\ fpbits)\ \{}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keywordflow}{if}\ (bits\ ==\ 0)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keywordflow}{if}\ (capacity\ >\ 0xffffffff)\ \textcolor{keywordflow}{return}\ capacity;}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{comment}{//\ Start\ with\ max\_elements=capacity,\ and\ decrease\ max\_elements\ until\ the\ corresponding\ capacity\ is\ capacity.}}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ max\_elements\ =\ capacity;}
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ capacity\_for\_max\_elements\ =\ ComputeCapacity(bits,\ max\_elements,\ fpbits);}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ CHECK\_SAFE(capacity\_for\_max\_elements\ >=\ capacity);}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (capacity\_for\_max\_elements\ <=\ capacity)\ \textcolor{keywordflow}{return}\ max\_elements;}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ adjust\ =\ capacity\_for\_max\_elements\ -\/\ capacity;}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Decrementing\ max\_elements\ by\ N\ will\ at\ most\ decrement\ the\ corresponding\ capacity\ by\ N.}}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ As\ the\ observed\ capacity\ is\ adjust\ too\ high,\ we\ can\ safely\ decrease\ max\_elements\ by\ adjust.}}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ that\ brings\ us\ into\ negative\ max\_elements\ territory,\ no\ solution\ exists\ and\ we\ return\ 0.}}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (max\_elements\ <\ adjust)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ max\_elements\ -\/=\ adjust;}
+\DoxyCodeLine{00107\ \ \ \ \ \}}
+\DoxyCodeLine{00108\ \}}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \}\ \ \textcolor{comment}{//\ namespace}}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

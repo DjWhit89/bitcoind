@@ -1,0 +1,214 @@
+.TH "src/util/check.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/util/check.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <attributes\&.h>\fP
+.br
+\fR#include <atomic>\fP
+.br
+\fR#include <cassert>\fP
+.br
+\fR#include <source_location>\fP
+.br
+\fR#include <stdexcept>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <string_view>\fP
+.br
+\fR#include <utility>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBtest_only_CheckFailuresAreExceptionsNotAborts\fP"
+.br
+.ti -1c
+.RI "class \fBNonFatalCheckError\fP"
+.br
+.in -1c
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBSTR_INTERNAL_BUG\fP(msg)"
+.br
+.ti -1c
+.RI "#define \fBCHECK_NONFATAL\fP(condition)"
+.br
+.ti -1c
+.RI "#define \fBAssert\fP(val)"
+.br
+.ti -1c
+.RI "#define \fBAssume\fP(val)"
+.br
+.ti -1c
+.RI "#define \fBNONFATAL_UNREACHABLE\fP()"
+.br
+.ti -1c
+.RI "#define \fBASAN_POISON_MEMORY_REGION\fP(addr,  size)"
+.br
+.ti -1c
+.RI "#define \fBASAN_UNPOISON_MEMORY_REGION\fP(addr,  size)"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "bool \fBEnableFuzzDeterminism\fP ()"
+.br
+.ti -1c
+.RI "std::string \fBStrFormatInternalBug\fP (std::string_view msg, const std::source_location &loc)"
+.br
+.ti -1c
+.RI "void \fBassertion_fail\fP (const std::source_location &loc, std::string_view assertion)"
+.br
+.ti -1c
+.RI "template<typename \fBT\fP> \fBT\fP && \fBinline_check_non_fatal\fP (\fBLIFETIMEBOUND\fP \fBT\fP &&val, const std::source_location &loc, std::string_view assertion)"
+.br
+.ti -1c
+.RI "template<bool IS_ASSERT, typename \fBT\fP> constexpr \fBT\fP && \fBinline_assertion_check\fP (\fBLIFETIMEBOUND\fP \fBT\fP &&val, const std::source_location &loc, std::string_view assertion)"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "constexpr bool \fBG_FUZZING_BUILD\fP"
+.br
+.ti -1c
+.RI "constexpr bool \fBG_ABORT_ON_FAILED_ASSUME\fP"
+.br
+.ti -1c
+.RI "std::atomic< bool > \fBg_enable_dynamic_fuzz_determinism\fP"
+.br
+.ti -1c
+.RI "bool \fBg_detail_test_only_CheckFailuresAreExceptionsNotAborts\fP"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define ASAN_POISON_MEMORY_REGION( addr,  size)"
+\fBValue:\fP
+.nf
+((void)(addr), (void)(size))
+.PP
+.fi
+
+.SS "#define ASAN_UNPOISON_MEMORY_REGION( addr,  size)"
+\fBValue:\fP
+.nf
+((void)(addr), (void)(size))
+.PP
+.fi
+
+.SS "#define Assert( val)"
+\fBValue:\fP
+.nf
+inline_assertion_check<true>(val, std::source_location::current(), #val)
+.PP
+.fi
+Identity function\&. Abort if the value compares equal to zero 
+.SS "#define Assume( val)"
+\fBValue:\fP
+.nf
+inline_assertion_check<false>(val, std::source_location::current(), #val)
+.PP
+.fi
+Assume is the identity function\&.
+
+.PP
+.IP "\(bu" 2
+Should be used to run non-fatal checks\&. In debug builds it behaves like \fBAssert()\fP/assert() to notify developers and testers about non-fatal errors\&. In production it doesn't warn or log anything\&.
+.IP "\(bu" 2
+For fatal errors, use \fBAssert()\fP\&.
+.IP "\(bu" 2
+For non-fatal errors in interactive sessions (e\&.g\&. RPC or command line interfaces), \fBCHECK_NONFATAL()\fP might be more appropriate\&. 
+.PP
+
+.SS "#define CHECK_NONFATAL( condition)"
+\fBValue:\fP
+.nf
+    inline_check_non_fatal(condition, std::source_location::current(), #condition)
+.PP
+.fi
+Identity function\&. Throw a \fBNonFatalCheckError\fP when the condition evaluates to false
+
+.PP
+This should only be used
+.IP "\(bu" 2
+where the condition is assumed to be true, not for error handling or validating user input
+.IP "\(bu" 2
+where a failure to fulfill the condition is recoverable and does not abort the program
+.PP
+
+.PP
+For example in RPC code, where it is undesirable to crash the whole program, this can be generally used to replace asserts or recoverable logic errors\&. A \fBNonFatalCheckError\fP in RPC code is caught and passed as a string to the RPC caller, which can then report the issue to the developers\&. 
+.SS "#define NONFATAL_UNREACHABLE()"
+\fBValue:\fP
+.nf
+    throw NonFatalCheckError { "Unreachable code reached (non\-fatal)", std::source_location::current() }
+.PP
+.fi
+\fBNONFATAL_UNREACHABLE()\fP is a macro that is used to mark unreachable code\&. It throws a \fBNonFatalCheckError\fP\&. 
+.SS "#define STR_INTERNAL_BUG( msg)"
+\fBValue:\fP
+.nf
+StrFormatInternalBug((msg), std::source_location::current())
+.PP
+.fi
+
+.SH "Function Documentation"
+.PP 
+.SS "void assertion_fail (const std::source_location & loc, std::string_view assertion)"
+Internal helper 
+.SS "bool EnableFuzzDeterminism ()\fR [inline]\fP"
+
+.SS "template<bool IS_ASSERT, typename \fBT\fP> \fBT\fP && inline_assertion_check (\fBLIFETIMEBOUND\fP \fBT\fP && val, const std::source_location & loc, std::string_view assertion)\fR [constexpr]\fP"
+Helper for \fBAssert()\fP/Assume() 
+.SS "template<typename \fBT\fP> \fBT\fP && inline_check_non_fatal (\fBLIFETIMEBOUND\fP \fBT\fP && val, const std::source_location & loc, std::string_view assertion)"
+Helper for \fBCHECK_NONFATAL()\fP 
+.SS "std::string StrFormatInternalBug (std::string_view msg, const std::source_location & loc)"
+
+.SH "Variable Documentation"
+.PP 
+.SS "bool G_ABORT_ON_FAILED_ASSUME\fR [constexpr]\fP"
+\fBInitial value:\fP
+.nf
+{G_FUZZING_BUILD ||
+
+
+
+    false
+
+}
+.PP
+.fi
+
+.SS "bool g_detail_test_only_CheckFailuresAreExceptionsNotAborts\fR [extern]\fP"
+
+.SS "std::atomic<bool> g_enable_dynamic_fuzz_determinism\fR [extern]\fP"
+
+.SS "bool G_FUZZING_BUILD\fR [constexpr]\fP"
+\fBInitial value:\fP
+.nf
+{
+
+
+
+    false
+
+}
+.PP
+.fi
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

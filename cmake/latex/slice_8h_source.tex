@@ -1,0 +1,124 @@
+\doxysection{slice.\+h}
+\label{slice_8h_source}\index{src/leveldb/include/leveldb/slice.h@{src/leveldb/include/leveldb/slice.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ Slice\ is\ a\ simple\ structure\ containing\ a\ pointer\ into\ some\ external}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//\ storage\ and\ a\ size.\ \ The\ user\ of\ a\ Slice\ must\ ensure\ that\ the\ slice}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//\ is\ not\ used\ after\ the\ corresponding\ external\ storage\ has\ been}}
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ deallocated.}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//\ Multiple\ threads\ can\ invoke\ const\ methods\ on\ a\ Slice\ without}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//\ external\ synchronization,\ but\ if\ any\ of\ the\ threads\ may\ call\ a}}
+\DoxyCodeLine{00012\ \textcolor{comment}{//\ non-\/const\ method,\ all\ threads\ accessing\ the\ same\ Slice\ must\ use}}
+\DoxyCodeLine{00013\ \textcolor{comment}{//\ external\ synchronization.}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_SLICE\_H\_}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_SLICE\_H\_}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <assert.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <stddef.h>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <string.h>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ Slice\ \{}
+\DoxyCodeLine{00029\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00030\ \ \ \textcolor{comment}{//\ Create\ an\ empty\ slice.}}
+\DoxyCodeLine{00031\ \ \ Slice()\ :\ data\_(\textcolor{stringliteral}{"{}"{}}),\ size\_(0)\ \{\}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \ \ \textcolor{comment}{//\ Create\ a\ slice\ that\ refers\ to\ d[0,n-\/1].}}
+\DoxyCodeLine{00034\ \ \ Slice(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ d,\ \textcolor{keywordtype}{size\_t}\ n)\ :\ data\_(d),\ size\_(n)\ \{\}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \textcolor{comment}{//\ Create\ a\ slice\ that\ refers\ to\ the\ contents\ of\ "{}s"{}}}
+\DoxyCodeLine{00037\ \ \ Slice(\textcolor{keyword}{const}\ std::string\&\ s)\ :\ data\_(s.data()),\ size\_(s.size())\ \{\}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \textcolor{comment}{//\ Create\ a\ slice\ that\ refers\ to\ s[0,strlen(s)-\/1]}}
+\DoxyCodeLine{00040\ \ \ Slice(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ s)\ :\ data\_(s),\ size\_(strlen(s))\ \{\}}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \ \ \textcolor{comment}{//\ Intentionally\ copyable.}}
+\DoxyCodeLine{00043\ \ \ Slice(\textcolor{keyword}{const}\ Slice\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00044\ \ \ Slice\&\ operator=(\textcolor{keyword}{const}\ Slice\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \textcolor{comment}{//\ Return\ a\ pointer\ to\ the\ beginning\ of\ the\ referenced\ data}}
+\DoxyCodeLine{00047\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ data()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ data\_;\ \}}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \textcolor{comment}{//\ Return\ the\ length\ (in\ bytes)\ of\ the\ referenced\ data}}
+\DoxyCodeLine{00050\ \ \ \textcolor{keywordtype}{size\_t}\ size()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ size\_;\ \}}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ \textcolor{comment}{//\ Return\ true\ iff\ the\ length\ of\ the\ referenced\ data\ is\ zero}}
+\DoxyCodeLine{00053\ \ \ \textcolor{keywordtype}{bool}\ empty()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ size\_\ ==\ 0;\ \}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ begin()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ data();\ \}}
+\DoxyCodeLine{00056\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ end()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ data()\ +\ size();\ \}}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ \textcolor{comment}{//\ Return\ the\ ith\ byte\ in\ the\ referenced\ data.}}
+\DoxyCodeLine{00059\ \ \ \textcolor{comment}{//\ REQUIRES:\ n\ <\ size()}}
+\DoxyCodeLine{00060\ \ \ \textcolor{keywordtype}{char}\ operator[](\textcolor{keywordtype}{size\_t}\ n)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00061\ \ \ \ \ assert(n\ <\ size());}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordflow}{return}\ data\_[n];}
+\DoxyCodeLine{00063\ \ \ \}}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \textcolor{comment}{//\ Change\ this\ slice\ to\ refer\ to\ an\ empty\ array}}
+\DoxyCodeLine{00066\ \ \ \textcolor{keywordtype}{void}\ clear()\ \{}
+\DoxyCodeLine{00067\ \ \ \ \ data\_\ =\ \textcolor{stringliteral}{"{}"{}};}
+\DoxyCodeLine{00068\ \ \ \ \ size\_\ =\ 0;}
+\DoxyCodeLine{00069\ \ \ \}}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \textcolor{comment}{//\ Drop\ the\ first\ "{}n"{}\ bytes\ from\ this\ slice.}}
+\DoxyCodeLine{00072\ \ \ \textcolor{keywordtype}{void}\ remove\_prefix(\textcolor{keywordtype}{size\_t}\ n)\ \{}
+\DoxyCodeLine{00073\ \ \ \ \ assert(n\ <=\ size());}
+\DoxyCodeLine{00074\ \ \ \ \ data\_\ +=\ n;}
+\DoxyCodeLine{00075\ \ \ \ \ size\_\ -\/=\ n;}
+\DoxyCodeLine{00076\ \ \ \}}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ \textcolor{comment}{//\ Return\ a\ string\ that\ contains\ the\ copy\ of\ the\ referenced\ data.}}
+\DoxyCodeLine{00079\ \ \ std::string\ ToString()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ std::string(data\_,\ size\_);\ \}}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ \textcolor{comment}{//\ Three-\/way\ comparison.\ \ Returns\ value:}}
+\DoxyCodeLine{00082\ \ \ \textcolor{comment}{//\ \ \ <\ \ 0\ iff\ "{}*this"{}\ <\ \ "{}b"{},}}
+\DoxyCodeLine{00083\ \ \ \textcolor{comment}{//\ \ \ ==\ 0\ iff\ "{}*this"{}\ ==\ "{}b"{},}}
+\DoxyCodeLine{00084\ \ \ \textcolor{comment}{//\ \ \ >\ \ 0\ iff\ "{}*this"{}\ >\ \ "{}b"{}}}
+\DoxyCodeLine{00085\ \ \ \textcolor{keywordtype}{int}\ compare(\textcolor{keyword}{const}\ Slice\&\ b)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \ \ \textcolor{comment}{//\ Return\ true\ iff\ "{}x"{}\ is\ a\ prefix\ of\ "{}*this"{}}}
+\DoxyCodeLine{00088\ \ \ \textcolor{keywordtype}{bool}\ starts\_with(\textcolor{keyword}{const}\ Slice\&\ x)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordflow}{return}\ ((size\_\ >=\ x.size\_)\ \&\&\ (memcmp(data\_,\ x.data\_,\ x.size\_)\ ==\ 0));}
+\DoxyCodeLine{00090\ \ \ \}}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00093\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ data\_;}
+\DoxyCodeLine{00094\ \ \ \textcolor{keywordtype}{size\_t}\ size\_;}
+\DoxyCodeLine{00095\ \};}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00097\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ Slice\&\ x,\ \textcolor{keyword}{const}\ Slice\&\ y)\ \{}
+\DoxyCodeLine{00098\ \ \ \textcolor{keywordflow}{return}\ ((x.size()\ ==\ y.size())\ \&\&}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ (memcmp(x.data(),\ y.data(),\ x.size())\ ==\ 0));}
+\DoxyCodeLine{00100\ \}}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ operator!=(\textcolor{keyword}{const}\ Slice\&\ x,\ \textcolor{keyword}{const}\ Slice\&\ y)\ \{\ \textcolor{keywordflow}{return}\ !(x\ ==\ y);\ \}}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ Slice::compare(\textcolor{keyword}{const}\ Slice\&\ b)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00105\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ min\_len\ =\ (size\_\ <\ b.size\_)\ ?\ size\_\ :\ b.size\_;}
+\DoxyCodeLine{00106\ \ \ \textcolor{keywordtype}{int}\ r\ =\ memcmp(data\_,\ b.data\_,\ min\_len);}
+\DoxyCodeLine{00107\ \ \ \textcolor{keywordflow}{if}\ (r\ ==\ 0)\ \{}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keywordflow}{if}\ (size\_\ <\ b.size\_)}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ r\ =\ -\/1;}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (size\_\ >\ b.size\_)}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ r\ =\ +1;}
+\DoxyCodeLine{00112\ \ \ \}}
+\DoxyCodeLine{00113\ \ \ \textcolor{keywordflow}{return}\ r;}
+\DoxyCodeLine{00114\ \}}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_INCLUDE\_SLICE\_H\_}}
+
+\end{DoxyCode}

@@ -1,0 +1,304 @@
+\doxysection{int\+\_\+utils.\+h}
+\label{int__utils_8h_source}\index{src/minisketch/src/int\_utils.h@{src/minisketch/src/int\_utils.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/**********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2018\ Pieter\ Wuille,\ Greg\ Maxwell,\ Gleb\ Naumenko\ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ LICENSE\ or\ http://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ **********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ \_MINISKETCH\_INT\_UTILS\_H\_}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ \_MINISKETCH\_INT\_UTILS\_H\_}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <stdlib.h>}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#if\ defined(\_\_cpp\_lib\_int\_pow2)\ \&\&\ \_\_cpp\_lib\_int\_pow2\ >=\ 202002L}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#\ \ include\ <bit>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#elif\ defined(\_MSC\_VER)}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#\ \ include\ <intrin.h>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{template}<\textcolor{keywordtype}{int}\ bits>}
+\DoxyCodeLine{00024\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ uint64\_t\ Rot(uint64\_t\ x)\ \{\ \textcolor{keywordflow}{return}\ (x\ <<\ bits)\ |\ (x\ >>\ (64\ -\/\ bits));\ \}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ SipHashRound(uint64\_t\&\ v0,\ uint64\_t\&\ v1,\ uint64\_t\&\ v2,\ uint64\_t\&\ v3)\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ v0\ +=\ v1;\ v1\ =\ Rot<13>(v1);\ v1\ \string^=\ v0;}
+\DoxyCodeLine{00028\ \ \ \ \ v0\ =\ Rot<32>(v0);}
+\DoxyCodeLine{00029\ \ \ \ \ v2\ +=\ v3;\ v3\ =\ Rot<16>(v3);\ v3\ \string^=\ v2;}
+\DoxyCodeLine{00030\ \ \ \ \ v0\ +=\ v3;\ v3\ =\ Rot<21>(v3);\ v3\ \string^=\ v0;}
+\DoxyCodeLine{00031\ \ \ \ \ v2\ +=\ v1;\ v1\ =\ Rot<17>(v1);\ v1\ \string^=\ v2;}
+\DoxyCodeLine{00032\ \ \ \ \ v2\ =\ Rot<32>(v2);}
+\DoxyCodeLine{00033\ \}}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \textcolor{keyword}{inline}\ uint64\_t\ SipHash(uint64\_t\ k0,\ uint64\_t\ k1,\ uint64\_t\ data)\ \{}
+\DoxyCodeLine{00036\ \ \ \ \ uint64\_t\ v0\ =\ 0x736f6d6570736575ULL\ \string^\ k0;}
+\DoxyCodeLine{00037\ \ \ \ \ uint64\_t\ v1\ =\ 0x646f72616e646f6dULL\ \string^\ k1;}
+\DoxyCodeLine{00038\ \ \ \ \ uint64\_t\ v2\ =\ 0x6c7967656e657261ULL\ \string^\ k0;}
+\DoxyCodeLine{00039\ \ \ \ \ uint64\_t\ v3\ =\ 0x7465646279746573ULL\ \string^\ k1\ \string^\ data;}
+\DoxyCodeLine{00040\ \ \ \ \ SipHashRound(v0,\ v1,\ v2,\ v3);}
+\DoxyCodeLine{00041\ \ \ \ \ SipHashRound(v0,\ v1,\ v2,\ v3);}
+\DoxyCodeLine{00042\ \ \ \ \ v0\ \string^=\ data;}
+\DoxyCodeLine{00043\ \ \ \ \ v3\ \string^=\ 0x800000000000000ULL;}
+\DoxyCodeLine{00044\ \ \ \ \ SipHashRound(v0,\ v1,\ v2,\ v3);}
+\DoxyCodeLine{00045\ \ \ \ \ SipHashRound(v0,\ v1,\ v2,\ v3);}
+\DoxyCodeLine{00046\ \ \ \ \ v0\ \string^=\ 0x800000000000000ULL;}
+\DoxyCodeLine{00047\ \ \ \ \ v2\ \string^=\ 0xFF;}
+\DoxyCodeLine{00048\ \ \ \ \ SipHashRound(v0,\ v1,\ v2,\ v3);}
+\DoxyCodeLine{00049\ \ \ \ \ SipHashRound(v0,\ v1,\ v2,\ v3);}
+\DoxyCodeLine{00050\ \ \ \ \ SipHashRound(v0,\ v1,\ v2,\ v3);}
+\DoxyCodeLine{00051\ \ \ \ \ SipHashRound(v0,\ v1,\ v2,\ v3);}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keywordflow}{return}\ v0\ \string^\ v1\ \string^\ v2\ \string^\ v3;}
+\DoxyCodeLine{00053\ \}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{class\ }BitWriter\ \{}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ state\ =\ 0;}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{int}\ offset\ =\ 0;}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ out;}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{int}\ BITS,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ WriteInner(I\ val)\ \{}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ We\ right\ shift\ by\ up\ to\ 8\ bits\ below.\ Verify\ that's\ well\ defined\ for\ the\ type\ I.}}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(std::numeric\_limits<I>::digits\ >\ 8,\ \textcolor{stringliteral}{"{}BitWriter::WriteInner\ needs\ I\ >\ 8\ bits"{}});}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ bits\ =\ BITS;}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bits\ +\ offset\ >=\ 8)\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \ \ \ \ state\ |=\ ((val\ \&\ ((I(1)\ <<\ (8\ -\/\ offset))\ -\/\ 1))\ <<\ offset);}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ *(out++)\ =\ state;}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ val\ >>=\ (8\ -\/\ offset);}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ bits\ -\/=\ 8\ -\/\ offset;}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ offset\ =\ 0;}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ state\ =\ 0;}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (bits\ >=\ 8)\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ *(out++)\ =\ val\ \&\ 255;}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ val\ >>=\ 8;}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ bits\ -\/=\ 8;}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ state\ |=\ ((val\ \&\ ((I(1)\ <<\ bits)\ -\/\ 1))\ <<\ offset);}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ offset\ +=\ bits;}
+\DoxyCodeLine{00080\ \ \ \ \ \}}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00084\ \ \ \ \ BitWriter(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ output)\ :\ out(output)\ \{\}}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{int}\ BITS,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Write(I\ val)\ \{}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ I\ is\ smaller\ than\ an\ unsigned\ int,\ invoke\ WriteInner\ with\ argument\ converted\ to\ unsigned.}}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }compute\_type\ =\ \textcolor{keyword}{typename}\ std::conditional<}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ (std::numeric\_limits<I>::digits\ <\ std::numeric\_limits<unsigned>::digits),}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned},\ I>::type;}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ WriteInner<BITS,\ compute\_type>(val);}
+\DoxyCodeLine{00093\ \ \ \ \ \}}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Flush()\ \{}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (offset)\ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ *(out++)\ =\ state;}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ state\ =\ 0;}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ offset\ =\ 0;}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00101\ \ \ \ \ \}}
+\DoxyCodeLine{00102\ \};}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \textcolor{keyword}{class\ }BitReader\ \{}
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ state\ =\ 0;}
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{keywordtype}{int}\ offset\ =\ 0;}
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ in;}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00109\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00110\ \ \ \ \ BitReader(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ input)\ :\ in(input)\ \{\}}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{int}\ BITS,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{keyword}{inline}\ I\ Read()\ \{}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ bits\ =\ BITS;}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (offset\ >=\ bits)\ \{}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \ \ \ \ I\ ret\ =\ state\ \&\ ((1\ <<\ bits)\ -\/\ 1);}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \ \ \ \ state\ >>=\ bits;}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \ \ \ \ offset\ -\/=\ bits;}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ I\ val\ =\ state;}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ out\ =\ offset;}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (out\ +\ 8\ <=\ bits)\ \{}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ \ \ \ \ val\ |=\ ((I(*(in++)))\ <<\ out);}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ \ \ \ \ out\ +=\ 8;}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (out\ <\ bits)\ \{}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ c\ =\ *(in++);}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \ \ \ \ val\ |=\ (c\ \&\ ((I(1)\ <<\ (bits\ -\/\ out))\ -\/\ 1))\ <<\ out;}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \ \ \ \ state\ =\ c\ >>\ (bits\ -\/\ out);}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ \ \ \ \ offset\ =\ 8\ -\/\ (bits\ -\/\ out);}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00133\ \ \ \ \ \ \ \ \ \ \ \ \ state\ =\ 0;}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ \ \ \ \ offset\ =\ 0;}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ val;}
+\DoxyCodeLine{00137\ \ \ \ \ \}}
+\DoxyCodeLine{00138\ \};}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00141\ \textcolor{keyword}{template}<\textcolor{keywordtype}{int}\ BITS,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00142\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ I\ Mask()\ \{\ \textcolor{keywordflow}{return}\ ((I((I(-\/1))\ <<\ (std::numeric\_limits<I>::digits\ -\/\ BITS)))\ >>\ (std::numeric\_limits<I>::digits\ -\/\ BITS));\ \}}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00145\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00146\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ CountBits(I\ val,\ \textcolor{keywordtype}{int}\ max)\ \{}
+\DoxyCodeLine{00147\ \textcolor{preprocessor}{\#if\ defined(\_\_cpp\_lib\_int\_pow2)\ \&\&\ \_\_cpp\_lib\_int\_pow2\ >=\ 202002L}}
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{comment}{//\ c++20\ impl}}
+\DoxyCodeLine{00149\ \ \ \ \ (void)max;}
+\DoxyCodeLine{00150\ \ \ \ \ \textcolor{keywordflow}{return}\ std::bit\_width(val);}
+\DoxyCodeLine{00151\ \textcolor{preprocessor}{\#elif\ defined(\_MSC\_VER)}}
+\DoxyCodeLine{00152\ \ \ \ \ (void)max;}
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{long}\ index;}
+\DoxyCodeLine{00154\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ ret;}
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keywordflow}{if}\ (std::numeric\_limits<I>::digits\ <=\ 32)\ \{}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ ret\ =\ \_BitScanReverse(\&index,\ val);}
+\DoxyCodeLine{00157\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ ret\ =\ \_BitScanReverse64(\&index,\ val);}
+\DoxyCodeLine{00159\ \ \ \ \ \}}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{keywordflow}{if}\ (!ret)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordflow}{return}\ index\ +\ 1;}
+\DoxyCodeLine{00162\ \textcolor{preprocessor}{\#elif\ defined(HAVE\_CLZ)}}
+\DoxyCodeLine{00163\ \ \ \ \ (void)max;}
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keywordflow}{if}\ (val\ ==\ 0)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keywordflow}{if}\ (std::numeric\_limits<unsigned>::digits\ >=\ std::numeric\_limits<I>::digits)\ \{}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::numeric\_limits<unsigned>::digits\ -\/\ \_\_builtin\_clz(val);}
+\DoxyCodeLine{00167\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (std::numeric\_limits<unsigned\ long>::digits\ >=\ std::numeric\_limits<I>::digits)\ \{}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::numeric\_limits<unsigned\ long>::digits\ -\/\ \_\_builtin\_clzl(val);}
+\DoxyCodeLine{00169\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::numeric\_limits<unsigned\ long\ long>::digits\ -\/\ \_\_builtin\_clzll(val);}
+\DoxyCodeLine{00171\ \ \ \ \ \}}
+\DoxyCodeLine{00172\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00173\ \ \ \ \ \textcolor{keywordflow}{while}\ (max\ \&\&\ (val\ >>\ (max\ -\/\ 1)\ ==\ 0))\ -\/-\/max;}
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keywordflow}{return}\ max;}
+\DoxyCodeLine{00175\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00176\ \}}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00178\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keywordtype}{int}\ BITS>}
+\DoxyCodeLine{00179\ \textcolor{keyword}{class\ }BitsInt\ \{}
+\DoxyCodeLine{00180\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00181\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_integral<I>::value\ \&\&\ std::is\_unsigned<I>::value,\ \textcolor{stringliteral}{"{}BitsInt\ requires\ an\ unsigned\ integer\ type"{}});}
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{keyword}{static\_assert}(BITS\ >\ 0\ \&\&\ BITS\ <=\ std::numeric\_limits<I>::digits,\ \textcolor{stringliteral}{"{}BitsInt\ requires\ 1\ <=\ Bits\ <=\ representation\ type\ size"{}});}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00184\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ I\ MASK\ =\ Mask<BITS,\ I>();}
+\DoxyCodeLine{00185\ }
+\DoxyCodeLine{00186\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00187\ }
+\DoxyCodeLine{00188\ \ \ \ \ \textcolor{keyword}{typedef}\ I\ Repr;}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00190\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ SIZE\ =\ BITS;}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ \textcolor{keyword}{inline}\ Swap(I\&\ a,\ I\&\ b)\ \{}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ std::swap(a,\ b);}
+\DoxyCodeLine{00194\ \ \ \ \ \}}
+\DoxyCodeLine{00195\ }
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ IsZero(I\ a)\ \{\ \textcolor{keywordflow}{return}\ a\ ==\ 0;\ \}}
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ IsOne(I\ a)\ \{\ \textcolor{keywordflow}{return}\ a\ ==\ 1;\ \}}
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ I\ Mask(I\ val)\ \{\ \textcolor{keywordflow}{return}\ val\ \&\ MASK;\ \}}
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ I\ Shift(I\ val,\ \textcolor{keywordtype}{int}\ bits)\ \{\ \textcolor{keywordflow}{return}\ ((val\ <<\ bits)\ \&\ MASK);\ \}}
+\DoxyCodeLine{00200\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ I\ UnsafeShift(I\ val,\ \textcolor{keywordtype}{int}\ bits)\ \{\ \textcolor{keywordflow}{return}\ (val\ <<\ bits);\ \}}
+\DoxyCodeLine{00201\ }
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{int}\ Offset,\ \textcolor{keywordtype}{int}\ Count>}
+\DoxyCodeLine{00203\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ MidBits(I\ val)\ \{}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(Count\ >\ 0,\ \textcolor{stringliteral}{"{}BITSInt::MidBits\ needs\ Count\ >\ 0"{}});}
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(Count\ +\ Offset\ <=\ BITS,\ \textcolor{stringliteral}{"{}BitsInt::MidBits\ overflow\ of\ Count+Offset"{}});}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (val\ >>\ Offset)\ \&\ ((I(1)\ <<\ Count)\ -\/\ 1);}
+\DoxyCodeLine{00207\ \ \ \ \ \}}
+\DoxyCodeLine{00208\ }
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{int}\ Count>}
+\DoxyCodeLine{00210\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ TopBits(I\ val)\ \{}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(Count\ >\ 0,\ \textcolor{stringliteral}{"{}BitsInt::TopBits\ needs\ Count\ >\ 0"{}});}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(Count\ <=\ BITS,\ \textcolor{stringliteral}{"{}BitsInt::TopBits\ needs\ Offset\ <=\ BITS"{}});}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{int}\textcolor{keyword}{>}(val\ >>\ (BITS\ -\/\ Count));}
+\DoxyCodeLine{00214\ \ \ \ \ \}}
+\DoxyCodeLine{00215\ }
+\DoxyCodeLine{00216\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ I\ CondXorWith(I\ val,\ \textcolor{keywordtype}{bool}\ cond,\ I\ v)\ \{}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ val\ \string^\ (-\/I(cond)\ \&\ v);}
+\DoxyCodeLine{00218\ \ \ \ \ \}}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00220\ \ \ \ \ \textcolor{keyword}{template}<I\ MOD>}
+\DoxyCodeLine{00221\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ I\ CondXorWith(I\ val,\ \textcolor{keywordtype}{bool}\ cond)\ \{}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ val\ \string^\ (-\/I(cond)\ \&\ MOD);}
+\DoxyCodeLine{00223\ \ \ \ \ \}}
+\DoxyCodeLine{00224\ }
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ Bits(I\ val,\ \textcolor{keywordtype}{int}\ max)\ \{\ \textcolor{keywordflow}{return}\ CountBits<I>(val,\ max);\ \}}
+\DoxyCodeLine{00226\ \};}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00229\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F,\ u\textcolor{keywordtype}{int}32\_t\ MOD>}
+\DoxyCodeLine{00230\ \textcolor{keyword}{struct\ }LFSR\ \{}
+\DoxyCodeLine{00231\ \ \ \ \ \textcolor{keyword}{typedef}\ \textcolor{keyword}{typename}\ F::Repr\ I;}
+\DoxyCodeLine{00233\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ I\ Call(\textcolor{keyword}{const}\ I\&\ a)\ \{}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ F::template\ CondXorWith<MOD>(F::Shift(a,\ 1),\ F::template\ TopBits<1>(a));}
+\DoxyCodeLine{00235\ \ \ \ \ \}}
+\DoxyCodeLine{00236\ \};}
+\DoxyCodeLine{00237\ }
+\DoxyCodeLine{00239\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ L,\ \textcolor{keyword}{typename}\ F,\ \textcolor{keywordtype}{int}\ K>\ \textcolor{keyword}{struct\ }GFMulHelper;}
+\DoxyCodeLine{00240\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ L,\ \textcolor{keyword}{typename}\ F>\ \textcolor{keyword}{struct\ }GFMulHelper<I,\ N,\ L,\ F,\ 0>}
+\DoxyCodeLine{00241\ \{}
+\DoxyCodeLine{00242\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ I\ Run(\textcolor{keyword}{const}\ I\&\ a,\ \textcolor{keyword}{const}\ I\&\ b)\ \{\ \textcolor{keywordflow}{return}\ I(0);\ \}}
+\DoxyCodeLine{00243\ \};}
+\DoxyCodeLine{00244\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ L,\ \textcolor{keyword}{typename}\ F,\ \textcolor{keywordtype}{int}\ K>\ \textcolor{keyword}{struct\ }GFMulHelper}
+\DoxyCodeLine{00245\ \{}
+\DoxyCodeLine{00246\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ I\ Run(\textcolor{keyword}{const}\ I\&\ a,\ \textcolor{keyword}{const}\ I\&\ b)\ \{\ \textcolor{keywordflow}{return}\ F::CondXorWith(GFMulHelper<I,\ N,\ L,\ F,\ K\ -\/\ 1>::Run(L::Call(a),\ b),\ F::template\ MidBits<N\ -\/\ K,\ 1>(b),\ a);\ \}}
+\DoxyCodeLine{00247\ \};}
+\DoxyCodeLine{00248\ }
+\DoxyCodeLine{00250\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ L,\ \textcolor{keyword}{typename}\ F>\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ I\ GFMul(\textcolor{keyword}{const}\ I\&\ a,\ \textcolor{keyword}{const}\ I\&\ b)\ \{\ \textcolor{keywordflow}{return}\ GFMulHelper<I,\ N,\ L,\ F,\ N>::Run(a,\ b);\ \}}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00253\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keyword}{typename}\ F,\ \textcolor{keywordtype}{int}\ BITS,\ u\textcolor{keywordtype}{int}32\_t\ MOD>}
+\DoxyCodeLine{00254\ \textcolor{keyword}{inline}\ I\ InvExtGCD(I\ x)}
+\DoxyCodeLine{00255\ \{}
+\DoxyCodeLine{00256\ \ \ \ \ \textcolor{keywordflow}{if}\ (F::IsZero(x)\ ||\ F::IsOne(x))\ \textcolor{keywordflow}{return}\ x;}
+\DoxyCodeLine{00257\ \ \ \ \ I\ t(0),\ newt(1);}
+\DoxyCodeLine{00258\ \ \ \ \ I\ r(MOD),\ newr\ =\ x;}
+\DoxyCodeLine{00259\ \ \ \ \ \textcolor{keywordtype}{int}\ rlen\ =\ BITS\ +\ 1,\ newrlen\ =\ F::Bits(newr,\ BITS);}
+\DoxyCodeLine{00260\ \ \ \ \ \textcolor{keywordflow}{while}\ (newr)\ \{}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ q\ =\ rlen\ -\/\ newrlen;}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ r\ \string^=\ F::Shift(newr,\ q);}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ t\ \string^=\ F::UnsafeShift(newt,\ q);}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ rlen\ =\ F::Bits(r,\ rlen\ -\/\ 1);}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (r\ <\ newr)\ \{}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ \ \ \ \ F::Swap(t,\ newt);}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ \ \ \ \ F::Swap(r,\ newr);}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \ \ \ \ std::swap(rlen,\ newrlen);}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00270\ \ \ \ \ \}}
+\DoxyCodeLine{00271\ \ \ \ \ \textcolor{keywordflow}{return}\ t;}
+\DoxyCodeLine{00272\ \}}
+\DoxyCodeLine{00273\ }
+\DoxyCodeLine{00279\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keyword}{typename}\ F,\ \textcolor{keywordtype}{int}\ BITS,\ I\ (*MUL)(I,\ I),\ I\ (*SQR)(I),\ I\ (*SQR2)(I),\ I(*SQR4)(I),\ I(*SQR8)(I),\ I(*SQR16)(I)>}
+\DoxyCodeLine{00280\ \textcolor{keyword}{inline}\ I\ InvLadder(I\ x1)}
+\DoxyCodeLine{00281\ \{}
+\DoxyCodeLine{00282\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ INV\_EXP\ =\ BITS\ -\/\ 1;}
+\DoxyCodeLine{00283\ \ \ \ \ I\ x2\ =\ (INV\_EXP\ >=\ 2)\ ?\ MUL(SQR(x1),\ x1)\ :\ I();}
+\DoxyCodeLine{00284\ \ \ \ \ I\ x4\ =\ (INV\_EXP\ >=\ 4)\ ?\ MUL(SQR2(x2),\ x2)\ :\ I();}
+\DoxyCodeLine{00285\ \ \ \ \ I\ x8\ =\ (INV\_EXP\ >=\ 8)\ ?\ MUL(SQR4(x4),\ x4)\ :\ I();}
+\DoxyCodeLine{00286\ \ \ \ \ I\ x16\ =\ (INV\_EXP\ >=\ 16)\ ?\ MUL(SQR8(x8),\ x8)\ :\ I();}
+\DoxyCodeLine{00287\ \ \ \ \ I\ x32\ =\ (INV\_EXP\ >=\ 32)\ ?\ MUL(SQR16(x16),\ x16)\ :\ I();}
+\DoxyCodeLine{00288\ \ \ \ \ I\ r;}
+\DoxyCodeLine{00289\ \ \ \ \ \textcolor{keywordflow}{if}\ (INV\_EXP\ >=\ 32)\ \{}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ r\ =\ x32;}
+\DoxyCodeLine{00291\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (INV\_EXP\ >=\ 16)\ \{}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ r\ =\ x16;}
+\DoxyCodeLine{00293\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (INV\_EXP\ >=\ 8)\ \{}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ r\ =\ x8;}
+\DoxyCodeLine{00295\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (INV\_EXP\ >=\ 4)\ \{}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ r\ =\ x4;}
+\DoxyCodeLine{00297\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (INV\_EXP\ >=\ 2)\ \{}
+\DoxyCodeLine{00298\ \ \ \ \ \ \ \ \ r\ =\ x2;}
+\DoxyCodeLine{00299\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ r\ =\ x1;}
+\DoxyCodeLine{00301\ \ \ \ \ \}}
+\DoxyCodeLine{00302\ \ \ \ \ \textcolor{keywordflow}{if}\ (INV\_EXP\ >=\ 32\ \&\&\ (INV\_EXP\ \&\ 16))\ r\ =\ MUL(SQR16(r),\ x16);}
+\DoxyCodeLine{00303\ \ \ \ \ \textcolor{keywordflow}{if}\ (INV\_EXP\ >=\ 16\ \&\&\ (INV\_EXP\ \&\ 8))\ r\ =\ MUL(SQR8(r),\ x8);}
+\DoxyCodeLine{00304\ \ \ \ \ \textcolor{keywordflow}{if}\ (INV\_EXP\ >=\ 8\ \&\&\ (INV\_EXP\ \&\ 4))\ r\ =\ MUL(SQR4(r),\ x4);}
+\DoxyCodeLine{00305\ \ \ \ \ \textcolor{keywordflow}{if}\ (INV\_EXP\ >=\ 4\ \&\&\ (INV\_EXP\ \&\ 2))\ r\ =\ MUL(SQR2(r),\ x2);}
+\DoxyCodeLine{00306\ \ \ \ \ \textcolor{keywordflow}{if}\ (INV\_EXP\ >=\ 2\ \&\&\ (INV\_EXP\ \&\ 1))\ r\ =\ MUL(SQR(r),\ x1);}
+\DoxyCodeLine{00307\ \ \ \ \ \textcolor{keywordflow}{return}\ SQR(r);}
+\DoxyCodeLine{00308\ \}}
+\DoxyCodeLine{00309\ }
+\DoxyCodeLine{00310\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

@@ -1,0 +1,334 @@
+\doxysection{net.\+h}
+\label{test_2util_2net_8h_source}\index{src/test/util/net.h@{src/test/util/net.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2020-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_TEST\_UTIL\_NET\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_TEST\_UTIL\_NET\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <compat/compat.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <netmessagemaker.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <net.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <net\_permissions.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <net\_processing.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <netaddress.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <node/connection\_types.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <node/eviction.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <util/sock.h>}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <condition\_variable>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{class\ }FastRandomContext;}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \textcolor{keyword}{struct\ }ConnmanTestMsg\ :\ \textcolor{keyword}{public}\ CConnman\ \{}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keyword}{using\ }CConnman::CConnman;}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordtype}{void}\ SetMsgProc(NetEventsInterface*\ msgproc)}
+\DoxyCodeLine{00039\ \ \ \ \ \{}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ m\_msgproc\ =\ msgproc;}
+\DoxyCodeLine{00041\ \ \ \ \ \}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keywordtype}{void}\ SetPeerConnectTimeout(std::chrono::seconds\ timeout)}
+\DoxyCodeLine{00044\ \ \ \ \ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ m\_peer\_connect\_timeout\ =\ timeout;}
+\DoxyCodeLine{00046\ \ \ \ \ \}}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keywordtype}{void}\ ResetAddrCache();}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordtype}{void}\ ResetMaxOutboundCycle();}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \ \ std::vector<CNode*>\ TestNodes()}
+\DoxyCodeLine{00052\ \ \ \ \ \{}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ LOCK(m\_nodes\_mutex);}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_nodes;}
+\DoxyCodeLine{00055\ \ \ \ \ \}}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{void}\ AddTestNode(CNode\&\ node)}
+\DoxyCodeLine{00058\ \ \ \ \ \{}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ LOCK(m\_nodes\_mutex);}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ m\_nodes.push\_back(\&node);}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (node.IsManualOrFullOutboundConn())\ ++m\_network\_conn\_counts[node.addr.GetNetwork()];}
+\DoxyCodeLine{00063\ \ \ \ \ \}}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordtype}{void}\ ClearTestNodes()}
+\DoxyCodeLine{00066\ \ \ \ \ \{}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ LOCK(m\_nodes\_mutex);}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (CNode*\ node\ :\ m\_nodes)\ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{delete}\ node;}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ m\_nodes.clear();}
+\DoxyCodeLine{00072\ \ \ \ \ \}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keywordtype}{void}\ CreateNodeFromAcceptedSocketPublic(std::unique\_ptr<Sock>\ sock,}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ NetPermissionFlags\ permissions,}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CAddress\&\ addr\_bind,}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CAddress\&\ addr\_peer)}
+\DoxyCodeLine{00078\ \ \ \ \ \{}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ CreateNodeFromAcceptedSocket(std::move(sock),\ permissions,\ addr\_bind,\ addr\_peer);}
+\DoxyCodeLine{00080\ \ \ \ \ \}}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keywordtype}{bool}\ InitBindsPublic(\textcolor{keyword}{const}\ CConnman::Options\&\ options)}
+\DoxyCodeLine{00083\ \ \ \ \ \{}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ InitBinds(options);}
+\DoxyCodeLine{00085\ \ \ \ \ \}}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{keywordtype}{void}\ SocketHandlerPublic()}
+\DoxyCodeLine{00088\ \ \ \ \ \{}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ SocketHandler();}
+\DoxyCodeLine{00090\ \ \ \ \ \}}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keywordtype}{void}\ Handshake(CNode\&\ node,}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ successfully\_connected,}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ServiceFlags\ remote\_services,}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ServiceFlags\ local\_services,}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int32\_t\ version,}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ relay\_txs)}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(NetEventsInterface::g\_msgproc\_mutex);}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{keywordtype}{bool}\ ProcessMessagesOnce(CNode\&\ node)\ EXCLUSIVE\_LOCKS\_REQUIRED(NetEventsInterface::g\_msgproc\_mutex)}
+\DoxyCodeLine{00101\ \ \ \ \ \{}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_msgproc-\/>ProcessMessages(\&node,\ flagInterruptMsgProc);}
+\DoxyCodeLine{00103\ \ \ \ \ \}}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{keywordtype}{void}\ NodeReceiveMsgBytes(CNode\&\ node,\ std::span<const\ uint8\_t>\ msg\_bytes,\ \textcolor{keywordtype}{bool}\&\ complete)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReceiveMsgFrom(CNode\&\ node,\ CSerializedNetMsg\&\&\ ser\_msg)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keywordtype}{void}\ FlushSendBuffer(CNode\&\ node)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordtype}{bool}\ AlreadyConnectedToAddressPublic(\textcolor{keyword}{const}\ CNetAddr\&\ addr)\ \{\ \textcolor{keywordflow}{return}\ AlreadyConnectedToAddress(addr);\ \};}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \ \ \ \ CNode*\ ConnectNodePublic(PeerManager\&\ peerman,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszDest,\ ConnectionType\ conn\_type)}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_unused\_i2p\_sessions\_mutex);}
+\DoxyCodeLine{00114\ \};}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \textcolor{keyword}{constexpr}\ ServiceFlags\ ALL\_SERVICE\_FLAGS[]\{}
+\DoxyCodeLine{00117\ \ \ \ \ NODE\_NONE,}
+\DoxyCodeLine{00118\ \ \ \ \ NODE\_NETWORK,}
+\DoxyCodeLine{00119\ \ \ \ \ NODE\_BLOOM,}
+\DoxyCodeLine{00120\ \ \ \ \ NODE\_WITNESS,}
+\DoxyCodeLine{00121\ \ \ \ \ NODE\_COMPACT\_FILTERS,}
+\DoxyCodeLine{00122\ \ \ \ \ NODE\_NETWORK\_LIMITED,}
+\DoxyCodeLine{00123\ \ \ \ \ NODE\_P2P\_V2,}
+\DoxyCodeLine{00124\ \};}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \textcolor{keyword}{constexpr}\ NetPermissionFlags\ ALL\_NET\_PERMISSION\_FLAGS[]\{}
+\DoxyCodeLine{00127\ \ \ \ \ NetPermissionFlags::None,}
+\DoxyCodeLine{00128\ \ \ \ \ NetPermissionFlags::BloomFilter,}
+\DoxyCodeLine{00129\ \ \ \ \ NetPermissionFlags::Relay,}
+\DoxyCodeLine{00130\ \ \ \ \ NetPermissionFlags::ForceRelay,}
+\DoxyCodeLine{00131\ \ \ \ \ NetPermissionFlags::NoBan,}
+\DoxyCodeLine{00132\ \ \ \ \ NetPermissionFlags::Mempool,}
+\DoxyCodeLine{00133\ \ \ \ \ NetPermissionFlags::Addr,}
+\DoxyCodeLine{00134\ \ \ \ \ NetPermissionFlags::Download,}
+\DoxyCodeLine{00135\ \ \ \ \ NetPermissionFlags::Implicit,}
+\DoxyCodeLine{00136\ \ \ \ \ NetPermissionFlags::All,}
+\DoxyCodeLine{00137\ \};}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00139\ \textcolor{keyword}{constexpr}\ ConnectionType\ ALL\_CONNECTION\_TYPES[]\{}
+\DoxyCodeLine{00140\ \ \ \ \ ConnectionType::INBOUND,}
+\DoxyCodeLine{00141\ \ \ \ \ ConnectionType::OUTBOUND\_FULL\_RELAY,}
+\DoxyCodeLine{00142\ \ \ \ \ ConnectionType::MANUAL,}
+\DoxyCodeLine{00143\ \ \ \ \ ConnectionType::FEELER,}
+\DoxyCodeLine{00144\ \ \ \ \ ConnectionType::BLOCK\_RELAY,}
+\DoxyCodeLine{00145\ \ \ \ \ ConnectionType::ADDR\_FETCH,}
+\DoxyCodeLine{00146\ \};}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00148\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ ALL\_NETWORKS\ =\ std::array\{}
+\DoxyCodeLine{00149\ \ \ \ \ Network::NET\_UNROUTABLE,}
+\DoxyCodeLine{00150\ \ \ \ \ Network::NET\_IPV4,}
+\DoxyCodeLine{00151\ \ \ \ \ Network::NET\_IPV6,}
+\DoxyCodeLine{00152\ \ \ \ \ Network::NET\_ONION,}
+\DoxyCodeLine{00153\ \ \ \ \ Network::NET\_I2P,}
+\DoxyCodeLine{00154\ \ \ \ \ Network::NET\_CJDNS,}
+\DoxyCodeLine{00155\ \ \ \ \ Network::NET\_INTERNAL,}
+\DoxyCodeLine{00156\ \};}
+\DoxyCodeLine{00157\ }
+\DoxyCodeLine{00162\ \textcolor{keyword}{class\ }ZeroSock\ :\ \textcolor{keyword}{public}\ Sock}
+\DoxyCodeLine{00163\ \{}
+\DoxyCodeLine{00164\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00165\ \ \ \ \ ZeroSock();}
+\DoxyCodeLine{00166\ }
+\DoxyCodeLine{00167\ \ \ \ \ \string~ZeroSock()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00169\ \ \ \ \ ssize\_t\ Send(\textcolor{keyword}{const}\ \textcolor{keywordtype}{void}*,\ \textcolor{keywordtype}{size\_t}\ len,\ \textcolor{keywordtype}{int})\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00171\ \ \ \ \ ssize\_t\ Recv(\textcolor{keywordtype}{void}*\ buf,\ \textcolor{keywordtype}{size\_t}\ len,\ \textcolor{keywordtype}{int}\ flags)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00172\ }
+\DoxyCodeLine{00173\ \ \ \ \ \textcolor{keywordtype}{int}\ Connect(\textcolor{keyword}{const}\ sockaddr*,\ socklen\_t)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00174\ }
+\DoxyCodeLine{00175\ \ \ \ \ \textcolor{keywordtype}{int}\ Bind(\textcolor{keyword}{const}\ sockaddr*,\ socklen\_t)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00176\ }
+\DoxyCodeLine{00177\ \ \ \ \ \textcolor{keywordtype}{int}\ Listen(\textcolor{keywordtype}{int})\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00179\ \ \ \ \ std::unique\_ptr<Sock>\ Accept(sockaddr*\ addr,\ socklen\_t*\ addr\_len)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00180\ }
+\DoxyCodeLine{00181\ \ \ \ \ \textcolor{keywordtype}{int}\ GetSockOpt(\textcolor{keywordtype}{int}\ level,\ \textcolor{keywordtype}{int}\ opt\_name,\ \textcolor{keywordtype}{void}*\ opt\_val,\ socklen\_t*\ opt\_len)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00182\ }
+\DoxyCodeLine{00183\ \ \ \ \ \textcolor{keywordtype}{int}\ SetSockOpt(\textcolor{keywordtype}{int},\ \textcolor{keywordtype}{int},\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{void}*,\ socklen\_t)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00185\ \ \ \ \ \textcolor{keywordtype}{int}\ GetSockName(sockaddr*\ name,\ socklen\_t*\ name\_len)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00186\ }
+\DoxyCodeLine{00187\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetNonBlocking()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00189\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsSelectable()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00190\ }
+\DoxyCodeLine{00191\ \ \ \ \ \textcolor{keywordtype}{bool}\ Wait(std::chrono::milliseconds\ timeout,}
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Event\ requested,}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Event*\ occurred\ =\ \textcolor{keyword}{nullptr})\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00195\ \ \ \ \ \textcolor{keywordtype}{bool}\ WaitMany(std::chrono::milliseconds\ timeout,\ EventsPerSock\&\ events\_per\_sock)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00197\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00198\ \ \ \ \ ZeroSock\&\ operator=(Sock\&\&\ other)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00199\ \};}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00206\ \textcolor{keyword}{class\ }StaticContentsSock\ :\ \textcolor{keyword}{public}\ ZeroSock}
+\DoxyCodeLine{00207\ \{}
+\DoxyCodeLine{00208\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{keyword}{explicit}\ StaticContentsSock(\textcolor{keyword}{const}\ std::string\&\ contents);}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00215\ \ \ \ \ ssize\_t\ Recv(\textcolor{keywordtype}{void}*\ buf,\ \textcolor{keywordtype}{size\_t}\ len,\ \textcolor{keywordtype}{int}\ flags)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00217\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsConnected(std::string\&)\textcolor{keyword}{\ const\ override}}
+\DoxyCodeLine{00218\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00220\ \ \ \ \ \}}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00222\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00223\ \ \ \ \ StaticContentsSock\&\ operator=(Sock\&\&\ other)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00224\ }
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keyword}{const}\ std::string\ m\_contents;}
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{keyword}{mutable}\ \textcolor{keywordtype}{size\_t}\ m\_consumed\{0\};}
+\DoxyCodeLine{00227\ \};}
+\DoxyCodeLine{00228\ }
+\DoxyCodeLine{00233\ \textcolor{keyword}{class\ }DynSock\ :\ \textcolor{keyword}{public}\ ZeroSock}
+\DoxyCodeLine{00234\ \{}
+\DoxyCodeLine{00235\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00239\ \ \ \ \ \textcolor{keyword}{class\ }Pipe}
+\DoxyCodeLine{00240\ \ \ \ \ \{}
+\DoxyCodeLine{00241\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ ssize\_t\ GetBytes(\textcolor{keywordtype}{void}*\ buf,\ \textcolor{keywordtype}{size\_t}\ len,\ \textcolor{keywordtype}{int}\ flags\ =\ 0)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ std::optional<CNetMessage>\ GetNetMsg()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00258\ }
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ PushBytes(\textcolor{keyword}{const}\ \textcolor{keywordtype}{void}*\ buf,\ \textcolor{keywordtype}{size\_t}\ len)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00263\ }
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ PushNetMsg(\textcolor{keyword}{const}\ std::string\&\ type,\ Args\&\&...\ payload)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00269\ }
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ Eof()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00274\ }
+\DoxyCodeLine{00275\ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ WaitForDataOrEof(UniqueLock<Mutex>\&\ lock)\ EXCLUSIVE\_LOCKS\_REQUIRED(m\_mutex);}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ Mutex\ m\_mutex;}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ std::condition\_variable\ m\_cond;}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ std::vector<uint8\_t>\ m\_data\ GUARDED\_BY(m\_mutex);}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_eof\ GUARDED\_BY(m\_mutex)\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00286\ \ \ \ \ \};}
+\DoxyCodeLine{00287\ }
+\DoxyCodeLine{00288\ \ \ \ \ \textcolor{keyword}{struct\ }Pipes\ \{}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ Pipe\ recv;}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ Pipe\ send;}
+\DoxyCodeLine{00291\ \ \ \ \ \};}
+\DoxyCodeLine{00292\ }
+\DoxyCodeLine{00296\ \ \ \ \ \textcolor{keyword}{class\ }Queue}
+\DoxyCodeLine{00297\ \ \ \ \ \{}
+\DoxyCodeLine{00298\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }S\ =\ std::unique\_ptr<DynSock>;}
+\DoxyCodeLine{00300\ }
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ Push(S\ s)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \ \ \ \ LOCK(m\_mutex);}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \ \ \ \ m\_queue.push(std::move(s));}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00306\ }
+\DoxyCodeLine{00307\ \ \ \ \ \ \ \ \ std::optional<S>\ Pop()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ \ \ \ \ LOCK(m\_mutex);}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_queue.empty())\ \{}
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \ \ \ \ S\ front\{std::move(m\_queue.front())\};}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \ \ \ \ m\_queue.pop();}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ front;}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00317\ }
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ Empty()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ \ \ \ \ LOCK(m\_mutex);}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_queue.empty();}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00324\ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \ \ \textcolor{keyword}{mutable}\ Mutex\ m\_mutex;}
+\DoxyCodeLine{00326\ \ \ \ \ \ \ \ \ std::queue<S>\ m\_queue\ GUARDED\_BY(m\_mutex);}
+\DoxyCodeLine{00327\ \ \ \ \ \};}
+\DoxyCodeLine{00328\ }
+\DoxyCodeLine{00334\ \ \ \ \ \textcolor{keyword}{explicit}\ DynSock(std::shared\_ptr<Pipes>\ pipes,\ std::shared\_ptr<Queue>\ accept\_sockets);}
+\DoxyCodeLine{00335\ }
+\DoxyCodeLine{00336\ \ \ \ \ \string~DynSock();}
+\DoxyCodeLine{00337\ }
+\DoxyCodeLine{00338\ \ \ \ \ ssize\_t\ Recv(\textcolor{keywordtype}{void}*\ buf,\ \textcolor{keywordtype}{size\_t}\ len,\ \textcolor{keywordtype}{int}\ flags)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00339\ }
+\DoxyCodeLine{00340\ \ \ \ \ ssize\_t\ Send(\textcolor{keyword}{const}\ \textcolor{keywordtype}{void}*\ buf,\ \textcolor{keywordtype}{size\_t}\ len,\ \textcolor{keywordtype}{int})\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00341\ }
+\DoxyCodeLine{00342\ \ \ \ \ std::unique\_ptr<Sock>\ Accept(sockaddr*\ addr,\ socklen\_t*\ addr\_len)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00343\ }
+\DoxyCodeLine{00344\ \ \ \ \ \textcolor{keywordtype}{bool}\ Wait(std::chrono::milliseconds\ timeout,}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Event\ requested,}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Event*\ occurred\ =\ \textcolor{keyword}{nullptr})\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00347\ }
+\DoxyCodeLine{00348\ \ \ \ \ \textcolor{keywordtype}{bool}\ WaitMany(std::chrono::milliseconds\ timeout,\ EventsPerSock\&\ events\_per\_sock)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00349\ }
+\DoxyCodeLine{00350\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00351\ \ \ \ \ DynSock\&\ operator=(Sock\&\&)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00352\ }
+\DoxyCodeLine{00353\ \ \ \ \ std::shared\_ptr<Pipes>\ m\_pipes;}
+\DoxyCodeLine{00354\ \ \ \ \ std::shared\_ptr<Queue>\ m\_accept\_sockets;}
+\DoxyCodeLine{00355\ \};}
+\DoxyCodeLine{00356\ }
+\DoxyCodeLine{00357\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00358\ \textcolor{keywordtype}{void}\ DynSock::Pipe::PushNetMsg(\textcolor{keyword}{const}\ std::string\&\ type,\ Args\&\&...\ payload)}
+\DoxyCodeLine{00359\ \{}
+\DoxyCodeLine{00360\ \ \ \ \ \textcolor{keyword}{auto}\ msg\ =\ NetMsg::Make(type,\ std::forward<Args>(payload)...);}
+\DoxyCodeLine{00361\ \ \ \ \ V1Transport\ transport\{NodeId\{0\}\};}
+\DoxyCodeLine{00362\ }
+\DoxyCodeLine{00363\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ queued\{transport.SetMessageToSend(msg)\};}
+\DoxyCodeLine{00364\ \ \ \ \ assert(queued);}
+\DoxyCodeLine{00365\ }
+\DoxyCodeLine{00366\ \ \ \ \ LOCK(m\_mutex);}
+\DoxyCodeLine{00367\ }
+\DoxyCodeLine{00368\ \ \ \ \ \textcolor{keywordflow}{for}\ (;;)\ \{}
+\DoxyCodeLine{00369\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [bytes,\ \_more,\ \_msg\_type]\ =\ transport.GetBytesToSend(\textcolor{comment}{/*have\_next\_message=*/}\textcolor{keyword}{true});}
+\DoxyCodeLine{00370\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bytes.empty())\ \{}
+\DoxyCodeLine{00371\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00372\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00373\ \ \ \ \ \ \ \ \ m\_data.insert(m\_data.end(),\ bytes.begin(),\ bytes.end());}
+\DoxyCodeLine{00374\ \ \ \ \ \ \ \ \ transport.MarkBytesSent(bytes.size());}
+\DoxyCodeLine{00375\ \ \ \ \ \}}
+\DoxyCodeLine{00376\ }
+\DoxyCodeLine{00377\ \ \ \ \ m\_cond.notify\_all();}
+\DoxyCodeLine{00378\ \}}
+\DoxyCodeLine{00379\ }
+\DoxyCodeLine{00380\ std::vector<NodeEvictionCandidate>\ GetRandomNodeEvictionCandidates(\textcolor{keywordtype}{int}\ n\_candidates,\ FastRandomContext\&\ random\_context);}
+\DoxyCodeLine{00381\ }
+\DoxyCodeLine{00382\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_TEST\_UTIL\_NET\_H}}
+
+\end{DoxyCode}

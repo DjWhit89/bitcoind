@@ -1,0 +1,173 @@
+\doxysection{testrand\+\_\+impl.\+h}
+\label{testrand__impl_8h_source}\index{src/secp256k1/src/testrand\_impl.h@{src/secp256k1/src/testrand\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2013-\/2015\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_TESTRAND\_IMPL\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_TESTRAND\_IMPL\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <stdio.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <string.h>}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}testrand.h"{}}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}hash.h"{}}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{keyword}{static}\ uint64\_t\ secp256k1\_test\_state[4];}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ testrand\_seed(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *seed16)\ \{}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ PREFIX[]\ =\ \{\textcolor{charliteral}{'s'},\ \textcolor{charliteral}{'e'},\ \textcolor{charliteral}{'c'},\ \textcolor{charliteral}{'p'},\ \textcolor{charliteral}{'2'},\ \textcolor{charliteral}{'5'},\ \textcolor{charliteral}{'6'},\ \textcolor{charliteral}{'k'},\ \textcolor{charliteral}{'1'},\ \textcolor{charliteral}{'\ '},\ \textcolor{charliteral}{'t'},\ \textcolor{charliteral}{'e'},\ \textcolor{charliteral}{'s'},\ \textcolor{charliteral}{'t'},\ \textcolor{charliteral}{'\ '},\ \textcolor{charliteral}{'i'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'i'},\ \textcolor{charliteral}{'t'}\};}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ out32[32];}
+\DoxyCodeLine{00023\ \ \ \ \ secp256k1\_sha256\ hash;}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{comment}{/*\ Use\ SHA256(PREFIX\ ||\ seed16)\ as\ initial\ state.\ */}}
+\DoxyCodeLine{00027\ \ \ \ \ secp256k1\_sha256\_initialize(\&hash);}
+\DoxyCodeLine{00028\ \ \ \ \ secp256k1\_sha256\_write(\&hash,\ PREFIX,\ \textcolor{keyword}{sizeof}(PREFIX));}
+\DoxyCodeLine{00029\ \ \ \ \ secp256k1\_sha256\_write(\&hash,\ seed16,\ 16);}
+\DoxyCodeLine{00030\ \ \ \ \ secp256k1\_sha256\_finalize(\&hash,\ out32);}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 4;\ ++i)\ \{}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ uint64\_t\ s\ =\ 0;}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ j;}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (j\ =\ 0;\ j\ <\ 8;\ ++j)\ s\ =\ (s\ <<\ 8)\ |\ out32[8*i\ +\ j];}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ secp256k1\_test\_state[i]\ =\ s;}
+\DoxyCodeLine{00036\ \ \ \ \ \}}
+\DoxyCodeLine{00037\ \}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ uint64\_t\ rotl(\textcolor{keyword}{const}\ uint64\_t\ x,\ \textcolor{keywordtype}{int}\ k)\ \{}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordflow}{return}\ (x\ <<\ k)\ |\ (x\ >>\ (64\ -\/\ k));}
+\DoxyCodeLine{00041\ \}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ uint64\_t\ testrand64(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{comment}{/*\ Test-\/only\ Xoshiro256++\ RNG.\ See\ https://prng.di.unimi.it/\ */}}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ result\ =\ rotl(secp256k1\_test\_state[0]\ +\ secp256k1\_test\_state[3],\ 23)\ +\ secp256k1\_test\_state[0];}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ t\ =\ secp256k1\_test\_state[1]\ <<\ 17;}
+\DoxyCodeLine{00047\ \ \ \ \ secp256k1\_test\_state[2]\ \string^=\ secp256k1\_test\_state[0];}
+\DoxyCodeLine{00048\ \ \ \ \ secp256k1\_test\_state[3]\ \string^=\ secp256k1\_test\_state[1];}
+\DoxyCodeLine{00049\ \ \ \ \ secp256k1\_test\_state[1]\ \string^=\ secp256k1\_test\_state[2];}
+\DoxyCodeLine{00050\ \ \ \ \ secp256k1\_test\_state[0]\ \string^=\ secp256k1\_test\_state[3];}
+\DoxyCodeLine{00051\ \ \ \ \ secp256k1\_test\_state[2]\ \string^=\ t;}
+\DoxyCodeLine{00052\ \ \ \ \ secp256k1\_test\_state[3]\ =\ rotl(secp256k1\_test\_state[3],\ 45);}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00054\ \}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ uint64\_t\ testrand\_bits(\textcolor{keywordtype}{int}\ bits)\ \{}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordflow}{if}\ (bits\ ==\ 0)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordflow}{return}\ testrand64()\ >>\ (64\ -\/\ bits);}
+\DoxyCodeLine{00059\ \}}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ uint32\_t\ testrand32(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordflow}{return}\ testrand64()\ >>\ 32;}
+\DoxyCodeLine{00063\ \}}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \textcolor{keyword}{static}\ uint32\_t\ testrand\_int(uint32\_t\ range)\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ uint32\_t\ mask\ =\ 0;}
+\DoxyCodeLine{00067\ \ \ \ \ uint32\_t\ range\_copy;}
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{comment}{/*\ Reduce\ range\ by\ 1,\ changing\ its\ meaning\ to\ "{}maximum\ value"{}.\ */}}
+\DoxyCodeLine{00069\ \ \ \ \ VERIFY\_CHECK(range\ !=\ 0);}
+\DoxyCodeLine{00070\ \ \ \ \ range\ -\/=\ 1;}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{comment}{/*\ Count\ the\ number\ of\ bits\ in\ range.\ */}}
+\DoxyCodeLine{00072\ \ \ \ \ range\_copy\ =\ range;}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keywordflow}{while}\ (range\_copy)\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ mask\ =\ (mask\ <<\ 1)\ |\ 1U;}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ range\_copy\ >>=\ 1;}
+\DoxyCodeLine{00076\ \ \ \ \ \}}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{comment}{/*\ Generation\ loop.\ */}}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keywordflow}{while}\ (1)\ \{}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ uint32\_t\ val\ =\ testrand64()\ \&\ mask;}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (val\ <=\ range)\ \textcolor{keywordflow}{return}\ val;}
+\DoxyCodeLine{00081\ \ \ \ \ \}}
+\DoxyCodeLine{00082\ \}}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ testrand256(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *b32)\ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 4;\ ++i)\ \{}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ uint64\_t\ val\ =\ testrand64();}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ b32[0]\ =\ val;}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ b32[1]\ =\ val\ >>\ 8;}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ b32[2]\ =\ val\ >>\ 16;}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ b32[3]\ =\ val\ >>\ 24;}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ b32[4]\ =\ val\ >>\ 32;}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ b32[5]\ =\ val\ >>\ 40;}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ b32[6]\ =\ val\ >>\ 48;}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ b32[7]\ =\ val\ >>\ 56;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ b32\ +=\ 8;}
+\DoxyCodeLine{00097\ \ \ \ \ \}}
+\DoxyCodeLine{00098\ \}}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ testrand\_bytes\_test(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *bytes,\ \textcolor{keywordtype}{size\_t}\ len)\ \{}
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ bits\ =\ 0;}
+\DoxyCodeLine{00102\ \ \ \ \ memset(bytes,\ 0,\ len);}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keywordflow}{while}\ (bits\ <\ len\ *\ 8)\ \{}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ now;}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ uint32\_t\ val;}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ now\ =\ 1\ +\ (testrand\_bits(6)\ *\ testrand\_bits(5)\ +\ 16)\ /\ 31;}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ val\ =\ testrand\_bits(1);}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (now\ >\ 0\ \&\&\ bits\ <\ len\ *\ 8)\ \{}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \ \ \ \ bytes[bits\ /\ 8]\ |=\ val\ <<\ (bits\ \%\ 8);}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \ \ \ \ now-\/-\/;}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \ \ \ \ bits++;}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00113\ \ \ \ \ \}}
+\DoxyCodeLine{00114\ \}}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ testrand256\_test(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *b32)\ \{}
+\DoxyCodeLine{00117\ \ \ \ \ testrand\_bytes\_test(b32,\ 32);}
+\DoxyCodeLine{00118\ \}}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00120\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ testrand\_flip(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *b,\ \textcolor{keywordtype}{size\_t}\ len)\ \{}
+\DoxyCodeLine{00121\ \ \ \ \ b[testrand\_int(len)]\ \string^=\ (1\ <<\ testrand\_bits(3));}
+\DoxyCodeLine{00122\ \}}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ testrand\_init(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ hexseed)\ \{}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ seed16[16]\ =\ \{0\};}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keywordflow}{if}\ (hexseed\ \&\&\ strlen(hexseed)\ !=\ 0)\ \{}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ pos\ =\ 0;}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (pos\ <\ 16\ \&\&\ hexseed[0]\ !=\ 0\ \&\&\ hexseed[1]\ !=\ 0)\ \{}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{short}\ sh;}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((sscanf(hexseed,\ \textcolor{stringliteral}{"{}\%2hx"{}},\ \&sh))\ ==\ 1)\ \{}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ seed16[pos]\ =\ sh;}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00133\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \ \ \ \ hexseed\ +=\ 2;}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \ \ \ \ pos++;}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00138\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ FILE\ *frand\ =\ fopen(\textcolor{stringliteral}{"{}/dev/urandom"{}},\ \textcolor{stringliteral}{"{}rb"{}});}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((frand\ ==\ NULL)\ ||\ fread(\&seed16,\ 1,\ \textcolor{keyword}{sizeof}(seed16),\ frand)\ !=\ \textcolor{keyword}{sizeof}(seed16))\ \{}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ t\ =\ time(NULL)\ *\ (uint64\_t)1337;}
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}WARNING:\ could\ not\ read\ 16\ bytes\ from\ /dev/urandom;\ falling\ back\ to\ insecure\ PRNG\(\backslash\)n"{}});}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ \ \ \ \ seed16[0]\ \string^=\ t;}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ \ \ \ \ seed16[1]\ \string^=\ t\ >>\ 8;}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ \ \ \ \ seed16[2]\ \string^=\ t\ >>\ 16;}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ \ \ \ \ seed16[3]\ \string^=\ t\ >>\ 24;}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ \ \ \ \ seed16[4]\ \string^=\ t\ >>\ 32;}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \ \ \ \ seed16[5]\ \string^=\ t\ >>\ 40;}
+\DoxyCodeLine{00149\ \ \ \ \ \ \ \ \ \ \ \ \ seed16[6]\ \string^=\ t\ >>\ 48;}
+\DoxyCodeLine{00150\ \ \ \ \ \ \ \ \ \ \ \ \ seed16[7]\ \string^=\ t\ >>\ 56;}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (frand)\ \{}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \ \ \ \ fclose(frand);}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00155\ \ \ \ \ \}}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ \ \ \ \ printf(\textcolor{stringliteral}{"{}random\ seed\ =\ \%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\(\backslash\)n"{}},\ seed16[0],\ seed16[1],\ seed16[2],\ seed16[3],\ seed16[4],\ seed16[5],\ seed16[6],\ seed16[7],\ seed16[8],\ seed16[9],\ seed16[10],\ seed16[11],\ seed16[12],\ seed16[13],\ seed16[14],\ seed16[15]);}
+\DoxyCodeLine{00158\ \ \ \ \ testrand\_seed(seed16);}
+\DoxyCodeLine{00159\ \}}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00161\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ testrand\_finish(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ run32[32];}
+\DoxyCodeLine{00163\ \ \ \ \ testrand256(run32);}
+\DoxyCodeLine{00164\ \ \ \ \ printf(\textcolor{stringliteral}{"{}random\ run\ =\ \%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\%02x\(\backslash\)n"{}},\ run32[0],\ run32[1],\ run32[2],\ run32[3],\ run32[4],\ run32[5],\ run32[6],\ run32[7],\ run32[8],\ run32[9],\ run32[10],\ run32[11],\ run32[12],\ run32[13],\ run32[14],\ run32[15]);}
+\DoxyCodeLine{00165\ \}}
+\DoxyCodeLine{00166\ }
+\DoxyCodeLine{00167\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_TESTRAND\_IMPL\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

@@ -1,0 +1,101 @@
+\doxysection{eckey\+\_\+impl.\+h}
+\label{eckey__impl_8h_source}\index{src/secp256k1/src/eckey\_impl.h@{src/secp256k1/src/eckey\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2013,\ 2014\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_ECKEY\_IMPL\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_ECKEY\_IMPL\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}eckey.h"{}}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}scalar.h"{}}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}field.h"{}}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}group.h"{}}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ "{}ecmult\_gen.h"{}}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_eckey\_pubkey\_parse(secp256k1\_ge\ *elem,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *pub,\ \textcolor{keywordtype}{size\_t}\ size)\ \{}
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{keywordflow}{if}\ (size\ ==\ 33\ \&\&\ (pub[0]\ ==\ SECP256K1\_TAG\_PUBKEY\_EVEN\ ||\ pub[0]\ ==\ SECP256K1\_TAG\_PUBKEY\_ODD))\ \{}
+\DoxyCodeLine{00020\ \ \ \ \ \ \ \ \ secp256k1\_fe\ x;}
+\DoxyCodeLine{00021\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_fe\_set\_b32\_limit(\&x,\ pub+1)\ \&\&\ secp256k1\_ge\_set\_xo\_var(elem,\ \&x,\ pub[0]\ ==\ SECP256K1\_TAG\_PUBKEY\_ODD);}
+\DoxyCodeLine{00022\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (size\ ==\ 65\ \&\&\ (pub[0]\ ==\ SECP256K1\_TAG\_PUBKEY\_UNCOMPRESSED\ ||\ pub[0]\ ==\ SECP256K1\_TAG\_PUBKEY\_HYBRID\_EVEN\ ||\ pub[0]\ ==\ SECP256K1\_TAG\_PUBKEY\_HYBRID\_ODD))\ \{}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ secp256k1\_fe\ x,\ y;}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_fe\_set\_b32\_limit(\&x,\ pub+1)\ ||\ !secp256k1\_fe\_set\_b32\_limit(\&y,\ pub+33))\ \{}
+\DoxyCodeLine{00025\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ secp256k1\_ge\_set\_xy(elem,\ \&x,\ \&y);}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((pub[0]\ ==\ SECP256K1\_TAG\_PUBKEY\_HYBRID\_EVEN\ ||\ pub[0]\ ==\ SECP256K1\_TAG\_PUBKEY\_HYBRID\_ODD)\ \&\&}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_fe\_is\_odd(\&y)\ !=\ (pub[0]\ ==\ SECP256K1\_TAG\_PUBKEY\_HYBRID\_ODD))\ \{}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_ge\_is\_valid\_var(elem);}
+\DoxyCodeLine{00033\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00035\ \ \ \ \ \}}
+\DoxyCodeLine{00036\ \}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_eckey\_pubkey\_serialize(secp256k1\_ge\ *elem,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *pub,\ \textcolor{keywordtype}{size\_t}\ *size,\ \textcolor{keywordtype}{int}\ compressed)\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ VERIFY\_CHECK(compressed\ ==\ 0\ ||\ compressed\ ==\ 1);}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_ge\_is\_infinity(elem))\ \{}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00043\ \ \ \ \ \}}
+\DoxyCodeLine{00044\ \ \ \ \ secp256k1\_fe\_normalize\_var(\&elem-\/>x);}
+\DoxyCodeLine{00045\ \ \ \ \ secp256k1\_fe\_normalize\_var(\&elem-\/>y);}
+\DoxyCodeLine{00046\ \ \ \ \ secp256k1\_fe\_get\_b32(\&pub[1],\ \&elem-\/>x);}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordflow}{if}\ (compressed)\ \{}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ *size\ =\ 33;}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ pub[0]\ =\ secp256k1\_fe\_is\_odd(\&elem-\/>y)\ ?\ SECP256K1\_TAG\_PUBKEY\_ODD\ :\ SECP256K1\_TAG\_PUBKEY\_EVEN;}
+\DoxyCodeLine{00050\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ *size\ =\ 65;}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ pub[0]\ =\ SECP256K1\_TAG\_PUBKEY\_UNCOMPRESSED;}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ secp256k1\_fe\_get\_b32(\&pub[33],\ \&elem-\/>y);}
+\DoxyCodeLine{00054\ \ \ \ \ \}}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00056\ \}}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_eckey\_privkey\_tweak\_add(secp256k1\_scalar\ *key,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *tweak)\ \{}
+\DoxyCodeLine{00059\ \ \ \ \ secp256k1\_scalar\_add(key,\ key,\ tweak);}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keywordflow}{return}\ !secp256k1\_scalar\_is\_zero(key);}
+\DoxyCodeLine{00061\ \}}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_eckey\_pubkey\_tweak\_add(secp256k1\_ge\ *key,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *tweak)\ \{}
+\DoxyCodeLine{00064\ \ \ \ \ secp256k1\_gej\ pt;}
+\DoxyCodeLine{00065\ \ \ \ \ secp256k1\_gej\_set\_ge(\&pt,\ key);}
+\DoxyCodeLine{00066\ \ \ \ \ secp256k1\_ecmult(\&pt,\ \&pt,\ \&secp256k1\_scalar\_one,\ tweak);}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_gej\_is\_infinity(\&pt))\ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00070\ \ \ \ \ \}}
+\DoxyCodeLine{00071\ \ \ \ \ secp256k1\_ge\_set\_gej(key,\ \&pt);}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00073\ \}}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_eckey\_privkey\_tweak\_mul(secp256k1\_scalar\ *key,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *tweak)\ \{}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keywordtype}{int}\ ret;}
+\DoxyCodeLine{00077\ \ \ \ \ ret\ =\ !secp256k1\_scalar\_is\_zero(tweak);}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ secp256k1\_scalar\_mul(key,\ key,\ tweak);}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00081\ \}}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_eckey\_pubkey\_tweak\_mul(secp256k1\_ge\ *key,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *tweak)\ \{}
+\DoxyCodeLine{00084\ \ \ \ \ secp256k1\_gej\ pt;}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_scalar\_is\_zero(tweak))\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00087\ \ \ \ \ \}}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \ \ \ \ secp256k1\_gej\_set\_ge(\&pt,\ key);}
+\DoxyCodeLine{00090\ \ \ \ \ secp256k1\_ecmult(\&pt,\ \&pt,\ tweak,\ \&secp256k1\_scalar\_zero);}
+\DoxyCodeLine{00091\ \ \ \ \ secp256k1\_ge\_set\_gej(key,\ \&pt);}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00093\ \}}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_ECKEY\_IMPL\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

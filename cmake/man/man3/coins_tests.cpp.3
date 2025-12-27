@@ -1,0 +1,287 @@
+.TH "src/test/coins_tests.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/test/coins_tests.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <addresstype\&.h>\fP
+.br
+\fR#include <clientversion\&.h>\fP
+.br
+\fR#include <coins\&.h>\fP
+.br
+\fR#include <streams\&.h>\fP
+.br
+\fR#include <test/util/poolresourcetester\&.h>\fP
+.br
+\fR#include <test/util/random\&.h>\fP
+.br
+\fR#include <test/util/setup_common\&.h>\fP
+.br
+\fR#include <txdb\&.h>\fP
+.br
+\fR#include <uint256\&.h>\fP
+.br
+\fR#include <undo\&.h>\fP
+.br
+\fR#include <util/strencodings\&.h>\fP
+.br
+\fR#include <map>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <variant>\fP
+.br
+\fR#include <vector>\fP
+.br
+\fR#include <boost/test/unit_test\&.hpp>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBCacheTest\fP"
+.br
+.ti -1c
+.RI "struct \fBUpdateTest\fP"
+.br
+.ti -1c
+.RI "struct \fBCoinEntry\fP"
+.br
+.ti -1c
+.RI "class \fBSingleEntryCacheTest\fP"
+.br
+.ti -1c
+.RI "struct \fBFlushTest\fP"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "using \fBMaybeCoin\fP = std::optional<\fBCoinEntry\fP>"
+.br
+.ti -1c
+.RI "using \fBCoinOrError\fP = std::variant<\fBMaybeCoin\fP, std::string>"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "int \fBApplyTxInUndo\fP (\fBCoin\fP &&undo, \fBCCoinsViewCache\fP &view, const \fBCOutPoint\fP &out)"
+.br
+.ti -1c
+.RI "void \fBUpdateCoins\fP (const \fBCTransaction\fP &tx, \fBCCoinsViewCache\fP &inputs, \fBCTxUndo\fP &txundo, int \fBnHeight\fP)"
+.br
+.ti -1c
+.RI "\fBBOOST_FIXTURE_TEST_CASE\fP (coins_cache_base_simulation_test, \fBCacheTest\fP)"
+.br
+.ti -1c
+.RI "\fBBOOST_FIXTURE_TEST_CASE\fP (coins_cache_dbbase_simulation_test, \fBCacheTest\fP)"
+.br
+.ti -1c
+.RI "\fBBOOST_FIXTURE_TEST_CASE\fP (updatecoins_simulation_test, \fBUpdateTest\fP)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (ccoins_serialization)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (ccoins_access)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (ccoins_spend)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (ccoins_add)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (ccoins_write)"
+.br
+.ti -1c
+.RI "\fBBOOST_FIXTURE_TEST_CASE\fP (ccoins_flush_behavior, \fBFlushTest\fP)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (coins_resource_is_used)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (ccoins_addcoin_exception_keeps_usage_balanced)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (ccoins_emplace_duplicate_keeps_usage_balanced)"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "constexpr \fBCAmount\fP \fBSPENT\fP {\-1}"
+.br
+.ti -1c
+.RI "constexpr \fBCAmount\fP \fBABSENT\fP {\-2}"
+.br
+.ti -1c
+.RI "constexpr \fBCAmount\fP \fBVALUE1\fP {100}"
+.br
+.ti -1c
+.RI "constexpr \fBCAmount\fP \fBVALUE2\fP {200}"
+.br
+.ti -1c
+.RI "constexpr \fBCAmount\fP \fBVALUE3\fP {300}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBMISSING\fP {std::nullopt}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBSPENT_DIRTY\fP {{\fBSPENT\fP, CoinEntry::State::DIRTY}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBSPENT_DIRTY_FRESH\fP {{\fBSPENT\fP, CoinEntry::State::DIRTY_FRESH}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBSPENT_FRESH\fP {{\fBSPENT\fP, CoinEntry::State::FRESH}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBSPENT_CLEAN\fP {{\fBSPENT\fP, CoinEntry::State::CLEAN}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBVALUE1_DIRTY\fP {{\fBVALUE1\fP, CoinEntry::State::DIRTY}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBVALUE1_DIRTY_FRESH\fP {{\fBVALUE1\fP, CoinEntry::State::DIRTY_FRESH}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBVALUE1_FRESH\fP {{\fBVALUE1\fP, CoinEntry::State::FRESH}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBVALUE1_CLEAN\fP {{\fBVALUE1\fP, CoinEntry::State::CLEAN}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBVALUE2_DIRTY\fP {{\fBVALUE2\fP, CoinEntry::State::DIRTY}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBVALUE2_DIRTY_FRESH\fP {{\fBVALUE2\fP, CoinEntry::State::DIRTY_FRESH}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBVALUE2_FRESH\fP {{\fBVALUE2\fP, CoinEntry::State::FRESH}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBVALUE2_CLEAN\fP {{\fBVALUE2\fP, CoinEntry::State::CLEAN}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBVALUE3_DIRTY\fP {{\fBVALUE3\fP, CoinEntry::State::DIRTY}}"
+.br
+.ti -1c
+.RI "constexpr \fBMaybeCoin\fP \fBVALUE3_DIRTY_FRESH\fP {{\fBVALUE3\fP, CoinEntry::State::DIRTY_FRESH}}"
+.br
+.ti -1c
+.RI "constexpr auto \fBEX_OVERWRITE_UNSPENT\fP {'Attempted to overwrite an unspent coin (when possible_overwrite is false)'}"
+.br
+.ti -1c
+.RI "constexpr auto \fBEX_FRESH_MISAPPLIED\fP {'FRESH flag misapplied to coin that exists in parent cache'}"
+.br
+.in -1c
+.SH "Typedef Documentation"
+.PP 
+.SS "using \fBCoinOrError\fP = std::variant<\fBMaybeCoin\fP, std::string>"
+
+.SS "using \fBMaybeCoin\fP = std::optional<\fBCoinEntry\fP>"
+
+.SH "Function Documentation"
+.PP 
+.SS "int ApplyTxInUndo (\fBCoin\fP && undo, \fBCCoinsViewCache\fP & view, const \fBCOutPoint\fP & out)"
+Restore the UTXO in a \fBCoin\fP at a given \fBCOutPoint\fP 
+.PP
+\fBParameters\fP
+.RS 4
+\fIundo\fP The \fBCoin\fP to be restored\&. 
+.br
+\fIview\fP The coins view to which to apply the changes\&. 
+.br
+\fIout\fP The out point that corresponds to the tx input\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A \fBDisconnectResult\fP as an int 
+.RE
+.PP
+
+.SS "BOOST_AUTO_TEST_CASE (ccoins_access )"
+
+.SS "BOOST_AUTO_TEST_CASE (ccoins_add )"
+
+.SS "BOOST_AUTO_TEST_CASE (ccoins_addcoin_exception_keeps_usage_balanced )"
+
+.SS "BOOST_AUTO_TEST_CASE (ccoins_emplace_duplicate_keeps_usage_balanced )"
+
+.SS "BOOST_AUTO_TEST_CASE (ccoins_serialization )"
+
+.SS "BOOST_AUTO_TEST_CASE (ccoins_spend )"
+
+.SS "BOOST_AUTO_TEST_CASE (ccoins_write )"
+
+.SS "BOOST_AUTO_TEST_CASE (coins_resource_is_used )"
+
+.SS "BOOST_FIXTURE_TEST_CASE (ccoins_flush_behavior , \fBFlushTest\fP )"
+
+.SS "BOOST_FIXTURE_TEST_CASE (coins_cache_base_simulation_test , \fBCacheTest\fP )"
+
+.SS "BOOST_FIXTURE_TEST_CASE (coins_cache_dbbase_simulation_test , \fBCacheTest\fP )"
+
+.SS "BOOST_FIXTURE_TEST_CASE (updatecoins_simulation_test , \fBUpdateTest\fP )"
+
+.SS "void UpdateCoins (const \fBCTransaction\fP & tx, \fBCCoinsViewCache\fP & inputs, \fBCTxUndo\fP & txundo, int nHeight)"
+
+.SH "Variable Documentation"
+.PP 
+.SS "\fBCAmount\fP ABSENT {\-2}\fR [constexpr]\fP"
+
+.SS "auto EX_FRESH_MISAPPLIED {'FRESH flag misapplied to coin that exists in parent cache'}\fR [constexpr]\fP"
+
+.SS "auto EX_OVERWRITE_UNSPENT {'Attempted to overwrite an unspent coin (when possible_overwrite is false)'}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP MISSING {std::nullopt}\fR [constexpr]\fP"
+
+.SS "\fBCAmount\fP SPENT {\-1}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP SPENT_CLEAN {{\fBSPENT\fP, CoinEntry::State::CLEAN}}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP SPENT_DIRTY {{\fBSPENT\fP, CoinEntry::State::DIRTY}}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP SPENT_DIRTY_FRESH {{\fBSPENT\fP, CoinEntry::State::DIRTY_FRESH}}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP SPENT_FRESH {{\fBSPENT\fP, CoinEntry::State::FRESH}}\fR [constexpr]\fP"
+
+.SS "\fBCAmount\fP VALUE1 {100}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP VALUE1_CLEAN {{\fBVALUE1\fP, CoinEntry::State::CLEAN}}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP VALUE1_DIRTY {{\fBVALUE1\fP, CoinEntry::State::DIRTY}}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP VALUE1_DIRTY_FRESH {{\fBVALUE1\fP, CoinEntry::State::DIRTY_FRESH}}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP VALUE1_FRESH {{\fBVALUE1\fP, CoinEntry::State::FRESH}}\fR [constexpr]\fP"
+
+.SS "\fBCAmount\fP VALUE2 {200}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP VALUE2_CLEAN {{\fBVALUE2\fP, CoinEntry::State::CLEAN}}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP VALUE2_DIRTY {{\fBVALUE2\fP, CoinEntry::State::DIRTY}}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP VALUE2_DIRTY_FRESH {{\fBVALUE2\fP, CoinEntry::State::DIRTY_FRESH}}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP VALUE2_FRESH {{\fBVALUE2\fP, CoinEntry::State::FRESH}}\fR [constexpr]\fP"
+
+.SS "\fBCAmount\fP VALUE3 {300}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP VALUE3_DIRTY {{\fBVALUE3\fP, CoinEntry::State::DIRTY}}\fR [constexpr]\fP"
+
+.SS "\fBMaybeCoin\fP VALUE3_DIRTY_FRESH {{\fBVALUE3\fP, CoinEntry::State::DIRTY_FRESH}}\fR [constexpr]\fP"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

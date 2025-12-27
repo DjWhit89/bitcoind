@@ -1,0 +1,888 @@
+.TH "md_src_2secp256k1_2doc_2safegcd__implementation" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+md_src_2secp256k1_2doc_2safegcd__implementation \- The safegcd implementation in libsecp256k1 explained 
+.PP
+
+
+.PP
+This document explains the modular inverse and Jacobi symbol implementations in the \fRsrc/modinv*\&.h\fP files\&. It is based on the paper \fR"Fast constant-time gcd computation and modular inversion"\fP by Daniel J\&. Bernstein and Bo-Yin Yang\&. The references below are for the Date: 2019\&.04\&.13 version\&.
+
+.PP
+The actual implementation is in C of course, but for demonstration purposes Python3 is used here\&. Most implementation aspects and optimizations are explained, except those that depend on the specific number representation used in the C code\&.
+.SH "1\&. Computing the Greatest Common Divisor (GCD) using divsteps"
+.PP
+The algorithm from the paper (section 11), at a very high level, is this:
+
+.PP
+.PP
+.nf
+def gcd(f, g):
+    """Compute the GCD of an odd integer f and another integer g\&."""
+    assert f & 1  # require f to be odd
+    delta = 1     # additional state variable
+    while g != 0:
+        assert f & 1  # f will be odd in every iteration
+        if delta > 0 and g & 1:
+            delta, f, g = 1 \- delta, g, (g \- f) // 2
+        elif g & 1:
+            delta, f, g = 1 + delta, f, (g + f) // 2
+        else:
+            delta, f, g = 1 + delta, f, (g    ) // 2
+    return abs(f)
+.fi
+.PP
+
+.PP
+It computes the greatest common divisor of an odd integer \fIf\fP and any integer \fIg\fP\&. Its inner loop keeps rewriting the variables \fIf\fP and \fIg\fP alongside a state variable \fI\fP that starts at \fI1\fP, until \fIg=0\fP is reached\&. At that point, *|f|* gives the GCD\&. Each of the transitions in the loop is called a "division step" (referred to as divstep in what follows)\&.
+
+.PP
+For example, \fIgcd(21, 14)\fP would be computed as:
+.IP "\(bu" 2
+Start with \fI=1 f=21 g=14\fP
+.IP "\(bu" 2
+Take the third branch: \fI=2 f=21 g=7\fP
+.IP "\(bu" 2
+Take the first branch: \fI=-1 f=7 g=-7\fP
+.IP "\(bu" 2
+Take the second branch: \fI=0 f=7 g=0\fP
+.IP "\(bu" 2
+The answer *|f| = 7*\&.
+.PP
+
+.PP
+Why it works:
+.IP "\(bu" 2
+Divsteps can be decomposed into two steps (see paragraph 8\&.2 in the paper):
+.IP "  \(bu" 4
+(a) If \fIg\fP is odd, replace \fI(f,g)\fP with \fI(g,g-f)\fP or (f,g+f), resulting in an even \fIg\fP\&.
+.IP "  \(bu" 4
+(b) Replace \fI(f,g)\fP with \fI(f,g/2)\fP (where \fIg\fP is guaranteed to be even)\&.
+.PP
+
+.IP "\(bu" 2
+Neither of those two operations change the GCD:
+.IP "  \(bu" 4
+For (a), assume \fIgcd(f,g)=c\fP, then it must be the case that \fIf=ac\fP and \fIg=bc\fP for some integers \fIa\fP and \fIb\fP\&. As \fI(g,g-f)=(bc,(b-a)c)\fP and \fI(f,f+g)=(ac,(a+b)c)\fP, the result clearly still has common factor \fIc\fP\&. Reasoning in the other direction shows that no common factor can be added by doing so either\&.
+.IP "  \(bu" 4
+For (b), we know that \fIf\fP is odd, so \fIgcd(f,g)\fP clearly has no factor \fI2\fP, and we can remove it from \fIg\fP\&.
+.PP
+
+.IP "\(bu" 2
+The algorithm will eventually converge to \fIg=0\fP\&. This is proven in the paper (see theorem G\&.3)\&.
+.IP "\(bu" 2
+It follows that eventually we find a final value \fIf'\fP for which \fIgcd(f,g) = gcd(f',0)\fP\&. As the gcd of \fIf'\fP and \fI0\fP is *|f'|* by definition, that is our answer\&.
+.PP
+
+.PP
+Compared to more \fRtraditional GCD algorithms\fP, this one has the property of only ever looking at the low-order bits of the variables to decide the next steps, and being easy to make constant-time (in more low-level languages than Python)\&. The \fI\fP parameter is necessary to guide the algorithm towards shrinking the numbers' magnitudes without explicitly needing to look at high order bits\&.
+
+.PP
+Properties that will become important later:
+.IP "\(bu" 2
+Performing more divsteps than needed is not a problem, as \fIf\fP does not change anymore after \fIg=0\fP\&.
+.IP "\(bu" 2
+Only even numbers are divided by \fI2\fP\&. This means that when reasoning about it algebraically we do not need to worry about rounding\&.
+.IP "\(bu" 2
+At every point during the algorithm's execution the next \fIN\fP steps only depend on the bottom \fIN\fP bits of \fIf\fP and \fIg\fP, and on \fI\fP\&.
+.PP
+.SH "2\&. From GCDs to modular inverses"
+.PP
+We want an algorithm to compute the inverse \fIa\fP of \fIx\fP modulo \fIM\fP, i\&.e\&. the number a such that \fIax=1 mod M\fP\&. This inverse only exists if the GCD of \fIx\fP and \fIM\fP is \fI1\fP, but that is always the case if \fIM\fP is prime and \fI0 < x < M\fP\&. In what follows, assume that the modular inverse exists\&. It turns out this inverse can be computed as a side effect of computing the GCD by keeping track of how the internal variables can be written as linear combinations of the inputs at every step (see the \fRextended Euclidean algorithm\fP)\&. Since the GCD is \fI1\fP, such an algorithm will compute numbers \fIa\fP and \fIb\fP such that ax + bM = 1*\&. Taking that expression \fImod M\fP gives \fIax mod M = 1\fP, and we see that \fIa\fP is the modular inverse of \fIx mod M\fP\&.
+
+.PP
+A similar approach can be used to calculate modular inverses using the divsteps-based GCD algorithm shown above, if the modulus \fIM\fP is odd\&. To do so, compute \fIgcd(f=M,g=x)\fP, while keeping track of extra variables \fId\fP and \fIe\fP, for which at every step \fId = f/x (mod M)\fP and \fIe = g/x (mod M)\fP\&. \fIf/x\fP here means the number which multiplied with \fIx\fP gives \fIf mod M\fP\&. As \fIf\fP and \fIg\fP are initialized to \fIM\fP and \fIx\fP respectively, \fId\fP and \fIe\fP just start off being \fI0\fP (\fIM/x mod M = 0/x mod M = 0\fP) and \fI1\fP (\fIx/x mod M = 1\fP)\&.
+
+.PP
+.PP
+.nf
+def div2(M, x):
+    """Helper routine to compute x/2 mod M (where M is odd)\&."""
+    assert M & 1
+    if x & 1: # If x is odd, make it even by adding M\&.
+        x += M
+    # x must be even now, so a clean division by 2 is possible\&.
+    return x // 2
+
+def modinv(M, x):
+    """Compute the inverse of x mod M (given that it exists, and M is odd)\&."""
+    assert M & 1
+    delta, f, g, d, e = 1, M, x, 0, 1
+    while g != 0:
+        # Note that while division by two for f and g is only ever done on even inputs, this is
+        # not true for d and e, so we need the div2 helper function\&.
+        if delta > 0 and g & 1:
+            delta, f, g, d, e = 1 \- delta, g, (g \- f) // 2, e, div2(M, e \- d)
+        elif g & 1:
+            delta, f, g, d, e = 1 + delta, f, (g + f) // 2, d, div2(M, e + d)
+        else:
+            delta, f, g, d, e = 1 + delta, f, (g    ) // 2, d, div2(M, e    )
+        # Verify that the invariants d=f/x mod M, e=g/x mod M are maintained\&.
+        assert f % M == (d * x) % M
+        assert g % M == (e * x) % M
+    assert f == 1 or f == \-1  # |f| is the GCD, it must be 1
+    # Because of invariant d = f/x (mod M), 1/x = d/f (mod M)\&. As |f|=1, d/f = d*f\&.
+    return (d * f) % M
+.fi
+.PP
+
+.PP
+Also note that this approach to track \fId\fP and \fIe\fP throughout the computation to determine the inverse is different from the paper\&. There (see paragraph 12\&.1 in the paper) a transition matrix for the entire computation is determined (see section 3 below) and the inverse is computed from that\&. The approach here avoids the need for 2x2 matrix multiplications of various sizes, and appears to be faster at the level of optimization we're able to do in C\&.
+.SH "3\&. Batching multiple divsteps"
+.PP
+Every divstep can be expressed as a matrix multiplication, applying a transition matrix \fI(1/2 t)\fP to both vectors \fI[f, g]\fP and \fI[d, e]\fP (see paragraph 8\&.1 in the paper):
+
+.PP
+.PP
+.nf
+t = [ u,  v ]
+    [ q,  r ]
+
+[ out_f ] = (1/2 * t) * [ in_f ]
+[ out_g ] =             [ in_g ]
+
+[ out_d ] = (1/2 * t) * [ in_d ]  (mod M)
+[ out_e ]               [ in_e ]
+.fi
+.PP
+
+.PP
+where \fI(u, v, q, r)\fP is \fI(0, 2, -1, 1)\fP, \fI(2, 0, 1, 1)\fP, or \fI(2, 0, 0, 1)\fP, depending on which branch is taken\&. As above, the resulting \fIf\fP and \fIg\fP are always integers\&.
+
+.PP
+Performing multiple divsteps corresponds to a multiplication with the product of all the individual divsteps' transition matrices\&. As each transition matrix consists of integers divided by \fI2\fP, the product of these matrices will consist of integers divided by *2\*{N\*} * (see also theorem 9\&.2 in the paper)\&. These divisions are expensive when updating \fId\fP and \fIe\fP, so we delay them: we compute the integer coefficients of the combined transition matrix scaled by *2\*{N\*} *, and do one division by *2\*{N\*} * as a final step:
+
+.PP
+.PP
+.nf
+def divsteps_n_matrix(delta, f, g):
+    """Compute delta and transition matrix t after N divsteps (multiplied by 2^N)\&."""
+    u, v, q, r = 1, 0, 0, 1 # start with identity matrix
+    for _ in range(N):
+        if delta > 0 and g & 1:
+            delta, f, g, u, v, q, r = 1 \- delta, g, (g \- f) // 2, 2*q, 2*r, q\-u, r\-v
+        elif g & 1:
+            delta, f, g, u, v, q, r = 1 + delta, f, (g + f) // 2, 2*u, 2*v, q+u, r+v
+        else:
+            delta, f, g, u, v, q, r = 1 + delta, f, (g    ) // 2, 2*u, 2*v, q  , r
+    return delta, (u, v, q, r)
+.fi
+.PP
+
+.PP
+As the branches in the divsteps are completely determined by the bottom \fIN\fP bits of \fIf\fP and \fIg\fP, this function to compute the transition matrix only needs to see those bottom bits\&. Furthermore all intermediate results and outputs fit in \fI(N+1)\fP-bit numbers (unsigned for \fIf\fP and \fIg\fP; signed for \fIu\fP, \fIv\fP, \fIq\fP, and \fIr\fP) (see also paragraph 8\&.3 in the paper)\&. This means that an implementation using 64-bit integers could set \fIN=62\fP and compute the full transition matrix for 62 steps at once without any big integer arithmetic at all\&. This is the reason why this algorithm is efficient: it only needs to update the full-size \fIf\fP, \fIg\fP, \fId\fP, and \fIe\fP numbers once every \fIN\fP steps\&.
+
+.PP
+We still need functions to compute:
+
+.PP
+.PP
+.nf
+[ out_f ] = (1/2^N * [ u,  v ]) * [ in_f ]
+[ out_g ]   (        [ q,  r ])   [ in_g ]
+
+[ out_d ] = (1/2^N * [ u,  v ]) * [ in_d ]  (mod M)
+[ out_e ]   (        [ q,  r ])   [ in_e ]
+.fi
+.PP
+
+.PP
+Because the divsteps transformation only ever divides even numbers by two, the result of \fIt[f,g]\fP is always even\&. When \fIt\fP is a composition of \fIN\fP divsteps, it follows that the resulting \fIf\fP and \fIg\fP will be multiple of *2\*{N\*} *, and division by *2\*{N\*} * is simply shifting them down:
+
+.PP
+.PP
+.nf
+def update_fg(f, g, t):
+    """Multiply matrix t/2^N with [f, g]\&."""
+    u, v, q, r = t
+    cf, cg = u*f + v*g, q*f + r*g
+    # (t / 2^N) should cleanly apply to [f,g] so the result of t*[f,g] should have N zero
+    # bottom bits\&.
+    assert cf % 2**N == 0
+    assert cg % 2**N == 0
+    return cf >> N, cg >> N
+.fi
+.PP
+
+.PP
+The same is not true for \fId\fP and \fIe\fP, and we need an equivalent of the \fRdiv2\fP function for division by *2\*{N\*}  mod M*\&. This is easy if we have precomputed *1/M mod 2\*{N\*} * (which always exists for odd \fIM\fP):
+
+.PP
+.PP
+.nf
+def div2n(M, Mi, x):
+    """Compute x/2^N mod M, given Mi = 1/M mod 2^N\&."""
+    assert (M * Mi) % 2**N == 1
+    # Find a factor m such that m*M has the same bottom N bits as x\&. We want:
+    #     (m * M) mod 2^N = x mod 2^N
+    # <=> m mod 2^N = (x / M) mod 2^N
+    # <=> m mod 2^N = (x * Mi) mod 2^N
+    m = (Mi * x) % 2**N
+    # Subtract that multiple from x, cancelling its bottom N bits\&.
+    x \-= m * M
+    # Now a clean division by 2^N is possible\&.
+    assert x % 2**N == 0
+    return (x >> N) % M
+
+def update_de(d, e, t, M, Mi):
+    """Multiply matrix t/2^N with [d, e], modulo M\&."""
+    u, v, q, r = t
+    cd, ce = u*d + v*e, q*d + r*e
+    return div2n(M, Mi, cd), div2n(M, Mi, ce)
+.fi
+.PP
+
+.PP
+With all of those, we can write a version of \fRmodinv\fP that performs \fIN\fP divsteps at once:
+
+.PP
+.PP
+.nf
+def modinv(M, Mi, x):
+    """Compute the modular inverse of x mod M, given Mi=1/M mod 2^N\&."""
+    assert M & 1
+    delta, f, g, d, e = 1, M, x, 0, 1
+    while g != 0:
+        # Compute the delta and transition matrix t for the next N divsteps (this only needs
+        # (N+1)\-bit signed integer arithmetic)\&.
+        delta, t = divsteps_n_matrix(delta, f % 2**N, g % 2**N)
+        # Apply the transition matrix t to [f, g]:
+        f, g = update_fg(f, g, t)
+        # Apply the transition matrix t to [d, e]:
+        d, e = update_de(d, e, t, M, Mi)
+    return (d * f) % M
+.fi
+.PP
+
+.PP
+This means that in practice we'll always perform a multiple of \fIN\fP divsteps\&. This is not a problem because once \fIg=0\fP, further divsteps do not affect \fIf\fP, \fIg\fP, \fId\fP, or \fIe\fP anymore (only \fI\fP keeps increasing)\&. For variable time code such excess iterations will be mostly optimized away in later sections\&.
+.SH "4\&. Avoiding modulus operations"
+.PP
+So far, there are two places where we compute a remainder of big numbers modulo \fIM\fP: at the end of \fRdiv2n\fP in every \fRupdate_de\fP, and at the very end of \fRmodinv\fP after potentially negating \fId\fP due to the sign of \fIf\fP\&. These are relatively expensive operations when done generically\&.
+
+.PP
+To deal with the modulus operation in \fRdiv2n\fP, we simply stop requiring \fId\fP and \fIe\fP to be in range \fI[0,M)\fP all the time\&. Let's start by inlining \fRdiv2n\fP into \fRupdate_de\fP, and dropping the modulus operation at the end:
+
+.PP
+.PP
+.nf
+def update_de(d, e, t, M, Mi):
+    """Multiply matrix t/2^N with [d, e] mod M, given Mi=1/M mod 2^N\&."""
+    u, v, q, r = t
+    cd, ce = u*d + v*e, q*d + r*e
+    # Cancel out bottom N bits of cd and ce\&.
+    md = \-((Mi * cd) % 2**N)
+    me = \-((Mi * ce) % 2**N)
+    cd += md * M
+    ce += me * M
+    # And cleanly divide by 2**N\&.
+    return cd >> N, ce >> N
+.fi
+.PP
+
+.PP
+Let's look at bounds on the ranges of these numbers\&. It can be shown that *|u|+|v|* and *|q|+|r|* never exceed *2\*{N\*} * (see paragraph 8\&.3 in the paper), and thus a multiplication with \fIt\fP will have outputs whose absolute values are at most *2\*{N\*} * times the maximum absolute input value\&. In case the inputs \fId\fP and \fIe\fP are in \fI(-M,M)\fP, which is certainly true for the initial values \fId=0\fP and \fIe=1\fP assuming \fIM > 1\fP, the multiplication results in numbers in range *(-2\*{N\*} M,2\*{N\*} M)*\&. Subtracting less than *2\*{N\*} * times \fIM\fP to cancel out \fIN\fP bits brings that up to *(-2\*{N+1\*} M,2\*{N\*} M)*, and dividing by *2\*{N\*} * at the end takes it to \fI(-2M,M)\fP\&. Another application of \fRupdate_de\fP would take that to \fI(-3M,2M)\fP, and so forth\&. This progressive expansion of the variables' ranges can be counteracted by incrementing \fId\fP and \fIe\fP by \fIM\fP whenever they're negative:
+
+.PP
+.PP
+.nf
+\&.\&.\&.
+if d < 0:
+    d += M
+if e < 0:
+    e += M
+cd, ce = u*d + v*e, q*d + r*e
+# Cancel out bottom N bits of cd and ce\&.
+\&.\&.\&.
+.fi
+.PP
+
+.PP
+With inputs in \fI(-2M,M)\fP, they will first be shifted into range \fI(-M,M)\fP, which means that the output will again be in \fI(-2M,M)\fP, and this remains the case regardless of how many \fRupdate_de\fP invocations there are\&. In what follows, we will try to make this more efficient\&.
+
+.PP
+Note that increasing \fId\fP by \fIM\fP is equal to incrementing \fIcd\fP by \fIuM\fP and \fIce\fP by \fIqM\fP\&. Similarly, increasing \fIe\fP by \fIM\fP is equal to incrementing \fIcd\fP by \fIvM\fP and \fIce\fP by \fIrM\fP\&. So we could instead write:
+
+.PP
+.PP
+.nf
+\&.\&.\&.
+cd, ce = u*d + v*e, q*d + r*e
+# Perform the equivalent of incrementing d, e by M when they're negative\&.
+if d < 0:
+    cd += u*M
+    ce += q*M
+if e < 0:
+    cd += v*M
+    ce += r*M
+# Cancel out bottom N bits of cd and ce\&.
+md = \-((Mi * cd) % 2**N)
+me = \-((Mi * ce) % 2**N)
+cd += md * M
+ce += me * M
+\&.\&.\&.
+.fi
+.PP
+
+.PP
+Now note that we have two steps of corrections to \fIcd\fP and \fIce\fP that add multiples of \fIM\fP: this increment, and the decrement that cancels out bottom bits\&. The second one depends on the first one, but they can still be efficiently combined by only computing the bottom bits of \fIcd\fP and \fIce\fP at first, and using that to compute the final \fImd\fP, \fIme\fP values:
+
+.PP
+.PP
+.nf
+def update_de(d, e, t, M, Mi):
+    """Multiply matrix t/2^N with [d, e], modulo M\&."""
+    u, v, q, r = t
+    md, me = 0, 0
+    # Compute what multiples of M to add to cd and ce\&.
+    if d < 0:
+        md += u
+        me += q
+    if e < 0:
+        md += v
+        me += r
+    # Compute bottom N bits of t*[d,e] + M*[md,me]\&.
+    cd, ce = (u*d + v*e + md*M) % 2**N, (q*d + r*e + me*M) % 2**N
+    # Correct md and me such that the bottom N bits of t*[d,e] + M*[md,me] are zero\&.
+    md \-= (Mi * cd) % 2**N
+    me \-= (Mi * ce) % 2**N
+    # Do the full computation\&.
+    cd, ce = u*d + v*e + md*M, q*d + r*e + me*M
+    # And cleanly divide by 2**N\&.
+    return cd >> N, ce >> N
+.fi
+.PP
+
+.PP
+One last optimization: we can avoid the \fImdM\fP and \fImeM\fP multiplications in the bottom bits of \fIcd\fP and \fIce\fP by moving them to the \fImd\fP and \fIme\fP correction:
+
+.PP
+.PP
+.nf
+\&.\&.\&.
+# Compute bottom N bits of t*[d,e]\&.
+cd, ce = (u*d + v*e) % 2**N, (q*d + r*e) % 2**N
+# Correct md and me such that the bottom N bits of t*[d,e]+M*[md,me] are zero\&.
+# Note that this is not the same as {md = (\-Mi * cd) % 2**N} etc\&. That would also result in N
+# zero bottom bits, but isn't guaranteed to be a reduction of [0,2^N) compared to the
+# previous md and me values, and thus would violate our bounds analysis\&.
+md \-= (Mi*cd + md) % 2**N
+me \-= (Mi*ce + me) % 2**N
+\&.\&.\&.
+.fi
+.PP
+
+.PP
+The resulting function takes \fId\fP and \fIe\fP in range \fI(-2M,M)\fP as inputs, and outputs values in the same range\&. That also means that the \fId\fP value at the end of \fRmodinv\fP will be in that range, while we want a result in \fI[0,M)\fP\&. To do that, we need a normalization function\&. It's easy to integrate the conditional negation of \fId\fP (based on the sign of \fIf\fP) into it as well:
+
+.PP
+.PP
+.nf
+def normalize(sign, v, M):
+    """Compute sign*v mod M, where v is in range (\-2*M,M); output in [0,M)\&."""
+    assert sign == 1 or sign == \-1
+    # v in (\-2*M,M)
+    if v < 0:
+        v += M
+    # v in (\-M,M)\&. Now multiply v with sign (which can only be 1 or \-1)\&.
+    if sign == \-1:
+        v = \-v
+    # v in (\-M,M)
+    if v < 0:
+        v += M
+    # v in [0,M)
+    return v
+.fi
+.PP
+
+.PP
+And calling it in \fRmodinv\fP is simply:
+
+.PP
+.PP
+.nf
+\&.\&.\&.
+return normalize(f, d, M)
+.fi
+.PP
+.SH "5\&. Constant-time operation"
+.PP
+The primary selling point of the algorithm is fast constant-time operation\&. What code flow still depends on the input data so far?
+
+.PP
+.IP "\(bu" 2
+the number of iterations of the while \fIg  0\fP loop in \fRmodinv\fP
+.IP "\(bu" 2
+the branches inside \fRdivsteps_n_matrix\fP
+.IP "\(bu" 2
+the sign checks in \fRupdate_de\fP
+.IP "\(bu" 2
+the sign checks in \fRnormalize\fP
+.PP
+
+.PP
+To make the while loop in \fRmodinv\fP constant time it can be replaced with a constant number of iterations\&. The paper proves (Theorem 11\&.2) that \fI741\fP divsteps are sufficient for any \fI256\fP-bit inputs, and \fRsafegcd-bounds\fP shows that the slightly better bound \fI724\fP is sufficient even\&. Given that every loop iteration performs \fIN\fP divsteps, it will run a total of \fI724/N\fP times\&.
+
+.PP
+To deal with the branches in \fRdivsteps_n_matrix\fP we will replace them with constant-time bitwise operations (and hope the C compiler isn't smart enough to turn them back into branches; see \fR\fBctime_tests\&.c\fP\fP for automated tests that this isn't the case)\&. To do so, observe that a divstep can be written instead as (compare to the inner loop of \fRgcd\fP in section 1)\&.
+
+.PP
+.PP
+.nf
+x = \-f if delta > 0 else f         # set x equal to (input) \-f or f
+if g & 1:
+    g += x                         # set g to (input) g\-f or g+f
+    if delta > 0:
+        delta = \-delta
+        f += g                     # set f to (input) g (note that g was set to g\-f before)
+delta += 1
+g >>= 1
+.fi
+.PP
+
+.PP
+To convert the above to bitwise operations, we rely on a trick to negate conditionally: per the definition of negative numbers in two's complement, (\fI-v == ~v + 1\fP) holds for every number \fIv\fP\&. As \fI-1\fP in two's complement is all \fI1\fP bits, bitflipping can be expressed as xor with \fI-1\fP\&. It follows that \fI-v == (v ^ -1) - (-1)\fP\&. Thus, if we have a variable \fIc\fP that takes on values \fI0\fP or \fI-1\fP, then \fI(v ^ c) - c\fP is \fIv\fP if \fIc=0\fP and \fI-v\fP if \fIc=-1\fP\&.
+
+.PP
+Using this we can write:
+
+.PP
+.PP
+.nf
+x = \-f if delta > 0 else f
+.fi
+.PP
+
+.PP
+in constant-time form as:
+
+.PP
+.PP
+.nf
+c1 = (\-delta) >> 63
+# Conditionally negate f based on c1:
+x = (f ^ c1) \- c1
+.fi
+.PP
+
+.PP
+To use that trick, we need a helper mask variable \fIc1\fP that resolves the condition \fI>0\fP to \fI-1\fP (if true) or \fI0\fP (if false)\&. We compute \fIc1\fP using right shifting, which is equivalent to dividing by the specified power of \fI2\fP and rounding down (in Python, and also in C under the assumption of a typical two's complement system; see \fRassumptions\&.h\fP for tests that this is the case)\&. Right shifting by \fI63\fP thus maps all numbers in range *[-2\*{63\*} ,0)* to \fI-1\fP, and numbers in range *[0,2\*{63\*} )* to \fI0\fP\&.
+
+.PP
+Using the facts that \fIx&0=0\fP and \fIx&(-1)=x\fP (on two's complement systems again), we can write:
+
+.PP
+.PP
+.nf
+if g & 1:
+    g += x
+.fi
+.PP
+
+.PP
+as:
+
+.PP
+.PP
+.nf
+# Compute c2=0 if g is even and c2=\-1 if g is odd\&.
+c2 = \-(g & 1)
+# This masks out x if g is even, and leaves x be if g is odd\&.
+g += x & c2
+.fi
+.PP
+
+.PP
+Using the conditional negation trick again we can write:
+
+.PP
+.PP
+.nf
+if g & 1:
+    if delta > 0:
+        delta = \-delta
+.fi
+.PP
+
+.PP
+as:
+
+.PP
+.PP
+.nf
+# Compute c3=\-1 if g is odd and delta>0, and 0 otherwise\&.
+c3 = c1 & c2
+# Conditionally negate delta based on c3:
+delta = (delta ^ c3) \- c3
+.fi
+.PP
+
+.PP
+Finally:
+
+.PP
+.PP
+.nf
+if g & 1:
+    if delta > 0:
+        f += g
+.fi
+.PP
+
+.PP
+becomes:
+
+.PP
+.PP
+.nf
+f += g & c3
+.fi
+.PP
+
+.PP
+It turns out that this can be implemented more efficiently by applying the substitution \fI=-\fP\&. In this representation, negating \fI\fP corresponds to negating \fI\fP, and incrementing \fI\fP corresponds to decrementing \fI\fP\&. This allows us to remove the negation in the \fIc1\fP computation:
+
+.PP
+.PP
+.nf
+# Compute a mask c1 for eta < 0, and compute the conditional negation x of f:
+c1 = eta >> 63
+x = (f ^ c1) \- c1
+# Compute a mask c2 for odd g, and conditionally add x to g:
+c2 = \-(g & 1)
+g += x & c2
+# Compute a mask c for (eta < 0) and odd (input) g, and use it to conditionally negate eta,
+# and add g to f:
+c3 = c1 & c2
+eta = (eta ^ c3) \- c3
+f += g & c3
+# Incrementing delta corresponds to decrementing eta\&.
+eta \-= 1
+g >>= 1
+.fi
+.PP
+
+.PP
+A variant of divsteps with better worst-case performance can be used instead: starting \fI\fP at \fI1/2\fP instead of \fI1\fP\&. This reduces the worst case number of iterations to \fI590\fP for \fI256\fP-bit inputs (which can be shown using convex hull analysis)\&. In this case, the substitution \fI=-(+1/2)\fP is used instead to keep the variable integral\&. Incrementing \fI\fP by \fI1\fP still translates to decrementing \fI\fP by \fI1\fP, but negating \fI\fP now corresponds to going from \fI\fP to \fI-(+1)\fP, or *~\fI\&. Doing that conditionally based on *c3\fP is simply:
+
+.PP
+.PP
+.nf
+\&.\&.\&.
+c3 = c1 & c2
+zeta ^= c3
+\&.\&.\&.
+.fi
+.PP
+
+.PP
+By replacing the loop in \fRdivsteps_n_matrix\fP with a variant of the divstep code above (extended to also apply all \fIf\fP operations to \fIu\fP, \fIv\fP and all \fIg\fP operations to \fIq\fP, \fIr\fP), a constant-time version of \fRdivsteps_n_matrix\fP is obtained\&. The full code will be in section 7\&.
+
+.PP
+These bit fiddling tricks can also be used to make the conditional negations and additions in \fRupdate_de\fP and \fRnormalize\fP constant-time\&.
+.SH "6\&. Variable-time optimizations"
+.PP
+In section 5, we modified the \fRdivsteps_n_matrix\fP function (and a few others) to be constant time\&. Constant time operations are only necessary when computing modular inverses of secret data\&. In other cases, it slows down calculations unnecessarily\&. In this section, we will construct a faster non-constant time \fRdivsteps_n_matrix\fP function\&.
+
+.PP
+To do so, first consider yet another way of writing the inner loop of divstep operations in \fRgcd\fP from section 1\&. This decomposition is also explained in the paper in section 8\&.2\&. We use the original version with initial \fI=1\fP and \fI=-\fP here\&.
+
+.PP
+.PP
+.nf
+for _ in range(N):
+    if g & 1 and eta < 0:
+        eta, f, g = \-eta, g, \-f
+    if g & 1:
+        g += f
+    eta \-= 1
+    g >>= 1
+.fi
+.PP
+
+.PP
+Whenever \fIg\fP is even, the loop only shifts \fIg\fP down and decreases \fI\fP\&. When \fIg\fP ends in multiple zero bits, these iterations can be consolidated into one step\&. This requires counting the bottom zero bits efficiently, which is possible on most platforms; it is abstracted here as the function \fRcount_trailing_zeros\fP\&.
+
+.PP
+.PP
+.nf
+def count_trailing_zeros(v):
+    """
+    When v is zero, consider all N zero bits as "trailing"\&.
+    For a non\-zero value v, find z such that v=(d<<z) for some odd d\&.
+    """
+    if v == 0:
+        return N
+    else:
+        return (v & \-v)\&.bit_length() \- 1
+
+i = N # divsteps left to do
+while True:
+    # Get rid of all bottom zeros at once\&. In the first iteration, g may be odd and the following
+    # lines have no effect (until "if eta < 0")\&.
+    zeros = min(i, count_trailing_zeros(g))
+    eta \-= zeros
+    g >>= zeros
+    i \-= zeros
+    if i == 0:
+        break
+    # We know g is odd now
+    if eta < 0:
+        eta, f, g = \-eta, g, \-f
+    g += f
+    # g is even now, and the eta decrement and g shift will happen in the next loop\&.
+.fi
+.PP
+
+.PP
+We can now remove multiple bottom \fI0\fP bits from \fIg\fP at once, but still need a full iteration whenever there is a bottom \fI1\fP bit\&. In what follows, we will get rid of multiple \fI1\fP bits simultaneously as well\&.
+
+.PP
+Observe that as long as \fI &geq; 0\fP, the loop does not modify \fIf\fP\&. Instead, it cancels out bottom bits of \fIg\fP and shifts them out, and decreases \fI\fP and \fIi\fP accordingly - interrupting only when \fI\fP becomes negative, or when \fIi\fP reaches \fI0\fP\&. Combined, this is equivalent to adding a multiple of \fIf\fP to \fIg\fP to cancel out multiple bottom bits, and then shifting them out\&.
+
+.PP
+It is easy to find what that multiple is: we want a number \fIw\fP such that \fIg+wf\fP has a few bottom zero bits\&. If that number of bits is \fIL\fP, we want *g+wf mod 2\*{L\*}  = 0*, or *w = -g/f mod 2\*{L\*} \fI\&. Since *f\fP is odd, such a \fIw\fP exists for any \fIL\fP\&. \fIL\fP cannot be more than \fIi\fP steps (as we'd finish the loop before doing more) or more than \fI+1\fP steps (as we'd run \fReta, f, g = -eta, g, -f\fP at that point), but apart from that, we're only limited by the complexity of computing \fIw\fP\&.
+
+.PP
+This code demonstrates how to cancel up to 4 bits per step:
+
+.PP
+.PP
+.nf
+NEGINV16 = [15, 5, 3, 9, 7, 13, 11, 1] # NEGINV16[n//2] = (\-n)^\-1 mod 16, for odd n
+i = N
+while True:
+    zeros = min(i, count_trailing_zeros(g))
+    eta \-= zeros
+    g >>= zeros
+    i \-= zeros
+    if i == 0:
+        break
+    # We know g is odd now
+    if eta < 0:
+        eta, f, g = \-eta, g, \-f
+    # Compute limit on number of bits to cancel
+    limit = min(min(eta + 1, i), 4)
+    # Compute w = \-g/f mod 2**limit, using the table value for \-1/f mod 2**4\&. Note that f is
+    # always odd, so its inverse modulo a power of two always exists\&.
+    w = (g * NEGINV16[(f & 15) // 2]) % (2**limit)
+    # As w = \-g/f mod (2**limit), g+w*f mod 2**limit = 0 mod 2**limit\&.
+    g += w * f
+    assert g % (2**limit) == 0
+    # The next iteration will now shift out at least limit bottom zero bits from g\&.
+.fi
+.PP
+
+.PP
+By using a bigger table more bits can be cancelled at once\&. The table can also be implemented as a formula\&. Several formulas are known for computing modular inverses modulo powers of two; some can be found in Hacker's Delight second edition by Henry S\&. Warren, Jr\&. pages 245-247\&. Here we need the negated modular inverse, which is a simple transformation of those:
+
+.PP
+.IP "\(bu" 2
+Instead of a 3-bit table:
+.IP "  \(bu" 4
+\fI-f\fP or \fIf ^ 6\fP
+.PP
+
+.IP "\(bu" 2
+Instead of a 4-bit table:
+.IP "  \(bu" 4
+\fI1 - f(f + 1)\fP
+.IP "  \(bu" 4
+\fI-(f + (((f + 1) & 4) << 1))\fP
+.PP
+
+.IP "\(bu" 2
+For larger tables the following technique can be used: if *w=-1/f mod 2\*{L\*} \fI, then *w(wf+2)\fP is *-1/f mod 2\*{2L\*} *\&. This allows extending the previous formulas (or tables)\&. In particular we have this 6-bit function (based on the 3-bit function above):
+.IP "  \(bu" 4
+*f(f\*{2\*}  - 2)*
+.PP
+
+.PP
+
+.PP
+This loop, again extended to also handle \fIu\fP, \fIv\fP, \fIq\fP, and \fIr\fP alongside \fIf\fP and \fIg\fP, placed in \fRdivsteps_n_matrix\fP, gives a significantly faster, but non-constant time version\&.
+.SH "7\&. Final Python version"
+.PP
+All together we need the following functions:
+
+.PP
+.IP "\(bu" 2
+A way to compute the transition matrix in constant time, using the \fRdivsteps_n_matrix\fP function from section 2, but with its loop replaced by a variant of the constant-time divstep from section 5, extended to handle \fIu\fP, \fIv\fP, \fIq\fP, \fIr\fP:
+.PP
+
+.PP
+.PP
+.nf
+def divsteps_n_matrix(zeta, f, g):
+    """Compute zeta and transition matrix t after N divsteps (multiplied by 2^N)\&."""
+    u, v, q, r = 1, 0, 0, 1 # start with identity matrix
+    for _ in range(N):
+        c1 = zeta >> 63
+        # Compute x, y, z as conditionally\-negated versions of f, u, v\&.
+        x, y, z = (f ^ c1) \- c1, (u ^ c1) \- c1, (v ^ c1) \- c1
+        c2 = \-(g & 1)
+        # Conditionally add x, y, z to g, q, r\&.
+        g, q, r = g + (x & c2), q + (y & c2), r + (z & c2)
+        c1 &= c2                     # reusing c1 here for the earlier c3 variable
+        zeta = (zeta ^ c1) \- 1       # inlining the unconditional zeta decrement here
+        # Conditionally add g, q, r to f, u, v\&.
+        f, u, v = f + (g & c1), u + (q & c1), v + (r & c1)
+        # When shifting g down, don't shift q, r, as we construct a transition matrix multiplied
+        # by 2^N\&. Instead, shift f's coefficients u and v up\&.
+        g, u, v = g >> 1, u << 1, v << 1
+    return zeta, (u, v, q, r)
+.fi
+.PP
+
+.PP
+.IP "\(bu" 2
+The functions to update \fIf\fP and \fIg\fP, and \fId\fP and \fIe\fP, from section 2 and section 4, with the constant-time changes to \fRupdate_de\fP from section 5:
+.PP
+
+.PP
+.PP
+.nf
+def update_fg(f, g, t):
+    """Multiply matrix t/2^N with [f, g]\&."""
+    u, v, q, r = t
+    cf, cg = u*f + v*g, q*f + r*g
+    return cf >> N, cg >> N
+
+def update_de(d, e, t, M, Mi):
+    """Multiply matrix t/2^N with [d, e], modulo M\&."""
+    u, v, q, r = t
+    d_sign, e_sign = d >> 257, e >> 257
+    md, me = (u & d_sign) + (v & e_sign), (q & d_sign) + (r & e_sign)
+    cd, ce = (u*d + v*e) % 2**N, (q*d + r*e) % 2**N
+    md \-= (Mi*cd + md) % 2**N
+    me \-= (Mi*ce + me) % 2**N
+    cd, ce = u*d + v*e + M*md, q*d + r*e + M*me
+    return cd >> N, ce >> N
+.fi
+.PP
+
+.PP
+.IP "\(bu" 2
+The \fRnormalize\fP function from section 4, made constant time as well:
+.PP
+
+.PP
+.PP
+.nf
+def normalize(sign, v, M):
+    """Compute sign*v mod M, where v in (\-2*M,M); output in [0,M)\&."""
+    v_sign = v >> 257
+    # Conditionally add M to v\&.
+    v += M & v_sign
+    c = (sign \- 1) >> 1
+    # Conditionally negate v\&.
+    v = (v ^ c) \- c
+    v_sign = v >> 257
+    # Conditionally add M to v again\&.
+    v += M & v_sign
+    return v
+.fi
+.PP
+
+.PP
+.IP "\(bu" 2
+And finally the \fRmodinv\fP function too, adapted to use \fI\fP instead of \fI\fP, and using the fixed iteration count from section 5:
+.PP
+
+.PP
+.PP
+.nf
+def modinv(M, Mi, x):
+    """Compute the modular inverse of x mod M, given Mi=1/M mod 2^N\&."""
+    zeta, f, g, d, e = \-1, M, x, 0, 1
+    for _ in range((590 + N \- 1) // N):
+        zeta, t = divsteps_n_matrix(zeta, f % 2**N, g % 2**N)
+        f, g = update_fg(f, g, t)
+        d, e = update_de(d, e, t, M, Mi)
+    return normalize(f, d, M)
+.fi
+.PP
+
+.PP
+.IP "\(bu" 2
+To get a variable time version, replace the \fRdivsteps_n_matrix\fP function with one that uses the divsteps loop from section 5, and a \fRmodinv\fP version that calls it without the fixed iteration count:
+.PP
+
+.PP
+.PP
+.nf
+NEGINV16 = [15, 5, 3, 9, 7, 13, 11, 1] # NEGINV16[n//2] = (\-n)^\-1 mod 16, for odd n
+def divsteps_n_matrix_var(eta, f, g):
+    """Compute eta and transition matrix t after N divsteps (multiplied by 2^N)\&."""
+    u, v, q, r = 1, 0, 0, 1
+    i = N
+    while True:
+        zeros = min(i, count_trailing_zeros(g))
+        eta, i = eta \- zeros, i \- zeros
+        g, u, v = g >> zeros, u << zeros, v << zeros
+        if i == 0:
+            break
+        if eta < 0:
+            eta, f, u, v, g, q, r = \-eta, g, q, r, \-f, \-u, \-v
+        limit = min(min(eta + 1, i), 4)
+        w = (g * NEGINV16[(f & 15) // 2]) % (2**limit)
+        g, q, r = g + w*f, q + w*u, r + w*v
+    return eta, (u, v, q, r)
+
+def modinv_var(M, Mi, x):
+    """Compute the modular inverse of x mod M, given Mi = 1/M mod 2^N\&."""
+    eta, f, g, d, e = \-1, M, x, 0, 1
+    while g != 0:
+        eta, t = divsteps_n_matrix_var(eta, f % 2**N, g % 2**N)
+        f, g = update_fg(f, g, t)
+        d, e = update_de(d, e, t, M, Mi)
+    return normalize(f, d, Mi)
+.fi
+.PP
+.SH "8\&. From GCDs to Jacobi symbol"
+.PP
+We can also use a similar approach to calculate Jacobi symbol \fI(x | M)\fP by keeping track of an extra variable \fIj\fP, for which at every step \fI(x | M) = j (g | f)\fP\&. As we update \fIf\fP and \fIg\fP, we make corresponding updates to \fIj\fP using \fRproperties of the Jacobi symbol\fP:
+.IP "\(bu" 2
+\fI((g/2) | f)\fP is either \fI(g | f)\fP or \fI-(g | f)\fP, depending on the value of \fIf mod 8\fP (negating if it's \fI3\fP or \fI5\fP)\&.
+.IP "\(bu" 2
+\fI(f | g)\fP is either \fI(g | f)\fP or \fI-(g | f)\fP, depending on \fIf mod 4\fP and \fIg mod 4\fP (negating if both are \fI3\fP)\&.
+.PP
+
+.PP
+These updates depend only on the values of \fIf\fP and \fIg\fP modulo \fI4\fP or \fI8\fP, and can thus be applied very quickly, as long as we keep track of a few additional bits of \fIf\fP and \fIg\fP\&. Overall, this calculation is slightly simpler than the one for the modular inverse because we no longer need to keep track of \fId\fP and \fIe\fP\&.
+
+.PP
+However, one difficulty of this approach is that the Jacobi symbol \fI(a | n)\fP is only defined for positive odd integers \fIn\fP, whereas in the original safegcd algorithm, \fIf, g\fP can take negative values\&. We resolve this by using the following modified steps:
+
+.PP
+.PP
+.nf
+# Before
+if delta > 0 and g & 1:
+    delta, f, g = 1 \- delta, g, (g \- f) // 2
+
+# After
+if delta > 0 and g & 1:
+    delta, f, g = 1 \- delta, g, (g + f) // 2
+.fi
+.PP
+
+.PP
+The algorithm is still correct, since the changed divstep, called a "posdivstep" (see section 8\&.4 and E\&.5 in the paper) preserves \fIgcd(f, g)\fP\&. However, there's no proof that the modified algorithm will converge\&. The justification for posdivsteps is completely empirical: in practice, it appears that the vast majority of nonzero inputs converge to *f=g=gcd(f\*<0\*> , g\*<0\*> )* in a number of steps proportional to their logarithm\&.
+
+.PP
+Note that:
+.IP "\(bu" 2
+We require inputs to satisfy \fIgcd(x, M) = 1\fP, as otherwise \fIf=1\fP is not reached\&.
+.IP "\(bu" 2
+We require inputs \fIx &neq; 0\fP, because applying posdivstep with \fIg=0\fP has no effect\&.
+.IP "\(bu" 2
+We need to update the termination condition from \fIg=0\fP to \fIf=1\fP\&.
+.PP
+
+.PP
+We account for the possibility of nonconvergence by only performing a bounded number of posdivsteps, and then falling back to square-root based Jacobi calculation if a solution has not yet been found\&.
+
+.PP
+The optimizations in sections 3-7 above are described in the context of the original divsteps, but in the C implementation we also adapt most of them (not including "avoiding modulus operations", since it's not necessary to track \fId, e\fP, and "constant-time operation", since we never calculate Jacobi symbols for secret data) to the posdivsteps version\&. 

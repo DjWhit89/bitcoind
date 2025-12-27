@@ -1,0 +1,415 @@
+\doxysection{sketch\+\_\+impl.\+h}
+\label{sketch__impl_8h_source}\index{src/minisketch/src/sketch\_impl.h@{src/minisketch/src/sketch\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/**********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2018\ Pieter\ Wuille,\ Greg\ Maxwell,\ Gleb\ Naumenko\ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ LICENSE\ or\ http://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ **********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ \_MINISKETCH\_SKETCH\_IMPL\_H\_}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ \_MINISKETCH\_SKETCH\_IMPL\_H\_}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <random>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}sketch.h"{}}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}int\_utils.h"{}}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00017\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00018\ \textcolor{keywordtype}{void}\ PolyMod(\textcolor{keyword}{const}\ std::vector<typename\ F::Elem>\&\ mod,\ std::vector<typename\ F::Elem>\&\ val,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ modsize\ =\ mod.size();}
+\DoxyCodeLine{00020\ \ \ \ \ CHECK\_SAFE(modsize\ >\ 0\ \&\&\ mod.back()\ ==\ 1);}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keywordflow}{if}\ (val.size()\ <\ modsize)\ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00022\ \ \ \ \ CHECK\_SAFE(val.back()\ !=\ 0);}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordflow}{while}\ (val.size()\ >=\ modsize)\ \{}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ term\ =\ val.back();}
+\DoxyCodeLine{00025\ \ \ \ \ \ \ \ \ val.pop\_back();}
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (term\ !=\ 0)\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{typename}\ F::Multiplier\ mul(field,\ term);}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ x\ =\ 0;\ x\ <\ mod.size()\ -\/\ 1;\ ++x)\ \{}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ val[val.size()\ -\/\ modsize\ +\ 1\ +\ x]\ \string^=\ mul(mod[x]);}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00032\ \ \ \ \ \}}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keywordflow}{while}\ (val.size()\ >\ 0\ \&\&\ val.back()\ ==\ 0)\ val.pop\_back();}
+\DoxyCodeLine{00034\ \}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00037\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00038\ \textcolor{keywordtype}{void}\ DivMod(\textcolor{keyword}{const}\ std::vector<typename\ F::Elem>\&\ mod,\ std::vector<typename\ F::Elem>\&\ val,\ std::vector<typename\ F::Elem>\&\ div,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ modsize\ =\ mod.size();}
+\DoxyCodeLine{00040\ \ \ \ \ CHECK\_SAFE(mod.size()\ >\ 0\ \&\&\ mod.back()\ ==\ 1);}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordflow}{if}\ (val.size()\ <\ mod.size())\ \{}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ div.clear();}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00044\ \ \ \ \ \}}
+\DoxyCodeLine{00045\ \ \ \ \ CHECK\_SAFE(val.back()\ !=\ 0);}
+\DoxyCodeLine{00046\ \ \ \ \ div.resize(val.size()\ -\/\ mod.size()\ +\ 1);}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordflow}{while}\ (val.size()\ >=\ modsize)\ \{}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ term\ =\ val.back();}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ div[val.size()\ -\/\ modsize]\ =\ term;}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ val.pop\_back();}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (term\ !=\ 0)\ \{}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{typename}\ F::Multiplier\ mul(field,\ term);}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ x\ =\ 0;\ x\ <\ mod.size()\ -\/\ 1;\ ++x)\ \{}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ val[val.size()\ -\/\ modsize\ +\ 1\ +\ x]\ \string^=\ mul(mod[x]);}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00057\ \ \ \ \ \}}
+\DoxyCodeLine{00058\ \}}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00061\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00062\ \textcolor{keyword}{typename}\ F::Elem\ MakeMonic(std::vector<typename\ F::Elem>\&\ a,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00063\ \ \ \ \ CHECK\_SAFE(a.back()\ !=\ 0);}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordflow}{if}\ (a.back()\ ==\ 1)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keyword}{auto}\ inv\ =\ field.Inv(a.back());}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keyword}{typename}\ F::Multiplier\ mul(field,\ inv);}
+\DoxyCodeLine{00067\ \ \ \ \ a.back()\ =\ 1;}
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ a.size()\ -\/\ 1;\ ++i)\ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ a[i]\ =\ mul(a[i]);}
+\DoxyCodeLine{00070\ \ \ \ \ \}}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordflow}{return}\ inv;}
+\DoxyCodeLine{00072\ \}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00075\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00076\ \textcolor{keywordtype}{void}\ GCD(std::vector<typename\ F::Elem>\&\ a,\ std::vector<typename\ F::Elem>\&\ b,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keywordflow}{if}\ (a.size()\ <\ b.size())\ std::swap(a,\ b);}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keywordflow}{while}\ (b.size()\ >\ 0)\ \{}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (b.size()\ ==\ 1)\ \{}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ a.resize(1);}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ a[0]\ =\ 1;}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ MakeMonic(b,\ field);}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ PolyMod(b,\ a,\ field);}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ std::swap(a,\ b);}
+\DoxyCodeLine{00087\ \ \ \ \ \}}
+\DoxyCodeLine{00088\ \}}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00091\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00092\ \textcolor{keywordtype}{void}\ Sqr(std::vector<typename\ F::Elem>\&\ poly,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keywordflow}{if}\ (poly.size()\ ==\ 0)\ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00094\ \ \ \ \ poly.resize(poly.size()\ *\ 2\ -\/\ 1);}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ poly.size();\ ++i)\ \{}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ x\ =\ poly.size()\ -\/\ i\ -\/\ 1;}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ poly[x]\ =\ (x\ \&\ 1)\ ?\ 0\ :\ field.Sqr(poly[x\ /\ 2]);}
+\DoxyCodeLine{00098\ \ \ \ \ \}}
+\DoxyCodeLine{00099\ \}}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00102\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00103\ \textcolor{keywordtype}{void}\ TraceMod(\textcolor{keyword}{const}\ std::vector<typename\ F::Elem>\&\ mod,\ std::vector<typename\ F::Elem>\&\ out,\ \textcolor{keyword}{const}\ \textcolor{keyword}{typename}\ F::Elem\&\ param,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00104\ \ \ \ \ out.reserve(mod.size()\ *\ 2);}
+\DoxyCodeLine{00105\ \ \ \ \ out.resize(2);}
+\DoxyCodeLine{00106\ \ \ \ \ out[0]\ =\ 0;}
+\DoxyCodeLine{00107\ \ \ \ \ out[1]\ =\ param;}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ field.Bits()\ -\/\ 1;\ ++i)\ \{}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ Sqr(out,\ field);}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (out.size()\ <\ 2)\ out.resize(2);}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ out[1]\ =\ param;}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ PolyMod(mod,\ out,\ field);}
+\DoxyCodeLine{00114\ \ \ \ \ \}}
+\DoxyCodeLine{00115\ \}}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00128\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00129\ \textcolor{keywordtype}{bool}\ RecFindRoots(std::vector<std::vector<typename\ F::Elem>>\&\ stack,\ \textcolor{keywordtype}{size\_t}\ pos,\ std::vector<typename\ F::Elem>\&\ roots,\ \textcolor{keywordtype}{bool}\ fully\_factorizable,\ \textcolor{keywordtype}{int}\ depth,\ \textcolor{keyword}{typename}\ F::Elem\ randv,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keyword}{auto}\&\ ppoly\ =\ stack[pos];}
+\DoxyCodeLine{00131\ \ \ \ \ \textcolor{comment}{//\ We\ assert\ ppoly.size()\ >\ 1\ (instead\ of\ just\ ppoly.size()\ >\ 0)\ to\ additionally\ exclude}}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{comment}{//\ constants\ polynomials\ because}}
+\DoxyCodeLine{00133\ \ \ \ \ \textcolor{comment}{//\ \ -\/\ ppoly\ is\ not\ constant\ initially\ (this\ is\ ensured\ by\ FindRoots()),\ and}}
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{comment}{//\ \ -\/\ we\ never\ recurse\ on\ a\ constant\ polynomial.}}
+\DoxyCodeLine{00135\ \ \ \ \ CHECK\_SAFE(ppoly.size()\ >\ 1\ \&\&\ ppoly.back()\ ==\ 1);}
+\DoxyCodeLine{00136\ \ \ \ \ \textcolor{comment}{/*\ 1st\ degree\ input:\ constant\ term\ is\ the\ root.\ */}}
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keywordflow}{if}\ (ppoly.size()\ ==\ 2)\ \{}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ roots.push\_back(ppoly[0]);}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00140\ \ \ \ \ \}}
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{comment}{/*\ 2nd\ degree\ input:\ use\ direct\ quadratic\ solver.\ */}}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keywordflow}{if}\ (ppoly.size()\ ==\ 3)\ \{}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ CHECK\_RETURN(ppoly[1]\ !=\ 0,\ \textcolor{keyword}{false});\ \textcolor{comment}{//\ Equations\ of\ the\ form\ (x\string^2\ +\ a)\ have\ two\ identical\ solutions;\ contradicts\ square-\/free\ assumption.\ */}}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ input\ =\ field.Mul(ppoly[0],\ field.Sqr(field.Inv(ppoly[1])));}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ root\ =\ field.Qrt(input);}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((field.Sqr(root)\ \string^\ root)\ !=\ input)\ \{}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK\_SAFE(!fully\_factorizable);}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \textcolor{comment}{//\ No\ root\ found.}}
+\DoxyCodeLine{00149\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00150\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ sol\ =\ field.Mul(root,\ ppoly[1]);}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ roots.push\_back(sol);}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ roots.push\_back(sol\ \string^\ ppoly[1]);}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00154\ \ \ \ \ \}}
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{comment}{/*\ 3rd\ degree\ input\ and\ more:\ recurse\ further.\ */}}
+\DoxyCodeLine{00156\ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ +\ 3\ >\ stack.size())\ \{}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Allocate\ memory\ if\ necessary.}}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ stack.resize((pos\ +\ 3)\ *\ 2);}
+\DoxyCodeLine{00159\ \ \ \ \ \}}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{keyword}{auto}\&\ poly\ =\ stack[pos];}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keyword}{auto}\&\ tmp\ =\ stack[pos\ +\ 1];}
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{keyword}{auto}\&\ trace\ =\ stack[pos\ +\ 2];}
+\DoxyCodeLine{00163\ \ \ \ \ trace.clear();}
+\DoxyCodeLine{00164\ \ \ \ \ tmp.clear();}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ iter\ =\ 0;;\ ++iter)\ \{}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Compute\ the\ polynomial\ (trace(x*randv)\ mod\ poly(x))\ symbolically,}}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ and\ put\ the\ result\ in\ \`{}trace`.}}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ TraceMod(poly,\ trace,\ randv,\ field);}
+\DoxyCodeLine{00169\ }
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (iter\ >=\ 1\ \&\&\ !fully\_factorizable)\ \{}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ the\ polynomial\ cannot\ be\ factorized\ completely\ (it\ has\ an}}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ irreducible\ factor\ of\ degree\ higher\ than\ 1),\ we\ want\ to\ avoid}}
+\DoxyCodeLine{00173\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ case\ where\ this\ is\ only\ detected\ after\ trying\ all\ BITS}}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ independent\ split\ attempts\ fail\ (see\ the\ assert\ below).}}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Observe\ that\ if\ we\ call\ y\ =\ randv*x,\ it\ is\ true\ that:}}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ trace\ =\ y\ +\ y\string^2\ +\ y\string^4\ +\ y\string^8\ +\ ...\ y\string^(FIELDSIZE/2)\ mod\ poly}}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Due\ to\ the\ Frobenius\ endomorphism,\ this\ means:}}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ trace\string^2\ =\ y\string^2\ +\ y\string^4\ +\ y\string^8\ +\ ...\ +\ y\string^FIELDSIZE\ mod\ poly}}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Or,\ adding\ them\ up:}}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ trace\ +\ trace\string^2\ =\ y\ +\ y\string^FIELDSIZE\ mod\ poly.}}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ =\ randv*x\ +\ randv\string^FIELDSIZE*x\string^FIELDSIZE}}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ =\ randv*x\ +\ randv*x\string^FIELDSIZE}}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ =\ randv*(x\ +\ x\string^FIELDSIZE).}}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ (all\ mod\ poly)}}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ x\ +\ x\string^FIELDSIZE\ is\ the\ polynomial\ which\ has\ every\ field\ element}}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ as\ root\ once.\ Whenever\ x\ +\ x\string^FIELDSIZE\ is\ multiple\ of\ poly,}}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ this\ means\ it\ only\ has\ unique\ first\ degree\ factors.\ The\ same}}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ holds\ for\ its\ constant\ multiple\ randv*(x\ +\ x\string^FIELDSIZE)\ =}}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ trace\ +\ trace\string^2.}}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ We\ use\ this\ test\ to\ quickly\ verify\ whether\ the\ polynomial\ is}}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ fully\ factorizable\ after\ already\ having\ computed\ a\ trace.}}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ We\ don't\ invoke\ it\ immediately;\ only\ when\ splitting\ has\ failed}}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ at\ least\ once,\ which\ avoids\ it\ for\ most\ polynomials\ that\ are}}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ fully\ factorizable\ (or\ at\ least\ pushes\ the\ test\ down\ the}}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ recursion\ to\ factors\ which\ are\ smaller\ and\ thus\ faster).}}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\ =\ trace;}
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ \ \ \ \ Sqr(tmp,\ field);}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ trace.size();\ ++i)\ \{}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tmp[i]\ \string^=\ trace[i];}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (tmp.size()\ \&\&\ tmp.back()\ ==\ 0)\ tmp.pop\_back();}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ \ \ \ \ PolyMod(poly,\ tmp,\ field);}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Whenever\ the\ test\ fails,\ we\ can\ immediately\ abort\ the\ root}}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ finding.\ Whenever\ it\ succeeds,\ we\ can\ remember\ and\ pass\ down}}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ information\ that\ it\ is\ in\ fact\ fully\ factorizable,\ avoiding}}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ need\ to\ run\ the\ test\ again.}}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (tmp.size()\ !=\ 0)\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \ \ \ \ fully\_factorizable\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fully\_factorizable)\ \{}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Every\ successful\ iteration\ of\ this\ algorithm\ splits\ the\ input}}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ polynomial\ further\ into\ buckets,\ each\ corresponding\ to\ a\ subset}}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ of\ 2\string^(BITS-\/depth)\ roots.\ If\ after\ depth\ splits\ the\ degree\ of}}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ polynomial\ is\ >=\ 2\string^(BITS-\/depth),\ something\ is\ wrong.}}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK\_RETURN(field.Bits()\ -\/\ depth\ >=\ std::numeric\_limits<\textcolor{keyword}{decltype}(poly.size())>::digits\ ||}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (poly.size()\ -\/\ 2)\ >>\ (field.Bits()\ -\/\ depth)\ ==\ 0,\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00228\ }
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ depth++;}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ In\ every\ iteration\ we\ multiply\ randv\ by\ 2.\ As\ a\ result,\ the\ set}}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ of\ randv\ values\ forms\ a\ GF(2)-\/linearly\ independent\ basis\ of\ splits.}}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ randv\ =\ field.Mul2(randv);}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ tmp\ =\ poly;}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ GCD(trace,\ tmp,\ field);}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (trace.size()\ !=\ poly.size()\ \&\&\ trace.size()\ >\ 1)\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00236\ \ \ \ \ \}}
+\DoxyCodeLine{00237\ \ \ \ \ MakeMonic(trace,\ field);}
+\DoxyCodeLine{00238\ \ \ \ \ DivMod(trace,\ poly,\ tmp,\ field);}
+\DoxyCodeLine{00239\ \ \ \ \ \textcolor{comment}{//\ At\ this\ point,\ the\ stack\ looks\ like\ [...\ (poly)\ tmp\ trace],\ and\ we\ want\ to\ recursively}}
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{comment}{//\ find\ roots\ of\ trace\ and\ tmp\ (=\ poly/trace).\ As\ we\ don't\ care\ about\ poly\ anymore,\ move}}
+\DoxyCodeLine{00241\ \ \ \ \ \textcolor{comment}{//\ trace\ into\ its\ position\ first.}}
+\DoxyCodeLine{00242\ \ \ \ \ std::swap(poly,\ trace);}
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{comment}{//\ Now\ the\ stack\ is\ [...\ (trace)\ tmp\ ...].\ First\ we\ factor\ tmp\ (at\ pos\ =\ pos+1),\ and\ then}}
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{comment}{//\ we\ factor\ trace\ (at\ pos\ =\ pos).}}
+\DoxyCodeLine{00245\ \ \ \ \ \textcolor{keywordflow}{if}\ (!RecFindRoots(stack,\ pos\ +\ 1,\ roots,\ fully\_factorizable,\ depth,\ randv,\ field))\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00246\ \ \ \ \ \textcolor{comment}{//\ The\ stack\ position\ pos\ contains\ trace,\ the\ polynomial\ with\ all\ of\ poly's\ roots\ which\ (after}}
+\DoxyCodeLine{00247\ \ \ \ \ \textcolor{comment}{//\ multiplication\ with\ randv)\ have\ trace\ 0.\ This\ is\ never\ the\ case\ for\ irreducible\ factors}}
+\DoxyCodeLine{00248\ \ \ \ \ \textcolor{comment}{//\ (which\ always\ end\ up\ in\ tmp),\ so\ we\ can\ set\ fully\_factorizable\ to\ true\ when\ recursing.}}
+\DoxyCodeLine{00249\ \ \ \ \ \textcolor{keywordtype}{bool}\ ret\ =\ RecFindRoots(stack,\ pos,\ roots,\ \textcolor{keyword}{true},\ depth,\ randv,\ field);}
+\DoxyCodeLine{00250\ \ \ \ \ \textcolor{comment}{//\ Because\ of\ the\ above,\ recursion\ can\ never\ fail\ here.}}
+\DoxyCodeLine{00251\ \ \ \ \ CHECK\_SAFE(ret);}
+\DoxyCodeLine{00252\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00253\ \}}
+\DoxyCodeLine{00254\ }
+\DoxyCodeLine{00263\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00264\ std::vector<typename\ F::Elem>\ FindRoots(\textcolor{keyword}{const}\ std::vector<typename\ F::Elem>\&\ poly,\ \textcolor{keyword}{typename}\ F::Elem\ basis,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00265\ \ \ \ \ std::vector<typename\ F::Elem>\ roots;}
+\DoxyCodeLine{00266\ \ \ \ \ CHECK\_RETURN(poly.size()\ !=\ 0,\ \{\});}
+\DoxyCodeLine{00267\ \ \ \ \ CHECK\_RETURN(basis\ !=\ 0,\ \{\});}
+\DoxyCodeLine{00268\ \ \ \ \ \textcolor{keywordflow}{if}\ (poly.size()\ ==\ 1)\ \textcolor{keywordflow}{return}\ roots;\ \textcolor{comment}{//\ No\ roots\ when\ the\ polynomial\ is\ a\ constant.}}
+\DoxyCodeLine{00269\ \ \ \ \ roots.reserve(poly.size()\ -\/\ 1);}
+\DoxyCodeLine{00270\ \ \ \ \ std::vector<std::vector<typename\ F::Elem>>\ stack\ =\ \{poly\};}
+\DoxyCodeLine{00271\ }
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{comment}{//\ Invoke\ the\ recursive\ factorization\ algorithm.}}
+\DoxyCodeLine{00273\ \ \ \ \ \textcolor{keywordflow}{if}\ (!RecFindRoots(stack,\ 0,\ roots,\ \textcolor{keyword}{false},\ 0,\ basis,\ field))\ \{}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Not\ fully\ factorizable.}}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{\};}
+\DoxyCodeLine{00276\ \ \ \ \ \}}
+\DoxyCodeLine{00277\ \ \ \ \ CHECK\_RETURN(poly.size()\ -\/\ 1\ ==\ roots.size(),\ \{\});}
+\DoxyCodeLine{00278\ \ \ \ \ \textcolor{keywordflow}{return}\ roots;}
+\DoxyCodeLine{00279\ \}}
+\DoxyCodeLine{00280\ }
+\DoxyCodeLine{00281\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00282\ std::vector<typename\ F::Elem>\ BerlekampMassey(\textcolor{keyword}{const}\ std::vector<typename\ F::Elem>\&\ syndromes,\ \textcolor{keywordtype}{size\_t}\ max\_degree,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00283\ \ \ \ \ std::vector<typename\ F::Multiplier>\ table;}
+\DoxyCodeLine{00284\ \ \ \ \ std::vector<typename\ F::Elem>\ current,\ prev,\ tmp;}
+\DoxyCodeLine{00285\ \ \ \ \ current.reserve(syndromes.size()\ /\ 2\ +\ 1);}
+\DoxyCodeLine{00286\ \ \ \ \ prev.reserve(syndromes.size()\ /\ 2\ +\ 1);}
+\DoxyCodeLine{00287\ \ \ \ \ tmp.reserve(syndromes.size()\ /\ 2\ +\ 1);}
+\DoxyCodeLine{00288\ \ \ \ \ current.resize(1);}
+\DoxyCodeLine{00289\ \ \ \ \ current[0]\ =\ 1;}
+\DoxyCodeLine{00290\ \ \ \ \ prev.resize(1);}
+\DoxyCodeLine{00291\ \ \ \ \ prev[0]\ =\ 1;}
+\DoxyCodeLine{00292\ \ \ \ \ \textcolor{keyword}{typename}\ F::Elem\ b\ =\ 1,\ b\_inv\ =\ 1;}
+\DoxyCodeLine{00293\ \ \ \ \ \textcolor{keywordtype}{bool}\ b\_have\_inv\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00294\ \ \ \ \ table.reserve(syndromes.size());}
+\DoxyCodeLine{00295\ }
+\DoxyCodeLine{00296\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ n\ =\ 0;\ n\ !=\ syndromes.size();\ ++n)\ \{}
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \ \ table.emplace\_back(field,\ syndromes[n]);}
+\DoxyCodeLine{00298\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ discrepancy\ =\ syndromes[n];}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 1;\ i\ <\ current.size();\ ++i)\ discrepancy\ \string^=\ table[n\ -\/\ i](current[i]);}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (discrepancy\ !=\ 0)\ \{}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ x\ =\ \textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{int}\textcolor{keyword}{>}(n\ +\ 1\ -\/\ (current.size()\ -\/\ 1)\ -\/\ (prev.size()\ -\/\ 1));}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!b\_have\_inv)\ \{}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ b\_inv\ =\ field.Inv(b);}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ b\_have\_inv\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ swap\ =\ 2\ *\ (current.size()\ -\/\ 1)\ <=\ n;}
+\DoxyCodeLine{00307\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (swap)\ \{}
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (prev.size()\ +\ x\ -\/\ 1\ >\ max\_degree)\ \textcolor{keywordflow}{return}\ \{\};\ \textcolor{comment}{//\ We'd\ exceed\ maximum\ degree}}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tmp\ =\ current;}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ current.resize(prev.size()\ +\ x);}
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{typename}\ F::Multiplier\ mul(field,\ field.Mul(discrepancy,\ b\_inv));}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ prev.size();\ ++i)\ current[i\ +\ x]\ \string^=\ mul(prev[i]);}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (swap)\ \{}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::swap(prev,\ tmp);}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ b\ =\ discrepancy;}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ b\_have\_inv\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00320\ \ \ \ \ \}}
+\DoxyCodeLine{00321\ \ \ \ \ CHECK\_RETURN(current.size()\ \&\&\ current.back()\ !=\ 0,\ \{\});}
+\DoxyCodeLine{00322\ \ \ \ \ \textcolor{keywordflow}{return}\ current;}
+\DoxyCodeLine{00323\ \}}
+\DoxyCodeLine{00324\ }
+\DoxyCodeLine{00325\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00326\ std::vector<typename\ F::Elem>\ ReconstructAllSyndromes(\textcolor{keyword}{const}\ std::vector<typename\ F::Elem>\&\ odd\_syndromes,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00327\ \ \ \ \ std::vector<typename\ F::Elem>\ all\_syndromes;}
+\DoxyCodeLine{00328\ \ \ \ \ all\_syndromes.resize(odd\_syndromes.size()\ *\ 2);}
+\DoxyCodeLine{00329\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ odd\_syndromes.size();\ ++i)\ \{}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ all\_syndromes[i\ *\ 2]\ =\ odd\_syndromes[i];}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ all\_syndromes[i\ *\ 2\ +\ 1]\ =\ field.Sqr(all\_syndromes[i]);}
+\DoxyCodeLine{00332\ \ \ \ \ \}}
+\DoxyCodeLine{00333\ \ \ \ \ \textcolor{keywordflow}{return}\ all\_syndromes;}
+\DoxyCodeLine{00334\ \}}
+\DoxyCodeLine{00335\ }
+\DoxyCodeLine{00336\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00337\ \textcolor{keywordtype}{void}\ AddToOddSyndromes(std::vector<typename\ F::Elem>\&\ osyndromes,\ \textcolor{keyword}{typename}\ F::Elem\ data,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00338\ \ \ \ \ \textcolor{keyword}{auto}\ sqr\ =\ field.Sqr(data);}
+\DoxyCodeLine{00339\ \ \ \ \ \textcolor{keyword}{typename}\ F::Multiplier\ mul(field,\ sqr);}
+\DoxyCodeLine{00340\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ osyndrome\ :\ osyndromes)\ \{}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ osyndrome\ \string^=\ data;}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ data\ =\ mul(data);}
+\DoxyCodeLine{00343\ \ \ \ \ \}}
+\DoxyCodeLine{00344\ \}}
+\DoxyCodeLine{00345\ }
+\DoxyCodeLine{00346\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00347\ std::vector<typename\ F::Elem>\ FullDecode(\textcolor{keyword}{const}\ std::vector<typename\ F::Elem>\&\ osyndromes,\ \textcolor{keyword}{const}\ F\&\ field)\ \{}
+\DoxyCodeLine{00348\ \ \ \ \ \textcolor{keyword}{auto}\ asyndromes\ =\ ReconstructAllSyndromes<typename\ F::Elem>(osyndromes,\ field);}
+\DoxyCodeLine{00349\ \ \ \ \ \textcolor{keyword}{auto}\ poly\ =\ BerlekampMassey(asyndromes,\ field);}
+\DoxyCodeLine{00350\ \ \ \ \ std::reverse(poly.begin(),\ poly.end());}
+\DoxyCodeLine{00351\ \ \ \ \ \textcolor{keywordflow}{return}\ FindRoots(poly,\ field);}
+\DoxyCodeLine{00352\ \}}
+\DoxyCodeLine{00353\ }
+\DoxyCodeLine{00354\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ F>}
+\DoxyCodeLine{00355\ \textcolor{keyword}{class\ }SketchImpl\ final\ :\ \textcolor{keyword}{public}\ Sketch}
+\DoxyCodeLine{00356\ \{}
+\DoxyCodeLine{00357\ \ \ \ \ \textcolor{keyword}{const}\ F\ m\_field;}
+\DoxyCodeLine{00358\ \ \ \ \ std::vector<typename\ F::Elem>\ m\_syndromes;}
+\DoxyCodeLine{00359\ \ \ \ \ \textcolor{keyword}{typename}\ F::Elem\ m\_basis;}
+\DoxyCodeLine{00360\ }
+\DoxyCodeLine{00361\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00362\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00363\ \ \ \ \ SketchImpl(\textcolor{keywordtype}{int}\ implementation,\ \textcolor{keywordtype}{int}\ bits,\ \textcolor{keyword}{const}\ Args\&...\ args)\ :\ Sketch(implementation,\ bits),\ m\_field(args...)\ \{}
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ std::random\_device\ rng;}
+\DoxyCodeLine{00365\ \ \ \ \ \ \ \ \ std::uniform\_int\_distribution<uint64\_t>\ dist;}
+\DoxyCodeLine{00366\ \ \ \ \ \ \ \ \ m\_basis\ =\ m\_field.FromSeed(dist(rng));}
+\DoxyCodeLine{00367\ \ \ \ \ \}}
+\DoxyCodeLine{00368\ }
+\DoxyCodeLine{00369\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ Syndromes()\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ m\_syndromes.size();\ \}}
+\DoxyCodeLine{00370\ \ \ \ \ \textcolor{keywordtype}{void}\ Init(\textcolor{keywordtype}{size\_t}\ count)\textcolor{keyword}{\ override\ }\{\ m\_syndromes.assign(count,\ 0);\ \}}
+\DoxyCodeLine{00371\ }
+\DoxyCodeLine{00372\ \ \ \ \ \textcolor{keywordtype}{void}\ Add(uint64\_t\ val)\textcolor{keyword}{\ override}}
+\DoxyCodeLine{00373\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00374\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ elem\ =\ m\_field.FromUint64(val);}
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \ \ AddToOddSyndromes(m\_syndromes,\ elem,\ m\_field);}
+\DoxyCodeLine{00376\ \ \ \ \ \}}
+\DoxyCodeLine{00377\ }
+\DoxyCodeLine{00378\ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ ptr)\textcolor{keyword}{\ const\ override}}
+\DoxyCodeLine{00379\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00380\ \ \ \ \ \ \ \ \ BitWriter\ writer(ptr);}
+\DoxyCodeLine{00381\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ val\ :\ m\_syndromes)\ \{}
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ \ \ \ \ m\_field.Serialize(writer,\ val);}
+\DoxyCodeLine{00383\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ writer.Flush();}
+\DoxyCodeLine{00385\ \ \ \ \ \}}
+\DoxyCodeLine{00386\ }
+\DoxyCodeLine{00387\ \ \ \ \ \textcolor{keywordtype}{void}\ Deserialize(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ ptr)\textcolor{keyword}{\ override}}
+\DoxyCodeLine{00388\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00389\ \ \ \ \ \ \ \ \ BitReader\ reader(ptr);}
+\DoxyCodeLine{00390\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ val\ :\ m\_syndromes)\ \{}
+\DoxyCodeLine{00391\ \ \ \ \ \ \ \ \ \ \ \ \ val\ =\ m\_field.Deserialize(reader);}
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00393\ \ \ \ \ \}}
+\DoxyCodeLine{00394\ }
+\DoxyCodeLine{00395\ \ \ \ \ \textcolor{keywordtype}{int}\ Decode(\textcolor{keywordtype}{int}\ max\_count,\ uint64\_t*\ out)\textcolor{keyword}{\ const\ override}}
+\DoxyCodeLine{00396\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00397\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ all\_syndromes\ =\ ReconstructAllSyndromes(m\_syndromes,\ m\_field);}
+\DoxyCodeLine{00398\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ poly\ =\ BerlekampMassey(all\_syndromes,\ max\_count,\ m\_field);}
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (poly.size()\ ==\ 0)\ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00400\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (poly.size()\ ==\ 1)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00401\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((\textcolor{keywordtype}{int})poly.size()\ >\ 1\ +\ max\_count)\ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00402\ \ \ \ \ \ \ \ \ std::reverse(poly.begin(),\ poly.end());}
+\DoxyCodeLine{00403\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ roots\ =\ FindRoots(poly,\ m\_basis,\ m\_field);}
+\DoxyCodeLine{00404\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (roots.size()\ ==\ 0)\ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00405\ }
+\DoxyCodeLine{00406\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ root\ :\ roots)\ \{}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ \ \ \ \ *(out++)\ =\ m\_field.ToUint64(root);}
+\DoxyCodeLine{00408\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{int}\textcolor{keyword}{>}(roots.size());}
+\DoxyCodeLine{00410\ \ \ \ \ \}}
+\DoxyCodeLine{00411\ }
+\DoxyCodeLine{00412\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ Merge(\textcolor{keyword}{const}\ Sketch*\ other\_sketch)\textcolor{keyword}{\ override}}
+\DoxyCodeLine{00413\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Sad\ cast.\ This\ is\ safe\ only\ because\ the\ caller\ code\ in\ minisketch.cpp\ checks}}
+\DoxyCodeLine{00415\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ that\ implementation\ and\ field\ size\ match.}}
+\DoxyCodeLine{00416\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ SketchImpl*\ other\ =\ \textcolor{keyword}{static\_cast<}\textcolor{keyword}{const\ }SketchImpl*\textcolor{keyword}{>}(other\_sketch);}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ m\_syndromes.resize(std::min(m\_syndromes.size(),\ other-\/>m\_syndromes.size()));}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ m\_syndromes.size();\ ++i)\ \{}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ \ \ \ \ m\_syndromes[i]\ \string^=\ other-\/>m\_syndromes[i];}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00421\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_syndromes.size();}
+\DoxyCodeLine{00422\ \ \ \ \ \}}
+\DoxyCodeLine{00423\ }
+\DoxyCodeLine{00424\ \ \ \ \ \textcolor{keywordtype}{void}\ SetSeed(uint64\_t\ seed)\textcolor{keyword}{\ override}}
+\DoxyCodeLine{00425\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00426\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (seed\ ==\ (uint64\_t)-\/1)\ \{}
+\DoxyCodeLine{00427\ \ \ \ \ \ \ \ \ \ \ \ \ m\_basis\ =\ 1;}
+\DoxyCodeLine{00428\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00429\ \ \ \ \ \ \ \ \ \ \ \ \ m\_basis\ =\ m\_field.FromSeed(seed);}
+\DoxyCodeLine{00430\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00431\ \ \ \ \ \}}
+\DoxyCodeLine{00432\ \};}
+\DoxyCodeLine{00433\ }
+\DoxyCodeLine{00434\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

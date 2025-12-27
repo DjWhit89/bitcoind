@@ -1,0 +1,112 @@
+.TH "CCoinsViewMemPool" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+CCoinsViewMemPool
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <txmempool\&.h>\fP
+.PP
+Inherits \fBCCoinsViewBacked\fP\&.
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBCCoinsViewMemPool\fP (\fBCCoinsView\fP *baseIn, const \fBCTxMemPool\fP &mempoolIn)"
+.br
+.ti -1c
+.RI "std::optional< \fBCoin\fP > \fBGetCoin\fP (const \fBCOutPoint\fP &outpoint) const override"
+.br
+.ti -1c
+.RI "void \fBPackageAddTransaction\fP (const \fBCTransactionRef\fP &tx)"
+.br
+.ti -1c
+.RI "const std::unordered_set< \fBCOutPoint\fP, \fBSaltedOutpointHasher\fP > & \fBGetNonBaseCoins\fP () const"
+.br
+.ti -1c
+.RI "void \fBReset\fP ()"
+.br
+.in -1c
+
+Public Member Functions inherited from \fBCCoinsViewBacked\fP
+.in +1c
+.ti -1c
+.RI "\fBCCoinsViewBacked\fP (\fBCCoinsView\fP *viewIn)"
+.br
+.ti -1c
+.RI "bool \fBHaveCoin\fP (const \fBCOutPoint\fP &outpoint) const override"
+.br
+.RI "Just check whether a given outpoint is unspent\&. "
+.ti -1c
+.RI "\fBuint256\fP \fBGetBestBlock\fP () const override"
+.br
+.RI "Retrieve the block hash whose state this \fBCCoinsView\fP currently represents\&. "
+.ti -1c
+.RI "std::vector< \fBuint256\fP > \fBGetHeadBlocks\fP () const override"
+.br
+.ti -1c
+.RI "void \fBSetBackend\fP (\fBCCoinsView\fP &viewIn)"
+.br
+.ti -1c
+.RI "bool \fBBatchWrite\fP (\fBCoinsViewCacheCursor\fP &cursor, const \fBuint256\fP &hashBlock) override"
+.br
+.ti -1c
+.RI "std::unique_ptr< \fBCCoinsViewCursor\fP > \fBCursor\fP () const override"
+.br
+.RI "Get a cursor to iterate over the whole state\&. "
+.ti -1c
+.RI "size_t \fBEstimateSize\fP () const override"
+.br
+.RI "Estimate database size (0 if not implemented)\&. "
+.in -1c
+
+Public Member Functions inherited from \fBCCoinsView\fP
+.in +1c
+.ti -1c
+.RI "virtual \fB~CCoinsView\fP ()=default"
+.br
+.RI "As we use CCoinsViews polymorphically, have a virtual destructor\&. "
+.in -1c
+.SS "Protected Attributes"
+
+.in +1c
+.ti -1c
+.RI "const \fBCTxMemPool\fP & \fBmempool\fP"
+.br
+.in -1c
+
+Protected Attributes inherited from \fBCCoinsViewBacked\fP
+.in +1c
+.ti -1c
+.RI "\fBCCoinsView\fP * \fBbase\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+\fBCCoinsView\fP that brings transactions from a mempool into view\&. It does not check for spendings by memory pool transactions\&. Instead, it provides access to all Coins which are either unspent in the base \fBCCoinsView\fP, are outputs from any mempool transaction, or are tracked temporarily to allow transaction dependencies in package validation\&. This allows transaction replacement to work as expected, as you want to have all inputs "available" to check signatures, and any cycles in the dependency graph are checked directly in AcceptToMemoryPool\&. It also allows you to sign a double-spend directly in signrawtransactionwithkey and signrawtransactionwithwallet, as long as the conflicting transaction is not yet confirmed\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBCCoinsViewMemPool\fP (\fBCCoinsView\fP * baseIn, const \fBCTxMemPool\fP & mempoolIn)"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "std::optional< \fBCoin\fP > GetCoin (const \fBCOutPoint\fP & outpoint) const\fR [override]\fP, \fR [virtual]\fP"
+GetCoin, returning whether it exists and is not spent\&. Also updates m_non_base_coins if the coin is not fetched from base\&. 
+.PP
+Reimplemented from \fBCCoinsViewBacked\fP\&.
+.SS "const std::unordered_set< \fBCOutPoint\fP, \fBSaltedOutpointHasher\fP > & GetNonBaseCoins () const\fR [inline]\fP"
+Get all coins in m_non_base_coins\&. 
+.SS "void PackageAddTransaction (const \fBCTransactionRef\fP & tx)"
+Add the coins created by this transaction\&. These coins are only temporarily stored in m_temp_added and cannot be flushed to the back end\&. Only used for package validation\&. 
+.SS "void Reset ()"
+Clear m_temp_added and m_non_base_coins\&. 
+.SH "Field Documentation"
+.PP 
+.SS "const \fBCTxMemPool\fP& mempool\fR [protected]\fP"
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

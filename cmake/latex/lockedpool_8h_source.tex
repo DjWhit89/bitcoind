@@ -1,0 +1,149 @@
+\doxysection{lockedpool.\+h}
+\label{lockedpool_8h_source}\index{src/support/lockedpool.h@{src/support/lockedpool.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2016-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_SUPPORT\_LOCKEDPOOL\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_SUPPORT\_LOCKEDPOOL\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <list>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <mutex>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }LockedPageAllocator}
+\DoxyCodeLine{00020\ \{}
+\DoxyCodeLine{00021\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~LockedPageAllocator()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}*\ AllocateLocked(\textcolor{keywordtype}{size\_t}\ len,\ \textcolor{keywordtype}{bool}\ *lockingSuccess)\ =\ 0;}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ FreeLocked(\textcolor{keywordtype}{void}*\ addr,\ \textcolor{keywordtype}{size\_t}\ len)\ =\ 0;}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{size\_t}\ GetLimit()\ =\ 0;}
+\DoxyCodeLine{00043\ \};}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \textcolor{comment}{/*\ An\ arena\ manages\ a\ contiguous\ region\ of\ memory\ by\ dividing\ it\ into}}
+\DoxyCodeLine{00046\ \textcolor{comment}{\ *\ chunks.}}
+\DoxyCodeLine{00047\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00048\ \textcolor{keyword}{class\ }Arena}
+\DoxyCodeLine{00049\ \{}
+\DoxyCodeLine{00050\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00051\ \ \ \ \ Arena(\textcolor{keywordtype}{void}\ *base,\ \textcolor{keywordtype}{size\_t}\ size,\ \textcolor{keywordtype}{size\_t}\ alignment);}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~Arena();}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \ \ Arena(\textcolor{keyword}{const}\ Arena\&\ other)\ =\ \textcolor{keyword}{delete};\ \textcolor{comment}{//\ non\ construction-\/copyable}}
+\DoxyCodeLine{00055\ \ \ \ \ Arena\&\ operator=(\textcolor{keyword}{const}\ Arena\&)\ =\ \textcolor{keyword}{delete};\ \textcolor{comment}{//\ non\ copyable}}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keyword}{struct\ }Stats}
+\DoxyCodeLine{00059\ \ \ \ \ \{}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ used;}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ free;}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ total;}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ chunks\_used;}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ chunks\_free;}
+\DoxyCodeLine{00065\ \ \ \ \ \};}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordtype}{void}*\ alloc(\textcolor{keywordtype}{size\_t}\ size);}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keywordtype}{void}\ free(\textcolor{keywordtype}{void}\ *ptr);}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00080\ \ \ \ \ Stats\ stats()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \textcolor{preprocessor}{\#ifdef\ ARENA\_DEBUG}}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordtype}{void}\ walk()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00084\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{keywordtype}{bool}\ addressInArena(\textcolor{keywordtype}{void}\ *ptr)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ ptr\ >=\ base\ \&\&\ ptr\ <\ end;\ \}}
+\DoxyCodeLine{00091\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keyword}{typedef}\ std::multimap<size\_t,\ void*>\ SizeToChunkSortedMap;}
+\DoxyCodeLine{00094\ \ \ \ \ SizeToChunkSortedMap\ size\_to\_free\_chunk;}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keyword}{typedef}\ std::unordered\_map<void*,\ SizeToChunkSortedMap::const\_iterator>\ ChunkToSizeMap;}
+\DoxyCodeLine{00098\ \ \ \ \ ChunkToSizeMap\ chunks\_free;}
+\DoxyCodeLine{00100\ \ \ \ \ ChunkToSizeMap\ chunks\_free\_end;}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00103\ \ \ \ \ std::unordered\_map<void*,\ size\_t>\ chunks\_used;}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{keywordtype}{void}*\ base;}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keywordtype}{void}*\ end;}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ alignment;}
+\DoxyCodeLine{00111\ \};}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00126\ \textcolor{keyword}{class\ }LockedPool}
+\DoxyCodeLine{00127\ \{}
+\DoxyCodeLine{00128\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ ARENA\_SIZE\ =\ 256*1024;}
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ ARENA\_ALIGN\ =\ 16;}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keyword}{typedef}\ bool\ (*LockingFailed\_Callback)();}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keyword}{struct\ }Stats}
+\DoxyCodeLine{00146\ \ \ \ \ \{}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ used;}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ free;}
+\DoxyCodeLine{00149\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ total;}
+\DoxyCodeLine{00150\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ locked;}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ chunks\_used;}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ chunks\_free;}
+\DoxyCodeLine{00153\ \ \ \ \ \};}
+\DoxyCodeLine{00154\ }
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{keyword}{explicit}\ LockedPool(std::unique\_ptr<LockedPageAllocator>\ allocator,\ LockingFailed\_Callback\ lf\_cb\_in\ =\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00163\ \ \ \ \ \string~LockedPool();}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \ \ \ \ LockedPool(\textcolor{keyword}{const}\ LockedPool\&\ other)\ =\ \textcolor{keyword}{delete};\ \textcolor{comment}{//\ non\ construction-\/copyable}}
+\DoxyCodeLine{00166\ \ \ \ \ LockedPool\&\ operator=(\textcolor{keyword}{const}\ LockedPool\&)\ =\ \textcolor{keyword}{delete};\ \textcolor{comment}{//\ non\ copyable}}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keywordtype}{void}*\ alloc(\textcolor{keywordtype}{size\_t}\ size);}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keywordtype}{void}\ free(\textcolor{keywordtype}{void}\ *ptr);}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00181\ \ \ \ \ Stats\ stats()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00182\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00183\ \ \ \ \ std::unique\_ptr<LockedPageAllocator>\ allocator;}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00186\ \ \ \ \ \textcolor{keyword}{class\ }LockedPageArena:\ \textcolor{keyword}{public}\ Arena}
+\DoxyCodeLine{00187\ \ \ \ \ \{}
+\DoxyCodeLine{00188\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ LockedPageArena(LockedPageAllocator\ *alloc\_in,\ \textcolor{keywordtype}{void}\ *base\_in,\ \textcolor{keywordtype}{size\_t}\ size,\ \textcolor{keywordtype}{size\_t}\ align);}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ \string~LockedPageArena();}
+\DoxyCodeLine{00191\ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ *base;}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size;}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ LockedPageAllocator\ *allocator;}
+\DoxyCodeLine{00195\ \ \ \ \ \};}
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keywordtype}{bool}\ new\_arena(\textcolor{keywordtype}{size\_t}\ size,\ \textcolor{keywordtype}{size\_t}\ align);}
+\DoxyCodeLine{00198\ }
+\DoxyCodeLine{00199\ \ \ \ \ std::list<LockedPageArena>\ arenas;}
+\DoxyCodeLine{00200\ \ \ \ \ LockingFailed\_Callback\ lf\_cb;}
+\DoxyCodeLine{00201\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ cumulative\_bytes\_locked\{0\};}
+\DoxyCodeLine{00204\ \ \ \ \ \textcolor{keyword}{mutable}\ std::mutex\ mutex;}
+\DoxyCodeLine{00205\ \};}
+\DoxyCodeLine{00206\ }
+\DoxyCodeLine{00218\ \textcolor{keyword}{class\ }LockedPoolManager\ :\ \textcolor{keyword}{public}\ LockedPool}
+\DoxyCodeLine{00219\ \{}
+\DoxyCodeLine{00220\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{keyword}{static}\ LockedPoolManager\&\ Instance()}
+\DoxyCodeLine{00223\ \ \ \ \ \{}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ std::once\_flag\ init\_flag;}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ std::call\_once(init\_flag,\ LockedPoolManager::CreateInstance);}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *LockedPoolManager::\_instance;}
+\DoxyCodeLine{00227\ \ \ \ \ \}}
+\DoxyCodeLine{00228\ }
+\DoxyCodeLine{00229\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00230\ \ \ \ \ \textcolor{keyword}{explicit}\ LockedPoolManager(std::unique\_ptr<LockedPageAllocator>\ allocator);}
+\DoxyCodeLine{00231\ }
+\DoxyCodeLine{00233\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ CreateInstance();}
+\DoxyCodeLine{00235\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ LockingFailed();}
+\DoxyCodeLine{00236\ }
+\DoxyCodeLine{00237\ \ \ \ \ \textcolor{keyword}{static}\ LockedPoolManager*\ \_instance;}
+\DoxyCodeLine{00238\ \};}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_SUPPORT\_LOCKEDPOOL\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,116 @@
+\doxysection{txgraph.\+h}
+\label{txgraph_8h_source}\index{src/txgraph.h@{src/txgraph.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <compare>}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <util/feefrac.h>}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_TXGRAPH\_H}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#define\ BITCOIN\_TXGRAPH\_H}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ MAX\_CLUSTER\_COUNT\_LIMIT\{64\};}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00046\ \textcolor{keyword}{class\ }TxGraph}
+\DoxyCodeLine{00047\ \{}
+\DoxyCodeLine{00048\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keyword}{using\ }GraphIndex\ =\ uint32\_t;}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keyword}{class\ }Ref;}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keyword}{enum\ class}\ Level\ \{}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ TOP,\ }
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ MAIN\ }
+\DoxyCodeLine{00066\ \ \ \ \ \};}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~TxGraph()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00075\ \ \ \ \ [[nodiscard]]\ \textcolor{keyword}{virtual}\ Ref\ AddTransaction(\textcolor{keyword}{const}\ FeePerWeight\&\ feerate)\ \textcolor{keyword}{noexcept}\ =\ 0;}
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ RemoveTransaction(\textcolor{keyword}{const}\ Ref\&\ arg)\ \textcolor{keyword}{noexcept}\ =\ 0;}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ AddDependency(\textcolor{keyword}{const}\ Ref\&\ parent,\ \textcolor{keyword}{const}\ Ref\&\ child)\ \textcolor{keyword}{noexcept}\ =\ 0;}
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ SetTransactionFee(\textcolor{keyword}{const}\ Ref\&\ arg,\ int64\_t\ fee)\ \textcolor{keyword}{noexcept}\ =\ 0;}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ DoWork(uint64\_t\ iters)\ \textcolor{keyword}{noexcept}\ =\ 0;}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ StartStaging()\ noexcept\ =\ 0;}
+\DoxyCodeLine{00113\ \ \ \ \ virtual\ \textcolor{keywordtype}{void}\ AbortStaging()\ noexcept\ =\ 0;}
+\DoxyCodeLine{00115\ \ \ \ \ virtual\ \textcolor{keywordtype}{void}\ CommitStaging()\ noexcept\ =\ 0;}
+\DoxyCodeLine{00117\ \ \ \ \ virtual\ \textcolor{keywordtype}{bool}\ HaveStaging()\ const\ noexcept\ =\ 0;}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00124\ \ \ \ \ virtual\ \textcolor{keywordtype}{bool}\ IsOversized(Level\ level)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00127\ \ \ \ \ virtual\ \textcolor{keywordtype}{bool}\ Exists(const\ Ref\&\ arg,\ Level\ level)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00131\ \ \ \ \ virtual\ FeePerWeight\ GetIndividualFeerate(const\ Ref\&\ arg)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00135\ \ \ \ \ virtual\ FeePerWeight\ GetMainChunkFeerate(const\ Ref\&\ arg)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00139\ \ \ \ \ virtual\ std::vector<Ref*>\ GetCluster(const\ Ref\&\ arg,\ Level\ level)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00143\ \ \ \ \ virtual\ std::vector<Ref*>\ GetAncestors(const\ Ref\&\ arg,\ Level\ level)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00147\ \ \ \ \ virtual\ std::vector<Ref*>\ GetDescendants(const\ Ref\&\ arg,\ Level\ level)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00151\ \ \ \ \ virtual\ std::vector<Ref*>\ GetAncestorsUnion(std::span<const\ Ref*\ const>\ args,\ Level\ level)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00155\ \ \ \ \ virtual\ std::vector<Ref*>\ GetDescendantsUnion(std::span<const\ Ref*\ const>\ args,\ Level\ level)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00158\ \ \ \ \ virtual\ GraphIndex\ GetTransactionCount(Level\ level)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00161\ \ \ \ \ virtual\ std::strong\_ordering\ CompareMainOrder(const\ Ref\&\ a,\ const\ Ref\&\ b)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00165\ \ \ \ \ virtual\ GraphIndex\ CountDistinctClusters(std::span<const\ Ref*\ const>,\ Level\ level)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00170\ \ \ \ \ virtual\ std::pair<std::vector<FeeFrac>,\ std::vector<FeeFrac>>\ GetMainStagingDiagrams()\ noexcept\ =\ 0;}
+\DoxyCodeLine{00175\ \ \ \ \ virtual\ std::vector<Ref*>\ Trim()\ noexcept\ =\ 0;}
+\DoxyCodeLine{00176\ }
+\DoxyCodeLine{00178\ \ \ \ \ class\ BlockBuilder}
+\DoxyCodeLine{00179\ \ \ \ \ \{}
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ BlockBuilder()\ noexcept\ =\ default;}
+\DoxyCodeLine{00183\ \ \ \ \ public:}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ virtual\ \string~BlockBuilder()\ =\ default;}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ virtual\ std::optional<std::pair<std::vector<Ref*>,\ FeePerWeight>>\ GetCurrentChunk()\ noexcept\ =\ 0;}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ virtual\ \textcolor{keywordtype}{void}\ Include()\ noexcept\ =\ 0;}
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ virtual\ \textcolor{keywordtype}{void}\ Skip()\ noexcept\ =\ 0;}
+\DoxyCodeLine{00193\ \ \ \ \ \};}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00198\ \ \ \ \ virtual\ std::unique\_ptr<BlockBuilder>\ GetBlockBuilder()\ noexcept\ =\ 0;}
+\DoxyCodeLine{00203\ \ \ \ \ virtual\ std::pair<std::vector<Ref*>,\ FeePerWeight>\ GetWorstMainChunk()\ noexcept\ =\ 0;}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00210\ \ \ \ \ virtual\ \textcolor{keywordtype}{size\_t}\ GetMainMemoryUsage()\ noexcept\ =\ 0;}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00213\ \ \ \ \ virtual\ \textcolor{keywordtype}{void}\ SanityCheck()\ const\ =\ 0;}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00215\ protected:}
+\DoxyCodeLine{00216\ \ \ \ \ \textcolor{comment}{//\ Allow\ TxGraph::Ref\ to\ call\ UpdateRef\ and\ UnlinkRef.}}
+\DoxyCodeLine{00217\ \ \ \ \ friend\ class\ TxGraph::Ref;}
+\DoxyCodeLine{00219\ \ \ \ \ virtual\ \textcolor{keywordtype}{void}\ UpdateRef(GraphIndex\ index,\ Ref\&\ new\_location)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00221\ \ \ \ \ virtual\ \textcolor{keywordtype}{void}\ UnlinkRef(GraphIndex\ index)\ noexcept\ =\ 0;}
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{comment}{//\ Allow\ TxGraph\ implementations\ (inheriting\ from\ it)\ to\ access\ Ref\ internals.}}
+\DoxyCodeLine{00223\ \ \ \ \ static\ TxGraph*\&\ GetRefGraph(Ref\&\ arg)\ noexcept\ \{\ \textcolor{keywordflow}{return}\ arg.m\_graph;\ \}}
+\DoxyCodeLine{00224\ \ \ \ \ \textcolor{keyword}{static}\ TxGraph*\ GetRefGraph(\textcolor{keyword}{const}\ Ref\&\ arg)\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ arg.m\_graph;\ \}}
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keyword}{static}\ GraphIndex\&\ GetRefIndex(Ref\&\ arg)\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ arg.m\_index;\ \}}
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{keyword}{static}\ GraphIndex\ GetRefIndex(\textcolor{keyword}{const}\ Ref\&\ arg)\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ arg.m\_index;\ \}}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00228\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00229\ \ \ \ \ \textcolor{keyword}{class\ }Ref}
+\DoxyCodeLine{00230\ \ \ \ \ \{}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Allow\ TxGraph's\ GetRefGraph\ and\ GetRefIndex\ to\ access\ internals.}}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }TxGraph;}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ TxGraph*\ m\_graph\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ GraphIndex\ m\_index\ =\ GraphIndex(-\/1);}
+\DoxyCodeLine{00237\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ Ref()\ noexcept\ =\ default;}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ virtual\ \string~Ref();}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Support\ move-\/constructing\ a\ Ref.}}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ Ref\&\ operator=(Ref\&\&\ other)\ noexcept\ =\ delete;}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ Ref(Ref\&\&\ other)\ noexcept;}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Do\ not\ permit\ copy\ constructing\ or\ copy\ assignment.\ A\ TxGraph\ entry\ can\ have\ at\ most\ one}}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Ref\ pointing\ to\ it.}}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ Ref\&\ operator=(const\ Ref\&)\ =\ delete;}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ Ref(const\ Ref\&)\ =\ delete;}
+\DoxyCodeLine{00251\ \ \ \ \ \};}
+\DoxyCodeLine{00252\ \};}
+\DoxyCodeLine{00253\ }
+\DoxyCodeLine{00258\ std::unique\_ptr<TxGraph>\ MakeTxGraph(\textcolor{keywordtype}{unsigned}\ max\_cluster\_count,\ uint64\_t\ max\_cluster\_size,\ uint64\_t\ acceptable\_iters)\ noexcept;}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00260\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_TXGRAPH\_H}}
+
+\end{DoxyCode}

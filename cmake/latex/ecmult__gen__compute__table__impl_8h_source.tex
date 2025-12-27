@@ -1,0 +1,114 @@
+\doxysection{ecmult\+\_\+gen\+\_\+compute\+\_\+table\+\_\+impl.\+h}
+\label{ecmult__gen__compute__table__impl_8h_source}\index{src/secp256k1/src/ecmult\_gen\_compute\_table\_impl.h@{src/secp256k1/src/ecmult\_gen\_compute\_table\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ Pieter\ Wuille,\ Gregory\ Maxwell,\ Peter\ Dettman\ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_ECMULT\_GEN\_COMPUTE\_TABLE\_IMPL\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_ECMULT\_GEN\_COMPUTE\_TABLE\_IMPL\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}ecmult\_gen\_compute\_table.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}group\_impl.h"{}}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}field\_impl.h"{}}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}scalar\_impl.h"{}}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}ecmult\_gen.h"{}}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_gen\_compute\_table(secp256k1\_ge\_storage*\ table,\ \textcolor{keyword}{const}\ secp256k1\_ge*\ gen,\ \textcolor{keywordtype}{int}\ blocks,\ \textcolor{keywordtype}{int}\ teeth,\ \textcolor{keywordtype}{int}\ spacing)\ \{}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ points\ =\ ((size\_t)1)\ <<\ (teeth\ -\/\ 1);}
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ points\_total\ =\ points\ *\ blocks;}
+\DoxyCodeLine{00020\ \ \ \ \ secp256k1\_ge*\ prec\ =\ checked\_malloc(\&default\_error\_callback,\ points\_total\ *\ \textcolor{keyword}{sizeof}(*prec));}
+\DoxyCodeLine{00021\ \ \ \ \ secp256k1\_gej*\ ds\ =\ checked\_malloc(\&default\_error\_callback,\ teeth\ *\ \textcolor{keyword}{sizeof}(*ds));}
+\DoxyCodeLine{00022\ \ \ \ \ secp256k1\_gej*\ vs\ =\ checked\_malloc(\&default\_error\_callback,\ points\_total\ *\ \textcolor{keyword}{sizeof}(*vs));}
+\DoxyCodeLine{00023\ \ \ \ \ secp256k1\_gej\ u;}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ vs\_pos\ =\ 0;}
+\DoxyCodeLine{00025\ \ \ \ \ secp256k1\_scalar\ half;}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordtype}{int}\ block,\ i;}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \ \ \ \ VERIFY\_CHECK(points\_total\ >\ 0);}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{comment}{/*\ u\ is\ the\ running\ power\ of\ two\ times\ gen\ we're\ working\ with,\ initially\ gen/2.\ */}}
+\DoxyCodeLine{00031\ \ \ \ \ secp256k1\_scalar\_half(\&half,\ \&secp256k1\_scalar\_one);}
+\DoxyCodeLine{00032\ \ \ \ \ secp256k1\_gej\_set\_infinity(\&u);}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 255;\ i\ >=\ 0;\ -\/-\/i)\ \{}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Use\ a\ very\ simple\ multiplication\ ladder\ to\ avoid\ dependency\ on\ ecmult.\ */}}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ secp256k1\_gej\_double\_var(\&u,\ \&u,\ NULL);}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_scalar\_get\_bits\_limb32(\&half,\ i,\ 1))\ \{}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_ge\_var(\&u,\ \&u,\ gen,\ NULL);}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00039\ \ \ \ \ \}}
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00041\ \ \ \ \ \{}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Verify\ that\ u*2\ =\ gen.\ */}}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ secp256k1\_gej\ double\_u;}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ secp256k1\_gej\_double\_var(\&double\_u,\ \&u,\ NULL);}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_gej\_eq\_ge\_var(\&double\_u,\ gen));}
+\DoxyCodeLine{00046\ \ \ \ \ \}}
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordflow}{for}\ (block\ =\ 0;\ block\ <\ blocks;\ ++block)\ \{}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ tooth;}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Here\ u\ =\ 2\string^(block*teeth*spacing)\ *\ gen/2.\ */}}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ secp256k1\_gej\ sum;}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ secp256k1\_gej\_set\_infinity(\&sum);}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (tooth\ =\ 0;\ tooth\ <\ teeth;\ ++tooth)\ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Here\ u\ =\ 2\string^((block*teeth\ +\ tooth)*spacing)\ *\ gen/2.\ */}}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Make\ sum\ =\ sum(2\string^((block*teeth\ +\ t)*spacing),\ t=0..tooth)\ *\ gen/2.\ */}}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_var(\&sum,\ \&sum,\ \&u,\ NULL);}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Make\ u\ =\ 2\string^((block*teeth\ +\ tooth)*spacing\ +\ 1)\ *\ gen/2.\ */}}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_double\_var(\&u,\ \&u,\ NULL);}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Make\ ds[tooth]\ =\ u\ =\ 2\string^((block*teeth\ +\ tooth)*spacing\ +\ 1)\ *\ gen/2.\ */}}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ ds[tooth]\ =\ u;}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Make\ u\ =\ 2\string^((block*teeth\ +\ tooth\ +\ 1)*spacing)\ *\ gen/2,\ unless\ at\ the\ end.\ */}}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (block\ +\ tooth\ !=\ blocks\ +\ teeth\ -\/\ 2)\ \{}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ bit\_off;}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (bit\_off\ =\ 1;\ bit\_off\ <\ spacing;\ ++bit\_off)\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_double\_var(\&u,\ \&u,\ NULL);}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Now\ u\ =\ 2\string^((block*teeth\ +\ teeth)*spacing)\ *\ gen/2}}
+\DoxyCodeLine{00071\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ \ \ \ \ \ \ =\ 2\string^((block+1)*teeth*spacing)\ *\ gen/2\ \ \ \ \ \ \ */}}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Next,\ compute\ the\ table\ entries\ for\ block\ number\ block\ in\ Jacobian\ coordinates.}}
+\DoxyCodeLine{00074\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ The\ entries\ will\ occupy\ vs[block*points\ +\ i]\ for\ i=0..points-\/1.}}
+\DoxyCodeLine{00075\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ We\ start\ by\ computing\ the\ first\ (i=0)\ value\ corresponding\ to\ all\ summed}}
+\DoxyCodeLine{00076\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ powers\ of\ two\ times\ G\ being\ negative.\ */}}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ secp256k1\_gej\_neg(\&vs[vs\_pos++],\ \&sum);}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ And\ then\ teeth-\/1\ times\ "{}double"{}\ the\ range\ of\ i\ values\ for\ which\ the\ table}}
+\DoxyCodeLine{00079\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ is\ computed:\ in\ each\ iteration,\ double\ the\ table\ by\ taking\ an\ existing}}
+\DoxyCodeLine{00080\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ table\ entry\ and\ adding\ ds[tooth].\ */}}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (tooth\ =\ 0;\ tooth\ <\ teeth\ -\/\ 1;\ ++tooth)\ \{}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ stride\ =\ ((size\_t)1)\ <<\ tooth;}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ index;}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (index\ =\ 0;\ index\ <\ stride;\ ++index,\ ++vs\_pos)\ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_var(\&vs[vs\_pos],\ \&vs[vs\_pos\ -\/\ stride],\ \&ds[tooth],\ NULL);}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00088\ \ \ \ \ \}}
+\DoxyCodeLine{00089\ \ \ \ \ VERIFY\_CHECK(vs\_pos\ ==\ points\_total);}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{comment}{/*\ Convert\ all\ points\ simultaneously\ from\ secp256k1\_gej\ to\ secp256k1\_ge.\ */}}
+\DoxyCodeLine{00092\ \ \ \ \ secp256k1\_ge\_set\_all\_gej\_var(prec,\ vs,\ points\_total);}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{comment}{/*\ Convert\ all\ points\ from\ secp256k1\_ge\ to\ secp256k1\_ge\_storage\ output.\ */}}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keywordflow}{for}\ (block\ =\ 0;\ block\ <\ blocks;\ ++block)\ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ index;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (index\ =\ 0;\ index\ <\ points;\ ++index)\ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ VERIFY\_CHECK(!secp256k1\_ge\_is\_infinity(\&prec[block\ *\ points\ +\ index]));}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ge\_to\_storage(\&table[block\ *\ points\ +\ index],\ \&prec[block\ *\ points\ +\ index]);}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00100\ \ \ \ \ \}}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{comment}{/*\ Free\ memory.\ */}}
+\DoxyCodeLine{00103\ \ \ \ \ free(vs);}
+\DoxyCodeLine{00104\ \ \ \ \ free(ds);}
+\DoxyCodeLine{00105\ \ \ \ \ free(prec);}
+\DoxyCodeLine{00106\ \}}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_ECMULT\_GEN\_COMPUTE\_TABLE\_IMPL\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

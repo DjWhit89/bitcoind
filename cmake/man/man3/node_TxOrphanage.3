@@ -1,0 +1,240 @@
+.TH "TxOrphanage" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+TxOrphanage
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <txorphanage\&.h>\fP
+.PP
+Inherited by \fBTxOrphanageImpl\fP\&.
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBOrphanInfo\fP"
+.br
+.in -1c
+.SS "Public Types"
+
+.in +1c
+.ti -1c
+.RI "using \fBUsage\fP = int64_t"
+.br
+.ti -1c
+.RI "using \fBCount\fP = unsigned int"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "virtual \fB~TxOrphanage\fP ()=default"
+.br
+.ti -1c
+.RI "virtual bool \fBAddTx\fP (const \fBCTransactionRef\fP &tx, \fBNodeId\fP peer)=0"
+.br
+.ti -1c
+.RI "virtual bool \fBAddAnnouncer\fP (const \fBWtxid\fP &wtxid, \fBNodeId\fP peer)=0"
+.br
+.ti -1c
+.RI "virtual \fBCTransactionRef\fP \fBGetTx\fP (const \fBWtxid\fP &wtxid) const =0"
+.br
+.ti -1c
+.RI "virtual bool \fBHaveTx\fP (const \fBWtxid\fP &wtxid) const =0"
+.br
+.ti -1c
+.RI "virtual bool \fBHaveTxFromPeer\fP (const \fBWtxid\fP &wtxid, \fBNodeId\fP peer) const =0"
+.br
+.ti -1c
+.RI "virtual \fBCTransactionRef\fP \fBGetTxToReconsider\fP (\fBNodeId\fP peer)=0"
+.br
+.ti -1c
+.RI "virtual bool \fBEraseTx\fP (const \fBWtxid\fP &wtxid)=0"
+.br
+.ti -1c
+.RI "virtual void \fBEraseForPeer\fP (\fBNodeId\fP peer)=0"
+.br
+.ti -1c
+.RI "virtual void \fBEraseForBlock\fP (const \fBCBlock\fP &block)=0"
+.br
+.ti -1c
+.RI "virtual std::vector< std::pair< \fBWtxid\fP, \fBNodeId\fP > > \fBAddChildrenToWorkSet\fP (const \fBCTransaction\fP &tx, \fBFastRandomContext\fP &rng)=0"
+.br
+.ti -1c
+.RI "virtual bool \fBHaveTxToReconsider\fP (\fBNodeId\fP peer)=0"
+.br
+.ti -1c
+.RI "virtual std::vector< \fBCTransactionRef\fP > \fBGetChildrenFromSamePeer\fP (const \fBCTransactionRef\fP &parent, \fBNodeId\fP nodeid) const =0"
+.br
+.ti -1c
+.RI "virtual std::vector< \fBOrphanInfo\fP > \fBGetOrphanTransactions\fP () const =0"
+.br
+.ti -1c
+.RI "virtual \fBUsage\fP \fBTotalOrphanUsage\fP () const =0"
+.br
+.ti -1c
+.RI "virtual \fBUsage\fP \fBUsageByPeer\fP (\fBNodeId\fP peer) const =0"
+.br
+.ti -1c
+.RI "virtual void \fBSanityCheck\fP () const =0"
+.br
+.ti -1c
+.RI "virtual \fBCount\fP \fBCountAnnouncements\fP () const =0"
+.br
+.ti -1c
+.RI "virtual \fBCount\fP \fBCountUniqueOrphans\fP () const =0"
+.br
+.ti -1c
+.RI "virtual \fBCount\fP \fBAnnouncementsFromPeer\fP (\fBNodeId\fP peer) const =0"
+.br
+.ti -1c
+.RI "virtual \fBCount\fP \fBLatencyScoreFromPeer\fP (\fBNodeId\fP peer) const =0"
+.br
+.ti -1c
+.RI "virtual \fBCount\fP \fBMaxGlobalLatencyScore\fP () const =0"
+.br
+.ti -1c
+.RI "virtual \fBCount\fP \fBTotalLatencyScore\fP () const =0"
+.br
+.ti -1c
+.RI "virtual \fBUsage\fP \fBReservedPeerUsage\fP () const =0"
+.br
+.ti -1c
+.RI "virtual \fBCount\fP \fBMaxPeerLatencyScore\fP () const =0"
+.br
+.ti -1c
+.RI "virtual \fBUsage\fP \fBMaxGlobalUsage\fP () const =0"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+A class to track orphan transactions (failed on TX_MISSING_INPUTS) Since we cannot distinguish orphans from bad transactions with non-existent inputs, we heavily limit the amount of announcements (unique (\fBNodeId\fP, wtxid) pairs), the number of inputs, and size of the orphans stored (both individual and summed)\&. We also try to prevent adversaries from churning this data structure: once global limits are reached, we continuously evict the oldest announcement (sorting non-reconsiderable orphans before reconsiderable ones) from the most resource-intensive peer until we are back within limits\&.
+.IP "\(bu" 2
+Peers can exceed their individual limits (e\&.g\&. because they are very useful transaction relay peers) as long as the global limits are not exceeded\&.
+.IP "\(bu" 2
+As long as the orphan has 1 announcer, it remains in the orphanage\&.
+.IP "\(bu" 2
+No peer can trigger the eviction of another peer's orphans\&.
+.IP "\(bu" 2
+Peers' orphans are effectively protected from eviction as long as they don't exceed their limits\&. Not thread-safe\&. Requires external synchronization\&. 
+.PP
+
+.SH "Member Typedef Documentation"
+.PP 
+.SS "using \fBCount\fP = unsigned int"
+
+.SS "using \fBUsage\fP = int64_t"
+
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "virtual ~\fBTxOrphanage\fP ()\fR [virtual]\fP, \fR [default]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "virtual bool AddAnnouncer (const \fBWtxid\fP & wtxid, \fBNodeId\fP peer)\fR [pure virtual]\fP"
+Add an additional announcer to an orphan if it exists\&. Otherwise, do nothing\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual std::vector< std::pair< \fBWtxid\fP, \fBNodeId\fP > > AddChildrenToWorkSet (const \fBCTransaction\fP & tx, \fBFastRandomContext\fP & rng)\fR [pure virtual]\fP"
+Add any orphans that list a particular tx as a parent into the from peer's work set 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual bool AddTx (const \fBCTransactionRef\fP & tx, \fBNodeId\fP peer)\fR [pure virtual]\fP"
+Add a new orphan transaction 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBCount\fP AnnouncementsFromPeer (\fBNodeId\fP peer) const\fR [pure virtual]\fP"
+Number of orphans stored from this peer\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBCount\fP CountAnnouncements () const\fR [pure virtual]\fP"
+Number of announcements, i\&.e\&. total size of m_orphans\&. Ones for the same wtxid are not de-duplicated\&. Not the same as \fBTotalLatencyScore()\fP\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBCount\fP CountUniqueOrphans () const\fR [pure virtual]\fP"
+Number of unique orphans (by wtxid)\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual void EraseForBlock (const \fBCBlock\fP & block)\fR [pure virtual]\fP"
+Erase all orphans included in or invalidated by a new block 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual void EraseForPeer (\fBNodeId\fP peer)\fR [pure virtual]\fP"
+Maybe erase all orphans announced by a peer (eg, after that peer disconnects)\&. If an orphan has been announced by another peer, don't erase, just remove this peer from the list of announcers\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual bool EraseTx (const \fBWtxid\fP & wtxid)\fR [pure virtual]\fP"
+Erase an orphan by wtxid, including all announcements if there are multiple\&. Returns true if an orphan was erased, false if no tx with this wtxid exists\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual std::vector< \fBCTransactionRef\fP > GetChildrenFromSamePeer (const \fBCTransactionRef\fP & parent, \fBNodeId\fP nodeid) const\fR [pure virtual]\fP"
+Get all children that spend from this tx and were received from nodeid\&. Sorted reconsiderable before non-reconsiderable, then from most recent to least recent\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual std::vector< \fBOrphanInfo\fP > GetOrphanTransactions () const\fR [pure virtual]\fP"
+Get all orphan transactions 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBCTransactionRef\fP GetTx (const \fBWtxid\fP & wtxid) const\fR [pure virtual]\fP"
+Get a transaction by its witness txid 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBCTransactionRef\fP GetTxToReconsider (\fBNodeId\fP peer)\fR [pure virtual]\fP"
+Extract a transaction from a peer's work set, and flip it back to non-reconsiderable\&. Returns nullptr if there are no transactions to work on\&. Otherwise returns the transaction reference, and removes it from the work set\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual bool HaveTx (const \fBWtxid\fP & wtxid) const\fR [pure virtual]\fP"
+Check if we already have an orphan transaction (by wtxid only) 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual bool HaveTxFromPeer (const \fBWtxid\fP & wtxid, \fBNodeId\fP peer) const\fR [pure virtual]\fP"
+Check if a {tx, peer} exists in the orphanage\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual bool HaveTxToReconsider (\fBNodeId\fP peer)\fR [pure virtual]\fP"
+Does this peer have any work to do? 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBCount\fP LatencyScoreFromPeer (\fBNodeId\fP peer) const\fR [pure virtual]\fP"
+Latency score of transactions announced by this peer\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBCount\fP MaxGlobalLatencyScore () const\fR [pure virtual]\fP"
+Get the maximum global latency score allowed 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBUsage\fP MaxGlobalUsage () const\fR [pure virtual]\fP"
+Get the maximum global usage allowed 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBCount\fP MaxPeerLatencyScore () const\fR [pure virtual]\fP"
+Get the maximum latency score allowed per peer 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBUsage\fP ReservedPeerUsage () const\fR [pure virtual]\fP"
+Get the reserved usage per peer 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual void SanityCheck () const\fR [pure virtual]\fP"
+Check consistency between PeerOrphanInfo and m_orphans\&. Recalculate counters and ensure they match what is cached\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBCount\fP TotalLatencyScore () const\fR [pure virtual]\fP"
+Get the total latency score of all orphans 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBUsage\fP TotalOrphanUsage () const\fR [pure virtual]\fP"
+Get the total usage (weight) of all orphans\&. If an orphan has multiple announcers, its usage is only counted once within this total\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+.SS "virtual \fBUsage\fP UsageByPeer (\fBNodeId\fP peer) const\fR [pure virtual]\fP"
+Total usage (weight) of orphans for which this peer is an announcer\&. If an orphan has multiple announcers, its weight will be accounted for in each PeerOrphanInfo, so the total of all peers' \fBUsageByPeer()\fP may be larger than \fBTotalOrphanUsage()\fP\&. Similarly, \fBUsageByPeer()\fP may be far higher than \fBReservedPeerUsage()\fP, particularly if many peers have provided the same orphans\&. 
+.PP
+Implemented in \fBTxOrphanageImpl\fP\&.
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

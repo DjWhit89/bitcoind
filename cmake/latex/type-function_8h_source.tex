@@ -1,0 +1,72 @@
+\doxysection{type-\/function.h}
+\label{type-function_8h_source}\index{src/ipc/libmultiprocess/include/mp/type-\/function.h@{src/ipc/libmultiprocess/include/mp/type-\/function.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ MP\_PROXY\_TYPE\_FUNCTION\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ MP\_PROXY\_TYPE\_FUNCTION\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <mp/util.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{keyword}{namespace\ }mp\ \{}
+\DoxyCodeLine{00012\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Result,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00013\ \textcolor{keyword}{class\ }ProxyCallbackImpl\ final\ :\ \textcolor{keyword}{public}\ ProxyCallback<std::function<Result(Args...)>>}
+\DoxyCodeLine{00014\ \{}
+\DoxyCodeLine{00015\ \ \ \ \ \textcolor{keyword}{using\ }Fn\ =\ std::function<Result(Args...)>;}
+\DoxyCodeLine{00016\ \ \ \ \ Fn\ m\_fn;}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00019\ \ \ \ \ ProxyCallbackImpl(Fn\ fn)\ :\ m\_fn(std::move(fn))\ \{\}}
+\DoxyCodeLine{00020\ \ \ \ \ Result\ call(Args\&\&...\ args)\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ m\_fn(std::forward<Args>(args)...);\ \}}
+\DoxyCodeLine{00021\ \};}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Value,\ \textcolor{keyword}{typename}\ FnR,\ \textcolor{keyword}{typename}...\ FnParams,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00024\ \textcolor{keywordtype}{void}\ CustomBuildField(TypeList<std::function<FnR(FnParams...)>>,}
+\DoxyCodeLine{00025\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00026\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00027\ \ \ \ \ Value\&\&\ value,}
+\DoxyCodeLine{00028\ \ \ \ \ Output\&\&\ output)}
+\DoxyCodeLine{00029\ \{}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keywordflow}{if}\ (value)\ \{}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }Interface\ =\ \textcolor{keyword}{typename}\ \textcolor{keyword}{decltype}(output.get())::Calls;}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }Callback\ =\ ProxyCallbackImpl<FnR,\ FnParams...>;}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ output.set(kj::heap<ProxyServer<Interface>>(}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \ \ \ \ std::make\_shared<Callback>(std::forward<Value>(value)),\ invoke\_context.connection));}
+\DoxyCodeLine{00035\ \ \ \ \ \}}
+\DoxyCodeLine{00036\ \}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{comment}{//\ ProxyCallFn\ class\ is\ needed\ because\ c++11\ doesn't\ support\ auto\ lambda\ parameters.}}
+\DoxyCodeLine{00039\ \textcolor{comment}{//\ It's\ equivalent\ c++14:\ [invoke\_context](auto\&\&\ params)\ \{}}
+\DoxyCodeLine{00040\ \textcolor{comment}{//\ invoke\_context-\/>call(std::forward<decltype(params)>(params)...)}}
+\DoxyCodeLine{00041\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ InvokeContext>}
+\DoxyCodeLine{00042\ \textcolor{keyword}{struct\ }ProxyCallFn}
+\DoxyCodeLine{00043\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ InvokeContext\ m\_proxy;}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ CallParams>}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ \textcolor{keyword}{operator}()(CallParams\&\&...\ params)\ \{\ \textcolor{keywordflow}{return}\ this-\/>m\_proxy-\/>call(std::forward<CallParams>(params)...);\ \}}
+\DoxyCodeLine{00048\ \};}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ FnR,\ \textcolor{keyword}{typename}...\ FnParams,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00051\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<std::function<FnR(FnParams...)>>,}
+\DoxyCodeLine{00052\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00053\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00054\ \ \ \ \ Input\&\&\ input,}
+\DoxyCodeLine{00055\ \ \ \ \ ReadDest\&\&\ read\_dest)}
+\DoxyCodeLine{00056\ \{}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordflow}{if}\ (input.has())\ \{}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }Interface\ =\ \textcolor{keyword}{typename}\ Decay<\textcolor{keyword}{decltype}(input.get())>::Calls;}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ client\ =\ std::make\_shared<ProxyClient<Interface>>(}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ input.get(),\ \&invoke\_context.connection,\ \textcolor{comment}{/*\ destroy\_connection=\ */}\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.construct(ProxyCallFn<\textcolor{keyword}{decltype}(client)>\{std::move(client)\});}
+\DoxyCodeLine{00062\ \ \ \ \ \}}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.construct();}
+\DoxyCodeLine{00064\ \};}
+\DoxyCodeLine{00065\ \}\ \textcolor{comment}{//\ namespace\ mp}}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ MP\_PROXY\_TYPE\_FUNCTION\_H}}
+
+\end{DoxyCode}

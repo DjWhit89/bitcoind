@@ -1,0 +1,223 @@
+\doxysection{pool.\+h}
+\label{pool_8h_source}\index{src/support/allocators/pool.h@{src/support/allocators/pool.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2022-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_SUPPORT\_ALLOCATORS\_POOL\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_SUPPORT\_ALLOCATORS\_POOL\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <list>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <new>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00071\ \textcolor{keyword}{template}\ <std::\textcolor{keywordtype}{size\_t}\ MAX\_BLOCK\_SIZE\_BYTES,\ std::\textcolor{keywordtype}{size\_t}\ ALIGN\_BYTES>}
+\DoxyCodeLine{00072\ \textcolor{keyword}{class\ }PoolResource\ final}
+\DoxyCodeLine{00073\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keyword}{static\_assert}(ALIGN\_BYTES\ >\ 0,\ \textcolor{stringliteral}{"{}ALIGN\_BYTES\ must\ be\ nonzero"{}});}
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keyword}{static\_assert}((ALIGN\_BYTES\ \&\ (ALIGN\_BYTES\ -\/\ 1))\ ==\ 0,\ \textcolor{stringliteral}{"{}ALIGN\_BYTES\ must\ be\ a\ power\ of\ two"{}});}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keyword}{struct\ }ListNode\ \{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ ListNode*\ m\_next;}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \textcolor{keyword}{explicit}\ ListNode(ListNode*\ next)\ :\ m\_next(next)\ \{\}}
+\DoxyCodeLine{00084\ \ \ \ \ \};}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_trivially\_destructible\_v<ListNode>,\ \textcolor{stringliteral}{"{}Make\ sure\ we\ don't\ need\ to\ manually\ call\ a\ destructor"{}});}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ std::size\_t\ ELEM\_ALIGN\_BYTES\ =\ std::max(\textcolor{keyword}{alignof}(ListNode),\ ALIGN\_BYTES);}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{keyword}{static\_assert}((ELEM\_ALIGN\_BYTES\ \&\ (ELEM\_ALIGN\_BYTES\ -\/\ 1))\ ==\ 0,\ \textcolor{stringliteral}{"{}ELEM\_ALIGN\_BYTES\ must\ be\ a\ power\ of\ two"{}});}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keyword}{static\_assert}(\textcolor{keyword}{sizeof}(ListNode)\ <=\ ELEM\_ALIGN\_BYTES,\ \textcolor{stringliteral}{"{}Units\ of\ size\ ELEM\_SIZE\_ALIGN\ need\ to\ be\ able\ to\ store\ a\ ListNode"{}});}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keyword}{static\_assert}((MAX\_BLOCK\_SIZE\_BYTES\ \&\ (ELEM\_ALIGN\_BYTES\ -\/\ 1))\ ==\ 0,\ \textcolor{stringliteral}{"{}MAX\_BLOCK\_SIZE\_BYTES\ needs\ to\ be\ a\ multiple\ of\ the\ alignment."{}});}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ m\_chunk\_size\_bytes;}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00103\ \ \ \ \ std::list<std::byte*>\ m\_allocated\_chunks\{\};}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00109\ \ \ \ \ std::array<ListNode*,\ MAX\_BLOCK\_SIZE\_BYTES\ /\ ELEM\_ALIGN\_BYTES\ +\ 1>\ m\_free\_lists\{\};}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00114\ \ \ \ \ std::byte*\ m\_available\_memory\_it\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00122\ \ \ \ \ std::byte*\ m\_available\_memory\_end\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00128\ \ \ \ \ [[nodiscard]]\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ std::size\_t\ NumElemAlignBytes(std::size\_t\ bytes)}
+\DoxyCodeLine{00129\ \ \ \ \ \{}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (bytes\ +\ ELEM\_ALIGN\_BYTES\ -\/\ 1)\ /\ ELEM\_ALIGN\_BYTES\ +\ (bytes\ ==\ 0);}
+\DoxyCodeLine{00131\ \ \ \ \ \}}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00136\ \ \ \ \ [[nodiscard]]\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ IsFreeListUsable(std::size\_t\ bytes,\ std::size\_t\ alignment)}
+\DoxyCodeLine{00137\ \ \ \ \ \{}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ alignment\ <=\ ELEM\_ALIGN\_BYTES\ \&\&\ bytes\ <=\ MAX\_BLOCK\_SIZE\_BYTES;}
+\DoxyCodeLine{00139\ \ \ \ \ \}}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keywordtype}{void}\ PlacementAddToList(\textcolor{keywordtype}{void}*\ p,\ ListNode*\&\ node)}
+\DoxyCodeLine{00145\ \ \ \ \ \{}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ node\ =\ \textcolor{keyword}{new}\ (p)\ ListNode\{node\};}
+\DoxyCodeLine{00147\ \ \ \ \ \}}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keywordtype}{void}\ AllocateChunk()}
+\DoxyCodeLine{00156\ \ \ \ \ \{}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ if\ there\ is\ still\ any\ available\ memory\ left,\ put\ it\ into\ the\ freelist.}}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ remaining\_available\_bytes\ =\ std::distance(m\_available\_memory\_it,\ m\_available\_memory\_end);}
+\DoxyCodeLine{00159\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (0\ !=\ remaining\_available\_bytes)\ \{}
+\DoxyCodeLine{00160\ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_UNPOISON\_MEMORY\_REGION(m\_available\_memory\_it,\ \textcolor{keyword}{sizeof}(ListNode));}
+\DoxyCodeLine{00161\ \ \ \ \ \ \ \ \ \ \ \ \ PlacementAddToList(m\_available\_memory\_it,\ m\_free\_lists[remaining\_available\_bytes\ /\ ELEM\_ALIGN\_BYTES]);}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_POISON\_MEMORY\_REGION(m\_available\_memory\_it,\ \textcolor{keyword}{sizeof}(ListNode));}
+\DoxyCodeLine{00163\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}*\ storage\ =\ ::operator\ \textcolor{keyword}{new}\ (m\_chunk\_size\_bytes,\ std::align\_val\_t\{ELEM\_ALIGN\_BYTES\});}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ m\_available\_memory\_it\ =\ \textcolor{keyword}{new}\ (storage)\ std::byte[m\_chunk\_size\_bytes];}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ m\_available\_memory\_end\ =\ m\_available\_memory\_it\ +\ m\_chunk\_size\_bytes;}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ ASAN\_POISON\_MEMORY\_REGION(m\_available\_memory\_it,\ m\_chunk\_size\_bytes);}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ m\_allocated\_chunks.emplace\_back(m\_available\_memory\_it);}
+\DoxyCodeLine{00170\ \ \ \ \ \}}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00175\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }PoolResourceTester;}
+\DoxyCodeLine{00176\ }
+\DoxyCodeLine{00177\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{keyword}{explicit}\ PoolResource(std::size\_t\ chunk\_size\_bytes)}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ :\ m\_chunk\_size\_bytes(NumElemAlignBytes(chunk\_size\_bytes)\ *\ ELEM\_ALIGN\_BYTES)}
+\DoxyCodeLine{00184\ \ \ \ \ \{}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ assert(m\_chunk\_size\_bytes\ >=\ MAX\_BLOCK\_SIZE\_BYTES);}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ AllocateChunk();}
+\DoxyCodeLine{00187\ \ \ \ \ \}}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00192\ \ \ \ \ PoolResource()\ :\ PoolResource(262144)\ \{\}}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00197\ \ \ \ \ PoolResource(\textcolor{keyword}{const}\ PoolResource\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00198\ \ \ \ \ PoolResource\&\ operator=(\textcolor{keyword}{const}\ PoolResource\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00199\ \ \ \ \ PoolResource(PoolResource\&\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00200\ \ \ \ \ PoolResource\&\ operator=(PoolResource\&\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00201\ }
+\DoxyCodeLine{00205\ \ \ \ \ \string~PoolResource()}
+\DoxyCodeLine{00206\ \ \ \ \ \{}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (std::byte*\ chunk\ :\ m\_allocated\_chunks)\ \{}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \ \ \ \ std::destroy(chunk,\ chunk\ +\ m\_chunk\_size\_bytes);}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \ \ \ \ ::operator\ \textcolor{keyword}{delete}\ ((\textcolor{keywordtype}{void}*)chunk,\ std::align\_val\_t\{ELEM\_ALIGN\_BYTES\});}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_UNPOISON\_MEMORY\_REGION(chunk,\ m\_chunk\_size\_bytes);}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00212\ \ \ \ \ \}}
+\DoxyCodeLine{00213\ }
+\DoxyCodeLine{00218\ \ \ \ \ \textcolor{keywordtype}{void}*\ Allocate(std::size\_t\ bytes,\ std::size\_t\ alignment)}
+\DoxyCodeLine{00219\ \ \ \ \ \{}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (IsFreeListUsable(bytes,\ alignment))\ \{}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::size\_t\ num\_alignments\ =\ NumElemAlignBytes(bytes);}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{nullptr}\ !=\ m\_free\_lists[num\_alignments])\ \{}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ we've\ already\ got\ data\ in\ the\ pool's\ freelist,\ unlink\ one\ element\ and\ return\ the\ pointer}}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ to\ the\ unlinked\ memory.\ Since\ FreeList\ is\ trivially\ destructible\ we\ can\ just\ treat\ it\ as}}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ uninitialized\ memory.}}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_UNPOISON\_MEMORY\_REGION(m\_free\_lists[num\_alignments],\ \textcolor{keyword}{sizeof}(ListNode));}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}*\ next\{m\_free\_lists[num\_alignments]-\/>m\_next\};}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_POISON\_MEMORY\_REGION(m\_free\_lists[num\_alignments],\ \textcolor{keyword}{sizeof}(ListNode));}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_UNPOISON\_MEMORY\_REGION(m\_free\_lists[num\_alignments],\ bytes);}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::exchange(m\_free\_lists[num\_alignments],\ next);}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ freelist\ is\ empty:\ get\ one\ allocation\ from\ allocated\ chunk\ memory.}}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::ptrdiff\_t\ round\_bytes\ =\ \textcolor{keyword}{static\_cast<}std::ptrdiff\_t\textcolor{keyword}{>}(num\_alignments\ *\ ELEM\_ALIGN\_BYTES);}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (round\_bytes\ >\ m\_available\_memory\_end\ -\/\ m\_available\_memory\_it)\ \{}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ slow\ path,\ only\ happens\ when\ a\ new\ chunk\ needs\ to\ be\ allocated}}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ AllocateChunk();}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ we\ use\ the\ right\ amount\ of\ bytes\ for\ that\ freelist\ (might\ be\ rounded\ up),}}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_UNPOISON\_MEMORY\_REGION(m\_available\_memory\_it,\ round\_bytes);}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::exchange(m\_available\_memory\_it,\ m\_available\_memory\_it\ +\ round\_bytes);}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00244\ }
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Can't\ use\ the\ pool\ =>\ use\ operator\ new()}}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ return\ ::operator\ \textcolor{keyword}{new}\ (bytes,\ std::align\_val\_t\{alignment\});}
+\DoxyCodeLine{00247\ \ \ \ \ \}}
+\DoxyCodeLine{00248\ }
+\DoxyCodeLine{00252\ \ \ \ \ \textcolor{keywordtype}{void}\ Deallocate(\textcolor{keywordtype}{void}*\ p,\ std::size\_t\ bytes,\ std::size\_t\ alignment)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00253\ \ \ \ \ \{}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (IsFreeListUsable(bytes,\ alignment))\ \{}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::size\_t\ num\_alignments\ =\ NumElemAlignBytes(bytes);}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ put\ the\ memory\ block\ into\ the\ linked\ list.\ We\ can\ placement\ construct\ the\ FreeList}}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ into\ the\ memory\ since\ we\ can\ be\ sure\ the\ alignment\ is\ correct.}}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_UNPOISON\_MEMORY\_REGION(p,\ \textcolor{keyword}{sizeof}(ListNode));}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ \ \ \ \ PlacementAddToList(p,\ m\_free\_lists[num\_alignments]);}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ \ \ \ \ ASAN\_POISON\_MEMORY\_REGION(p,\ std::max(bytes,\ \textcolor{keyword}{sizeof}(ListNode)));}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Can't\ use\ the\ pool\ =>\ forward\ deallocation\ to\ ::operator\ delete().}}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \ \ \ \ ::operator\ \textcolor{keyword}{delete}\ (p,\ std::align\_val\_t\{alignment\});}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00265\ \ \ \ \ \}}
+\DoxyCodeLine{00266\ }
+\DoxyCodeLine{00270\ \ \ \ \ [[nodiscard]]\ std::size\_t\ NumAllocatedChunks()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00271\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_allocated\_chunks.size();}
+\DoxyCodeLine{00273\ \ \ \ \ \}}
+\DoxyCodeLine{00274\ }
+\DoxyCodeLine{00278\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{size\_t}\ ChunkSizeBytes()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00279\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_chunk\_size\_bytes;}
+\DoxyCodeLine{00281\ \ \ \ \ \}}
+\DoxyCodeLine{00282\ \};}
+\DoxyCodeLine{00283\ }
+\DoxyCodeLine{00284\ }
+\DoxyCodeLine{00288\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T,\ std::\textcolor{keywordtype}{size\_t}\ MAX\_BLOCK\_SIZE\_BYTES,\ std::\textcolor{keywordtype}{size\_t}\ ALIGN\_BYTES\ =\ alignof(T)>}
+\DoxyCodeLine{00289\ \textcolor{keyword}{class\ }PoolAllocator}
+\DoxyCodeLine{00290\ \{}
+\DoxyCodeLine{00291\ \ \ \ \ PoolResource<MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>*\ m\_resource;}
+\DoxyCodeLine{00292\ }
+\DoxyCodeLine{00293\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ U,\ std::\textcolor{keywordtype}{size\_t}\ M,\ std::\textcolor{keywordtype}{size\_t}\ A>}
+\DoxyCodeLine{00294\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }PoolAllocator;}
+\DoxyCodeLine{00295\ }
+\DoxyCodeLine{00296\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00297\ \ \ \ \ \textcolor{keyword}{using\ }value\_type\ =\ T;}
+\DoxyCodeLine{00298\ \ \ \ \ \textcolor{keyword}{using\ }ResourceType\ =\ PoolResource<MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>;}
+\DoxyCodeLine{00299\ }
+\DoxyCodeLine{00303\ \ \ \ \ PoolAllocator(ResourceType*\ resource)\ noexcept}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ :\ m\_resource(resource)}
+\DoxyCodeLine{00305\ \ \ \ \ \{}
+\DoxyCodeLine{00306\ \ \ \ \ \}}
+\DoxyCodeLine{00307\ }
+\DoxyCodeLine{00308\ \ \ \ \ PoolAllocator(\textcolor{keyword}{const}\ PoolAllocator\&\ other)\ \textcolor{keyword}{noexcept}\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00309\ \ \ \ \ PoolAllocator\&\ operator=(\textcolor{keyword}{const}\ PoolAllocator\&\ other)\ \textcolor{keyword}{noexcept}\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00310\ }
+\DoxyCodeLine{00311\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ U>}
+\DoxyCodeLine{00312\ \ \ \ \ PoolAllocator(\textcolor{keyword}{const}\ PoolAllocator<U,\ MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>\&\ other)\ noexcept}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ :\ m\_resource(other.resource())}
+\DoxyCodeLine{00314\ \ \ \ \ \{}
+\DoxyCodeLine{00315\ \ \ \ \ \}}
+\DoxyCodeLine{00316\ }
+\DoxyCodeLine{00321\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ U>}
+\DoxyCodeLine{00322\ \ \ \ \ \textcolor{keyword}{struct\ }rebind\ \{}
+\DoxyCodeLine{00323\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }other\ =\ PoolAllocator<U,\ MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>;}
+\DoxyCodeLine{00324\ \ \ \ \ \};}
+\DoxyCodeLine{00325\ }
+\DoxyCodeLine{00329\ \ \ \ \ T*\ allocate(\textcolor{keywordtype}{size\_t}\ n)}
+\DoxyCodeLine{00330\ \ \ \ \ \{}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}T*\textcolor{keyword}{>}(m\_resource-\/>Allocate(n\ *\ \textcolor{keyword}{sizeof}(T),\ \textcolor{keyword}{alignof}(T)));}
+\DoxyCodeLine{00332\ \ \ \ \ \}}
+\DoxyCodeLine{00333\ }
+\DoxyCodeLine{00337\ \ \ \ \ \textcolor{keywordtype}{void}\ deallocate(T*\ p,\ \textcolor{keywordtype}{size\_t}\ n)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00338\ \ \ \ \ \{}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ m\_resource-\/>Deallocate(p,\ n\ *\ \textcolor{keyword}{sizeof}(T),\ \textcolor{keyword}{alignof}(T));}
+\DoxyCodeLine{00340\ \ \ \ \ \}}
+\DoxyCodeLine{00341\ }
+\DoxyCodeLine{00342\ \ \ \ \ ResourceType*\ resource()\ const\ noexcept}
+\DoxyCodeLine{00343\ \ \ \ \ \{}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_resource;}
+\DoxyCodeLine{00345\ \ \ \ \ \}}
+\DoxyCodeLine{00346\ \};}
+\DoxyCodeLine{00347\ }
+\DoxyCodeLine{00348\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T1,\ \textcolor{keyword}{class}\ T2,\ std::\textcolor{keywordtype}{size\_t}\ MAX\_BLOCK\_SIZE\_BYTES,\ std::\textcolor{keywordtype}{size\_t}\ ALIGN\_BYTES>}
+\DoxyCodeLine{00349\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ PoolAllocator<T1,\ MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>\&\ a,}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ PoolAllocator<T2,\ MAX\_BLOCK\_SIZE\_BYTES,\ ALIGN\_BYTES>\&\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00351\ \{}
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{keywordflow}{return}\ a.resource()\ ==\ b.resource();}
+\DoxyCodeLine{00353\ \}}
+\DoxyCodeLine{00354\ }
+\DoxyCodeLine{00355\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_SUPPORT\_ALLOCATORS\_POOL\_H}}
+
+\end{DoxyCode}

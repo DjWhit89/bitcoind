@@ -1,0 +1,94 @@
+\doxysection{transaction\+\_\+identifier.\+h}
+\label{transaction__identifier_8h_source}\index{src/primitives/transaction\_identifier.h@{src/primitives/transaction\_identifier.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2023-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ https://opensource.org/license/mit.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_PRIMITIVES\_TRANSACTION\_IDENTIFIER\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_PRIMITIVES\_TRANSACTION\_IDENTIFIER\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <util/types.h>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <compare>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <concepts>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <tuple>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <variant>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{bool}\ has\_witness>}
+\DoxyCodeLine{00020\ \textcolor{keyword}{class\ }transaction\_identifier}
+\DoxyCodeLine{00021\ \{}
+\DoxyCodeLine{00022\ \ \ \ \ uint256\ m\_wrapped;}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{comment}{//\ Note:\ Use\ FromUint256\ externally\ instead.}}
+\DoxyCodeLine{00025\ \ \ \ \ transaction\_identifier(\textcolor{keyword}{const}\ uint256\&\ wrapped)\ :\ m\_wrapped\{wrapped\}\ \{\}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ Compare(\textcolor{keyword}{const}\ transaction\_identifier<has\_witness>\&\ other)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_wrapped.Compare(other.m\_wrapped);\ \}}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Other>}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ Compare(\textcolor{keyword}{const}\ Other\&\ other)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00030\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(ALWAYS\_FALSE<Other>,\ \textcolor{stringliteral}{"{}Forbidden\ comparison\ type"{}});}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00033\ \ \ \ \ \}}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00036\ \ \ \ \ transaction\_identifier()\ :\ m\_wrapped\{\}\ \{\}}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keyword}{consteval}\ \textcolor{keyword}{explicit}\ transaction\_identifier(std::string\_view\ hex\_str)\ :\ m\_wrapped\{uint256\{hex\_str\}\}\ \{\}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Other>}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ Other\&\ other)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Compare(other)\ ==\ 0;\ \}}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Other>}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator<(\textcolor{keyword}{const}\ Other\&\ other)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Compare(other)\ <\ 0;\ \}}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keyword}{const}\ uint256\&\ ToUint256()\ const\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ m\_wrapped;\ \}}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keyword}{static}\ transaction\_identifier\ FromUint256(\textcolor{keyword}{const}\ uint256\&\ \textcolor{keywordtype}{id})\ \{\ \textcolor{keywordflow}{return}\ \{\textcolor{keywordtype}{id}\};\ \}}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ IsNull()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_wrapped.IsNull();\ \}}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{void}\ SetNull()\ \{\ m\_wrapped.SetNull();\ \}}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keyword}{static}\ std::optional<transaction\_identifier>\ FromHex(std::string\_view\ hex)}
+\DoxyCodeLine{00051\ \ \ \ \ \{}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ u\{uint256::FromHex(hex)\};}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!u)\ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ FromUint256(*u);}
+\DoxyCodeLine{00055\ \ \ \ \ \}}
+\DoxyCodeLine{00056\ \ \ \ \ std::string\ GetHex()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_wrapped.GetHex();\ \}}
+\DoxyCodeLine{00057\ \ \ \ \ std::string\ ToString()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_wrapped.ToString();\ \}}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ size()\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{decltype}(m\_wrapped)::size();\ \}}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ std::byte*\ data()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }std::byte*\textcolor{keyword}{>}(m\_wrapped.data());\ \}}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ std::byte*\ begin()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }std::byte*\textcolor{keyword}{>}(m\_wrapped.begin());\ \}}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ std::byte*\ end()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }std::byte*\textcolor{keyword}{>}(m\_wrapped.end());\ \}}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const\ }\{\ m\_wrapped.Serialize(s);\ \}}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)\ \{\ m\_wrapped.Unserialize(s);\ \}}
+\DoxyCodeLine{00064\ \};}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00067\ \textcolor{keyword}{using\ }Txid\ =\ transaction\_identifier<false>;}
+\DoxyCodeLine{00069\ \textcolor{keyword}{using\ }Wtxid\ =\ transaction\_identifier<true>;}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00072\ \textcolor{keyword}{concept\ }TxidOrWtxid\ =\ std::is\_same\_v<T,\ Txid>\ ||\ std::is\_same\_v<T,\ Wtxid>;}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \textcolor{keyword}{class\ }GenTxid\ :\ \textcolor{keyword}{public}\ std::variant<Txid,\ Wtxid>}
+\DoxyCodeLine{00075\ \{}
+\DoxyCodeLine{00076\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keyword}{using\ }variant::variant;}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsWtxid()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ std::holds\_alternative<Wtxid>(*\textcolor{keyword}{this});\ \}}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{keyword}{const}\ uint256\&\ ToUint256()\ const\ LIFETIMEBOUND}
+\DoxyCodeLine{00082\ \ \ \ \ \{}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::visit([](\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ \textcolor{keywordtype}{id})\ -\/>\ \textcolor{keyword}{const}\ uint256\&\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keywordtype}{id}.ToUint256();\ \},\ *\textcolor{keyword}{this});}
+\DoxyCodeLine{00084\ \ \ \ \ \}}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{auto}\ operator<=>(\textcolor{keyword}{const}\ GenTxid\&\ a,\ \textcolor{keyword}{const}\ GenTxid\&\ b)}
+\DoxyCodeLine{00087\ \ \ \ \ \{}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Use\ a\ reference\ for\ read-\/only\ access\ to\ the\ hash,\ avoiding\ a\ copy\ that\ might\ not\ be\ optimized\ away.}}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::tuple<bool,\ const\ uint256\&>(a.IsWtxid(),\ a.ToUint256())\ <=>\ std::tuple<bool,\ const\ uint256\&>(b.IsWtxid(),\ b.ToUint256());}
+\DoxyCodeLine{00090\ \ \ \ \ \}}
+\DoxyCodeLine{00091\ \};}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_PRIMITIVES\_TRANSACTION\_IDENTIFIER\_H}}
+
+\end{DoxyCode}

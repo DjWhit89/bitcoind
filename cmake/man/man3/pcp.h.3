@@ -1,0 +1,131 @@
+.TH "src/common/pcp.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/common/pcp.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <netaddress\&.h>\fP
+.br
+\fR#include <util/threadinterrupt\&.h>\fP
+.br
+\fR#include <variant>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBMappingResult\fP"
+.br
+.RI "Successful response to a port mapping\&. "
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "typedef std::array< uint8_t, \fBPCP_MAP_NONCE_SIZE\fP > \fBPCPMappingNonce\fP"
+.br
+.RI "PCP mapping nonce\&. Arbitrary data chosen by the client to identify a mapping\&. "
+.in -1c
+.SS "Enumerations"
+
+.in +1c
+.ti -1c
+.RI "enum class \fBMappingError\fP { \fBNETWORK_ERROR\fP, \fBPROTOCOL_ERROR\fP, \fBUNSUPP_VERSION\fP, \fBNO_RESOURCES\fP }"
+.br
+.RI "Unsuccessful response to a port mapping\&. "
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "std::variant< \fBMappingResult\fP, \fBMappingError\fP > \fBNATPMPRequestPortMap\fP (const \fBCNetAddr\fP &gateway, uint16_t port, uint32_t lifetime, \fBCThreadInterrupt\fP &interrupt, int num_tries=3, std::chrono::milliseconds timeout_per_try=std::chrono::milliseconds(1000))"
+.br
+.ti -1c
+.RI "std::variant< \fBMappingResult\fP, \fBMappingError\fP > \fBPCPRequestPortMap\fP (const \fBPCPMappingNonce\fP &\fBnonce\fP, const \fBCNetAddr\fP &gateway, const \fBCNetAddr\fP &bind, uint16_t port, uint32_t lifetime, \fBCThreadInterrupt\fP &interrupt, int num_tries=3, std::chrono::milliseconds timeout_per_try=std::chrono::milliseconds(1000))"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "constexpr size_t \fBPCP_MAP_NONCE_SIZE\fP = 12"
+.br
+.RI "Mapping nonce size in bytes (see RFC6887 section 11\&.1)\&. "
+.in -1c
+.SH "Typedef Documentation"
+.PP 
+.SS "typedef std::array<uint8_t, \fBPCP_MAP_NONCE_SIZE\fP> \fBPCPMappingNonce\fP"
+
+.PP
+PCP mapping nonce\&. Arbitrary data chosen by the client to identify a mapping\&. 
+.SH "Enumeration Type Documentation"
+.PP 
+.SS "enum class \fBMappingError\fP\fR [strong]\fP"
+
+.PP
+Unsuccessful response to a port mapping\&. 
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BINETWORK_ERROR \fP
+Any kind of network-level error\&. 
+.TP
+\f(BIPROTOCOL_ERROR \fP
+Any kind of protocol-level error, except unsupported version or no resources\&. 
+.TP
+\f(BIUNSUPP_VERSION \fP
+Unsupported protocol version\&. 
+.TP
+\f(BINO_RESOURCES \fP
+No resources available (port probably already mapped)\&. 
+.SH "Function Documentation"
+.PP 
+.SS "std::variant< \fBMappingResult\fP, \fBMappingError\fP > NATPMPRequestPortMap (const \fBCNetAddr\fP & gateway, uint16_t port, uint32_t lifetime, \fBCThreadInterrupt\fP & interrupt, int num_tries = \fR3\fP, std::chrono::milliseconds timeout_per_try = \fRstd::chrono::milliseconds(1000)\fP)"
+Try to open a port using RFC 6886 NAT-PMP\&. IPv4 only\&.
+
+.PP
+.IP "\(bu" 2
+gateway: Destination address for PCP requests (usually the default gateway)\&.
+.IP "\(bu" 2
+port: Internal port, and desired external port\&.
+.IP "\(bu" 2
+lifetime: Requested lifetime in seconds for mapping\&. The server may assign as shorter or longer lifetime\&. A lifetime of 0 deletes the mapping\&.
+.IP "\(bu" 2
+num_tries: Number of tries in case of no response\&.
+.PP
+
+.PP
+Returns the external_ip:external_port of the mapping if successful, otherwise a \fBMappingError\fP\&. 
+.SS "std::variant< \fBMappingResult\fP, \fBMappingError\fP > PCPRequestPortMap (const \fBPCPMappingNonce\fP & nonce, const \fBCNetAddr\fP & gateway, const \fBCNetAddr\fP & bind, uint16_t port, uint32_t lifetime, \fBCThreadInterrupt\fP & interrupt, int num_tries = \fR3\fP, std::chrono::milliseconds timeout_per_try = \fRstd::chrono::milliseconds(1000)\fP)"
+Try to open a port using RFC 6887 Port Control Protocol (PCP)\&. Handles IPv4 and IPv6\&.
+
+.PP
+.IP "\(bu" 2
+nonce: Mapping cookie\&. Keep this the same over renewals\&.
+.IP "\(bu" 2
+gateway: Destination address for PCP requests (usually the default gateway)\&.
+.IP "\(bu" 2
+bind: Specific local bind address for IPv6 pinholing\&. Set this as INADDR_ANY for IPv4\&.
+.IP "\(bu" 2
+port: Internal port, and desired external port\&.
+.IP "\(bu" 2
+lifetime: Requested lifetime in seconds for mapping\&. The server may assign as shorter or longer lifetime\&. A lifetime of 0 deletes the mapping\&.
+.IP "\(bu" 2
+num_tries: Number of tries in case of no response\&.
+.PP
+
+.PP
+Returns the external_ip:external_port of the mapping if successful, otherwise a \fBMappingError\fP\&. 
+.SH "Variable Documentation"
+.PP 
+.SS "size_t PCP_MAP_NONCE_SIZE = 12\fR [constexpr]\fP"
+
+.PP
+Mapping nonce size in bytes (see RFC6887 section 11\&.1)\&. 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

@@ -1,0 +1,101 @@
+\doxysection{snapshot.\+h}
+\label{snapshot_8h_source}\index{src/leveldb/db/snapshot.h@{src/leveldb/db/snapshot.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_DB\_SNAPSHOT\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_DB\_SNAPSHOT\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ "{}db/dbformat.h"{}}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ "{}leveldb/db.h"{}}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{class\ }SnapshotList;}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{comment}{//\ Snapshots\ are\ kept\ in\ a\ doubly-\/linked\ list\ in\ the\ DB.}}
+\DoxyCodeLine{00016\ \textcolor{comment}{//\ Each\ SnapshotImpl\ corresponds\ to\ a\ particular\ sequence\ number.}}
+\DoxyCodeLine{00017\ \textcolor{keyword}{class\ }SnapshotImpl\ :\ \textcolor{keyword}{public}\ Snapshot\ \{}
+\DoxyCodeLine{00018\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00019\ \ \ SnapshotImpl(SequenceNumber\ sequence\_number)}
+\DoxyCodeLine{00020\ \ \ \ \ \ \ :\ sequence\_number\_(sequence\_number)\ \{\}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \ \ SequenceNumber\ sequence\_number()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ sequence\_number\_;\ \}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00025\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }SnapshotList;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \textcolor{comment}{//\ SnapshotImpl\ is\ kept\ in\ a\ doubly-\/linked\ circular\ list.\ The\ SnapshotList}}
+\DoxyCodeLine{00028\ \ \ \textcolor{comment}{//\ implementation\ operates\ on\ the\ next/previous\ fields\ directly.}}
+\DoxyCodeLine{00029\ \ \ SnapshotImpl*\ prev\_;}
+\DoxyCodeLine{00030\ \ \ SnapshotImpl*\ next\_;}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \ \ \textcolor{keyword}{const}\ SequenceNumber\ sequence\_number\_;}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#if\ !defined(NDEBUG)}}
+\DoxyCodeLine{00035\ \ \ SnapshotList*\ list\_\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ !defined(NDEBUG)}}
+\DoxyCodeLine{00037\ \};}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{class\ }SnapshotList\ \{}
+\DoxyCodeLine{00040\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00041\ \ \ SnapshotList()\ :\ head\_(0)\ \{}
+\DoxyCodeLine{00042\ \ \ \ \ head\_.prev\_\ =\ \&head\_;}
+\DoxyCodeLine{00043\ \ \ \ \ head\_.next\_\ =\ \&head\_;}
+\DoxyCodeLine{00044\ \ \ \}}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \textcolor{keywordtype}{bool}\ empty()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ head\_.next\_\ ==\ \&head\_;\ \}}
+\DoxyCodeLine{00047\ \ \ SnapshotImpl*\ oldest()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00048\ \ \ \ \ assert(!empty());}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordflow}{return}\ head\_.next\_;}
+\DoxyCodeLine{00050\ \ \ \}}
+\DoxyCodeLine{00051\ \ \ SnapshotImpl*\ newest()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00052\ \ \ \ \ assert(!empty());}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordflow}{return}\ head\_.prev\_;}
+\DoxyCodeLine{00054\ \ \ \}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \textcolor{comment}{//\ Creates\ a\ SnapshotImpl\ and\ appends\ it\ to\ the\ end\ of\ the\ list.}}
+\DoxyCodeLine{00057\ \ \ SnapshotImpl*\ New(SequenceNumber\ sequence\_number)\ \{}
+\DoxyCodeLine{00058\ \ \ \ \ assert(empty()\ ||\ newest()-\/>sequence\_number\_\ <=\ sequence\_number);}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \ \ SnapshotImpl*\ snapshot\ =\ \textcolor{keyword}{new}\ SnapshotImpl(sequence\_number);}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \textcolor{preprocessor}{\#if\ !defined(NDEBUG)}}
+\DoxyCodeLine{00063\ \ \ \ \ snapshot-\/>list\_\ =\ \textcolor{keyword}{this};}
+\DoxyCodeLine{00064\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ !defined(NDEBUG)}}
+\DoxyCodeLine{00065\ \ \ \ \ snapshot-\/>next\_\ =\ \&head\_;}
+\DoxyCodeLine{00066\ \ \ \ \ snapshot-\/>prev\_\ =\ head\_.prev\_;}
+\DoxyCodeLine{00067\ \ \ \ \ snapshot-\/>prev\_-\/>next\_\ =\ snapshot;}
+\DoxyCodeLine{00068\ \ \ \ \ snapshot-\/>next\_-\/>prev\_\ =\ snapshot;}
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordflow}{return}\ snapshot;}
+\DoxyCodeLine{00070\ \ \ \}}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \textcolor{comment}{//\ Removes\ a\ SnapshotImpl\ from\ this\ list.}}
+\DoxyCodeLine{00073\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00074\ \ \ \textcolor{comment}{//\ The\ snapshot\ must\ have\ been\ created\ by\ calling\ New()\ on\ this\ list.}}
+\DoxyCodeLine{00075\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00076\ \ \ \textcolor{comment}{//\ The\ snapshot\ pointer\ should\ not\ be\ const,\ because\ its\ memory\ is}}
+\DoxyCodeLine{00077\ \ \ \textcolor{comment}{//\ deallocated.\ However,\ that\ would\ force\ us\ to\ change\ DB::ReleaseSnapshot(),}}
+\DoxyCodeLine{00078\ \ \ \textcolor{comment}{//\ which\ is\ in\ the\ API,\ and\ currently\ takes\ a\ const\ Snapshot.}}
+\DoxyCodeLine{00079\ \ \ \textcolor{keywordtype}{void}\ Delete(\textcolor{keyword}{const}\ SnapshotImpl*\ snapshot)\ \{}
+\DoxyCodeLine{00080\ \textcolor{preprocessor}{\#if\ !defined(NDEBUG)}}
+\DoxyCodeLine{00081\ \ \ \ \ assert(snapshot-\/>list\_\ ==\ \textcolor{keyword}{this});}
+\DoxyCodeLine{00082\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ !defined(NDEBUG)}}
+\DoxyCodeLine{00083\ \ \ \ \ snapshot-\/>prev\_-\/>next\_\ =\ snapshot-\/>next\_;}
+\DoxyCodeLine{00084\ \ \ \ \ snapshot-\/>next\_-\/>prev\_\ =\ snapshot-\/>prev\_;}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keyword}{delete}\ snapshot;}
+\DoxyCodeLine{00086\ \ \ \}}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00089\ \ \ \textcolor{comment}{//\ Dummy\ head\ of\ doubly-\/linked\ list\ of\ snapshots}}
+\DoxyCodeLine{00090\ \ \ SnapshotImpl\ head\_;}
+\DoxyCodeLine{00091\ \};}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_DB\_SNAPSHOT\_H\_}}
+
+\end{DoxyCode}

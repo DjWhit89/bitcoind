@@ -1,0 +1,241 @@
+.TH "TxRequestTracker" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+TxRequestTracker
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <txrequest\&.h>\fP
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBImpl\fP"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBTxRequestTracker\fP (bool deterministic=false)"
+.br
+.RI "Construct a \fBTxRequestTracker\fP\&. "
+.ti -1c
+.RI "\fB~TxRequestTracker\fP ()"
+.br
+.ti -1c
+.RI "void \fBReceivedInv\fP (\fBNodeId\fP peer, const \fBGenTxid\fP &gtxid, bool preferred, std::chrono::microseconds reqtime)"
+.br
+.ti -1c
+.RI "void \fBDisconnectedPeer\fP (\fBNodeId\fP peer)"
+.br
+.ti -1c
+.RI "void \fBForgetTxHash\fP (const \fBuint256\fP &txhash)"
+.br
+.ti -1c
+.RI "std::vector< \fBGenTxid\fP > \fBGetRequestable\fP (\fBNodeId\fP peer, std::chrono::microseconds now, std::vector< std::pair< \fBNodeId\fP, \fBGenTxid\fP > > *expired=nullptr)"
+.br
+.ti -1c
+.RI "void \fBRequestedTx\fP (\fBNodeId\fP peer, const \fBuint256\fP &txhash, std::chrono::microseconds expiry)"
+.br
+.ti -1c
+.RI "void \fBReceivedResponse\fP (\fBNodeId\fP peer, const \fBuint256\fP &txhash)"
+.br
+.ti -1c
+.RI "size_t \fBCountInFlight\fP (\fBNodeId\fP peer) const"
+.br
+.ti -1c
+.RI "size_t \fBCountCandidates\fP (\fBNodeId\fP peer) const"
+.br
+.ti -1c
+.RI "size_t \fBCount\fP (\fBNodeId\fP peer) const"
+.br
+.ti -1c
+.RI "size_t \fBSize\fP () const"
+.br
+.ti -1c
+.RI "void \fBGetCandidatePeers\fP (const \fBuint256\fP &txhash, std::vector< \fBNodeId\fP > &result_peers) const"
+.br
+.ti -1c
+.RI "uint64_t \fBComputePriority\fP (const \fBuint256\fP &txhash, \fBNodeId\fP peer, bool preferred) const"
+.br
+.ti -1c
+.RI "void \fBSanityCheck\fP () const"
+.br
+.ti -1c
+.RI "void \fBPostGetRequestableSanityCheck\fP (std::chrono::microseconds now) const"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Data structure to keep track of, and schedule, transaction downloads from peers\&.
+
+.PP
+=== Specification ===
+
+.PP
+We keep track of which peers have announced which transactions, and use that to determine which requests should go to which peer, when, and in what order\&.
+
+.PP
+The following information is tracked per peer/tx combination ("announcement"):
+.IP "\(bu" 2
+Which peer announced it (through their \fBNodeId\fP)
+.IP "\(bu" 2
+The txid or wtxid of the transaction (collectively called "txhash" in what follows)
+.IP "\(bu" 2
+Whether it was a tx or wtx announcement (see BIP339)\&.
+.IP "\(bu" 2
+What the earliest permitted time is that that transaction can be requested from that peer (called "reqtime")\&.
+.IP "\(bu" 2
+Whether it's from a "preferred" peer or not\&. Which announcements get this flag is determined by the caller, but this is designed for outbound peers, or other peers that we have a higher level of trust in\&. Even when the peers' preferredness changes, the preferred flag of existing announcements from that peer won't change\&.
+.IP "\(bu" 2
+Whether or not the transaction was requested already, and if so, when it times out (called "expiry")\&.
+.IP "\(bu" 2
+Whether or not the transaction request failed already (timed out, or invalid transaction or NOTFOUND was received)\&.
+.PP
+
+.PP
+Transaction requests are then assigned to peers, following these rules:
+
+.PP
+.IP "\(bu" 2
+No transaction is requested as long as another request for the same txhash is outstanding (it needs to fail first by passing expiry, or a NOTFOUND or invalid transaction has to be received for it)\&.
+
+.PP
+Rationale: to avoid wasting bandwidth on multiple copies of the same transaction\&. Note that this only works per txhash, so if the same transaction is announced both through txid and wtxid, we have no means to prevent fetching both (the caller can however mitigate this by delaying one, see further)\&.
+.IP "\(bu" 2
+The same transaction is never requested twice from the same peer, unless the announcement was forgotten in between, and re-announced\&. Announcements are forgotten only:
+.IP "  \(bu" 4
+If a peer goes offline, all its announcements are forgotten\&.
+.IP "  \(bu" 4
+If a transaction has been successfully received, or is otherwise no longer needed, the caller can call ForgetTxHash, which removes all announcements across all peers with the specified txhash\&.
+.IP "  \(bu" 4
+If for a given txhash only already-failed announcements remain, they are all forgotten\&.
+.PP
+
+.PP
+Rationale: giving a peer multiple chances to announce a transaction would allow them to bias requests in their favor, worsening transaction censoring attacks\&. The flip side is that as long as an attacker manages to prevent us from receiving a transaction, failed announcements (including those from honest peers) will linger longer, increasing memory usage somewhat\&. The impact of this is limited by imposing a cap on the number of tracked announcements per peer\&. As failed requests in response to announcements from honest peers should be rare, this almost solely hinders attackers\&. Transaction censoring attacks can be done by announcing transactions quickly while not answering requests for them\&. See https://allquantor.at/blockchainbib/pdf/miller2015topology.pdf for more information\&.
+.IP "\(bu" 2
+Transactions are not requested from a peer until its reqtime has passed\&.
+
+.PP
+Rationale: enable the calling code to define a delay for less-than-ideal peers, so that (presumed) better peers have a chance to give their announcement first\&.
+.IP "\(bu" 2
+If multiple viable candidate peers exist according to the above rules, pick a peer as follows:
+.IP "  \(bu" 4
+If any preferred peers are available, non-preferred peers are not considered for what follows\&.
+
+.PP
+Rationale: preferred peers are more trusted by us, so are less likely to be under attacker control\&.
+.IP "  \(bu" 4
+Pick a uniformly random peer among the candidates\&.
+
+.PP
+Rationale: random assignments are hard to influence for attackers\&.
+.PP
+
+.PP
+
+.PP
+Together these rules strike a balance between being fast in non-adverserial conditions and minimizing susceptibility to censorship attacks\&. An attacker that races the network:
+.IP "\(bu" 2
+Will be unsuccessful if all preferred connections are honest (and there is at least one preferred connection)\&.
+.IP "\(bu" 2
+If there are P preferred connections of which Ph>=1 are honest, the attacker can delay us from learning about a transaction by k expiration periods, where k ~ 1 + NHG(N=P-1,K=P-Ph-1,r=1), which has mean P/(Ph+1) (where NHG stands for Negative Hypergeometric distribution)\&. The "1 +" is due to the fact that the attacker can be the first to announce through a preferred connection in this scenario, which very likely means they get the first request\&.
+.IP "\(bu" 2
+If all P preferred connections are to the attacker, and there are NP non-preferred connections of which NPh>=1 are honest, where we assume that the attacker can disconnect and reconnect those connections, the distribution becomes k ~ P + NB(p=1-NPh/NP,r=1) (where NB stands for Negative Binomial distribution), which has mean P-1+NP/NPh\&.
+.PP
+
+.PP
+Complexity:
+.IP "\(bu" 2
+Memory usage is proportional to the total number of tracked announcements (\fBSize()\fP) plus the number of peers with a nonzero number of tracked announcements\&.
+.IP "\(bu" 2
+CPU usage is generally logarithmic in the total number of tracked announcements, plus the number of announcements affected by an operation (amortized O(1) per announcement)\&.
+.PP
+
+.PP
+Context:
+.IP "\(bu" 2
+In an earlier version of the transaction request logic it was possible for a peer to prevent us from seeing a specific transaction\&. See https://bitcoincore.org/en/2024/07/03/disclose_already_asked_for\&. 
+.PP
+
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBTxRequestTracker\fP (bool deterministic = \fRfalse\fP)\fR [explicit]\fP"
+
+.PP
+Construct a \fBTxRequestTracker\fP\&. 
+.SS "~\fBTxRequestTracker\fP ()\fR [default]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "uint64_t ComputePriority (const \fBuint256\fP & txhash, \fBNodeId\fP peer, bool preferred) const"
+Access to the internal priority computation (testing only) 
+.SS "size_t Count (\fBNodeId\fP peer) const"
+Count how many announcements a peer has (REQUESTED, CANDIDATE, and COMPLETED combined)\&. 
+.SS "size_t CountCandidates (\fBNodeId\fP peer) const"
+Count how many CANDIDATE announcements a peer has\&. 
+.SS "size_t CountInFlight (\fBNodeId\fP peer) const"
+Count how many REQUESTED announcements a peer has\&. 
+.SS "void DisconnectedPeer (\fBNodeId\fP peer)"
+Deletes all announcements for a given peer\&.
+
+.PP
+It should be called when a peer goes offline\&. 
+.SS "void ForgetTxHash (const \fBuint256\fP & txhash)"
+Deletes all announcements for a given txhash (both txid and wtxid ones)\&.
+
+.PP
+This should be called when a transaction is no longer needed\&. The caller should ensure that new announcements for the same txhash will not trigger new ReceivedInv calls, at least in the short term after this call\&. 
+.SS "void GetCandidatePeers (const \fBuint256\fP & txhash, std::vector< \fBNodeId\fP > & result_peers) const"
+For some txhash (txid or wtxid), finds all peers with non-COMPLETED announcements and appends them to result_peers\&. Does not try to ensure that result_peers contains no duplicates\&. 
+.SS "std::vector< \fBGenTxid\fP > GetRequestable (\fBNodeId\fP peer, std::chrono::microseconds now, std::vector< std::pair< \fBNodeId\fP, \fBGenTxid\fP > > * expired = \fRnullptr\fP)"
+Find the txids to request now from peer\&.
+
+.PP
+It does the following:
+.IP "\(bu" 2
+Convert all REQUESTED announcements (for all txhashes/peers) with (expiry <= now) to COMPLETED ones\&. These are returned in expired, if non-nullptr\&.
+.IP "\(bu" 2
+Requestable announcements are selected: CANDIDATE announcements from the specified peer with (reqtime <= now) for which no existing REQUESTED announcement with the same txhash from a different peer exists, and for which the specified peer is the best choice among all (reqtime <= now) CANDIDATE announcements with the same txhash (subject to preferredness rules, and tiebreaking using a deterministic salted hash of peer and txhash)\&.
+.IP "\(bu" 2
+The selected announcements are returned in announcement order (even if multiple were added at the same time, or when the clock went backwards while they were being added)\&. This is done to minimize disruption from dependent transactions being requested out of order: if multiple dependent transactions are announced simultaneously by one peer, and end up being requested from them, the requests will happen in announcement order\&. 
+.PP
+
+.SS "void PostGetRequestableSanityCheck (std::chrono::microseconds now) const"
+Run a time-dependent internal consistency check (testing only)\&.
+
+.PP
+This can only be called immediately after GetRequestable, with the same 'now' parameter\&. 
+.SS "void ReceivedInv (\fBNodeId\fP peer, const \fBGenTxid\fP & gtxid, bool preferred, std::chrono::microseconds reqtime)"
+Adds a new CANDIDATE announcement\&.
+
+.PP
+Does nothing if one already exists for that (txhash, peer) combination (whether it's CANDIDATE, REQUESTED, or COMPLETED)\&. Note that the txid/wtxid property is ignored for determining uniqueness, so if an announcement is added for a wtxid H, while one for txid H from the same peer already exists, it will be ignored\&. This is harmless as the txhashes being equal implies it is a non-segwit transaction, so it doesn't matter how it is fetched\&. The new announcement is given the specified preferred and reqtime values, and takes its is_wtxid from the specified gtxid\&. 
+.SS "void ReceivedResponse (\fBNodeId\fP peer, const \fBuint256\fP & txhash)"
+Converts a CANDIDATE or REQUESTED announcement to a COMPLETED one\&. If no such announcement exists for the provided peer and txhash, nothing happens\&.
+
+.PP
+It should be called whenever a transaction or NOTFOUND was received from a peer\&. When the transaction is not needed entirely anymore, ForgetTxhash should be called instead of, or in addition to, this call\&. 
+.SS "void RequestedTx (\fBNodeId\fP peer, const \fBuint256\fP & txhash, std::chrono::microseconds expiry)"
+Marks a transaction as requested, with a specified expiry\&.
+
+.PP
+If no CANDIDATE announcement for the provided peer and txhash exists, this call has no effect\&. Otherwise:
+.IP "\(bu" 2
+That announcement is converted to REQUESTED\&.
+.IP "\(bu" 2
+If any other REQUESTED announcement for the same txhash already existed, it means an unexpected request was made (GetRequestable will never advise doing so)\&. In this case it is converted to COMPLETED, as we're no longer waiting for a response to it\&. 
+.PP
+
+.SS "void SanityCheck () const"
+Run internal consistency check (testing only)\&. 
+.SS "size_t Size () const"
+Count how many announcements are being tracked in total across all peers and transaction hashes\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

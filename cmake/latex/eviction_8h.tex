@@ -1,0 +1,51 @@
+\doxysection{src/node/eviction.h File Reference}
+\label{eviction_8h}\index{src/node/eviction.h@{src/node/eviction.h}}
+{\ttfamily \#include $<$node/connection\+\_\+types.\+h$>$}\newline
+{\ttfamily \#include $<$net\+\_\+permissions.\+h$>$}\newline
+{\ttfamily \#include $<$chrono$>$}\newline
+{\ttfamily \#include $<$cstdint$>$}\newline
+{\ttfamily \#include $<$optional$>$}\newline
+{\ttfamily \#include $<$vector$>$}\newline
+\doxysubsubsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+struct \textbf{ Node\+Eviction\+Candidate}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+std\+::optional$<$ \textbf{ Node\+Id} $>$ \textbf{ Select\+Node\+To\+Evict} (std\+::vector$<$ \textbf{ Node\+Eviction\+Candidate} $>$ \&\&v\+Eviction\+Candidates)
+\item 
+void \textbf{ Protect\+Eviction\+Candidates\+By\+Ratio} (std\+::vector$<$ \textbf{ Node\+Eviction\+Candidate} $>$ \&v\+Eviction\+Candidates)
+\end{DoxyCompactItemize}
+
+
+\label{doc-func-members}
+\doxysubsection{Function Documentation}
+\index{eviction.h@{eviction.h}!ProtectEvictionCandidatesByRatio@{ProtectEvictionCandidatesByRatio}}
+\index{ProtectEvictionCandidatesByRatio@{ProtectEvictionCandidatesByRatio}!eviction.h@{eviction.h}}
+\doxysubsubsection{ProtectEvictionCandidatesByRatio()}
+{\footnotesize\ttfamily \label{eviction_8h_ac52cc1a6b495b5950766a0d6786c5bdc} 
+void Protect\+Eviction\+Candidates\+By\+Ratio (\begin{DoxyParamCaption}\item[{std\+::vector$<$ \textbf{ Node\+Eviction\+Candidate} $>$ \&}]{v\+Eviction\+Candidates}{}\end{DoxyParamCaption})}
+
+Protect desirable or disadvantaged inbound peers from eviction by ratio.
+
+This function protects half of the peers which have been connected the longest, to replicate the non-\/eviction implicit behavior and preclude attacks that start later.
+
+Half of these protected spots (1/4 of the total) are reserved for the following categories of peers, sorted by longest uptime, even if they\textquotesingle{}re not longest uptime overall\+:
+
+
+\begin{DoxyItemize}
+\item onion peers connected via our tor control service
+\item localhost peers, as manually configured hidden services not using {\ttfamily -\/bind=addr[\+:port]=onion} will not be detected as inbound onion connections
+\item I2P peers
+\item CJDNS peers
+\end{DoxyItemize}
+
+This helps protect these privacy network peers, which tend to be otherwise disadvantaged under our eviction criteria for their higher min ping times relative to IPv4/\+IPv6 peers, and favorise the diversity of peer connections. \index{eviction.h@{eviction.h}!SelectNodeToEvict@{SelectNodeToEvict}}
+\index{SelectNodeToEvict@{SelectNodeToEvict}!eviction.h@{eviction.h}}
+\doxysubsubsection{SelectNodeToEvict()}
+{\footnotesize\ttfamily \label{eviction_8h_a799d58489ce4ea35e8bc556dd9ffb33c} 
+std\+::optional$<$ \textbf{ Node\+Id} $>$ Select\+Node\+To\+Evict (\begin{DoxyParamCaption}\item[{std\+::vector$<$ \textbf{ Node\+Eviction\+Candidate} $>$ \&\&}]{v\+Eviction\+Candidates}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [nodiscard]}}
+
+Select an inbound peer to evict after filtering out (protecting) peers having distinct, difficult-\/to-\/forge characteristics. The protection logic picks out fixed numbers of desirable peers per various criteria, followed by (mostly) ratios of desirable or disadvantaged peers. If any eviction candidates remain, the selection logic chooses a peer to evict. 

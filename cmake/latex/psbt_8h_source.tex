@@ -1,0 +1,1418 @@
+\doxysection{psbt.\+h}
+\label{psbt_8h_source}\index{src/psbt.h@{src/psbt.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_PSBT\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_PSBT\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <common/types.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <node/transaction.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <policy/feerate.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <pubkey.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <script/keyorigin.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <script/sign.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <script/signingprovider.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <streams.h>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{namespace\ }node\ \{}
+\DoxyCodeLine{00022\ \textcolor{keyword}{enum\ class}\ TransactionError;}
+\DoxyCodeLine{00023\ \}\ \textcolor{comment}{//\ namespace\ node}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{using\ }common::PSBTError;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{comment}{//\ Magic\ bytes}}
+\DoxyCodeLine{00028\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_MAGIC\_BYTES[5]\ =\ \{\textcolor{charliteral}{'p'},\ \textcolor{charliteral}{'s'},\ \textcolor{charliteral}{'b'},\ \textcolor{charliteral}{'t'},\ 0xff\};}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{comment}{//\ Global\ types}}
+\DoxyCodeLine{00031\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_GLOBAL\_UNSIGNED\_TX\ =\ 0x00;}
+\DoxyCodeLine{00032\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_GLOBAL\_XPUB\ =\ 0x01;}
+\DoxyCodeLine{00033\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_GLOBAL\_VERSION\ =\ 0xFB;}
+\DoxyCodeLine{00034\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_GLOBAL\_PROPRIETARY\ =\ 0xFC;}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{comment}{//\ Input\ types}}
+\DoxyCodeLine{00037\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_NON\_WITNESS\_UTXO\ =\ 0x00;}
+\DoxyCodeLine{00038\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_WITNESS\_UTXO\ =\ 0x01;}
+\DoxyCodeLine{00039\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_PARTIAL\_SIG\ =\ 0x02;}
+\DoxyCodeLine{00040\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_SIGHASH\ =\ 0x03;}
+\DoxyCodeLine{00041\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_REDEEMSCRIPT\ =\ 0x04;}
+\DoxyCodeLine{00042\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_WITNESSSCRIPT\ =\ 0x05;}
+\DoxyCodeLine{00043\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_BIP32\_DERIVATION\ =\ 0x06;}
+\DoxyCodeLine{00044\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_SCRIPTSIG\ =\ 0x07;}
+\DoxyCodeLine{00045\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_SCRIPTWITNESS\ =\ 0x08;}
+\DoxyCodeLine{00046\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_RIPEMD160\ =\ 0x0A;}
+\DoxyCodeLine{00047\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_SHA256\ =\ 0x0B;}
+\DoxyCodeLine{00048\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_HASH160\ =\ 0x0C;}
+\DoxyCodeLine{00049\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_HASH256\ =\ 0x0D;}
+\DoxyCodeLine{00050\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_TAP\_KEY\_SIG\ =\ 0x13;}
+\DoxyCodeLine{00051\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_TAP\_SCRIPT\_SIG\ =\ 0x14;}
+\DoxyCodeLine{00052\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_TAP\_LEAF\_SCRIPT\ =\ 0x15;}
+\DoxyCodeLine{00053\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_TAP\_BIP32\_DERIVATION\ =\ 0x16;}
+\DoxyCodeLine{00054\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_TAP\_INTERNAL\_KEY\ =\ 0x17;}
+\DoxyCodeLine{00055\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_TAP\_MERKLE\_ROOT\ =\ 0x18;}
+\DoxyCodeLine{00056\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_MUSIG2\_PARTICIPANT\_PUBKEYS\ =\ 0x1a;}
+\DoxyCodeLine{00057\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_MUSIG2\_PUB\_NONCE\ =\ 0x1b;}
+\DoxyCodeLine{00058\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_MUSIG2\_PARTIAL\_SIG\ =\ 0x1c;}
+\DoxyCodeLine{00059\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_IN\_PROPRIETARY\ =\ 0xFC;}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \textcolor{comment}{//\ Output\ types}}
+\DoxyCodeLine{00062\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_OUT\_REDEEMSCRIPT\ =\ 0x00;}
+\DoxyCodeLine{00063\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_OUT\_WITNESSSCRIPT\ =\ 0x01;}
+\DoxyCodeLine{00064\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_OUT\_BIP32\_DERIVATION\ =\ 0x02;}
+\DoxyCodeLine{00065\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_OUT\_TAP\_INTERNAL\_KEY\ =\ 0x05;}
+\DoxyCodeLine{00066\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_OUT\_TAP\_TREE\ =\ 0x06;}
+\DoxyCodeLine{00067\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_OUT\_TAP\_BIP32\_DERIVATION\ =\ 0x07;}
+\DoxyCodeLine{00068\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_OUT\_MUSIG2\_PARTICIPANT\_PUBKEYS\ =\ 0x08;}
+\DoxyCodeLine{00069\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_OUT\_PROPRIETARY\ =\ 0xFC;}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \textcolor{comment}{//\ The\ separator\ is\ 0x00.\ Reading\ this\ in\ means\ that\ the\ unserializer\ can\ interpret\ it}}
+\DoxyCodeLine{00072\ \textcolor{comment}{//\ as\ a\ 0\ length\ key\ which\ indicates\ that\ this\ is\ the\ separator.\ The\ separator\ has\ no\ value.}}
+\DoxyCodeLine{00073\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ PSBT\_SEPARATOR\ =\ 0x00;}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \textcolor{comment}{//\ BIP\ 174\ does\ not\ specify\ a\ maximum\ file\ size,\ but\ we\ set\ a\ limit\ anyway}}
+\DoxyCodeLine{00076\ \textcolor{comment}{//\ to\ prevent\ reading\ a\ stream\ indefinitely\ and\ running\ out\ of\ memory.}}
+\DoxyCodeLine{00077\ \textcolor{keyword}{const}\ std::streamsize\ MAX\_FILE\_SIZE\_PSBT\ =\ 100000000;\ \textcolor{comment}{//\ 100\ MB}}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \textcolor{comment}{//\ PSBT\ version\ number}}
+\DoxyCodeLine{00080\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint32\_t\ PSBT\_HIGHEST\_VERSION\ =\ 0;}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00083\ \textcolor{keyword}{struct\ }PSBTProprietary}
+\DoxyCodeLine{00084\ \{}
+\DoxyCodeLine{00085\ \ \ \ \ uint64\_t\ subtype;}
+\DoxyCodeLine{00086\ \ \ \ \ std::vector<unsigned\ char>\ identifier;}
+\DoxyCodeLine{00087\ \ \ \ \ std::vector<unsigned\ char>\ key;}
+\DoxyCodeLine{00088\ \ \ \ \ std::vector<unsigned\ char>\ value;}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator<(\textcolor{keyword}{const}\ PSBTProprietary\ \&b)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ key\ <\ b.key;}
+\DoxyCodeLine{00092\ \ \ \ \ \}}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ PSBTProprietary\ \&b)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ key\ ==\ b.key;}
+\DoxyCodeLine{00095\ \ \ \ \ \}}
+\DoxyCodeLine{00096\ \};}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \textcolor{comment}{//\ Takes\ a\ stream\ and\ multiple\ arguments\ and\ serializes\ them\ as\ if\ first\ serialized\ into\ a\ vector\ and\ then\ into\ the\ stream}}
+\DoxyCodeLine{00099\ \textcolor{comment}{//\ The\ resulting\ output\ into\ the\ stream\ has\ the\ total\ serialized\ length\ of\ all\ of\ the\ objects\ followed\ by\ all\ objects\ concatenated\ with\ each\ other.}}
+\DoxyCodeLine{00100\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}...\ X>}
+\DoxyCodeLine{00101\ \textcolor{keywordtype}{void}\ SerializeToVector(Stream\&\ s,\ \textcolor{keyword}{const}\ X\&...\ args)}
+\DoxyCodeLine{00102\ \{}
+\DoxyCodeLine{00103\ \ \ \ \ SizeComputer\ sizecomp;}
+\DoxyCodeLine{00104\ \ \ \ \ SerializeMany(sizecomp,\ args...);}
+\DoxyCodeLine{00105\ \ \ \ \ WriteCompactSize(s,\ sizecomp.size());}
+\DoxyCodeLine{00106\ \ \ \ \ SerializeMany(s,\ args...);}
+\DoxyCodeLine{00107\ \}}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00109\ \textcolor{comment}{//\ Takes\ a\ stream\ and\ multiple\ arguments\ and\ unserializes\ them\ first\ as\ a\ vector\ then\ each\ object\ individually\ in\ the\ order\ provided\ in\ the\ arguments}}
+\DoxyCodeLine{00110\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}...\ X>}
+\DoxyCodeLine{00111\ \textcolor{keywordtype}{void}\ UnserializeFromVector(Stream\&\ s,\ X\&\&...\ args)}
+\DoxyCodeLine{00112\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ expected\_size\ =\ ReadCompactSize(s);}
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ remaining\_before\ =\ s.size();}
+\DoxyCodeLine{00115\ \ \ \ \ UnserializeMany(s,\ args...);}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ remaining\_after\ =\ s.size();}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{keywordflow}{if}\ (remaining\_after\ +\ expected\_size\ !=\ remaining\_before)\ \{}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Size\ of\ value\ was\ not\ the\ stated\ size"{}});}
+\DoxyCodeLine{00119\ \ \ \ \ \}}
+\DoxyCodeLine{00120\ \}}
+\DoxyCodeLine{00121\ }
+\DoxyCodeLine{00122\ \textcolor{comment}{//\ Deserialize\ bytes\ of\ given\ length\ from\ the\ stream\ as\ a\ KeyOriginInfo}}
+\DoxyCodeLine{00123\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00124\ KeyOriginInfo\ DeserializeKeyOrigin(Stream\&\ s,\ uint64\_t\ length)}
+\DoxyCodeLine{00125\ \{}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{comment}{//\ Read\ in\ key\ path}}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keywordflow}{if}\ (length\ \%\ 4\ ||\ length\ ==\ 0)\ \{}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Invalid\ length\ for\ HD\ key\ path"{}});}
+\DoxyCodeLine{00129\ \ \ \ \ \}}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00131\ \ \ \ \ KeyOriginInfo\ hd\_keypath;}
+\DoxyCodeLine{00132\ \ \ \ \ s\ >>\ hd\_keypath.fingerprint;}
+\DoxyCodeLine{00133\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ i\ =\ 4;\ i\ <\ length;\ i\ +=\ \textcolor{keyword}{sizeof}(uint32\_t))\ \{}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ uint32\_t\ index;}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ s\ >>\ index;}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ hd\_keypath.path.push\_back(index);}
+\DoxyCodeLine{00137\ \ \ \ \ \}}
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{keywordflow}{return}\ hd\_keypath;}
+\DoxyCodeLine{00139\ \}}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00141\ \textcolor{comment}{//\ Deserialize\ a\ length\ prefixed\ KeyOriginInfo\ from\ a\ stream}}
+\DoxyCodeLine{00142\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00143\ \textcolor{keywordtype}{void}\ DeserializeHDKeypath(Stream\&\ s,\ KeyOriginInfo\&\ hd\_keypath)}
+\DoxyCodeLine{00144\ \{}
+\DoxyCodeLine{00145\ \ \ \ \ hd\_keypath\ =\ DeserializeKeyOrigin(s,\ ReadCompactSize(s));}
+\DoxyCodeLine{00146\ \}}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00148\ \textcolor{comment}{//\ Deserialize\ HD\ keypaths\ into\ a\ map}}
+\DoxyCodeLine{00149\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00150\ \textcolor{keywordtype}{void}\ DeserializeHDKeypaths(Stream\&\ s,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ key,\ std::map<CPubKey,\ KeyOriginInfo>\&\ hd\_keypaths)}
+\DoxyCodeLine{00151\ \{}
+\DoxyCodeLine{00152\ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ that\ the\ key\ is\ the\ size\ of\ pubkey\ +\ 1}}
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keywordflow}{if}\ (key.size()\ !=\ CPubKey::SIZE\ +\ 1\ \&\&\ key.size()\ !=\ CPubKey::COMPRESSED\_SIZE\ +\ 1)\ \{}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Size\ of\ key\ was\ not\ the\ expected\ size\ for\ the\ type\ BIP32\ keypath"{}});}
+\DoxyCodeLine{00155\ \ \ \ \ \}}
+\DoxyCodeLine{00156\ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ pubkey\ from\ key}}
+\DoxyCodeLine{00157\ \ \ \ \ CPubKey\ pubkey(key.begin()\ +\ 1,\ key.end());}
+\DoxyCodeLine{00158\ \ \ \ \ \textcolor{keywordflow}{if}\ (!pubkey.IsFullyValid())\ \{}
+\DoxyCodeLine{00159\ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Invalid\ pubkey"{}});}
+\DoxyCodeLine{00160\ \ \ \ \ \}}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordflow}{if}\ (hd\_keypaths.contains(pubkey))\ \{}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ pubkey\ derivation\ path\ already\ provided"{}});}
+\DoxyCodeLine{00163\ \ \ \ \ \}}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \ \ \ \ KeyOriginInfo\ keypath;}
+\DoxyCodeLine{00166\ \ \ \ \ DeserializeHDKeypath(s,\ keypath);}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ \ \ \ \ \textcolor{comment}{//\ Add\ to\ map}}
+\DoxyCodeLine{00169\ \ \ \ \ hd\_keypaths.emplace(pubkey,\ std::move(keypath));}
+\DoxyCodeLine{00170\ \}}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00172\ \textcolor{comment}{//\ Serialize\ a\ KeyOriginInfo\ to\ a\ stream}}
+\DoxyCodeLine{00173\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00174\ \textcolor{keywordtype}{void}\ SerializeKeyOrigin(Stream\&\ s,\ KeyOriginInfo\ hd\_keypath)}
+\DoxyCodeLine{00175\ \{}
+\DoxyCodeLine{00176\ \ \ \ \ s\ <<\ hd\_keypath.fingerprint;}
+\DoxyCodeLine{00177\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ path\ :\ hd\_keypath.path)\ \{}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ s\ <<\ path;}
+\DoxyCodeLine{00179\ \ \ \ \ \}}
+\DoxyCodeLine{00180\ \}}
+\DoxyCodeLine{00181\ }
+\DoxyCodeLine{00182\ \textcolor{comment}{//\ Serialize\ a\ length\ prefixed\ KeyOriginInfo\ to\ a\ stream}}
+\DoxyCodeLine{00183\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00184\ \textcolor{keywordtype}{void}\ SerializeHDKeypath(Stream\&\ s,\ KeyOriginInfo\ hd\_keypath)}
+\DoxyCodeLine{00185\ \{}
+\DoxyCodeLine{00186\ \ \ \ \ WriteCompactSize(s,\ (hd\_keypath.path.size()\ +\ 1)\ *\ \textcolor{keyword}{sizeof}(uint32\_t));}
+\DoxyCodeLine{00187\ \ \ \ \ SerializeKeyOrigin(s,\ hd\_keypath);}
+\DoxyCodeLine{00188\ \}}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00190\ \textcolor{comment}{//\ Serialize\ HD\ keypaths\ to\ a\ stream\ from\ a\ map}}
+\DoxyCodeLine{00191\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00192\ \textcolor{keywordtype}{void}\ SerializeHDKeypaths(Stream\&\ s,\ \textcolor{keyword}{const}\ std::map<CPubKey,\ KeyOriginInfo>\&\ hd\_keypaths,\ CompactSizeWriter\ type)}
+\DoxyCodeLine{00193\ \{}
+\DoxyCodeLine{00194\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ keypath\_pair\ :\ hd\_keypaths)\ \{}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!keypath\_pair.first.IsValid())\ \{}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Invalid\ CPubKey\ being\ serialized"{}});}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ SerializeToVector(s,\ type,\ std::span\{keypath\_pair.first\});}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ SerializeHDKeypath(s,\ keypath\_pair.second);}
+\DoxyCodeLine{00200\ \ \ \ \ \}}
+\DoxyCodeLine{00201\ \}}
+\DoxyCodeLine{00202\ }
+\DoxyCodeLine{00203\ \textcolor{comment}{//\ Deserialize\ a\ PSBT\_\{IN/OUT\}\_MUSIG2\_PARTICIPANT\_PUBKEYS\ field}}
+\DoxyCodeLine{00204\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00205\ \textcolor{keywordtype}{void}\ DeserializeMuSig2ParticipantPubkeys(Stream\&\ s,\ SpanReader\&\ skey,\ std::map<CPubKey,\ std::vector<CPubKey>>\&\ out,\ std::string\ context)}
+\DoxyCodeLine{00206\ \{}
+\DoxyCodeLine{00207\ \ \ \ \ std::array<unsigned\ char,\ CPubKey::COMPRESSED\_SIZE>\ agg\_pubkey\_bytes;}
+\DoxyCodeLine{00208\ \ \ \ \ skey\ >>\ std::as\_writable\_bytes(std::span\{agg\_pubkey\_bytes\});}
+\DoxyCodeLine{00209\ \ \ \ \ CPubKey\ agg\_pubkey(agg\_pubkey\_bytes);}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00211\ \ \ \ \ std::vector<CPubKey>\ participants;}
+\DoxyCodeLine{00212\ \ \ \ \ std::vector<unsigned\ char>\ val;}
+\DoxyCodeLine{00213\ \ \ \ \ s\ >>\ val;}
+\DoxyCodeLine{00214\ \ \ \ \ SpanReader\ s\_val\{val\};}
+\DoxyCodeLine{00215\ \ \ \ \ \textcolor{keywordflow}{while}\ (s\_val.size()\ >=\ CPubKey::COMPRESSED\_SIZE)\ \{}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ std::array<unsigned\ char,\ CPubKey::COMPRESSED\_SIZE>\ part\_pubkey\_bytes;}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ s\_val\ >>\ std::as\_writable\_bytes(std::span\{part\_pubkey\_bytes\});}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ participants.emplace\_back(std::span\{part\_pubkey\_bytes\});}
+\DoxyCodeLine{00219\ \ \ \ \ \}}
+\DoxyCodeLine{00220\ \ \ \ \ \textcolor{keywordflow}{if}\ (!s\_val.empty())\ \{}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(context\ +\ \textcolor{stringliteral}{"{}\ musig2\ participants\ pubkeys\ value\ size\ is\ not\ a\ multiple\ of\ 33"{}});}
+\DoxyCodeLine{00222\ \ \ \ \ \}}
+\DoxyCodeLine{00223\ }
+\DoxyCodeLine{00224\ \ \ \ \ out.emplace(agg\_pubkey,\ participants);}
+\DoxyCodeLine{00225\ \}}
+\DoxyCodeLine{00226\ }
+\DoxyCodeLine{00227\ \textcolor{comment}{//\ Deserialize\ the\ MuSig2\ participant\ identifiers\ from\ PSBT\_MUSIG2\_\{PUBNONCE/PARTIAL\_SIG\}\ fields}}
+\DoxyCodeLine{00228\ \textcolor{comment}{//\ Both\ fields\ contain\ the\ same\ data\ after\ the\ type\ byte\ -\/\ aggregate\ pubkey\ |\ participant\ pubkey\ |\ leaf\ script\ hash}}
+\DoxyCodeLine{00229\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00230\ \textcolor{keywordtype}{void}\ DeserializeMuSig2ParticipantDataIdentifier(Stream\&\ skey,\ CPubKey\&\ agg\_pub,\ CPubKey\&\ part\_pub,\ uint256\&\ leaf\_hash)}
+\DoxyCodeLine{00231\ \{}
+\DoxyCodeLine{00232\ \ \ \ \ leaf\_hash.SetNull();}
+\DoxyCodeLine{00233\ }
+\DoxyCodeLine{00234\ \ \ \ \ std::array<unsigned\ char,\ CPubKey::COMPRESSED\_SIZE>\ part\_pubkey\_bytes;}
+\DoxyCodeLine{00235\ \ \ \ \ std::array<unsigned\ char,\ CPubKey::COMPRESSED\_SIZE>\ agg\_pubkey\_bytes;}
+\DoxyCodeLine{00236\ }
+\DoxyCodeLine{00237\ \ \ \ \ skey\ >>\ std::as\_writable\_bytes(std::span\{part\_pubkey\_bytes\})\ >>\ std::as\_writable\_bytes(std::span\{agg\_pubkey\_bytes\});}
+\DoxyCodeLine{00238\ \ \ \ \ agg\_pub.Set(agg\_pubkey\_bytes.begin(),\ agg\_pubkey\_bytes.end());}
+\DoxyCodeLine{00239\ \ \ \ \ part\_pub.Set(part\_pubkey\_bytes.begin(),\ part\_pubkey\_bytes.end());}
+\DoxyCodeLine{00240\ }
+\DoxyCodeLine{00241\ \ \ \ \ \textcolor{keywordflow}{if}\ (!skey.empty())\ \{}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ skey\ >>\ leaf\_hash;}
+\DoxyCodeLine{00243\ \ \ \ \ \}}
+\DoxyCodeLine{00244\ \}}
+\DoxyCodeLine{00245\ }
+\DoxyCodeLine{00247\ \textcolor{keyword}{struct\ }PSBTInput}
+\DoxyCodeLine{00248\ \{}
+\DoxyCodeLine{00249\ \ \ \ \ CTransactionRef\ non\_witness\_utxo;}
+\DoxyCodeLine{00250\ \ \ \ \ CTxOut\ witness\_utxo;}
+\DoxyCodeLine{00251\ \ \ \ \ CScript\ redeem\_script;}
+\DoxyCodeLine{00252\ \ \ \ \ CScript\ witness\_script;}
+\DoxyCodeLine{00253\ \ \ \ \ CScript\ final\_script\_sig;}
+\DoxyCodeLine{00254\ \ \ \ \ CScriptWitness\ final\_script\_witness;}
+\DoxyCodeLine{00255\ \ \ \ \ std::map<CPubKey,\ KeyOriginInfo>\ hd\_keypaths;}
+\DoxyCodeLine{00256\ \ \ \ \ std::map<CKeyID,\ SigPair>\ partial\_sigs;}
+\DoxyCodeLine{00257\ \ \ \ \ std::map<uint160,\ std::vector<unsigned\ char>>\ ripemd160\_preimages;}
+\DoxyCodeLine{00258\ \ \ \ \ std::map<uint256,\ std::vector<unsigned\ char>>\ sha256\_preimages;}
+\DoxyCodeLine{00259\ \ \ \ \ std::map<uint160,\ std::vector<unsigned\ char>>\ hash160\_preimages;}
+\DoxyCodeLine{00260\ \ \ \ \ std::map<uint256,\ std::vector<unsigned\ char>>\ hash256\_preimages;}
+\DoxyCodeLine{00261\ }
+\DoxyCodeLine{00262\ \ \ \ \ \textcolor{comment}{//\ Taproot\ fields}}
+\DoxyCodeLine{00263\ \ \ \ \ std::vector<unsigned\ char>\ m\_tap\_key\_sig;}
+\DoxyCodeLine{00264\ \ \ \ \ std::map<std::pair<XOnlyPubKey,\ uint256>,\ std::vector<unsigned\ char>>\ m\_tap\_script\_sigs;}
+\DoxyCodeLine{00265\ \ \ \ \ std::map<std::pair<std::vector<unsigned\ char>,\ \textcolor{keywordtype}{int}>,\ std::set<std::vector<unsigned\ char>,\ ShortestVectorFirstComparator>>\ m\_tap\_scripts;}
+\DoxyCodeLine{00266\ \ \ \ \ std::map<XOnlyPubKey,\ std::pair<std::set<uint256>,\ KeyOriginInfo>>\ m\_tap\_bip32\_paths;}
+\DoxyCodeLine{00267\ \ \ \ \ XOnlyPubKey\ m\_tap\_internal\_key;}
+\DoxyCodeLine{00268\ \ \ \ \ uint256\ m\_tap\_merkle\_root;}
+\DoxyCodeLine{00269\ }
+\DoxyCodeLine{00270\ \ \ \ \ \textcolor{comment}{//\ MuSig2\ fields}}
+\DoxyCodeLine{00271\ \ \ \ \ std::map<CPubKey,\ std::vector<CPubKey>>\ m\_musig2\_participants;}
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{comment}{//\ Key\ is\ the\ aggregate\ pubkey\ and\ the\ script\ leaf\ hash,\ value\ is\ a\ map\ of\ participant\ pubkey\ to\ pubnonce}}
+\DoxyCodeLine{00273\ \ \ \ \ std::map<std::pair<CPubKey,\ uint256>,\ std::map<CPubKey,\ std::vector<uint8\_t>>>\ m\_musig2\_pubnonces;}
+\DoxyCodeLine{00274\ \ \ \ \ \textcolor{comment}{//\ Key\ is\ the\ aggregate\ pubkey\ and\ the\ script\ leaf\ hash,\ value\ is\ a\ map\ of\ participant\ pubkey\ to\ partial\_sig}}
+\DoxyCodeLine{00275\ \ \ \ \ std::map<std::pair<CPubKey,\ uint256>,\ std::map<CPubKey,\ uint256>>\ m\_musig2\_partial\_sigs;}
+\DoxyCodeLine{00276\ }
+\DoxyCodeLine{00277\ \ \ \ \ std::map<std::vector<unsigned\ char>,\ std::vector<unsigned\ char>>\ unknown;}
+\DoxyCodeLine{00278\ \ \ \ \ std::set<PSBTProprietary>\ m\_proprietary;}
+\DoxyCodeLine{00279\ \ \ \ \ std::optional<int>\ sighash\_type;}
+\DoxyCodeLine{00280\ }
+\DoxyCodeLine{00281\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsNull()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00282\ \ \ \ \ \textcolor{keywordtype}{void}\ FillSignatureData(SignatureData\&\ sigdata)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00283\ \ \ \ \ \textcolor{keywordtype}{void}\ FromSignatureData(\textcolor{keyword}{const}\ SignatureData\&\ sigdata);}
+\DoxyCodeLine{00284\ \ \ \ \ \textcolor{keywordtype}{void}\ Merge(\textcolor{keyword}{const}\ PSBTInput\&\ input);}
+\DoxyCodeLine{00285\ \ \ \ \ PSBTInput()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00286\ }
+\DoxyCodeLine{00287\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00288\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ the\ utxo}}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (non\_witness\_utxo)\ \{}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_NON\_WITNESS\_UTXO));}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ TX\_NO\_WITNESS(non\_witness\_utxo));}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!witness\_utxo.IsNull())\ \{}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_WITNESS\_UTXO));}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ witness\_utxo);}
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00298\ }
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (final\_script\_sig.empty()\ \&\&\ final\_script\_witness.IsNull())\ \{}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ any\ partial\ signatures}}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ sig\_pair\ :\ partial\_sigs)\ \{}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_PARTIAL\_SIG),\ std::span\{sig\_pair.second.first\});}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ sig\_pair.second.second;}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00305\ }
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ the\ sighash\ type}}
+\DoxyCodeLine{00307\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sighash\_type\ !=\ std::nullopt)\ \{}
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_SIGHASH));}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ *sighash\_type);}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00311\ }
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ the\ redeem\ script}}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!redeem\_script.empty())\ \{}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_REDEEMSCRIPT));}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ redeem\_script;}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00317\ }
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ the\ witness\ script}}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!witness\_script.empty())\ \{}
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_WITNESSSCRIPT));}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ witness\_script;}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00324\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ any\ hd\ keypaths}}
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeHDKeypaths(s,\ hd\_keypaths,\ CompactSizeWriter(PSBT\_IN\_BIP32\_DERIVATION));}
+\DoxyCodeLine{00326\ }
+\DoxyCodeLine{00327\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ any\ ripemd160\ preimage}}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [hash,\ preimage]\ :\ ripemd160\_preimages)\ \{}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_RIPEMD160),\ std::span\{hash\});}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ preimage;}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ any\ sha256\ preimage}}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [hash,\ preimage]\ :\ sha256\_preimages)\ \{}
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_SHA256),\ std::span\{hash\});}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ preimage;}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00338\ }
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ any\ hash160\ preimage}}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [hash,\ preimage]\ :\ hash160\_preimages)\ \{}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_HASH160),\ std::span\{hash\});}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ preimage;}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00344\ }
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ any\ hash256\ preimage}}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [hash,\ preimage]\ :\ hash256\_preimages)\ \{}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_HASH256),\ std::span\{hash\});}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ preimage;}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00350\ }
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ taproot\ key\ sig}}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_tap\_key\_sig.empty())\ \{}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ PSBT\_IN\_TAP\_KEY\_SIG);}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ m\_tap\_key\_sig;}
+\DoxyCodeLine{00355\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00356\ }
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ taproot\ script\ sigs}}
+\DoxyCodeLine{00358\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [pubkey\_leaf,\ sig]\ :\ m\_tap\_script\_sigs)\ \{}
+\DoxyCodeLine{00359\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [xonly,\ leaf\_hash]\ =\ pubkey\_leaf;}
+\DoxyCodeLine{00360\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ PSBT\_IN\_TAP\_SCRIPT\_SIG,\ xonly,\ leaf\_hash);}
+\DoxyCodeLine{00361\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ sig;}
+\DoxyCodeLine{00362\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00363\ }
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ taproot\ leaf\ scripts}}
+\DoxyCodeLine{00365\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [leaf,\ control\_blocks]\ :\ m\_tap\_scripts)\ \{}
+\DoxyCodeLine{00366\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [script,\ leaf\_ver]\ =\ leaf;}
+\DoxyCodeLine{00367\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ control\_block\ :\ control\_blocks)\ \{}
+\DoxyCodeLine{00368\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ PSBT\_IN\_TAP\_LEAF\_SCRIPT,\ std::span\{control\_block\});}
+\DoxyCodeLine{00369\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ value\_v(script.begin(),\ script.end());}
+\DoxyCodeLine{00370\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ value\_v.push\_back((uint8\_t)leaf\_ver);}
+\DoxyCodeLine{00371\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ value\_v;}
+\DoxyCodeLine{00372\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00373\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00374\ }
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ taproot\ bip32\ keypaths}}
+\DoxyCodeLine{00376\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [xonly,\ leaf\_origin]\ :\ m\_tap\_bip32\_paths)\ \{}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [leaf\_hashes,\ origin]\ =\ leaf\_origin;}
+\DoxyCodeLine{00378\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ PSBT\_IN\_TAP\_BIP32\_DERIVATION,\ xonly);}
+\DoxyCodeLine{00379\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ value;}
+\DoxyCodeLine{00380\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ VectorWriter\ s\_value\{value,\ 0\};}
+\DoxyCodeLine{00381\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_value\ <<\ leaf\_hashes;}
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeKeyOrigin(s\_value,\ origin);}
+\DoxyCodeLine{00383\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ value;}
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00385\ }
+\DoxyCodeLine{00386\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ taproot\ internal\ key}}
+\DoxyCodeLine{00387\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_tap\_internal\_key.IsNull())\ \{}
+\DoxyCodeLine{00388\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ PSBT\_IN\_TAP\_INTERNAL\_KEY);}
+\DoxyCodeLine{00389\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ ToByteVector(m\_tap\_internal\_key);}
+\DoxyCodeLine{00390\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00391\ }
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ taproot\ merkle\ root}}
+\DoxyCodeLine{00393\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_tap\_merkle\_root.IsNull())\ \{}
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ PSBT\_IN\_TAP\_MERKLE\_ROOT);}
+\DoxyCodeLine{00395\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ m\_tap\_merkle\_root);}
+\DoxyCodeLine{00396\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00397\ }
+\DoxyCodeLine{00398\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ MuSig2\ Participants}}
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [agg\_pubkey,\ part\_pubs]\ :\ m\_musig2\_participants)\ \{}
+\DoxyCodeLine{00400\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_MUSIG2\_PARTICIPANT\_PUBKEYS),\ std::span\{agg\_pubkey\});}
+\DoxyCodeLine{00401\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ value;}
+\DoxyCodeLine{00402\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ VectorWriter\ s\_value\{value,\ 0\};}
+\DoxyCodeLine{00403\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ pk\ :\ part\_pubs)\ \{}
+\DoxyCodeLine{00404\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_value\ <<\ std::span\{pk\};}
+\DoxyCodeLine{00405\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00406\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ value;}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00408\ }
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ MuSig2\ pubnonces}}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [agg\_pubkey\_leaf\_hash,\ pubnonces]\ :\ m\_musig2\_pubnonces)\ \{}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [agg\_pubkey,\ leaf\_hash]\ =\ agg\_pubkey\_leaf\_hash;}
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [part\_pubkey,\ pubnonce]\ :\ pubnonces)\ \{}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (leaf\_hash.IsNull())\ \{}
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_MUSIG2\_PUB\_NONCE),\ std::span\{part\_pubkey\},\ std::span\{agg\_pubkey\});}
+\DoxyCodeLine{00415\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00416\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_MUSIG2\_PUB\_NONCE),\ std::span\{part\_pubkey\},\ std::span\{agg\_pubkey\},\ leaf\_hash);}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ pubnonce;}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00421\ }
+\DoxyCodeLine{00422\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ MuSig2\ partial\ signatures}}
+\DoxyCodeLine{00423\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [agg\_pubkey\_leaf\_hash,\ psigs]\ :\ m\_musig2\_partial\_sigs)\ \{}
+\DoxyCodeLine{00424\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [agg\_pubkey,\ leaf\_hash]\ =\ agg\_pubkey\_leaf\_hash;}
+\DoxyCodeLine{00425\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [pubkey,\ psig]\ :\ psigs)\ \{}
+\DoxyCodeLine{00426\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (leaf\_hash.IsNull())\ \{}
+\DoxyCodeLine{00427\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_MUSIG2\_PARTIAL\_SIG),\ std::span\{pubkey\},\ std::span\{agg\_pubkey\});}
+\DoxyCodeLine{00428\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00429\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_MUSIG2\_PARTIAL\_SIG),\ std::span\{pubkey\},\ std::span\{agg\_pubkey\},\ leaf\_hash);}
+\DoxyCodeLine{00430\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00431\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ psig);}
+\DoxyCodeLine{00432\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00433\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00434\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00435\ }
+\DoxyCodeLine{00436\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ script\ sig}}
+\DoxyCodeLine{00437\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!final\_script\_sig.empty())\ \{}
+\DoxyCodeLine{00438\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_SCRIPTSIG));}
+\DoxyCodeLine{00439\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ final\_script\_sig;}
+\DoxyCodeLine{00440\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00441\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ write\ script\ witness}}
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!final\_script\_witness.IsNull())\ \{}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_IN\_SCRIPTWITNESS));}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ final\_script\_witness.stack);}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00446\ }
+\DoxyCodeLine{00447\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ proprietary\ things}}
+\DoxyCodeLine{00448\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ entry\ :\ m\_proprietary)\ \{}
+\DoxyCodeLine{00449\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.key;}
+\DoxyCodeLine{00450\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.value;}
+\DoxyCodeLine{00451\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00452\ }
+\DoxyCodeLine{00453\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ unknown\ things}}
+\DoxyCodeLine{00454\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ entry\ :\ unknown)\ \{}
+\DoxyCodeLine{00455\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.first;}
+\DoxyCodeLine{00456\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.second;}
+\DoxyCodeLine{00457\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00458\ }
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ s\ <<\ PSBT\_SEPARATOR;}
+\DoxyCodeLine{00460\ \ \ \ \ \}}
+\DoxyCodeLine{00461\ }
+\DoxyCodeLine{00462\ }
+\DoxyCodeLine{00463\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00464\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)\ \{}
+\DoxyCodeLine{00465\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Used\ for\ duplicate\ key\ detection}}
+\DoxyCodeLine{00466\ \ \ \ \ \ \ \ \ std::set<std::vector<unsigned\ char>>\ key\_lookup;}
+\DoxyCodeLine{00467\ }
+\DoxyCodeLine{00468\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ loop}}
+\DoxyCodeLine{00469\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ found\_sep\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00470\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}(!s.empty())\ \{}
+\DoxyCodeLine{00471\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ the\ key\ of\ format\ "{}<keylen><keytype><keydata>"{}\ after\ which}}
+\DoxyCodeLine{00472\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ "{}key"{}\ will\ contain\ "{}<keytype><keydata>"{}}}
+\DoxyCodeLine{00473\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ key;}
+\DoxyCodeLine{00474\ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ key;}
+\DoxyCodeLine{00475\ }
+\DoxyCodeLine{00476\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ key\ is\ empty\ if\ that\ was\ actually\ a\ separator\ byte}}
+\DoxyCodeLine{00477\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ This\ is\ a\ special\ case\ for\ key\ lengths\ 0\ as\ those\ are\ not\ allowed\ (except\ for\ separator)}}
+\DoxyCodeLine{00478\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (key.empty())\ \{}
+\DoxyCodeLine{00479\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ found\_sep\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00480\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00481\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00482\ }
+\DoxyCodeLine{00483\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ "{}skey"{}\ is\ used\ so\ that\ "{}key"{}\ is\ unchanged\ after\ reading\ keytype\ below}}
+\DoxyCodeLine{00484\ \ \ \ \ \ \ \ \ \ \ \ \ SpanReader\ skey\{key\};}
+\DoxyCodeLine{00485\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ keytype\ is\ of\ the\ format\ compact\ size\ uint\ at\ the\ beginning\ of\ "{}key"{}}}
+\DoxyCodeLine{00486\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ type\ =\ ReadCompactSize(skey);}
+\DoxyCodeLine{00487\ }
+\DoxyCodeLine{00488\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Do\ stuff\ based\ on\ keytype\ "{}type"{},\ i.e.,\ key\ checks,\ reading\ values\ of\ the}}
+\DoxyCodeLine{00489\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ format\ "{}<valuelen><valuedata>"{}\ from\ the\ stream\ "{}s"{},\ and\ value\ checks}}
+\DoxyCodeLine{00490\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{switch}(type)\ \{}
+\DoxyCodeLine{00491\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_NON\_WITNESS\_UTXO:}
+\DoxyCodeLine{00492\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00493\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00494\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ non-\/witness\ utxo\ already\ provided"{}});}
+\DoxyCodeLine{00495\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00496\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Non-\/witness\ utxo\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00497\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00498\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Set\ the\ stream\ to\ unserialize\ with\ witness\ since\ this\ is\ always\ a\ valid\ network\ transaction}}
+\DoxyCodeLine{00499\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeFromVector(s,\ TX\_WITH\_WITNESS(non\_witness\_utxo));}
+\DoxyCodeLine{00500\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00501\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00502\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_WITNESS\_UTXO:}
+\DoxyCodeLine{00503\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00504\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ witness\ utxo\ already\ provided"{}});}
+\DoxyCodeLine{00505\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00506\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Witness\ utxo\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00507\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00508\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeFromVector(s,\ witness\_utxo);}
+\DoxyCodeLine{00509\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00510\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_PARTIAL\_SIG:}
+\DoxyCodeLine{00511\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00512\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ that\ the\ key\ is\ the\ size\ of\ pubkey\ +\ 1}}
+\DoxyCodeLine{00513\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (key.size()\ !=\ CPubKey::SIZE\ +\ 1\ \&\&\ key.size()\ !=\ CPubKey::COMPRESSED\_SIZE\ +\ 1)\ \{}
+\DoxyCodeLine{00514\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Size\ of\ key\ was\ not\ the\ expected\ size\ for\ the\ type\ partial\ signature\ pubkey"{}});}
+\DoxyCodeLine{00515\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00516\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ pubkey\ from\ key}}
+\DoxyCodeLine{00517\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CPubKey\ pubkey(key.begin()\ +\ 1,\ key.end());}
+\DoxyCodeLine{00518\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!pubkey.IsFullyValid())\ \{}
+\DoxyCodeLine{00519\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Invalid\ pubkey"{}});}
+\DoxyCodeLine{00520\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00521\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (partial\_sigs.contains(pubkey.GetID()))\ \{}
+\DoxyCodeLine{00522\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ partial\ signature\ for\ pubkey\ already\ provided"{}});}
+\DoxyCodeLine{00523\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00524\ }
+\DoxyCodeLine{00525\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ signature\ from\ value}}
+\DoxyCodeLine{00526\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ sig;}
+\DoxyCodeLine{00527\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ sig;}
+\DoxyCodeLine{00528\ }
+\DoxyCodeLine{00529\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Check\ that\ the\ signature\ is\ validly\ encoded}}
+\DoxyCodeLine{00530\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sig.empty()\ ||\ !CheckSignatureEncoding(sig,\ SCRIPT\_VERIFY\_DERSIG\ |\ SCRIPT\_VERIFY\_STRICTENC,\ \textcolor{keyword}{nullptr}))\ \{}
+\DoxyCodeLine{00531\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Signature\ is\ not\ a\ valid\ encoding"{}});}
+\DoxyCodeLine{00532\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00533\ }
+\DoxyCodeLine{00534\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ to\ list}}
+\DoxyCodeLine{00535\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ partial\_sigs.emplace(pubkey.GetID(),\ SigPair(pubkey,\ std::move(sig)));}
+\DoxyCodeLine{00536\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00537\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00538\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_SIGHASH:}
+\DoxyCodeLine{00539\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00540\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ sighash\ type\ already\ provided"{}});}
+\DoxyCodeLine{00541\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00542\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Sighash\ type\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00543\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00544\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ sighash;}
+\DoxyCodeLine{00545\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeFromVector(s,\ sighash);}
+\DoxyCodeLine{00546\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sighash\_type\ =\ sighash;}
+\DoxyCodeLine{00547\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00548\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_REDEEMSCRIPT:}
+\DoxyCodeLine{00549\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00550\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00551\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ redeemScript\ already\ provided"{}});}
+\DoxyCodeLine{00552\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00553\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ redeemScript\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00554\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00555\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ redeem\_script;}
+\DoxyCodeLine{00556\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00557\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00558\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_WITNESSSCRIPT:}
+\DoxyCodeLine{00559\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00560\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00561\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ witnessScript\ already\ provided"{}});}
+\DoxyCodeLine{00562\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00563\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ witnessScript\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00564\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00565\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ witness\_script;}
+\DoxyCodeLine{00566\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00567\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00568\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_BIP32\_DERIVATION:}
+\DoxyCodeLine{00569\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00570\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DeserializeHDKeypaths(s,\ key,\ hd\_keypaths);}
+\DoxyCodeLine{00571\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00572\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00573\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_SCRIPTSIG:}
+\DoxyCodeLine{00574\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00575\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00576\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ final\ scriptSig\ already\ provided"{}});}
+\DoxyCodeLine{00577\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00578\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Final\ scriptSig\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00579\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00580\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ final\_script\_sig;}
+\DoxyCodeLine{00581\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00582\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00583\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_SCRIPTWITNESS:}
+\DoxyCodeLine{00584\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00585\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00586\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ final\ scriptWitness\ already\ provided"{}});}
+\DoxyCodeLine{00587\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00588\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Final\ scriptWitness\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00589\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00590\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeFromVector(s,\ final\_script\_witness.stack);}
+\DoxyCodeLine{00591\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00592\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00593\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_RIPEMD160:}
+\DoxyCodeLine{00594\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00595\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ that\ the\ key\ is\ the\ size\ of\ a\ ripemd160\ hash\ +\ 1}}
+\DoxyCodeLine{00596\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (key.size()\ !=\ CRIPEMD160::OUTPUT\_SIZE\ +\ 1)\ \{}
+\DoxyCodeLine{00597\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Size\ of\ key\ was\ not\ the\ expected\ size\ for\ the\ type\ ripemd160\ preimage"{}});}
+\DoxyCodeLine{00598\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00599\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ hash\ from\ key}}
+\DoxyCodeLine{00600\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ hash\_vec(key.begin()\ +\ 1,\ key.end());}
+\DoxyCodeLine{00601\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint160\ hash(hash\_vec);}
+\DoxyCodeLine{00602\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ripemd160\_preimages.contains(hash))\ \{}
+\DoxyCodeLine{00603\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ ripemd160\ preimage\ already\ provided"{}});}
+\DoxyCodeLine{00604\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00605\ }
+\DoxyCodeLine{00606\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ preimage\ from\ value}}
+\DoxyCodeLine{00607\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ preimage;}
+\DoxyCodeLine{00608\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ preimage;}
+\DoxyCodeLine{00609\ }
+\DoxyCodeLine{00610\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ to\ preimages\ list}}
+\DoxyCodeLine{00611\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ripemd160\_preimages.emplace(hash,\ std::move(preimage));}
+\DoxyCodeLine{00612\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00613\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00614\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_SHA256:}
+\DoxyCodeLine{00615\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00616\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ that\ the\ key\ is\ the\ size\ of\ a\ sha256\ hash\ +\ 1}}
+\DoxyCodeLine{00617\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (key.size()\ !=\ CSHA256::OUTPUT\_SIZE\ +\ 1)\ \{}
+\DoxyCodeLine{00618\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Size\ of\ key\ was\ not\ the\ expected\ size\ for\ the\ type\ sha256\ preimage"{}});}
+\DoxyCodeLine{00619\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00620\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ hash\ from\ key}}
+\DoxyCodeLine{00621\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ hash\_vec(key.begin()\ +\ 1,\ key.end());}
+\DoxyCodeLine{00622\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint256\ hash(hash\_vec);}
+\DoxyCodeLine{00623\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sha256\_preimages.contains(hash))\ \{}
+\DoxyCodeLine{00624\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ sha256\ preimage\ already\ provided"{}});}
+\DoxyCodeLine{00625\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00626\ }
+\DoxyCodeLine{00627\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ preimage\ from\ value}}
+\DoxyCodeLine{00628\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ preimage;}
+\DoxyCodeLine{00629\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ preimage;}
+\DoxyCodeLine{00630\ }
+\DoxyCodeLine{00631\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ to\ preimages\ list}}
+\DoxyCodeLine{00632\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sha256\_preimages.emplace(hash,\ std::move(preimage));}
+\DoxyCodeLine{00633\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00634\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00635\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_HASH160:}
+\DoxyCodeLine{00636\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00637\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ that\ the\ key\ is\ the\ size\ of\ a\ hash160\ hash\ +\ 1}}
+\DoxyCodeLine{00638\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (key.size()\ !=\ CHash160::OUTPUT\_SIZE\ +\ 1)\ \{}
+\DoxyCodeLine{00639\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Size\ of\ key\ was\ not\ the\ expected\ size\ for\ the\ type\ hash160\ preimage"{}});}
+\DoxyCodeLine{00640\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00641\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ hash\ from\ key}}
+\DoxyCodeLine{00642\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ hash\_vec(key.begin()\ +\ 1,\ key.end());}
+\DoxyCodeLine{00643\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint160\ hash(hash\_vec);}
+\DoxyCodeLine{00644\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (hash160\_preimages.contains(hash))\ \{}
+\DoxyCodeLine{00645\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ hash160\ preimage\ already\ provided"{}});}
+\DoxyCodeLine{00646\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00647\ }
+\DoxyCodeLine{00648\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ preimage\ from\ value}}
+\DoxyCodeLine{00649\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ preimage;}
+\DoxyCodeLine{00650\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ preimage;}
+\DoxyCodeLine{00651\ }
+\DoxyCodeLine{00652\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ to\ preimages\ list}}
+\DoxyCodeLine{00653\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ hash160\_preimages.emplace(hash,\ std::move(preimage));}
+\DoxyCodeLine{00654\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00655\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00656\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_HASH256:}
+\DoxyCodeLine{00657\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00658\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ that\ the\ key\ is\ the\ size\ of\ a\ hash256\ hash\ +\ 1}}
+\DoxyCodeLine{00659\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (key.size()\ !=\ CHash256::OUTPUT\_SIZE\ +\ 1)\ \{}
+\DoxyCodeLine{00660\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Size\ of\ key\ was\ not\ the\ expected\ size\ for\ the\ type\ hash256\ preimage"{}});}
+\DoxyCodeLine{00661\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00662\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ hash\ from\ key}}
+\DoxyCodeLine{00663\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ hash\_vec(key.begin()\ +\ 1,\ key.end());}
+\DoxyCodeLine{00664\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint256\ hash(hash\_vec);}
+\DoxyCodeLine{00665\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (hash256\_preimages.contains(hash))\ \{}
+\DoxyCodeLine{00666\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ hash256\ preimage\ already\ provided"{}});}
+\DoxyCodeLine{00667\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00668\ }
+\DoxyCodeLine{00669\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ preimage\ from\ value}}
+\DoxyCodeLine{00670\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ preimage;}
+\DoxyCodeLine{00671\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ preimage;}
+\DoxyCodeLine{00672\ }
+\DoxyCodeLine{00673\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ to\ preimages\ list}}
+\DoxyCodeLine{00674\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ hash256\_preimages.emplace(hash,\ std::move(preimage));}
+\DoxyCodeLine{00675\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00676\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00677\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_TAP\_KEY\_SIG:}
+\DoxyCodeLine{00678\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00679\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00680\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ Taproot\ key\ signature\ already\ provided"{}});}
+\DoxyCodeLine{00681\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00682\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ key\ signature\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00683\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00684\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ m\_tap\_key\_sig;}
+\DoxyCodeLine{00685\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_tap\_key\_sig.size()\ <\ 64)\ \{}
+\DoxyCodeLine{00686\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ key\ path\ signature\ is\ shorter\ than\ 64\ bytes"{}});}
+\DoxyCodeLine{00687\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (m\_tap\_key\_sig.size()\ >\ 65)\ \{}
+\DoxyCodeLine{00688\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ key\ path\ signature\ is\ longer\ than\ 65\ bytes"{}});}
+\DoxyCodeLine{00689\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00690\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00691\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00692\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_TAP\_SCRIPT\_SIG:}
+\DoxyCodeLine{00693\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00694\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00695\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ Taproot\ script\ signature\ already\ provided"{}});}
+\DoxyCodeLine{00696\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 65)\ \{}
+\DoxyCodeLine{00697\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ script\ signature\ key\ is\ not\ 65\ bytes"{}});}
+\DoxyCodeLine{00698\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00699\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SpanReader\ s\_key\{std::span\{key\}.subspan(1)\};}
+\DoxyCodeLine{00700\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ XOnlyPubKey\ xonly;}
+\DoxyCodeLine{00701\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint256\ hash;}
+\DoxyCodeLine{00702\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_key\ >>\ xonly;}
+\DoxyCodeLine{00703\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_key\ >>\ hash;}
+\DoxyCodeLine{00704\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ sig;}
+\DoxyCodeLine{00705\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ sig;}
+\DoxyCodeLine{00706\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (sig.size()\ <\ 64)\ \{}
+\DoxyCodeLine{00707\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ script\ path\ signature\ is\ shorter\ than\ 64\ bytes"{}});}
+\DoxyCodeLine{00708\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (sig.size()\ >\ 65)\ \{}
+\DoxyCodeLine{00709\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ script\ path\ signature\ is\ longer\ than\ 65\ bytes"{}});}
+\DoxyCodeLine{00710\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00711\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_tap\_script\_sigs.emplace(std::make\_pair(xonly,\ hash),\ sig);}
+\DoxyCodeLine{00712\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00713\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00714\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_TAP\_LEAF\_SCRIPT:}
+\DoxyCodeLine{00715\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00716\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00717\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ Taproot\ leaf\ script\ already\ provided"{}});}
+\DoxyCodeLine{00718\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ <\ 34)\ \{}
+\DoxyCodeLine{00719\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Taproot\ leaf\ script\ key\ is\ not\ at\ least\ 34\ bytes"{}});}
+\DoxyCodeLine{00720\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ ((key.size()\ -\/\ 2)\ \%\ 32\ !=\ 0)\ \{}
+\DoxyCodeLine{00721\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ leaf\ script\ key's\ control\ block\ size\ is\ not\ valid"{}});}
+\DoxyCodeLine{00722\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00723\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ script\_v;}
+\DoxyCodeLine{00724\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ script\_v;}
+\DoxyCodeLine{00725\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (script\_v.empty())\ \{}
+\DoxyCodeLine{00726\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ leaf\ script\ must\ be\ at\ least\ 1\ byte"{}});}
+\DoxyCodeLine{00727\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00728\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint8\_t\ leaf\_ver\ =\ script\_v.back();}
+\DoxyCodeLine{00729\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ script\_v.pop\_back();}
+\DoxyCodeLine{00730\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ leaf\_script\ =\ std::make\_pair(script\_v,\ (\textcolor{keywordtype}{int})leaf\_ver);}
+\DoxyCodeLine{00731\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_tap\_scripts[leaf\_script].insert(std::vector<unsigned\ char>(key.begin()\ +\ 1,\ key.end()));}
+\DoxyCodeLine{00732\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00733\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00734\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_TAP\_BIP32\_DERIVATION:}
+\DoxyCodeLine{00735\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00736\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00737\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ Taproot\ BIP32\ keypath\ already\ provided"{}});}
+\DoxyCodeLine{00738\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 33)\ \{}
+\DoxyCodeLine{00739\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ BIP32\ keypath\ key\ is\ not\ at\ 33\ bytes"{}});}
+\DoxyCodeLine{00740\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00741\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SpanReader\ s\_key\{std::span\{key\}.subspan(1)\};}
+\DoxyCodeLine{00742\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ XOnlyPubKey\ xonly;}
+\DoxyCodeLine{00743\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_key\ >>\ xonly;}
+\DoxyCodeLine{00744\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::set<uint256>\ leaf\_hashes;}
+\DoxyCodeLine{00745\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ value\_len\ =\ ReadCompactSize(s);}
+\DoxyCodeLine{00746\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ before\_hashes\ =\ s.size();}
+\DoxyCodeLine{00747\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ leaf\_hashes;}
+\DoxyCodeLine{00748\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ after\_hashes\ =\ s.size();}
+\DoxyCodeLine{00749\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ hashes\_len\ =\ before\_hashes\ -\/\ after\_hashes;}
+\DoxyCodeLine{00750\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (hashes\_len\ >\ value\_len)\ \{}
+\DoxyCodeLine{00751\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ BIP32\ keypath\ has\ an\ invalid\ length"{}});}
+\DoxyCodeLine{00752\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00753\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ origin\_len\ =\ value\_len\ -\/\ hashes\_len;}
+\DoxyCodeLine{00754\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_tap\_bip32\_paths.emplace(xonly,\ std::make\_pair(leaf\_hashes,\ DeserializeKeyOrigin(s,\ origin\_len)));}
+\DoxyCodeLine{00755\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00756\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00757\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_TAP\_INTERNAL\_KEY:}
+\DoxyCodeLine{00758\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00759\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00760\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ Taproot\ internal\ key\ already\ provided"{}});}
+\DoxyCodeLine{00761\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00762\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ internal\ key\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00763\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00764\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeFromVector(s,\ m\_tap\_internal\_key);}
+\DoxyCodeLine{00765\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00766\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00767\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_TAP\_MERKLE\_ROOT:}
+\DoxyCodeLine{00768\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00769\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00770\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ Taproot\ merkle\ root\ already\ provided"{}});}
+\DoxyCodeLine{00771\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00772\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ Taproot\ merkle\ root\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00773\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00774\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeFromVector(s,\ m\_tap\_merkle\_root);}
+\DoxyCodeLine{00775\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00776\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00777\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_MUSIG2\_PARTICIPANT\_PUBKEYS:}
+\DoxyCodeLine{00778\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00779\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00780\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ participant\ pubkeys\ for\ an\ aggregate\ key\ already\ provided"{}});}
+\DoxyCodeLine{00781\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ CPubKey::COMPRESSED\_SIZE\ +\ 1)\ \{}
+\DoxyCodeLine{00782\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ musig2\ participants\ pubkeys\ aggregate\ key\ is\ not\ 34\ bytes"{}});}
+\DoxyCodeLine{00783\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00784\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DeserializeMuSig2ParticipantPubkeys(s,\ skey,\ m\_musig2\_participants,\ std::string\{\textcolor{stringliteral}{"{}Input"{}}\});}
+\DoxyCodeLine{00785\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00786\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00787\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_MUSIG2\_PUB\_NONCE:}
+\DoxyCodeLine{00788\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00789\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00790\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ musig2\ pubnonce\ already\ provided"{}});}
+\DoxyCodeLine{00791\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 2\ *\ CPubKey::COMPRESSED\_SIZE\ +\ 1\ \&\&\ key.size()\ !=\ 2\ *\ CPubKey::COMPRESSED\_SIZE\ +\ CSHA256::OUTPUT\_SIZE\ +\ 1)\ \{}
+\DoxyCodeLine{00792\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ musig2\ pubnonce\ key\ is\ not\ expected\ size\ of\ 67\ or\ 99\ bytes"{}});}
+\DoxyCodeLine{00793\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00794\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CPubKey\ agg\_pub,\ part\_pub;}
+\DoxyCodeLine{00795\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint256\ leaf\_hash;}
+\DoxyCodeLine{00796\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DeserializeMuSig2ParticipantDataIdentifier(skey,\ agg\_pub,\ part\_pub,\ leaf\_hash);}
+\DoxyCodeLine{00797\ }
+\DoxyCodeLine{00798\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<uint8\_t>\ pubnonce;}
+\DoxyCodeLine{00799\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ pubnonce;}
+\DoxyCodeLine{00800\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pubnonce.size()\ !=\ MUSIG2\_PUBNONCE\_SIZE)\ \{}
+\DoxyCodeLine{00801\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ musig2\ pubnonce\ value\ is\ not\ 66\ bytes"{}});}
+\DoxyCodeLine{00802\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00803\ }
+\DoxyCodeLine{00804\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_musig2\_pubnonces[std::make\_pair(agg\_pub,\ leaf\_hash)].emplace(part\_pub,\ pubnonce);}
+\DoxyCodeLine{00805\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00806\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00807\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_MUSIG2\_PARTIAL\_SIG:}
+\DoxyCodeLine{00808\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00809\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00810\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ input\ musig2\ partial\ sig\ already\ provided"{}});}
+\DoxyCodeLine{00811\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 2\ *\ CPubKey::COMPRESSED\_SIZE\ +\ 1\ \&\&\ key.size()\ !=\ 2\ *\ CPubKey::COMPRESSED\_SIZE\ +\ CSHA256::OUTPUT\_SIZE\ +\ 1)\ \{}
+\DoxyCodeLine{00812\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ musig2\ partial\ sig\ key\ is\ not\ expected\ size\ of\ 67\ or\ 99\ bytes"{}});}
+\DoxyCodeLine{00813\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00814\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CPubKey\ agg\_pub,\ part\_pub;}
+\DoxyCodeLine{00815\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint256\ leaf\_hash;}
+\DoxyCodeLine{00816\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DeserializeMuSig2ParticipantDataIdentifier(skey,\ agg\_pub,\ part\_pub,\ leaf\_hash);}
+\DoxyCodeLine{00817\ }
+\DoxyCodeLine{00818\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint256\ partial\_sig;}
+\DoxyCodeLine{00819\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeFromVector(s,\ partial\_sig);}
+\DoxyCodeLine{00820\ }
+\DoxyCodeLine{00821\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_musig2\_partial\_sigs[std::make\_pair(agg\_pub,\ leaf\_hash)].emplace(part\_pub,\ partial\_sig);}
+\DoxyCodeLine{00822\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00823\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00824\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_IN\_PROPRIETARY:}
+\DoxyCodeLine{00825\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00826\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ PSBTProprietary\ this\_prop;}
+\DoxyCodeLine{00827\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ skey\ >>\ this\_prop.identifier;}
+\DoxyCodeLine{00828\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this\_prop.subtype\ =\ ReadCompactSize(skey);}
+\DoxyCodeLine{00829\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this\_prop.key\ =\ key;}
+\DoxyCodeLine{00830\ }
+\DoxyCodeLine{00831\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_proprietary.contains(this\_prop))\ \{}
+\DoxyCodeLine{00832\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ proprietary\ key\ already\ found"{}});}
+\DoxyCodeLine{00833\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00834\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ this\_prop.value;}
+\DoxyCodeLine{00835\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_proprietary.insert(this\_prop);}
+\DoxyCodeLine{00836\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00837\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00838\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Unknown\ stuff}}
+\DoxyCodeLine{00839\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{default}:}
+\DoxyCodeLine{00840\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (unknown.contains(key))\ \{}
+\DoxyCodeLine{00841\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ key\ for\ unknown\ value\ already\ provided"{}});}
+\DoxyCodeLine{00842\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00843\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ value}}
+\DoxyCodeLine{00844\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ val\_bytes;}
+\DoxyCodeLine{00845\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ val\_bytes;}
+\DoxyCodeLine{00846\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ unknown.emplace(std::move(key),\ std::move(val\_bytes));}
+\DoxyCodeLine{00847\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00848\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00849\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00850\ }
+\DoxyCodeLine{00851\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!found\_sep)\ \{}
+\DoxyCodeLine{00852\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Separator\ is\ missing\ at\ the\ end\ of\ an\ input\ map"{}});}
+\DoxyCodeLine{00853\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00854\ \ \ \ \ \}}
+\DoxyCodeLine{00855\ }
+\DoxyCodeLine{00856\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00857\ \ \ \ \ PSBTInput(deserialize\_type,\ Stream\&\ s)\ \{}
+\DoxyCodeLine{00858\ \ \ \ \ \ \ \ \ Unserialize(s);}
+\DoxyCodeLine{00859\ \ \ \ \ \}}
+\DoxyCodeLine{00860\ \};}
+\DoxyCodeLine{00861\ }
+\DoxyCodeLine{00863\ \textcolor{keyword}{struct\ }PSBTOutput}
+\DoxyCodeLine{00864\ \{}
+\DoxyCodeLine{00865\ \ \ \ \ CScript\ redeem\_script;}
+\DoxyCodeLine{00866\ \ \ \ \ CScript\ witness\_script;}
+\DoxyCodeLine{00867\ \ \ \ \ std::map<CPubKey,\ KeyOriginInfo>\ hd\_keypaths;}
+\DoxyCodeLine{00868\ \ \ \ \ XOnlyPubKey\ m\_tap\_internal\_key;}
+\DoxyCodeLine{00869\ \ \ \ \ std::vector<std::tuple<uint8\_t,\ uint8\_t,\ std::vector<unsigned\ char>>>\ m\_tap\_tree;}
+\DoxyCodeLine{00870\ \ \ \ \ std::map<XOnlyPubKey,\ std::pair<std::set<uint256>,\ KeyOriginInfo>>\ m\_tap\_bip32\_paths;}
+\DoxyCodeLine{00871\ \ \ \ \ std::map<CPubKey,\ std::vector<CPubKey>>\ m\_musig2\_participants;}
+\DoxyCodeLine{00872\ \ \ \ \ std::map<std::vector<unsigned\ char>,\ std::vector<unsigned\ char>>\ unknown;}
+\DoxyCodeLine{00873\ \ \ \ \ std::set<PSBTProprietary>\ m\_proprietary;}
+\DoxyCodeLine{00874\ }
+\DoxyCodeLine{00875\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsNull()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00876\ \ \ \ \ \textcolor{keywordtype}{void}\ FillSignatureData(SignatureData\&\ sigdata)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00877\ \ \ \ \ \textcolor{keywordtype}{void}\ FromSignatureData(\textcolor{keyword}{const}\ SignatureData\&\ sigdata);}
+\DoxyCodeLine{00878\ \ \ \ \ \textcolor{keywordtype}{void}\ Merge(\textcolor{keyword}{const}\ PSBTOutput\&\ output);}
+\DoxyCodeLine{00879\ \ \ \ \ PSBTOutput()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00880\ }
+\DoxyCodeLine{00881\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00882\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00883\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ the\ redeem\ script}}
+\DoxyCodeLine{00884\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!redeem\_script.empty())\ \{}
+\DoxyCodeLine{00885\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_OUT\_REDEEMSCRIPT));}
+\DoxyCodeLine{00886\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ redeem\_script;}
+\DoxyCodeLine{00887\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00888\ }
+\DoxyCodeLine{00889\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ the\ witness\ script}}
+\DoxyCodeLine{00890\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!witness\_script.empty())\ \{}
+\DoxyCodeLine{00891\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_OUT\_WITNESSSCRIPT));}
+\DoxyCodeLine{00892\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ witness\_script;}
+\DoxyCodeLine{00893\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00894\ }
+\DoxyCodeLine{00895\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ any\ hd\ keypaths}}
+\DoxyCodeLine{00896\ \ \ \ \ \ \ \ \ SerializeHDKeypaths(s,\ hd\_keypaths,\ CompactSizeWriter(PSBT\_OUT\_BIP32\_DERIVATION));}
+\DoxyCodeLine{00897\ }
+\DoxyCodeLine{00898\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ proprietary\ things}}
+\DoxyCodeLine{00899\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ entry\ :\ m\_proprietary)\ \{}
+\DoxyCodeLine{00900\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.key;}
+\DoxyCodeLine{00901\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.value;}
+\DoxyCodeLine{00902\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00903\ }
+\DoxyCodeLine{00904\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ taproot\ internal\ key}}
+\DoxyCodeLine{00905\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_tap\_internal\_key.IsNull())\ \{}
+\DoxyCodeLine{00906\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ PSBT\_OUT\_TAP\_INTERNAL\_KEY);}
+\DoxyCodeLine{00907\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ ToByteVector(m\_tap\_internal\_key);}
+\DoxyCodeLine{00908\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00909\ }
+\DoxyCodeLine{00910\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ taproot\ tree}}
+\DoxyCodeLine{00911\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_tap\_tree.empty())\ \{}
+\DoxyCodeLine{00912\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ PSBT\_OUT\_TAP\_TREE);}
+\DoxyCodeLine{00913\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ value;}
+\DoxyCodeLine{00914\ \ \ \ \ \ \ \ \ \ \ \ \ VectorWriter\ s\_value\{value,\ 0\};}
+\DoxyCodeLine{00915\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [depth,\ leaf\_ver,\ script]\ :\ m\_tap\_tree)\ \{}
+\DoxyCodeLine{00916\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_value\ <<\ depth;}
+\DoxyCodeLine{00917\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_value\ <<\ leaf\_ver;}
+\DoxyCodeLine{00918\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_value\ <<\ script;}
+\DoxyCodeLine{00919\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00920\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ value;}
+\DoxyCodeLine{00921\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00922\ }
+\DoxyCodeLine{00923\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ taproot\ bip32\ keypaths}}
+\DoxyCodeLine{00924\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [xonly,\ leaf]\ :\ m\_tap\_bip32\_paths)\ \{}
+\DoxyCodeLine{00925\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [leaf\_hashes,\ origin]\ =\ leaf;}
+\DoxyCodeLine{00926\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ PSBT\_OUT\_TAP\_BIP32\_DERIVATION,\ xonly);}
+\DoxyCodeLine{00927\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ value;}
+\DoxyCodeLine{00928\ \ \ \ \ \ \ \ \ \ \ \ \ VectorWriter\ s\_value\{value,\ 0\};}
+\DoxyCodeLine{00929\ \ \ \ \ \ \ \ \ \ \ \ \ s\_value\ <<\ leaf\_hashes;}
+\DoxyCodeLine{00930\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeKeyOrigin(s\_value,\ origin);}
+\DoxyCodeLine{00931\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ value;}
+\DoxyCodeLine{00932\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00933\ }
+\DoxyCodeLine{00934\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ MuSig2\ Participants}}
+\DoxyCodeLine{00935\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [agg\_pubkey,\ part\_pubs]\ :\ m\_musig2\_participants)\ \{}
+\DoxyCodeLine{00936\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_OUT\_MUSIG2\_PARTICIPANT\_PUBKEYS),\ std::span\{agg\_pubkey\});}
+\DoxyCodeLine{00937\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ value;}
+\DoxyCodeLine{00938\ \ \ \ \ \ \ \ \ \ \ \ \ VectorWriter\ s\_value\{value,\ 0\};}
+\DoxyCodeLine{00939\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ pk\ :\ part\_pubs)\ \{}
+\DoxyCodeLine{00940\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_value\ <<\ std::span\{pk\};}
+\DoxyCodeLine{00941\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00942\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ value;}
+\DoxyCodeLine{00943\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00944\ }
+\DoxyCodeLine{00945\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ unknown\ things}}
+\DoxyCodeLine{00946\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ entry\ :\ unknown)\ \{}
+\DoxyCodeLine{00947\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.first;}
+\DoxyCodeLine{00948\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.second;}
+\DoxyCodeLine{00949\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00950\ }
+\DoxyCodeLine{00951\ \ \ \ \ \ \ \ \ s\ <<\ PSBT\_SEPARATOR;}
+\DoxyCodeLine{00952\ \ \ \ \ \}}
+\DoxyCodeLine{00953\ }
+\DoxyCodeLine{00954\ }
+\DoxyCodeLine{00955\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00956\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)\ \{}
+\DoxyCodeLine{00957\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Used\ for\ duplicate\ key\ detection}}
+\DoxyCodeLine{00958\ \ \ \ \ \ \ \ \ std::set<std::vector<unsigned\ char>>\ key\_lookup;}
+\DoxyCodeLine{00959\ }
+\DoxyCodeLine{00960\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ loop}}
+\DoxyCodeLine{00961\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ found\_sep\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00962\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}(!s.empty())\ \{}
+\DoxyCodeLine{00963\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ the\ key\ of\ format\ "{}<keylen><keytype><keydata>"{}\ after\ which}}
+\DoxyCodeLine{00964\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ "{}key"{}\ will\ contain\ "{}<keytype><keydata>"{}}}
+\DoxyCodeLine{00965\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ key;}
+\DoxyCodeLine{00966\ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ key;}
+\DoxyCodeLine{00967\ }
+\DoxyCodeLine{00968\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ key\ is\ empty\ if\ that\ was\ actually\ a\ separator\ byte}}
+\DoxyCodeLine{00969\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ This\ is\ a\ special\ case\ for\ key\ lengths\ 0\ as\ those\ are\ not\ allowed\ (except\ for\ separator)}}
+\DoxyCodeLine{00970\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (key.empty())\ \{}
+\DoxyCodeLine{00971\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ found\_sep\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00972\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00973\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00974\ }
+\DoxyCodeLine{00975\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ "{}skey"{}\ is\ used\ so\ that\ "{}key"{}\ is\ unchanged\ after\ reading\ keytype\ below}}
+\DoxyCodeLine{00976\ \ \ \ \ \ \ \ \ \ \ \ \ SpanReader\ skey\{key\};}
+\DoxyCodeLine{00977\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ keytype\ is\ of\ the\ format\ compact\ size\ uint\ at\ the\ beginning\ of\ "{}key"{}}}
+\DoxyCodeLine{00978\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ type\ =\ ReadCompactSize(skey);}
+\DoxyCodeLine{00979\ }
+\DoxyCodeLine{00980\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Do\ stuff\ based\ on\ keytype\ "{}type"{},\ i.e.,\ key\ checks,\ reading\ values\ of\ the}}
+\DoxyCodeLine{00981\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ format\ "{}<valuelen><valuedata>"{}\ from\ the\ stream\ "{}s"{},\ and\ value\ checks}}
+\DoxyCodeLine{00982\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{switch}(type)\ \{}
+\DoxyCodeLine{00983\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_OUT\_REDEEMSCRIPT:}
+\DoxyCodeLine{00984\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00985\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00986\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ output\ redeemScript\ already\ provided"{}});}
+\DoxyCodeLine{00987\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00988\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Output\ redeemScript\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00989\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00990\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ redeem\_script;}
+\DoxyCodeLine{00991\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00992\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00993\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_OUT\_WITNESSSCRIPT:}
+\DoxyCodeLine{00994\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00995\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{00996\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ output\ witnessScript\ already\ provided"{}});}
+\DoxyCodeLine{00997\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{00998\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Output\ witnessScript\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{00999\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01000\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ witness\_script;}
+\DoxyCodeLine{01001\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01002\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01003\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_OUT\_BIP32\_DERIVATION:}
+\DoxyCodeLine{01004\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{01005\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DeserializeHDKeypaths(s,\ key,\ hd\_keypaths);}
+\DoxyCodeLine{01006\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01007\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01008\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_OUT\_TAP\_INTERNAL\_KEY:}
+\DoxyCodeLine{01009\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{01010\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{01011\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ output\ Taproot\ internal\ key\ already\ provided"{}});}
+\DoxyCodeLine{01012\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{01013\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Output\ Taproot\ internal\ key\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{01014\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01015\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeFromVector(s,\ m\_tap\_internal\_key);}
+\DoxyCodeLine{01016\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01017\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01018\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_OUT\_TAP\_TREE:}
+\DoxyCodeLine{01019\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{01020\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{01021\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ output\ Taproot\ tree\ already\ provided"{}});}
+\DoxyCodeLine{01022\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{01023\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Output\ Taproot\ tree\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{01024\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01025\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ tree\_v;}
+\DoxyCodeLine{01026\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ tree\_v;}
+\DoxyCodeLine{01027\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SpanReader\ s\_tree\{tree\_v\};}
+\DoxyCodeLine{01028\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (s\_tree.empty())\ \{}
+\DoxyCodeLine{01029\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Output\ Taproot\ tree\ must\ not\ be\ empty"{}});}
+\DoxyCodeLine{01030\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01031\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ TaprootBuilder\ builder;}
+\DoxyCodeLine{01032\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (!s\_tree.empty())\ \{}
+\DoxyCodeLine{01033\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint8\_t\ depth;}
+\DoxyCodeLine{01034\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint8\_t\ leaf\_ver;}
+\DoxyCodeLine{01035\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ script;}
+\DoxyCodeLine{01036\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_tree\ >>\ depth;}
+\DoxyCodeLine{01037\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_tree\ >>\ leaf\_ver;}
+\DoxyCodeLine{01038\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\_tree\ >>\ script;}
+\DoxyCodeLine{01039\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (depth\ >\ TAPROOT\_CONTROL\_MAX\_NODE\_COUNT)\ \{}
+\DoxyCodeLine{01040\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Output\ Taproot\ tree\ has\ as\ leaf\ greater\ than\ Taproot\ maximum\ depth"{}});}
+\DoxyCodeLine{01041\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01042\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((leaf\_ver\ \&\ \string~TAPROOT\_LEAF\_MASK)\ !=\ 0)\ \{}
+\DoxyCodeLine{01043\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Output\ Taproot\ tree\ has\ a\ leaf\ with\ an\ invalid\ leaf\ version"{}});}
+\DoxyCodeLine{01044\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01045\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_tap\_tree.emplace\_back(depth,\ leaf\_ver,\ script);}
+\DoxyCodeLine{01046\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ builder.Add((\textcolor{keywordtype}{int})depth,\ script,\ (\textcolor{keywordtype}{int})leaf\_ver,\ \textcolor{comment}{/*track=*/}\textcolor{keyword}{true});}
+\DoxyCodeLine{01047\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01048\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!builder.IsComplete())\ \{}
+\DoxyCodeLine{01049\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Output\ Taproot\ tree\ is\ malformed"{}});}
+\DoxyCodeLine{01050\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01051\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01052\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_OUT\_TAP\_BIP32\_DERIVATION:}
+\DoxyCodeLine{01054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{01055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{01056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ output\ Taproot\ BIP32\ keypath\ already\ provided"{}});}
+\DoxyCodeLine{01057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 33)\ \{}
+\DoxyCodeLine{01058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Output\ Taproot\ BIP32\ keypath\ key\ is\ not\ at\ 33\ bytes"{}});}
+\DoxyCodeLine{01059\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ XOnlyPubKey\ xonly(uint256(std::span<uint8\_t>(key).last(32)));}
+\DoxyCodeLine{01061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::set<uint256>\ leaf\_hashes;}
+\DoxyCodeLine{01062\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ value\_len\ =\ ReadCompactSize(s);}
+\DoxyCodeLine{01063\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ before\_hashes\ =\ s.size();}
+\DoxyCodeLine{01064\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ leaf\_hashes;}
+\DoxyCodeLine{01065\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ after\_hashes\ =\ s.size();}
+\DoxyCodeLine{01066\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ hashes\_len\ =\ before\_hashes\ -\/\ after\_hashes;}
+\DoxyCodeLine{01067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (hashes\_len\ >\ value\_len)\ \{}
+\DoxyCodeLine{01068\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Output\ Taproot\ BIP32\ keypath\ has\ an\ invalid\ length"{}});}
+\DoxyCodeLine{01069\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ origin\_len\ =\ value\_len\ -\/\ hashes\_len;}
+\DoxyCodeLine{01071\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_tap\_bip32\_paths.emplace(xonly,\ std::make\_pair(leaf\_hashes,\ DeserializeKeyOrigin(s,\ origin\_len)));}
+\DoxyCodeLine{01072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_OUT\_MUSIG2\_PARTICIPANT\_PUBKEYS:}
+\DoxyCodeLine{01075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{01076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{01077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ output\ participant\ pubkeys\ for\ an\ aggregate\ key\ already\ provided"{}});}
+\DoxyCodeLine{01078\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ CPubKey::COMPRESSED\_SIZE\ +\ 1)\ \{}
+\DoxyCodeLine{01079\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Output\ musig2\ participants\ pubkeys\ aggregate\ key\ is\ not\ 34\ bytes"{}});}
+\DoxyCodeLine{01080\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DeserializeMuSig2ParticipantPubkeys(s,\ skey,\ m\_musig2\_participants,\ std::string\{\textcolor{stringliteral}{"{}Output"{}}\});}
+\DoxyCodeLine{01082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01083\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01084\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_OUT\_PROPRIETARY:}
+\DoxyCodeLine{01085\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{01086\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ PSBTProprietary\ this\_prop;}
+\DoxyCodeLine{01087\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ skey\ >>\ this\_prop.identifier;}
+\DoxyCodeLine{01088\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this\_prop.subtype\ =\ ReadCompactSize(skey);}
+\DoxyCodeLine{01089\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this\_prop.key\ =\ key;}
+\DoxyCodeLine{01090\ }
+\DoxyCodeLine{01091\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_proprietary.contains(this\_prop))\ \{}
+\DoxyCodeLine{01092\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ proprietary\ key\ already\ found"{}});}
+\DoxyCodeLine{01093\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01094\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ this\_prop.value;}
+\DoxyCodeLine{01095\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_proprietary.insert(this\_prop);}
+\DoxyCodeLine{01096\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01098\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Unknown\ stuff}}
+\DoxyCodeLine{01099\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{default}:\ \{}
+\DoxyCodeLine{01100\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (unknown.contains(key))\ \{}
+\DoxyCodeLine{01101\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ key\ for\ unknown\ value\ already\ provided"{}});}
+\DoxyCodeLine{01102\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01103\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ value}}
+\DoxyCodeLine{01104\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ val\_bytes;}
+\DoxyCodeLine{01105\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ val\_bytes;}
+\DoxyCodeLine{01106\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ unknown.emplace(std::move(key),\ std::move(val\_bytes));}
+\DoxyCodeLine{01107\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01108\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01109\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01110\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01111\ }
+\DoxyCodeLine{01112\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!found\_sep)\ \{}
+\DoxyCodeLine{01113\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Separator\ is\ missing\ at\ the\ end\ of\ an\ output\ map"{}});}
+\DoxyCodeLine{01114\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01115\ \ \ \ \ \}}
+\DoxyCodeLine{01116\ }
+\DoxyCodeLine{01117\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{01118\ \ \ \ \ PSBTOutput(deserialize\_type,\ Stream\&\ s)\ \{}
+\DoxyCodeLine{01119\ \ \ \ \ \ \ \ \ Unserialize(s);}
+\DoxyCodeLine{01120\ \ \ \ \ \}}
+\DoxyCodeLine{01121\ \};}
+\DoxyCodeLine{01122\ }
+\DoxyCodeLine{01124\ \textcolor{keyword}{struct\ }PartiallySignedTransaction}
+\DoxyCodeLine{01125\ \{}
+\DoxyCodeLine{01126\ \ \ \ \ std::optional<CMutableTransaction>\ tx;}
+\DoxyCodeLine{01127\ \ \ \ \ \textcolor{comment}{//\ We\ use\ a\ vector\ of\ CExtPubKey\ in\ the\ event\ that\ there\ happens\ to\ be\ the\ same\ KeyOriginInfos\ for\ different\ CExtPubKeys}}
+\DoxyCodeLine{01128\ \ \ \ \ \textcolor{comment}{//\ Note\ that\ this\ map\ swaps\ the\ key\ and\ values\ from\ the\ serialization}}
+\DoxyCodeLine{01129\ \ \ \ \ std::map<KeyOriginInfo,\ std::set<CExtPubKey>>\ m\_xpubs;}
+\DoxyCodeLine{01130\ \ \ \ \ std::vector<PSBTInput>\ inputs;}
+\DoxyCodeLine{01131\ \ \ \ \ std::vector<PSBTOutput>\ outputs;}
+\DoxyCodeLine{01132\ \ \ \ \ std::map<std::vector<unsigned\ char>,\ std::vector<unsigned\ char>>\ unknown;}
+\DoxyCodeLine{01133\ \ \ \ \ std::optional<uint32\_t>\ m\_version;}
+\DoxyCodeLine{01134\ \ \ \ \ std::set<PSBTProprietary>\ m\_proprietary;}
+\DoxyCodeLine{01135\ }
+\DoxyCodeLine{01136\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsNull()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{01137\ \ \ \ \ uint32\_t\ GetVersion()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{01138\ }
+\DoxyCodeLine{01141\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ Merge(\textcolor{keyword}{const}\ PartiallySignedTransaction\&\ psbt);}
+\DoxyCodeLine{01142\ \ \ \ \ \textcolor{keywordtype}{bool}\ AddInput(\textcolor{keyword}{const}\ CTxIn\&\ txin,\ PSBTInput\&\ psbtin);}
+\DoxyCodeLine{01143\ \ \ \ \ \textcolor{keywordtype}{bool}\ AddOutput(\textcolor{keyword}{const}\ CTxOut\&\ txout,\ \textcolor{keyword}{const}\ PSBTOutput\&\ psbtout);}
+\DoxyCodeLine{01144\ \ \ \ \ PartiallySignedTransaction()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{01145\ \ \ \ \ \textcolor{keyword}{explicit}\ PartiallySignedTransaction(\textcolor{keyword}{const}\ CMutableTransaction\&\ tx);}
+\DoxyCodeLine{01153\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetInputUTXO(CTxOut\&\ utxo,\ \textcolor{keywordtype}{int}\ input\_index)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{01154\ }
+\DoxyCodeLine{01155\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{01156\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{01157\ }
+\DoxyCodeLine{01158\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ magic\ bytes}}
+\DoxyCodeLine{01159\ \ \ \ \ \ \ \ \ s\ <<\ PSBT\_MAGIC\_BYTES;}
+\DoxyCodeLine{01160\ }
+\DoxyCodeLine{01161\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ unsigned\ tx\ flag}}
+\DoxyCodeLine{01162\ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_GLOBAL\_UNSIGNED\_TX));}
+\DoxyCodeLine{01163\ }
+\DoxyCodeLine{01164\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ serialized\ tx\ to\ a\ stream}}
+\DoxyCodeLine{01165\ \ \ \ \ \ \ \ \ SerializeToVector(s,\ TX\_NO\_WITNESS(*tx));}
+\DoxyCodeLine{01166\ }
+\DoxyCodeLine{01167\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ xpubs}}
+\DoxyCodeLine{01168\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ xpub\_pair\ :\ m\_xpubs)\ \{}
+\DoxyCodeLine{01169\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ xpub\ :\ xpub\_pair.second)\ \{}
+\DoxyCodeLine{01170\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ ser\_xpub[BIP32\_EXTKEY\_WITH\_VERSION\_SIZE];}
+\DoxyCodeLine{01171\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ xpub.EncodeWithVersion(ser\_xpub);}
+\DoxyCodeLine{01172\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Note\ that\ the\ serialization\ swaps\ the\ key\ and\ value}}
+\DoxyCodeLine{01173\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ xpub\ is\ the\ key\ (for\ uniqueness)\ while\ the\ path\ is\ the\ value}}
+\DoxyCodeLine{01174\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ PSBT\_GLOBAL\_XPUB,\ ser\_xpub);}
+\DoxyCodeLine{01175\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SerializeHDKeypath(s,\ xpub\_pair.first);}
+\DoxyCodeLine{01176\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01177\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01178\ }
+\DoxyCodeLine{01179\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ PSBT\ version}}
+\DoxyCodeLine{01180\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (GetVersion()\ >\ 0)\ \{}
+\DoxyCodeLine{01181\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ CompactSizeWriter(PSBT\_GLOBAL\_VERSION));}
+\DoxyCodeLine{01182\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeToVector(s,\ *m\_version);}
+\DoxyCodeLine{01183\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01184\ }
+\DoxyCodeLine{01185\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ proprietary\ things}}
+\DoxyCodeLine{01186\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ entry\ :\ m\_proprietary)\ \{}
+\DoxyCodeLine{01187\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.key;}
+\DoxyCodeLine{01188\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.value;}
+\DoxyCodeLine{01189\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01190\ }
+\DoxyCodeLine{01191\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ the\ unknown\ things}}
+\DoxyCodeLine{01192\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ entry\ :\ unknown)\ \{}
+\DoxyCodeLine{01193\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.first;}
+\DoxyCodeLine{01194\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ entry.second;}
+\DoxyCodeLine{01195\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01196\ }
+\DoxyCodeLine{01197\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Separator}}
+\DoxyCodeLine{01198\ \ \ \ \ \ \ \ \ s\ <<\ PSBT\_SEPARATOR;}
+\DoxyCodeLine{01199\ }
+\DoxyCodeLine{01200\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ inputs}}
+\DoxyCodeLine{01201\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ PSBTInput\&\ input\ :\ inputs)\ \{}
+\DoxyCodeLine{01202\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ input;}
+\DoxyCodeLine{01203\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01204\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ outputs}}
+\DoxyCodeLine{01205\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ PSBTOutput\&\ output\ :\ outputs)\ \{}
+\DoxyCodeLine{01206\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ output;}
+\DoxyCodeLine{01207\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01208\ \ \ \ \ \}}
+\DoxyCodeLine{01209\ }
+\DoxyCodeLine{01210\ }
+\DoxyCodeLine{01211\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{01212\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)\ \{}
+\DoxyCodeLine{01213\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ the\ magic\ bytes}}
+\DoxyCodeLine{01214\ \ \ \ \ \ \ \ \ uint8\_t\ magic[5];}
+\DoxyCodeLine{01215\ \ \ \ \ \ \ \ \ s\ >>\ magic;}
+\DoxyCodeLine{01216\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!std::equal(magic,\ magic\ +\ 5,\ PSBT\_MAGIC\_BYTES))\ \{}
+\DoxyCodeLine{01217\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Invalid\ PSBT\ magic\ bytes"{}});}
+\DoxyCodeLine{01218\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01219\ }
+\DoxyCodeLine{01220\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Used\ for\ duplicate\ key\ detection}}
+\DoxyCodeLine{01221\ \ \ \ \ \ \ \ \ std::set<std::vector<unsigned\ char>>\ key\_lookup;}
+\DoxyCodeLine{01222\ }
+\DoxyCodeLine{01223\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Track\ the\ global\ xpubs\ we\ have\ already\ seen.\ Just\ for\ sanity\ checking}}
+\DoxyCodeLine{01224\ \ \ \ \ \ \ \ \ std::set<CExtPubKey>\ global\_xpubs;}
+\DoxyCodeLine{01225\ }
+\DoxyCodeLine{01226\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ global\ data}}
+\DoxyCodeLine{01227\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ found\_sep\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{01228\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}(!s.empty())\ \{}
+\DoxyCodeLine{01229\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ the\ key\ of\ format\ "{}<keylen><keytype><keydata>"{}\ after\ which}}
+\DoxyCodeLine{01230\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ "{}key"{}\ will\ contain\ "{}<keytype><keydata>"{}}}
+\DoxyCodeLine{01231\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ key;}
+\DoxyCodeLine{01232\ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ key;}
+\DoxyCodeLine{01233\ }
+\DoxyCodeLine{01234\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ key\ is\ empty\ if\ that\ was\ actually\ a\ separator\ byte}}
+\DoxyCodeLine{01235\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ This\ is\ a\ special\ case\ for\ key\ lengths\ 0\ as\ those\ are\ not\ allowed\ (except\ for\ separator)}}
+\DoxyCodeLine{01236\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (key.empty())\ \{}
+\DoxyCodeLine{01237\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ found\_sep\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{01238\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01239\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01240\ }
+\DoxyCodeLine{01241\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ "{}skey"{}\ is\ used\ so\ that\ "{}key"{}\ is\ unchanged\ after\ reading\ keytype\ below}}
+\DoxyCodeLine{01242\ \ \ \ \ \ \ \ \ \ \ \ \ SpanReader\ skey\{key\};}
+\DoxyCodeLine{01243\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ keytype\ is\ of\ the\ format\ compact\ size\ uint\ at\ the\ beginning\ of\ "{}key"{}}}
+\DoxyCodeLine{01244\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ type\ =\ ReadCompactSize(skey);}
+\DoxyCodeLine{01245\ }
+\DoxyCodeLine{01246\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Do\ stuff\ based\ on\ keytype\ "{}type"{},\ i.e.,\ key\ checks,\ reading\ values\ of\ the}}
+\DoxyCodeLine{01247\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ format\ "{}<valuelen><valuedata>"{}\ from\ the\ stream\ "{}s"{},\ and\ value\ checks}}
+\DoxyCodeLine{01248\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{switch}(type)\ \{}
+\DoxyCodeLine{01249\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_GLOBAL\_UNSIGNED\_TX:}
+\DoxyCodeLine{01250\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{01251\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\_lookup.emplace(key).second)\ \{}
+\DoxyCodeLine{01252\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ unsigned\ tx\ already\ provided"{}});}
+\DoxyCodeLine{01253\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{01254\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Global\ unsigned\ tx\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{01255\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01256\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CMutableTransaction\ mtx;}
+\DoxyCodeLine{01257\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Set\ the\ stream\ to\ serialize\ with\ non-\/witness\ since\ this\ should\ always\ be\ non-\/witness}}
+\DoxyCodeLine{01258\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeFromVector(s,\ TX\_NO\_WITNESS(mtx));}
+\DoxyCodeLine{01259\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tx\ =\ std::move(mtx);}
+\DoxyCodeLine{01260\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ that\ all\ scriptSigs\ and\ scriptWitnesses\ are\ empty}}
+\DoxyCodeLine{01261\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ CTxIn\&\ txin\ :\ tx-\/>vin)\ \{}
+\DoxyCodeLine{01262\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!txin.scriptSig.empty()\ ||\ !txin.scriptWitness.IsNull())\ \{}
+\DoxyCodeLine{01263\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Unsigned\ tx\ does\ not\ have\ empty\ scriptSigs\ and\ scriptWitnesses."{}});}
+\DoxyCodeLine{01264\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01265\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01266\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01267\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01268\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_GLOBAL\_XPUB:}
+\DoxyCodeLine{01269\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{01270\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (key.size()\ !=\ BIP32\_EXTKEY\_WITH\_VERSION\_SIZE\ +\ 1)\ \{}
+\DoxyCodeLine{01271\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Size\ of\ key\ was\ not\ the\ expected\ size\ for\ the\ type\ global\ xpub"{}});}
+\DoxyCodeLine{01272\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01273\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ xpub\ from\ key}}
+\DoxyCodeLine{01274\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CExtPubKey\ xpub;}
+\DoxyCodeLine{01275\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ xpub.DecodeWithVersion(\&key.data()[1]);}
+\DoxyCodeLine{01276\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!xpub.pubkey.IsFullyValid())\ \{}
+\DoxyCodeLine{01277\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Invalid\ pubkey"{}});}
+\DoxyCodeLine{01278\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01279\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (global\_xpubs.contains(xpub))\ \{}
+\DoxyCodeLine{01280\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ key,\ global\ xpub\ already\ provided"{}});}
+\DoxyCodeLine{01281\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01282\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ global\_xpubs.insert(xpub);}
+\DoxyCodeLine{01283\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ keypath\ from\ stream}}
+\DoxyCodeLine{01284\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ KeyOriginInfo\ keypath;}
+\DoxyCodeLine{01285\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DeserializeHDKeypath(s,\ keypath);}
+\DoxyCodeLine{01286\ }
+\DoxyCodeLine{01287\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Note\ that\ we\ store\ these\ swapped\ to\ make\ searches\ faster.}}
+\DoxyCodeLine{01288\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Serialization\ uses\ xpub\ -\/>\ keypath\ to\ enqure\ key\ uniqueness}}
+\DoxyCodeLine{01289\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_xpubs.contains(keypath))\ \{}
+\DoxyCodeLine{01290\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ a\ new\ set\ to\ put\ the\ xpub\ in}}
+\DoxyCodeLine{01291\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_xpubs[keypath]\ =\ \{xpub\};}
+\DoxyCodeLine{01292\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{01293\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Insert\ xpub\ into\ existing\ set}}
+\DoxyCodeLine{01294\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_xpubs[keypath].insert(xpub);}
+\DoxyCodeLine{01295\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01296\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01297\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01298\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_GLOBAL\_VERSION:}
+\DoxyCodeLine{01299\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{01300\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_version)\ \{}
+\DoxyCodeLine{01301\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ version\ already\ provided"{}});}
+\DoxyCodeLine{01302\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (key.size()\ !=\ 1)\ \{}
+\DoxyCodeLine{01303\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Global\ version\ key\ is\ more\ than\ one\ byte\ type"{}});}
+\DoxyCodeLine{01304\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01305\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint32\_t\ v;}
+\DoxyCodeLine{01306\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeFromVector(s,\ v);}
+\DoxyCodeLine{01307\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_version\ =\ v;}
+\DoxyCodeLine{01308\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (*m\_version\ >\ PSBT\_HIGHEST\_VERSION)\ \{}
+\DoxyCodeLine{01309\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Unsupported\ version\ number"{}});}
+\DoxyCodeLine{01310\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01311\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01312\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01313\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PSBT\_GLOBAL\_PROPRIETARY:}
+\DoxyCodeLine{01314\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{01315\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ PSBTProprietary\ this\_prop;}
+\DoxyCodeLine{01316\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ skey\ >>\ this\_prop.identifier;}
+\DoxyCodeLine{01317\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this\_prop.subtype\ =\ ReadCompactSize(skey);}
+\DoxyCodeLine{01318\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ this\_prop.key\ =\ key;}
+\DoxyCodeLine{01319\ }
+\DoxyCodeLine{01320\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_proprietary.contains(this\_prop))\ \{}
+\DoxyCodeLine{01321\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ proprietary\ key\ already\ found"{}});}
+\DoxyCodeLine{01322\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01323\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ this\_prop.value;}
+\DoxyCodeLine{01324\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_proprietary.insert(this\_prop);}
+\DoxyCodeLine{01325\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01326\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01327\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Unknown\ stuff}}
+\DoxyCodeLine{01328\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{default}:\ \{}
+\DoxyCodeLine{01329\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (unknown.contains(key))\ \{}
+\DoxyCodeLine{01330\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Duplicate\ Key,\ key\ for\ unknown\ value\ already\ provided"{}});}
+\DoxyCodeLine{01331\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01332\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ in\ the\ value}}
+\DoxyCodeLine{01333\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ val\_bytes;}
+\DoxyCodeLine{01334\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ val\_bytes;}
+\DoxyCodeLine{01335\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ unknown.emplace(std::move(key),\ std::move(val\_bytes));}
+\DoxyCodeLine{01336\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01337\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01338\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01339\ }
+\DoxyCodeLine{01340\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!found\_sep)\ \{}
+\DoxyCodeLine{01341\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Separator\ is\ missing\ at\ the\ end\ of\ the\ global\ map"{}});}
+\DoxyCodeLine{01342\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01343\ }
+\DoxyCodeLine{01344\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ that\ we\ got\ an\ unsigned\ tx}}
+\DoxyCodeLine{01345\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!tx)\ \{}
+\DoxyCodeLine{01346\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}No\ unsigned\ transaction\ was\ provided"{}});}
+\DoxyCodeLine{01347\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01348\ }
+\DoxyCodeLine{01349\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ input\ data}}
+\DoxyCodeLine{01350\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ i\ =\ 0;}
+\DoxyCodeLine{01351\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (!s.empty()\ \&\&\ i\ <\ tx-\/>vin.size())\ \{}
+\DoxyCodeLine{01352\ \ \ \ \ \ \ \ \ \ \ \ \ PSBTInput\ input;}
+\DoxyCodeLine{01353\ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ input;}
+\DoxyCodeLine{01354\ \ \ \ \ \ \ \ \ \ \ \ \ inputs.push\_back(input);}
+\DoxyCodeLine{01355\ }
+\DoxyCodeLine{01356\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ the\ non-\/witness\ utxo\ matches\ the\ outpoint}}
+\DoxyCodeLine{01357\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (input.non\_witness\_utxo)\ \{}
+\DoxyCodeLine{01358\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (input.non\_witness\_utxo-\/>GetHash()\ !=\ tx-\/>vin[i].prevout.hash)\ \{}
+\DoxyCodeLine{01359\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Non-\/witness\ UTXO\ does\ not\ match\ outpoint\ hash"{}});}
+\DoxyCodeLine{01360\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01361\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (tx-\/>vin[i].prevout.n\ >=\ input.non\_witness\_utxo-\/>vout.size())\ \{}
+\DoxyCodeLine{01362\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Input\ specifies\ output\ index\ that\ does\ not\ exist"{}});}
+\DoxyCodeLine{01363\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01364\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01365\ \ \ \ \ \ \ \ \ \ \ \ \ ++i;}
+\DoxyCodeLine{01366\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01367\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ that\ the\ number\ of\ inputs\ matches\ the\ number\ of\ inputs\ in\ the\ transaction}}
+\DoxyCodeLine{01368\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (inputs.size()\ !=\ tx-\/>vin.size())\ \{}
+\DoxyCodeLine{01369\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Inputs\ provided\ does\ not\ match\ the\ number\ of\ inputs\ in\ transaction."{}});}
+\DoxyCodeLine{01370\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01371\ }
+\DoxyCodeLine{01372\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ output\ data}}
+\DoxyCodeLine{01373\ \ \ \ \ \ \ \ \ i\ =\ 0;}
+\DoxyCodeLine{01374\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (!s.empty()\ \&\&\ i\ <\ tx-\/>vout.size())\ \{}
+\DoxyCodeLine{01375\ \ \ \ \ \ \ \ \ \ \ \ \ PSBTOutput\ output;}
+\DoxyCodeLine{01376\ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ output;}
+\DoxyCodeLine{01377\ \ \ \ \ \ \ \ \ \ \ \ \ outputs.push\_back(output);}
+\DoxyCodeLine{01378\ \ \ \ \ \ \ \ \ \ \ \ \ ++i;}
+\DoxyCodeLine{01379\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01380\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ that\ the\ number\ of\ outputs\ matches\ the\ number\ of\ outputs\ in\ the\ transaction}}
+\DoxyCodeLine{01381\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (outputs.size()\ !=\ tx-\/>vout.size())\ \{}
+\DoxyCodeLine{01382\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Outputs\ provided\ does\ not\ match\ the\ number\ of\ outputs\ in\ transaction."{}});}
+\DoxyCodeLine{01383\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01384\ \ \ \ \ \}}
+\DoxyCodeLine{01385\ }
+\DoxyCodeLine{01386\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{01387\ \ \ \ \ PartiallySignedTransaction(deserialize\_type,\ Stream\&\ s)\ \{}
+\DoxyCodeLine{01388\ \ \ \ \ \ \ \ \ Unserialize(s);}
+\DoxyCodeLine{01389\ \ \ \ \ \}}
+\DoxyCodeLine{01390\ \};}
+\DoxyCodeLine{01391\ }
+\DoxyCodeLine{01392\ \textcolor{keyword}{enum\ class}\ PSBTRole\ \{}
+\DoxyCodeLine{01393\ \ \ \ \ CREATOR,}
+\DoxyCodeLine{01394\ \ \ \ \ UPDATER,}
+\DoxyCodeLine{01395\ \ \ \ \ SIGNER,}
+\DoxyCodeLine{01396\ \ \ \ \ FINALIZER,}
+\DoxyCodeLine{01397\ \ \ \ \ EXTRACTOR}
+\DoxyCodeLine{01398\ \};}
+\DoxyCodeLine{01399\ }
+\DoxyCodeLine{01400\ std::string\ PSBTRoleName(PSBTRole\ role);}
+\DoxyCodeLine{01401\ }
+\DoxyCodeLine{01403\ PrecomputedTransactionData\ PrecomputePSBTData(\textcolor{keyword}{const}\ PartiallySignedTransaction\&\ psbt);}
+\DoxyCodeLine{01404\ }
+\DoxyCodeLine{01406\ \textcolor{keywordtype}{bool}\ PSBTInputSigned(\textcolor{keyword}{const}\ PSBTInput\&\ input);}
+\DoxyCodeLine{01407\ }
+\DoxyCodeLine{01409\ \textcolor{keywordtype}{bool}\ PSBTInputSignedAndVerified(\textcolor{keyword}{const}\ PartiallySignedTransaction\ psbt,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ input\_index,\ \textcolor{keyword}{const}\ PrecomputedTransactionData*\ txdata);}
+\DoxyCodeLine{01410\ }
+\DoxyCodeLine{01416\ [[nodiscard]]\ PSBTError\ SignPSBTInput(\textcolor{keyword}{const}\ SigningProvider\&\ provider,\ PartiallySignedTransaction\&\ psbt,\ \textcolor{keywordtype}{int}\ index,\ \textcolor{keyword}{const}\ PrecomputedTransactionData*\ txdata,\ std::optional<int>\ sighash\ =\ std::nullopt,\ SignatureData*\ out\_sigdata\ =\ \textcolor{keyword}{nullptr},\ \textcolor{keywordtype}{bool}\ finalize\ =\ \textcolor{keyword}{true});}
+\DoxyCodeLine{01417\ }
+\DoxyCodeLine{01419\ \textcolor{keywordtype}{void}\ RemoveUnnecessaryTransactions(PartiallySignedTransaction\&\ psbtx);}
+\DoxyCodeLine{01420\ }
+\DoxyCodeLine{01422\ \textcolor{keywordtype}{size\_t}\ CountPSBTUnsignedInputs(\textcolor{keyword}{const}\ PartiallySignedTransaction\&\ psbt);}
+\DoxyCodeLine{01423\ }
+\DoxyCodeLine{01428\ \textcolor{keywordtype}{void}\ UpdatePSBTOutput(\textcolor{keyword}{const}\ SigningProvider\&\ provider,\ PartiallySignedTransaction\&\ psbt,\ \textcolor{keywordtype}{int}\ index);}
+\DoxyCodeLine{01429\ }
+\DoxyCodeLine{01436\ \textcolor{keywordtype}{bool}\ FinalizePSBT(PartiallySignedTransaction\&\ psbtx);}
+\DoxyCodeLine{01437\ }
+\DoxyCodeLine{01445\ \textcolor{keywordtype}{bool}\ FinalizeAndExtractPSBT(PartiallySignedTransaction\&\ psbtx,\ CMutableTransaction\&\ result);}
+\DoxyCodeLine{01446\ }
+\DoxyCodeLine{01454\ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ CombinePSBTs(PartiallySignedTransaction\&\ out,\ \textcolor{keyword}{const}\ std::vector<PartiallySignedTransaction>\&\ psbtxs);}
+\DoxyCodeLine{01455\ }
+\DoxyCodeLine{01457\ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ DecodeBase64PSBT(PartiallySignedTransaction\&\ decoded\_psbt,\ \textcolor{keyword}{const}\ std::string\&\ base64\_psbt,\ std::string\&\ error);}
+\DoxyCodeLine{01459\ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ DecodeRawPSBT(PartiallySignedTransaction\&\ decoded\_psbt,\ std::span<const\ std::byte>\ raw\_psbt,\ std::string\&\ error);}
+\DoxyCodeLine{01460\ }
+\DoxyCodeLine{01461\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_PSBT\_H}}
+
+\end{DoxyCode}

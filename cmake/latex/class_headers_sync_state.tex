@@ -1,0 +1,178 @@
+\doxysection{Headers\+Sync\+State Class Reference}
+\label{class_headers_sync_state}\index{HeadersSyncState@{HeadersSyncState}}
+
+
+{\ttfamily \#include $<$headerssync.\+h$>$}
+
+Inheritance diagram for Headers\+Sync\+State\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{class_headers_sync_state}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+struct \textbf{ Processing\+Result}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Types}
+\begin{DoxyCompactItemize}
+\item 
+enum class \textbf{ State} \{ \textbf{ PRESYNC}
+, \textbf{ REDOWNLOAD}
+, \textbf{ FINAL}
+ \}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ $\sim$\+Headers\+Sync\+State} ()=default
+\item 
+\textbf{ State} \textbf{ Get\+State} () const
+\item 
+int64\+\_\+t \textbf{ Get\+Presync\+Height} () const
+\item 
+uint32\+\_\+t \textbf{ Get\+Presync\+Time} () const
+\item 
+\textbf{ arith\+\_\+uint256} \textbf{ Get\+Presync\+Work} () const
+\item 
+\textbf{ Headers\+Sync\+State} (\textbf{ Node\+Id} id, const \textbf{ Consensus\+::\+Params} \&consensus\+\_\+params, const \textbf{ Headers\+Sync\+Params} \&params, const \textbf{ CBlock\+Index} $\ast$chain\+\_\+start, const \textbf{ arith\+\_\+uint256} \&minimum\+\_\+required\+\_\+work)
+\item 
+\textbf{ Processing\+Result} \textbf{ Process\+Next\+Headers} (std\+::span$<$ const \textbf{ CBlock\+Header} $>$ received\+\_\+headers, bool full\+\_\+headers\+\_\+message)
+\item 
+\textbf{ CBlock\+Locator} \textbf{ Next\+Headers\+Request\+Locator} () const
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+const size\+\_\+t \textbf{ m\+\_\+commit\+\_\+offset}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\doxyref{Headers\+Sync\+State}{p.}{class_headers_sync_state}\+:
+
+We wish to download a peer\textquotesingle{}s headers chain in a Do\+S-\/resistant way.
+
+The Bitcoin protocol does not offer an easy way to determine the work on a peer\textquotesingle{}s chain. Currently, we can query a peer\textquotesingle{}s headers by using a GETHEADERS message, and our peer can return a set of up to 2000 headers that connect to something we know. If a peer\textquotesingle{}s chain has more than 2000 blocks, then we need a way to verify that the chain actually has enough work on it to be useful to us -- by being above our anti-\/\+DoS minimum-\/chain-\/work threshold -- before we commit to storing those headers in memory. Otherwise, it would be cheap for an attacker to waste all our memory by serving us low-\/work headers (particularly for a new node coming online for the first time).
+
+To prevent memory-\/\+DoS with low-\/work headers, while still always being able to reorg to whatever the most-\/work chain is, we require that a chain meet a work threshold before committing it to memory. We can do this by downloading a peer\textquotesingle{}s headers twice, whenever we are not sure that the chain has sufficient work\+:
+
+
+\begin{DoxyItemize}
+\item In the first download phase, called pre-\/synchronization, we can calculate the work on the chain as we go (just by checking the n\+Bits value on each header, and validating the proof-\/of-\/work).
+\item Once we have reached a header where the cumulative chain work is sufficient, we switch to downloading the headers a second time, this time processing them fully, and possibly storing them in memory.
+\end{DoxyItemize}
+
+To prevent an attacker from using (eg) the honest chain to convince us that they have a high-\/work chain, but then feeding us an alternate set of low-\/difficulty headers in the second phase, we store commitments to the chain we see in the first download phase that we check in the second phase, as follows\+:
+
+
+\begin{DoxyItemize}
+\item In phase 1 (presync), store 1 bit (using a salted hash function) for every N headers that we see. With a reasonable choice of N, this uses relatively little memory even for a very long chain.
+\item In phase 2 (redownload), keep a lookahead buffer and only accept headers from that buffer into the block index (permanent memory usage) once they have some target number of verified commitments on top of them. With this parametrization, we can achieve a given security target for potential permanent memory usage, while choosing N to minimize memory use during the sync (temporary, per-\/peer storage). 
+\end{DoxyItemize}
+
+\label{doc-enum-members}
+\doxysubsection{Member Enumeration Documentation}
+\index{HeadersSyncState@{HeadersSyncState}!State@{State}}
+\index{State@{State}!HeadersSyncState@{HeadersSyncState}}
+\doxysubsubsection{State}
+{\footnotesize\ttfamily \label{class_headers_sync_state_a5d74787dedbc4e11c1ab15bf487e61f8} 
+enum class \textbf{ State}\hspace{0.3cm}{\ttfamily [strong]}}
+
+\begin{DoxyEnumFields}[2]{Enumerator}
+\raisebox{\heightof{T}}[0pt][0pt]{\index{PRESYNC@{PRESYNC}!HeadersSyncState@{HeadersSyncState}}\index{HeadersSyncState@{HeadersSyncState}!PRESYNC@{PRESYNC}}}\label{class_headers_sync_state_a5d74787dedbc4e11c1ab15bf487e61f8ac7b4faed4767142023121f8faacef9fa} 
+PRESYNC&PRESYNC means the peer has not yet demonstrated their chain has sufficient work and we\textquotesingle{}re only building commitments to the chain they serve us. \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{REDOWNLOAD@{REDOWNLOAD}!HeadersSyncState@{HeadersSyncState}}\index{HeadersSyncState@{HeadersSyncState}!REDOWNLOAD@{REDOWNLOAD}}}\label{class_headers_sync_state_a5d74787dedbc4e11c1ab15bf487e61f8acc314a5a286af9c5faefcdd8fa5f8a1f} 
+REDOWNLOAD&REDOWNLOAD means the peer has given us a high-\/enough-\/work chain, and now we\textquotesingle{}re redownloading the headers we saw before and trying to accept them \\
+\hline
+
+\raisebox{\heightof{T}}[0pt][0pt]{\index{FINAL@{FINAL}!HeadersSyncState@{HeadersSyncState}}\index{HeadersSyncState@{HeadersSyncState}!FINAL@{FINAL}}}\label{class_headers_sync_state_a5d74787dedbc4e11c1ab15bf487e61f8a6c8361dc2036c0559376fe4957699f69} 
+FINAL&We\textquotesingle{}re done syncing with this peer and can discard any remaining state \\
+\hline
+
+\end{DoxyEnumFields}
+
+
+\label{doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{HeadersSyncState@{HeadersSyncState}!````~HeadersSyncState@{$\sim$HeadersSyncState}}
+\index{````~HeadersSyncState@{$\sim$HeadersSyncState}!HeadersSyncState@{HeadersSyncState}}
+\doxysubsubsection{$\sim$HeadersSyncState()}
+{\footnotesize\ttfamily \label{class_headers_sync_state_aead457f323e9312e44673a1837abf705} 
+$\sim$\textbf{ Headers\+Sync\+State} (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [default]}}
+
+\index{HeadersSyncState@{HeadersSyncState}!HeadersSyncState@{HeadersSyncState}}
+\index{HeadersSyncState@{HeadersSyncState}!HeadersSyncState@{HeadersSyncState}}
+\doxysubsubsection{HeadersSyncState()}
+{\footnotesize\ttfamily \label{class_headers_sync_state_a9ef34f87a3e2aa8d73b928fa9f3b1911} 
+\textbf{ Headers\+Sync\+State} (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{id}{, }\item[{const \textbf{ Consensus\+::\+Params} \&}]{consensus\+\_\+params}{, }\item[{const \textbf{ Headers\+Sync\+Params} \&}]{params}{, }\item[{const \textbf{ CBlock\+Index} $\ast$}]{chain\+\_\+start}{, }\item[{const \textbf{ arith\+\_\+uint256} \&}]{minimum\+\_\+required\+\_\+work}{}\end{DoxyParamCaption})}
+
+Construct a \doxyref{Headers\+Sync\+State}{p.}{class_headers_sync_state} object representing a headers sync via this download-\/twice mechanism).
+
+id\+: node id (for logging) consensus\+\_\+params\+: parameters needed for difficulty adjustment validation chain\+\_\+start\+: best known fork point that the peer\textquotesingle{}s headers branch from minimum\+\_\+required\+\_\+work\+: amount of chain work required to accept the chain 
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{HeadersSyncState@{HeadersSyncState}!GetPresyncHeight@{GetPresyncHeight}}
+\index{GetPresyncHeight@{GetPresyncHeight}!HeadersSyncState@{HeadersSyncState}}
+\doxysubsubsection{GetPresyncHeight()}
+{\footnotesize\ttfamily \label{class_headers_sync_state_a57884de72372d959f39a3110123e419f} 
+int64\+\_\+t Get\+Presync\+Height (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Return the height reached during the PRESYNC phase \index{HeadersSyncState@{HeadersSyncState}!GetPresyncTime@{GetPresyncTime}}
+\index{GetPresyncTime@{GetPresyncTime}!HeadersSyncState@{HeadersSyncState}}
+\doxysubsubsection{GetPresyncTime()}
+{\footnotesize\ttfamily \label{class_headers_sync_state_ae696375936b0658e352ebcb824b91ae5} 
+uint32\+\_\+t Get\+Presync\+Time (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Return the block timestamp of the last header received during the PRESYNC phase. \index{HeadersSyncState@{HeadersSyncState}!GetPresyncWork@{GetPresyncWork}}
+\index{GetPresyncWork@{GetPresyncWork}!HeadersSyncState@{HeadersSyncState}}
+\doxysubsubsection{GetPresyncWork()}
+{\footnotesize\ttfamily \label{class_headers_sync_state_a1bcb794b07d97b08d45420e40589e5b4} 
+\textbf{ arith\+\_\+uint256} Get\+Presync\+Work (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Return the amount of work in the chain received during the PRESYNC phase. \index{HeadersSyncState@{HeadersSyncState}!GetState@{GetState}}
+\index{GetState@{GetState}!HeadersSyncState@{HeadersSyncState}}
+\doxysubsubsection{GetState()}
+{\footnotesize\ttfamily \label{class_headers_sync_state_affcd8c8b4f9cd82f29ce903bee82d622} 
+\textbf{ State} Get\+State (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Return the current state of our download \index{HeadersSyncState@{HeadersSyncState}!NextHeadersRequestLocator@{NextHeadersRequestLocator}}
+\index{NextHeadersRequestLocator@{NextHeadersRequestLocator}!HeadersSyncState@{HeadersSyncState}}
+\doxysubsubsection{NextHeadersRequestLocator()}
+{\footnotesize\ttfamily \label{class_headers_sync_state_ac7f7cda8eb56d220ef54951c6cebcb2e} 
+\textbf{ CBlock\+Locator} Next\+Headers\+Request\+Locator (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const}
+
+Issue the next GETHEADERS message to our peer.
+
+This will return a locator appropriate for the current sync object, to continue the synchronization phase it is in. \index{HeadersSyncState@{HeadersSyncState}!ProcessNextHeaders@{ProcessNextHeaders}}
+\index{ProcessNextHeaders@{ProcessNextHeaders}!HeadersSyncState@{HeadersSyncState}}
+\doxysubsubsection{ProcessNextHeaders()}
+{\footnotesize\ttfamily \label{class_headers_sync_state_a0e12375af6318f0729742c2fde2e7294} 
+\textbf{ Headers\+Sync\+State\+::\+Processing\+Result} Process\+Next\+Headers (\begin{DoxyParamCaption}\item[{std\+::span$<$ const \textbf{ CBlock\+Header} $>$}]{received\+\_\+headers}{, }\item[{bool}]{full\+\_\+headers\+\_\+message}{}\end{DoxyParamCaption})}
+
+Process a batch of headers, once a sync via this mechanism has started
+
+received\+\_\+headers\+: headers that were received over the network for processing. Assumes the caller has already verified the headers are continuous, and has checked that each header satisfies the proof-\/of-\/work target included in the header (but not necessarily verified that the proof-\/of-\/work target is correct and passes consensus rules). full\+\_\+headers\+\_\+message\+: true if the message was at max capacity, indicating more headers may be available \doxyref{Processing\+Result.\+pow\+\_\+validated\+\_\+headers}{p.}{struct_headers_sync_state_1_1_processing_result_a9c35a329ec17ebcbece028b7cc1e9d1e}\+: will be filled in with any headers that the caller can fully process and validate now (because these returned headers are on a chain with sufficient work) \doxyref{Processing\+Result.\+success}{p.}{struct_headers_sync_state_1_1_processing_result_a7960f9c558f9ee2c3d4a8fdea096fb56}\+: set to false if an error is detected and the sync is aborted; true otherwise. \doxyref{Processing\+Result.\+request\+\_\+more}{p.}{struct_headers_sync_state_1_1_processing_result_a360c8f164bde96ae04a0106b65ab4a3f}\+: if true, the caller is suggested to call Next\+Headers\+Request\+Locator and send a getheaders message using it.
+
+Process the next batch of headers received from our peer. Validate and store commitments, and compare total chainwork to our target to see if we can switch to REDOWNLOAD mode. 
+
+\label{doc-variable-members}
+\doxysubsection{Field Documentation}
+\index{HeadersSyncState@{HeadersSyncState}!m\_commit\_offset@{m\_commit\_offset}}
+\index{m\_commit\_offset@{m\_commit\_offset}!HeadersSyncState@{HeadersSyncState}}
+\doxysubsubsection{m\_commit\_offset}
+{\footnotesize\ttfamily \label{class_headers_sync_state_a840e4da6e13976dfabe46b044e3b1738} 
+const size\+\_\+t m\+\_\+commit\+\_\+offset\hspace{0.3cm}{\ttfamily [protected]}}
+
+The (secret) offset on the heights for which to create commitments.
+
+m\+\_\+header\+\_\+commitments entries are created at any height h for which (h \% m\+\_\+params.\+commitment\+\_\+period) == m\+\_\+commit\+\_\+offset. 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+src/\textbf{ headerssync.\+h}\item 
+src/\textbf{ headerssync.\+cpp}\end{DoxyCompactItemize}

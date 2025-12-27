@@ -1,0 +1,806 @@
+\doxysection{ecmult\+\_\+impl.\+h}
+\label{ecmult__impl_8h_source}\index{src/secp256k1/src/ecmult\_impl.h@{src/secp256k1/src/ecmult\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/******************************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2013,\ 2014,\ 2017\ Pieter\ Wuille,\ Andrew\ Poelstra,\ Jonas\ Nick\ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.\ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ******************************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_ECMULT\_IMPL\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_ECMULT\_IMPL\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <string.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}group.h"{}}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}scalar.h"{}}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ "{}ecmult.h"{}}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ "{}precomputed\_ecmult.h"{}}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#if\ defined(EXHAUSTIVE\_TEST\_ORDER)}}
+\DoxyCodeLine{00020\ \textcolor{comment}{/*\ We\ need\ to\ lower\ these\ values\ for\ exhaustive\ tests\ because}}
+\DoxyCodeLine{00021\ \textcolor{comment}{\ *\ the\ tables\ cannot\ have\ infinities\ in\ them\ (this\ breaks\ the}}
+\DoxyCodeLine{00022\ \textcolor{comment}{\ *\ affine-\/isomorphism\ stuff\ which\ tracks\ z-\/ratios)\ */}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#\ \ if\ EXHAUSTIVE\_TEST\_ORDER\ >\ 128}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#\ \ \ \ define\ WINDOW\_A\ 5}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#\ \ elif\ EXHAUSTIVE\_TEST\_ORDER\ >\ 8}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#\ \ \ \ define\ WINDOW\_A\ 4}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#\ \ else}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#\ \ \ \ define\ WINDOW\_A\ 2}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#\ \ endif}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00031\ \textcolor{comment}{/*\ optimal\ for\ 128-\/bit\ and\ 256-\/bit\ exponents.\ */}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#\ \ define\ WINDOW\_A\ 5}\textcolor{preprocessor}{}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \textcolor{preprocessor}{\#define\ WNAF\_BITS\ 128}}
+\DoxyCodeLine{00045\ \textcolor{preprocessor}{\#define\ WNAF\_SIZE\_BITS(bits,\ w)\ CEIL\_DIV(bits,\ w)}}
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\#define\ WNAF\_SIZE(w)\ WNAF\_SIZE\_BITS(WNAF\_BITS,\ w)}}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \textcolor{comment}{/*\ The\ number\ of\ objects\ allocated\ on\ the\ scratch\ space\ for\ ecmult\_multi\ algorithms\ */}}
+\DoxyCodeLine{00049\ \textcolor{preprocessor}{\#define\ PIPPENGER\_SCRATCH\_OBJECTS\ 6}}
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\#define\ STRAUSS\_SCRATCH\_OBJECTS\ 5}}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \textcolor{preprocessor}{\#define\ PIPPENGER\_MAX\_BUCKET\_WINDOW\ 12}}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \textcolor{comment}{/*\ Minimum\ number\ of\ points\ for\ which\ pippenger\_wnaf\ is\ faster\ than\ strauss\ wnaf\ */}}
+\DoxyCodeLine{00055\ \textcolor{preprocessor}{\#define\ ECMULT\_PIPPENGER\_THRESHOLD\ 88}}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \textcolor{preprocessor}{\#define\ ECMULT\_MAX\_POINTS\_PER\_BATCH\ 5000000}}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00073\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_odd\_multiples\_table(\textcolor{keywordtype}{int}\ n,\ secp256k1\_ge\ *pre\_a,\ secp256k1\_fe\ *zr,\ secp256k1\_fe\ *z,\ \textcolor{keyword}{const}\ secp256k1\_gej\ *a)\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ secp256k1\_gej\ d,\ ai;}
+\DoxyCodeLine{00075\ \ \ \ \ secp256k1\_ge\ d\_ge;}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ \ \ VERIFY\_CHECK(!a-\/>infinity);}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \ \ \ \ secp256k1\_gej\_double\_var(\&d,\ a,\ NULL);}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{comment}{/*}}
+\DoxyCodeLine{00083\ \textcolor{comment}{\ \ \ \ \ *\ Perform\ the\ additions\ using\ an\ isomorphic\ curve\ Y\string^2\ =\ X\string^3\ +\ 7*C\string^6\ where\ C\ :=\ d.z.}}
+\DoxyCodeLine{00084\ \textcolor{comment}{\ \ \ \ \ *\ The\ isomorphism,\ phi,\ maps\ a\ secp256k1\ point\ (x,\ y)\ to\ the\ point\ (x*C\string^2,\ y*C\string^3)\ on\ the\ other\ curve.}}
+\DoxyCodeLine{00085\ \textcolor{comment}{\ \ \ \ \ *\ In\ Jacobian\ coordinates\ phi\ maps\ (x,\ y,\ z)\ to\ (x*C\string^2,\ y*C\string^3,\ z)\ or,\ equivalently\ to\ (x,\ y,\ z/C).}}
+\DoxyCodeLine{00086\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00087\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ phi(x,\ y,\ z)\ =\ (x*C\string^2,\ y*C\string^3,\ z)\ =\ (x,\ y,\ z/C)}}
+\DoxyCodeLine{00088\ \textcolor{comment}{\ \ \ \ \ *\ \ \ d\_ge\ :=\ phi(d)\ =\ (d.x,\ d.y,\ 1)}}
+\DoxyCodeLine{00089\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ ai\ :=\ phi(a)\ =\ (a.x*C\string^2,\ a.y*C\string^3,\ a.z)}}
+\DoxyCodeLine{00090\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00091\ \textcolor{comment}{\ \ \ \ \ *\ The\ group\ addition\ functions\ work\ correctly\ on\ these\ isomorphic\ curves.}}
+\DoxyCodeLine{00092\ \textcolor{comment}{\ \ \ \ \ *\ In\ particular\ phi(d)\ is\ easy\ to\ represent\ in\ affine\ coordinates\ under\ this\ isomorphism.}}
+\DoxyCodeLine{00093\ \textcolor{comment}{\ \ \ \ \ *\ This\ lets\ us\ use\ the\ faster\ secp256k1\_gej\_add\_ge\_var\ group\ addition\ function\ that\ we\ wouldn't\ be\ able\ to\ use\ otherwise.}}
+\DoxyCodeLine{00094\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00095\ \ \ \ \ secp256k1\_ge\_set\_xy(\&d\_ge,\ \&d.x,\ \&d.y);}
+\DoxyCodeLine{00096\ \ \ \ \ secp256k1\_ge\_set\_gej\_zinv(\&pre\_a[0],\ a,\ \&d.z);}
+\DoxyCodeLine{00097\ \ \ \ \ secp256k1\_gej\_set\_ge(\&ai,\ \&pre\_a[0]);}
+\DoxyCodeLine{00098\ \ \ \ \ ai.z\ =\ a-\/>z;}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{comment}{/*\ pre\_a[0]\ is\ the\ point\ (a.x*C\string^2,\ a.y*C\string^3,\ a.z*C)\ which\ is\ equivalent\ to\ a.}}
+\DoxyCodeLine{00101\ \textcolor{comment}{\ \ \ \ \ *\ Set\ zr[0]\ to\ C,\ which\ is\ the\ ratio\ between\ the\ omitted\ z(pre\_a[0])\ value\ and\ a.z.}}
+\DoxyCodeLine{00102\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00103\ \ \ \ \ zr[0]\ =\ d.z;}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 1;\ i\ <\ n;\ i++)\ \{}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_ge\_var(\&ai,\ \&ai,\ \&d\_ge,\ \&zr[i]);}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ secp256k1\_ge\_set\_xy(\&pre\_a[i],\ \&ai.x,\ \&ai.y);}
+\DoxyCodeLine{00108\ \ \ \ \ \}}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{comment}{/*\ Multiply\ the\ last\ z-\/coordinate\ by\ C\ to\ undo\ the\ isomorphism.}}
+\DoxyCodeLine{00111\ \textcolor{comment}{\ \ \ \ \ *\ Since\ the\ z-\/coordinates\ of\ the\ pre\_a\ values\ are\ implied\ by\ the\ zr\ array\ of\ z-\/coordinate\ ratios,}}
+\DoxyCodeLine{00112\ \textcolor{comment}{\ \ \ \ \ *\ undoing\ the\ isomorphism\ here\ undoes\ the\ isomorphism\ for\ all\ pre\_a\ values.}}
+\DoxyCodeLine{00113\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00114\ \ \ \ \ secp256k1\_fe\_mul(z,\ \&ai.z,\ \&d.z);}
+\DoxyCodeLine{00115\ \}}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_table\_verify(\textcolor{keywordtype}{int}\ n,\ \textcolor{keywordtype}{int}\ w)\ \{}
+\DoxyCodeLine{00118\ \ \ \ \ (void)n;}
+\DoxyCodeLine{00119\ \ \ \ \ (void)w;}
+\DoxyCodeLine{00120\ \ \ \ \ VERIFY\_CHECK(((n)\ \&\ 1)\ ==\ 1);}
+\DoxyCodeLine{00121\ \ \ \ \ VERIFY\_CHECK((n)\ >=\ -\/((1\ <<\ ((w)-\/1))\ -\/\ 1));}
+\DoxyCodeLine{00122\ \ \ \ \ VERIFY\_CHECK((n)\ <=\ \ ((1\ <<\ ((w)-\/1))\ -\/\ 1));}
+\DoxyCodeLine{00123\ \}}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00125\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_table\_get\_ge(secp256k1\_ge\ *r,\ \textcolor{keyword}{const}\ secp256k1\_ge\ *pre,\ \textcolor{keywordtype}{int}\ n,\ \textcolor{keywordtype}{int}\ w)\ \{}
+\DoxyCodeLine{00126\ \ \ \ \ secp256k1\_ecmult\_table\_verify(n,w);}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ >\ 0)\ \{}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ *r\ =\ pre[(n-\/1)/2];}
+\DoxyCodeLine{00129\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ *r\ =\ pre[(-\/n-\/1)/2];}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ secp256k1\_fe\_negate(\&(r-\/>y),\ \&(r-\/>y),\ 1);}
+\DoxyCodeLine{00132\ \ \ \ \ \}}
+\DoxyCodeLine{00133\ \}}
+\DoxyCodeLine{00134\ }
+\DoxyCodeLine{00135\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_table\_get\_ge\_lambda(secp256k1\_ge\ *r,\ \textcolor{keyword}{const}\ secp256k1\_ge\ *pre,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *x,\ \textcolor{keywordtype}{int}\ n,\ \textcolor{keywordtype}{int}\ w)\ \{}
+\DoxyCodeLine{00136\ \ \ \ \ secp256k1\_ecmult\_table\_verify(n,w);}
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ >\ 0)\ \{}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ secp256k1\_ge\_set\_xy(r,\ \&x[(n-\/1)/2],\ \&pre[(n-\/1)/2].y);}
+\DoxyCodeLine{00139\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ secp256k1\_ge\_set\_xy(r,\ \&x[(-\/n-\/1)/2],\ \&pre[(-\/n-\/1)/2].y);}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ secp256k1\_fe\_negate(\&(r-\/>y),\ \&(r-\/>y),\ 1);}
+\DoxyCodeLine{00142\ \ \ \ \ \}}
+\DoxyCodeLine{00143\ \}}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_table\_get\_ge\_storage(secp256k1\_ge\ *r,\ \textcolor{keyword}{const}\ secp256k1\_ge\_storage\ *pre,\ \textcolor{keywordtype}{int}\ n,\ \textcolor{keywordtype}{int}\ w)\ \{}
+\DoxyCodeLine{00146\ \ \ \ \ secp256k1\_ecmult\_table\_verify(n,w);}
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ >\ 0)\ \{}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ secp256k1\_ge\_from\_storage(r,\ \&pre[(n-\/1)/2]);}
+\DoxyCodeLine{00149\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00150\ \ \ \ \ \ \ \ \ secp256k1\_ge\_from\_storage(r,\ \&pre[(-\/n-\/1)/2]);}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ secp256k1\_fe\_negate(\&(r-\/>y),\ \&(r-\/>y),\ 1);}
+\DoxyCodeLine{00152\ \ \ \ \ \}}
+\DoxyCodeLine{00153\ \}}
+\DoxyCodeLine{00154\ }
+\DoxyCodeLine{00162\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecmult\_wnaf(\textcolor{keywordtype}{int}\ *wnaf,\ \textcolor{keywordtype}{int}\ len,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *a,\ \textcolor{keywordtype}{int}\ w)\ \{}
+\DoxyCodeLine{00163\ \ \ \ \ secp256k1\_scalar\ s;}
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keywordtype}{int}\ last\_set\_bit\ =\ -\/1;}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keywordtype}{int}\ bit\ =\ 0;}
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{keywordtype}{int}\ sign\ =\ 1;}
+\DoxyCodeLine{00167\ \ \ \ \ \textcolor{keywordtype}{int}\ carry\ =\ 0;}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00169\ \ \ \ \ VERIFY\_CHECK(wnaf\ !=\ NULL);}
+\DoxyCodeLine{00170\ \ \ \ \ VERIFY\_CHECK(0\ <=\ len\ \&\&\ len\ <=\ 256);}
+\DoxyCodeLine{00171\ \ \ \ \ VERIFY\_CHECK(a\ !=\ NULL);}
+\DoxyCodeLine{00172\ \ \ \ \ VERIFY\_CHECK(2\ <=\ w\ \&\&\ w\ <=\ 31);}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keywordflow}{for}\ (bit\ =\ 0;\ bit\ <\ len;\ bit++)\ \{}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ wnaf[bit]\ =\ 0;}
+\DoxyCodeLine{00176\ \ \ \ \ \}}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00178\ \ \ \ \ s\ =\ *a;}
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_scalar\_get\_bits\_limb32(\&s,\ 255,\ 1))\ \{}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_negate(\&s,\ \&s);}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ sign\ =\ -\/1;}
+\DoxyCodeLine{00182\ \ \ \ \ \}}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00184\ \ \ \ \ bit\ =\ 0;}
+\DoxyCodeLine{00185\ \ \ \ \ \textcolor{keywordflow}{while}\ (bit\ <\ len)\ \{}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ now;}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ word;}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_scalar\_get\_bits\_limb32(\&s,\ bit,\ 1)\ ==\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int})carry)\ \{}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \ \ \ \ bit++;}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00192\ }
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ now\ =\ w;}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (now\ >\ len\ -\/\ bit)\ \{}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \ \ \ \ now\ =\ len\ -\/\ bit;}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ word\ =\ secp256k1\_scalar\_get\_bits\_var(\&s,\ bit,\ now)\ +\ carry;}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ carry\ =\ (word\ >>\ (w-\/1))\ \&\ 1;}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ word\ -\/=\ carry\ <<\ w;}
+\DoxyCodeLine{00202\ }
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ wnaf[bit]\ =\ sign\ *\ word;}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ last\_set\_bit\ =\ bit;}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ bit\ +=\ now;}
+\DoxyCodeLine{00207\ \ \ \ \ \}}
+\DoxyCodeLine{00208\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00209\ \ \ \ \ \{}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ verify\_bit\ =\ bit;}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(carry\ ==\ 0);}
+\DoxyCodeLine{00213\ }
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (verify\_bit\ <\ 256)\ \{}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_scalar\_get\_bits\_limb32(\&s,\ verify\_bit,\ 1)\ ==\ 0);}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \ \ \ \ verify\_bit++;}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00218\ \ \ \ \ \}}
+\DoxyCodeLine{00219\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00220\ \ \ \ \ \textcolor{keywordflow}{return}\ last\_set\_bit\ +\ 1;}
+\DoxyCodeLine{00221\ \}}
+\DoxyCodeLine{00222\ }
+\DoxyCodeLine{00223\ \textcolor{keyword}{struct\ }secp256k1\_strauss\_point\_state\ \{}
+\DoxyCodeLine{00224\ \ \ \ \ \textcolor{keywordtype}{int}\ wnaf\_na\_1[129];}
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keywordtype}{int}\ wnaf\_na\_lam[129];}
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{keywordtype}{int}\ bits\_na\_1;}
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{keywordtype}{int}\ bits\_na\_lam;}
+\DoxyCodeLine{00228\ \};}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00230\ \textcolor{keyword}{struct\ }secp256k1\_strauss\_state\ \{}
+\DoxyCodeLine{00231\ \ \ \ \ \textcolor{comment}{/*\ aux\ is\ used\ to\ hold\ z-\/ratios,\ and\ then\ used\ to\ hold\ pre\_a[i].x\ *\ BETA\ values.\ */}}
+\DoxyCodeLine{00232\ \ \ \ \ secp256k1\_fe*\ aux;}
+\DoxyCodeLine{00233\ \ \ \ \ secp256k1\_ge*\ pre\_a;}
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{keyword}{struct\ }secp256k1\_strauss\_point\_state*\ ps;}
+\DoxyCodeLine{00235\ \};}
+\DoxyCodeLine{00236\ }
+\DoxyCodeLine{00237\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_strauss\_wnaf(\textcolor{keyword}{const}\ \textcolor{keyword}{struct}\ secp256k1\_strauss\_state\ *state,\ secp256k1\_gej\ *r,\ \textcolor{keywordtype}{size\_t}\ num,\ \textcolor{keyword}{const}\ secp256k1\_gej\ *a,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *na,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *ng)\ \{}
+\DoxyCodeLine{00238\ \ \ \ \ secp256k1\_ge\ tmpa;}
+\DoxyCodeLine{00239\ \ \ \ \ secp256k1\_fe\ Z;}
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{comment}{/*\ Split\ G\ factors.\ */}}
+\DoxyCodeLine{00241\ \ \ \ \ secp256k1\_scalar\ ng\_1,\ ng\_128;}
+\DoxyCodeLine{00242\ \ \ \ \ \textcolor{keywordtype}{int}\ wnaf\_ng\_1[129];}
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{keywordtype}{int}\ bits\_ng\_1\ =\ 0;}
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keywordtype}{int}\ wnaf\_ng\_128[129];}
+\DoxyCodeLine{00245\ \ \ \ \ \textcolor{keywordtype}{int}\ bits\_ng\_128\ =\ 0;}
+\DoxyCodeLine{00246\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00247\ \ \ \ \ \textcolor{keywordtype}{int}\ bits\ =\ 0;}
+\DoxyCodeLine{00248\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ np;}
+\DoxyCodeLine{00249\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ no\ =\ 0;}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00251\ \ \ \ \ secp256k1\_fe\_set\_int(\&Z,\ 1);}
+\DoxyCodeLine{00252\ \ \ \ \ \textcolor{keywordflow}{for}\ (np\ =\ 0;\ np\ <\ num;\ ++np)\ \{}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ secp256k1\_gej\ tmp;}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ secp256k1\_scalar\ na\_1,\ na\_lam;}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_scalar\_is\_zero(\&na[np])\ ||\ secp256k1\_gej\_is\_infinity(\&a[np]))\ \{}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ split\ na\ into\ na\_1\ and\ na\_lam\ (where\ na\ =\ na\_1\ +\ na\_lam*lambda,\ and\ na\_1\ and\ na\_lam\ are\ \string~128\ bit)\ */}}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_split\_lambda(\&na\_1,\ \&na\_lam,\ \&na[np]);}
+\DoxyCodeLine{00260\ }
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ build\ wnaf\ representation\ for\ na\_1\ and\ na\_lam.\ */}}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ state-\/>ps[no].bits\_na\_1\ \ \ =\ secp256k1\_ecmult\_wnaf(state-\/>ps[no].wnaf\_na\_1,\ \ \ 129,\ \&na\_1,\ \ \ WINDOW\_A);}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ state-\/>ps[no].bits\_na\_lam\ =\ secp256k1\_ecmult\_wnaf(state-\/>ps[no].wnaf\_na\_lam,\ 129,\ \&na\_lam,\ WINDOW\_A);}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(state-\/>ps[no].bits\_na\_1\ <=\ 129);}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(state-\/>ps[no].bits\_na\_lam\ <=\ 129);}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (state-\/>ps[no].bits\_na\_1\ >\ bits)\ \{}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ \ \ \ \ bits\ =\ state-\/>ps[no].bits\_na\_1;}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (state-\/>ps[no].bits\_na\_lam\ >\ bits)\ \{}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \ \ \ \ bits\ =\ state-\/>ps[no].bits\_na\_lam;}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00272\ }
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Calculate\ odd\ multiples\ of\ a.}}
+\DoxyCodeLine{00274\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ All\ multiples\ are\ brought\ to\ the\ same\ Z\ 'denominator',\ which\ is\ stored}}
+\DoxyCodeLine{00275\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ in\ Z.\ Due\ to\ secp256k1'\ isomorphism\ we\ can\ do\ all\ operations\ pretending}}
+\DoxyCodeLine{00276\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ that\ the\ Z\ coordinate\ was\ 1,\ use\ affine\ addition\ formulae,\ and\ correct}}
+\DoxyCodeLine{00277\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ the\ Z\ coordinate\ of\ the\ result\ once\ at\ the\ end.}}
+\DoxyCodeLine{00278\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ The\ exception\ is\ the\ precomputed\ G\ table\ points,\ which\ are\ actually}}
+\DoxyCodeLine{00279\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ affine.\ Compared\ to\ the\ base\ used\ for\ other\ points,\ they\ have\ a\ Z\ ratio}}
+\DoxyCodeLine{00280\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ of\ 1/Z,\ so\ we\ can\ use\ secp256k1\_gej\_add\_zinv\_var,\ which\ uses\ the\ same}}
+\DoxyCodeLine{00281\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ isomorphism\ to\ efficiently\ add\ with\ a\ known\ Z\ inverse.}}
+\DoxyCodeLine{00282\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ */}}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ tmp\ =\ a[np];}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (no)\ \{}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_rescale(\&tmp,\ \&Z);}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ secp256k1\_ecmult\_odd\_multiples\_table(ECMULT\_TABLE\_SIZE(WINDOW\_A),\ state-\/>pre\_a\ +\ no\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A),\ state-\/>aux\ +\ no\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A),\ \&Z,\ \&tmp);}
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (no)\ secp256k1\_fe\_mul(state-\/>aux\ +\ no\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A),\ state-\/>aux\ +\ no\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A),\ \&(a[np].z));}
+\DoxyCodeLine{00289\ }
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ ++no;}
+\DoxyCodeLine{00291\ \ \ \ \ \}}
+\DoxyCodeLine{00292\ }
+\DoxyCodeLine{00293\ \ \ \ \ \textcolor{comment}{/*\ Bring\ them\ to\ the\ same\ Z\ denominator.\ */}}
+\DoxyCodeLine{00294\ \ \ \ \ \textcolor{keywordflow}{if}\ (no)\ \{}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ secp256k1\_ge\_table\_set\_globalz(ECMULT\_TABLE\_SIZE(WINDOW\_A)\ *\ no,\ state-\/>pre\_a,\ state-\/>aux);}
+\DoxyCodeLine{00296\ \ \ \ \ \}}
+\DoxyCodeLine{00297\ }
+\DoxyCodeLine{00298\ \ \ \ \ \textcolor{keywordflow}{for}\ (np\ =\ 0;\ np\ <\ no;\ ++np)\ \{}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ ECMULT\_TABLE\_SIZE(WINDOW\_A);\ i++)\ \{}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&state-\/>aux[np\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A)\ +\ i],\ \&state-\/>pre\_a[np\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A)\ +\ i].x,\ \&secp256k1\_const\_beta);}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00302\ \ \ \ \ \}}
+\DoxyCodeLine{00303\ }
+\DoxyCodeLine{00304\ \ \ \ \ \textcolor{keywordflow}{if}\ (ng)\ \{}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ split\ ng\ into\ ng\_1\ and\ ng\_128\ (where\ gn\ =\ gn\_1\ +\ gn\_128*2\string^128,\ and\ gn\_1\ and\ gn\_128\ are\ \string~128\ bit)\ */}}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_split\_128(\&ng\_1,\ \&ng\_128,\ ng);}
+\DoxyCodeLine{00307\ }
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Build\ wnaf\ representation\ for\ ng\_1\ and\ ng\_128\ */}}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ bits\_ng\_1\ \ \ =\ secp256k1\_ecmult\_wnaf(wnaf\_ng\_1,\ \ \ 129,\ \&ng\_1,\ \ \ WINDOW\_G);}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ bits\_ng\_128\ =\ secp256k1\_ecmult\_wnaf(wnaf\_ng\_128,\ 129,\ \&ng\_128,\ WINDOW\_G);}
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bits\_ng\_1\ >\ bits)\ \{}
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ \ \ \ \ bits\ =\ bits\_ng\_1;}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bits\_ng\_128\ >\ bits)\ \{}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ \ \ \ \ bits\ =\ bits\_ng\_128;}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00317\ \ \ \ \ \}}
+\DoxyCodeLine{00318\ }
+\DoxyCodeLine{00319\ \ \ \ \ secp256k1\_gej\_set\_infinity(r);}
+\DoxyCodeLine{00320\ }
+\DoxyCodeLine{00321\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ bits\ -\/\ 1;\ i\ >=\ 0;\ i-\/-\/)\ \{}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n;}
+\DoxyCodeLine{00323\ \ \ \ \ \ \ \ \ secp256k1\_gej\_double\_var(r,\ r,\ NULL);}
+\DoxyCodeLine{00324\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (np\ =\ 0;\ np\ <\ no;\ ++np)\ \{}
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ <\ state-\/>ps[np].bits\_na\_1\ \&\&\ (n\ =\ state-\/>ps[np].wnaf\_na\_1[i]))\ \{}
+\DoxyCodeLine{00326\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecmult\_table\_get\_ge(\&tmpa,\ state-\/>pre\_a\ +\ np\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A),\ n,\ WINDOW\_A);}
+\DoxyCodeLine{00327\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_ge\_var(r,\ r,\ \&tmpa,\ NULL);}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ <\ state-\/>ps[np].bits\_na\_lam\ \&\&\ (n\ =\ state-\/>ps[np].wnaf\_na\_lam[i]))\ \{}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecmult\_table\_get\_ge\_lambda(\&tmpa,\ state-\/>pre\_a\ +\ np\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A),\ state-\/>aux\ +\ np\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A),\ n,\ WINDOW\_A);}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_ge\_var(r,\ r,\ \&tmpa,\ NULL);}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ <\ bits\_ng\_1\ \&\&\ (n\ =\ wnaf\_ng\_1[i]))\ \{}
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecmult\_table\_get\_ge\_storage(\&tmpa,\ secp256k1\_pre\_g,\ n,\ WINDOW\_G);}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_zinv\_var(r,\ r,\ \&tmpa,\ \&Z);}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ <\ bits\_ng\_128\ \&\&\ (n\ =\ wnaf\_ng\_128[i]))\ \{}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ecmult\_table\_get\_ge\_storage(\&tmpa,\ secp256k1\_pre\_g\_128,\ n,\ WINDOW\_G);}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_zinv\_var(r,\ r,\ \&tmpa,\ \&Z);}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00342\ \ \ \ \ \}}
+\DoxyCodeLine{00343\ }
+\DoxyCodeLine{00344\ \ \ \ \ \textcolor{keywordflow}{if}\ (!r-\/>infinity)\ \{}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&r-\/>z,\ \&r-\/>z,\ \&Z);}
+\DoxyCodeLine{00346\ \ \ \ \ \}}
+\DoxyCodeLine{00347\ \}}
+\DoxyCodeLine{00348\ }
+\DoxyCodeLine{00349\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult(secp256k1\_gej\ *r,\ \textcolor{keyword}{const}\ secp256k1\_gej\ *a,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *na,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *ng)\ \{}
+\DoxyCodeLine{00350\ \ \ \ \ secp256k1\_fe\ aux[ECMULT\_TABLE\_SIZE(WINDOW\_A)];}
+\DoxyCodeLine{00351\ \ \ \ \ secp256k1\_ge\ pre\_a[ECMULT\_TABLE\_SIZE(WINDOW\_A)];}
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{keyword}{struct\ }secp256k1\_strauss\_point\_state\ ps[1];}
+\DoxyCodeLine{00353\ \ \ \ \ \textcolor{keyword}{struct\ }secp256k1\_strauss\_state\ state;}
+\DoxyCodeLine{00354\ }
+\DoxyCodeLine{00355\ \ \ \ \ state.aux\ =\ aux;}
+\DoxyCodeLine{00356\ \ \ \ \ state.pre\_a\ =\ pre\_a;}
+\DoxyCodeLine{00357\ \ \ \ \ state.ps\ =\ ps;}
+\DoxyCodeLine{00358\ \ \ \ \ secp256k1\_ecmult\_strauss\_wnaf(\&state,\ r,\ 1,\ a,\ na,\ ng);}
+\DoxyCodeLine{00359\ \}}
+\DoxyCodeLine{00360\ }
+\DoxyCodeLine{00361\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ secp256k1\_strauss\_scratch\_size(\textcolor{keywordtype}{size\_t}\ n\_points)\ \{}
+\DoxyCodeLine{00362\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ point\_size\ =\ (\textcolor{keyword}{sizeof}(secp256k1\_ge)\ +\ \textcolor{keyword}{sizeof}(secp256k1\_fe))\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A)\ +\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{struct\ }secp256k1\_strauss\_point\_state)\ +\ sizeof(secp256k1\_gej)\ +\ sizeof(secp256k1\_scalar);}
+\DoxyCodeLine{00363\ \ \ \ \ \textcolor{keywordflow}{return}\ n\_points*point\_size;}
+\DoxyCodeLine{00364\ \}}
+\DoxyCodeLine{00365\ }
+\DoxyCodeLine{00366\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecmult\_strauss\_batch(\textcolor{keyword}{const}\ secp256k1\_callback*\ error\_callback,\ secp256k1\_scratch\ *scratch,\ secp256k1\_gej\ *r,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *inp\_g\_sc,\ secp256k1\_ecmult\_multi\_callback\ cb,\ \textcolor{keywordtype}{void}\ *cbdata,\ \textcolor{keywordtype}{size\_t}\ n\_points,\ \textcolor{keywordtype}{size\_t}\ cb\_offset)\ \{}
+\DoxyCodeLine{00367\ \ \ \ \ secp256k1\_gej*\ points;}
+\DoxyCodeLine{00368\ \ \ \ \ secp256k1\_scalar*\ scalars;}
+\DoxyCodeLine{00369\ \ \ \ \ \textcolor{keyword}{struct\ }secp256k1\_strauss\_state\ state;}
+\DoxyCodeLine{00370\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i;}
+\DoxyCodeLine{00371\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ scratch\_checkpoint\ =\ secp256k1\_scratch\_checkpoint(error\_callback,\ scratch);}
+\DoxyCodeLine{00372\ }
+\DoxyCodeLine{00373\ \ \ \ \ secp256k1\_gej\_set\_infinity(r);}
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keywordflow}{if}\ (inp\_g\_sc\ ==\ NULL\ \&\&\ n\_points\ ==\ 0)\ \{}
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00376\ \ \ \ \ \}}
+\DoxyCodeLine{00377\ }
+\DoxyCodeLine{00378\ \ \ \ \ \textcolor{comment}{/*\ We\ allocate\ STRAUSS\_SCRATCH\_OBJECTS\ objects\ on\ the\ scratch\ space.\ If\ these}}
+\DoxyCodeLine{00379\ \textcolor{comment}{\ \ \ \ \ *\ allocations\ change,\ make\ sure\ to\ update\ the\ STRAUSS\_SCRATCH\_OBJECTS}}
+\DoxyCodeLine{00380\ \textcolor{comment}{\ \ \ \ \ *\ constant\ and\ strauss\_scratch\_size\ accordingly.\ */}}
+\DoxyCodeLine{00381\ \ \ \ \ points\ =\ (secp256k1\_gej*)secp256k1\_scratch\_alloc(error\_callback,\ scratch,\ n\_points\ *\ \textcolor{keyword}{sizeof}(secp256k1\_gej));}
+\DoxyCodeLine{00382\ \ \ \ \ scalars\ =\ (secp256k1\_scalar*)secp256k1\_scratch\_alloc(error\_callback,\ scratch,\ n\_points\ *\ \textcolor{keyword}{sizeof}(secp256k1\_scalar));}
+\DoxyCodeLine{00383\ \ \ \ \ state.aux\ =\ (secp256k1\_fe*)secp256k1\_scratch\_alloc(error\_callback,\ scratch,\ n\_points\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A)\ *\ \textcolor{keyword}{sizeof}(secp256k1\_fe));}
+\DoxyCodeLine{00384\ \ \ \ \ state.pre\_a\ =\ (secp256k1\_ge*)secp256k1\_scratch\_alloc(error\_callback,\ scratch,\ n\_points\ *\ ECMULT\_TABLE\_SIZE(WINDOW\_A)\ *\ \textcolor{keyword}{sizeof}(secp256k1\_ge));}
+\DoxyCodeLine{00385\ \ \ \ \ state.ps\ =\ (\textcolor{keyword}{struct\ }secp256k1\_strauss\_point\_state*)secp256k1\_scratch\_alloc(error\_callback,\ scratch,\ n\_points\ *\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{struct}\ secp256k1\_strauss\_point\_state));}
+\DoxyCodeLine{00386\ }
+\DoxyCodeLine{00387\ \ \ \ \ \textcolor{keywordflow}{if}\ (points\ ==\ NULL\ ||\ scalars\ ==\ NULL\ ||\ state.aux\ ==\ NULL\ ||\ state.pre\_a\ ==\ NULL\ ||\ state.ps\ ==\ NULL)\ \{}
+\DoxyCodeLine{00388\ \ \ \ \ \ \ \ \ secp256k1\_scratch\_apply\_checkpoint(error\_callback,\ scratch,\ scratch\_checkpoint);}
+\DoxyCodeLine{00389\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00390\ \ \ \ \ \}}
+\DoxyCodeLine{00391\ }
+\DoxyCodeLine{00392\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ n\_points;\ i++)\ \{}
+\DoxyCodeLine{00393\ \ \ \ \ \ \ \ \ secp256k1\_ge\ point;}
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!cb(\&scalars[i],\ \&point,\ i+cb\_offset,\ cbdata))\ \{}
+\DoxyCodeLine{00395\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scratch\_apply\_checkpoint(error\_callback,\ scratch,\ scratch\_checkpoint);}
+\DoxyCodeLine{00396\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00397\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00398\ \ \ \ \ \ \ \ \ secp256k1\_gej\_set\_ge(\&points[i],\ \&point);}
+\DoxyCodeLine{00399\ \ \ \ \ \}}
+\DoxyCodeLine{00400\ \ \ \ \ secp256k1\_ecmult\_strauss\_wnaf(\&state,\ r,\ n\_points,\ points,\ scalars,\ inp\_g\_sc);}
+\DoxyCodeLine{00401\ \ \ \ \ secp256k1\_scratch\_apply\_checkpoint(error\_callback,\ scratch,\ scratch\_checkpoint);}
+\DoxyCodeLine{00402\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00403\ \}}
+\DoxyCodeLine{00404\ }
+\DoxyCodeLine{00405\ \textcolor{comment}{/*\ Wrapper\ for\ secp256k1\_ecmult\_multi\_func\ interface\ */}}
+\DoxyCodeLine{00406\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecmult\_strauss\_batch\_single(\textcolor{keyword}{const}\ secp256k1\_callback*\ error\_callback,\ secp256k1\_scratch\ *scratch,\ secp256k1\_gej\ *r,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *inp\_g\_sc,\ secp256k1\_ecmult\_multi\_callback\ cb,\ \textcolor{keywordtype}{void}\ *cbdata,\ \textcolor{keywordtype}{size\_t}\ n)\ \{}
+\DoxyCodeLine{00407\ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_ecmult\_strauss\_batch(error\_callback,\ scratch,\ r,\ inp\_g\_sc,\ cb,\ cbdata,\ n,\ 0);}
+\DoxyCodeLine{00408\ \}}
+\DoxyCodeLine{00409\ }
+\DoxyCodeLine{00410\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ secp256k1\_strauss\_max\_points(\textcolor{keyword}{const}\ secp256k1\_callback*\ error\_callback,\ secp256k1\_scratch\ *scratch)\ \{}
+\DoxyCodeLine{00411\ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_scratch\_max\_allocation(error\_callback,\ scratch,\ STRAUSS\_SCRATCH\_OBJECTS)\ /\ secp256k1\_strauss\_scratch\_size(1);}
+\DoxyCodeLine{00412\ \}}
+\DoxyCodeLine{00413\ }
+\DoxyCodeLine{00421\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_wnaf\_fixed(\textcolor{keywordtype}{int}\ *wnaf,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *s,\ \textcolor{keywordtype}{int}\ w)\ \{}
+\DoxyCodeLine{00422\ \ \ \ \ \textcolor{keywordtype}{int}\ skew\ =\ 0;}
+\DoxyCodeLine{00423\ \ \ \ \ \textcolor{keywordtype}{int}\ pos;}
+\DoxyCodeLine{00424\ \ \ \ \ \textcolor{keywordtype}{int}\ max\_pos;}
+\DoxyCodeLine{00425\ \ \ \ \ \textcolor{keywordtype}{int}\ last\_w;}
+\DoxyCodeLine{00426\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_scalar\ *work\ =\ s;}
+\DoxyCodeLine{00427\ }
+\DoxyCodeLine{00428\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_scalar\_is\_zero(s))\ \{}
+\DoxyCodeLine{00429\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (pos\ =\ 0;\ pos\ <\ WNAF\_SIZE(w);\ pos++)\ \{}
+\DoxyCodeLine{00430\ \ \ \ \ \ \ \ \ \ \ \ \ wnaf[pos]\ =\ 0;}
+\DoxyCodeLine{00431\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00432\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00433\ \ \ \ \ \}}
+\DoxyCodeLine{00434\ }
+\DoxyCodeLine{00435\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_scalar\_is\_even(s))\ \{}
+\DoxyCodeLine{00436\ \ \ \ \ \ \ \ \ skew\ =\ 1;}
+\DoxyCodeLine{00437\ \ \ \ \ \}}
+\DoxyCodeLine{00438\ }
+\DoxyCodeLine{00439\ \ \ \ \ wnaf[0]\ =\ secp256k1\_scalar\_get\_bits\_var(work,\ 0,\ w)\ +\ skew;}
+\DoxyCodeLine{00440\ \ \ \ \ \textcolor{comment}{/*\ Compute\ last\ window\ size.\ Relevant\ when\ window\ size\ doesn't\ divide\ the}}
+\DoxyCodeLine{00441\ \textcolor{comment}{\ \ \ \ \ *\ number\ of\ bits\ in\ the\ scalar\ */}}
+\DoxyCodeLine{00442\ \ \ \ \ last\_w\ =\ WNAF\_BITS\ -\/\ (WNAF\_SIZE(w)\ -\/\ 1)\ *\ w;}
+\DoxyCodeLine{00443\ }
+\DoxyCodeLine{00444\ \ \ \ \ \textcolor{comment}{/*\ Store\ the\ position\ of\ the\ first\ nonzero\ word\ in\ max\_pos\ to\ allow}}
+\DoxyCodeLine{00445\ \textcolor{comment}{\ \ \ \ \ *\ skipping\ leading\ zeros\ when\ calculating\ the\ wnaf.\ */}}
+\DoxyCodeLine{00446\ \ \ \ \ \textcolor{keywordflow}{for}\ (pos\ =\ WNAF\_SIZE(w)\ -\/\ 1;\ pos\ >\ 0;\ pos-\/-\/)\ \{}
+\DoxyCodeLine{00447\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ val\ =\ secp256k1\_scalar\_get\_bits\_var(work,\ pos\ *\ w,\ pos\ ==\ WNAF\_SIZE(w)-\/1\ ?\ last\_w\ :\ w);}
+\DoxyCodeLine{00448\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}(val\ !=\ 0)\ \{}
+\DoxyCodeLine{00449\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00450\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00451\ \ \ \ \ \ \ \ \ wnaf[pos]\ =\ 0;}
+\DoxyCodeLine{00452\ \ \ \ \ \}}
+\DoxyCodeLine{00453\ \ \ \ \ max\_pos\ =\ pos;}
+\DoxyCodeLine{00454\ \ \ \ \ pos\ =\ 1;}
+\DoxyCodeLine{00455\ }
+\DoxyCodeLine{00456\ \ \ \ \ \textcolor{keywordflow}{while}\ (pos\ <=\ max\_pos)\ \{}
+\DoxyCodeLine{00457\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ val\ =\ secp256k1\_scalar\_get\_bits\_var(work,\ pos\ *\ w,\ pos\ ==\ WNAF\_SIZE(w)-\/1\ ?\ last\_w\ :\ w);}
+\DoxyCodeLine{00458\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((val\ \&\ 1)\ ==\ 0)\ \{}
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ \ \ \ \ wnaf[pos\ -\/\ 1]\ -\/=\ (1\ <<\ w);}
+\DoxyCodeLine{00460\ \ \ \ \ \ \ \ \ \ \ \ \ wnaf[pos]\ =\ (val\ +\ 1);}
+\DoxyCodeLine{00461\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00462\ \ \ \ \ \ \ \ \ \ \ \ \ wnaf[pos]\ =\ val;}
+\DoxyCodeLine{00463\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00464\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Set\ a\ coefficient\ to\ zero\ if\ it\ is\ 1\ or\ -\/1\ and\ the\ proceeding\ digit}}
+\DoxyCodeLine{00465\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ is\ strictly\ negative\ or\ strictly\ positive\ respectively.\ Only\ change}}
+\DoxyCodeLine{00466\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ coefficients\ at\ previous\ positions\ because\ above\ code\ assumes\ that}}
+\DoxyCodeLine{00467\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ wnaf[pos\ -\/\ 1]\ is\ odd.}}
+\DoxyCodeLine{00468\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ */}}
+\DoxyCodeLine{00469\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ >=\ 2\ \&\&\ ((wnaf[pos\ -\/\ 1]\ ==\ 1\ \&\&\ wnaf[pos\ -\/\ 2]\ <\ 0)\ ||\ (wnaf[pos\ -\/\ 1]\ ==\ -\/1\ \&\&\ wnaf[pos\ -\/\ 2]\ >\ 0)))\ \{}
+\DoxyCodeLine{00470\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (wnaf[pos\ -\/\ 1]\ ==\ 1)\ \{}
+\DoxyCodeLine{00471\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ wnaf[pos\ -\/\ 2]\ +=\ 1\ <<\ w;}
+\DoxyCodeLine{00472\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00473\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ wnaf[pos\ -\/\ 2]\ -\/=\ 1\ <<\ w;}
+\DoxyCodeLine{00474\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00475\ \ \ \ \ \ \ \ \ \ \ \ \ wnaf[pos\ -\/\ 1]\ =\ 0;}
+\DoxyCodeLine{00476\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00477\ \ \ \ \ \ \ \ \ ++pos;}
+\DoxyCodeLine{00478\ \ \ \ \ \}}
+\DoxyCodeLine{00479\ }
+\DoxyCodeLine{00480\ \ \ \ \ \textcolor{keywordflow}{return}\ skew;}
+\DoxyCodeLine{00481\ \}}
+\DoxyCodeLine{00482\ }
+\DoxyCodeLine{00483\ \textcolor{keyword}{struct\ }secp256k1\_pippenger\_point\_state\ \{}
+\DoxyCodeLine{00484\ \ \ \ \ \textcolor{keywordtype}{int}\ skew\_na;}
+\DoxyCodeLine{00485\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ input\_pos;}
+\DoxyCodeLine{00486\ \};}
+\DoxyCodeLine{00487\ }
+\DoxyCodeLine{00488\ \textcolor{keyword}{struct\ }secp256k1\_pippenger\_state\ \{}
+\DoxyCodeLine{00489\ \ \ \ \ \textcolor{keywordtype}{int}\ *wnaf\_na;}
+\DoxyCodeLine{00490\ \ \ \ \ \textcolor{keyword}{struct\ }secp256k1\_pippenger\_point\_state*\ ps;}
+\DoxyCodeLine{00491\ \};}
+\DoxyCodeLine{00492\ }
+\DoxyCodeLine{00493\ \textcolor{comment}{/*}}
+\DoxyCodeLine{00494\ \textcolor{comment}{\ *\ pippenger\_wnaf\ computes\ the\ result\ of\ a\ multi-\/point\ multiplication\ as}}
+\DoxyCodeLine{00495\ \textcolor{comment}{\ *\ follows:\ The\ scalars\ are\ brought\ into\ wnaf\ with\ n\_wnaf\ elements\ each.\ Then}}
+\DoxyCodeLine{00496\ \textcolor{comment}{\ *\ for\ every\ i\ <\ n\_wnaf,\ first\ each\ point\ is\ added\ to\ a\ "{}bucket"{}\ corresponding}}
+\DoxyCodeLine{00497\ \textcolor{comment}{\ *\ to\ the\ point's\ wnaf[i].\ Second,\ the\ buckets\ are\ added\ together\ such\ that}}
+\DoxyCodeLine{00498\ \textcolor{comment}{\ *\ r\ +=\ 1*bucket[0]\ +\ 3*bucket[1]\ +\ 5*bucket[2]\ +\ ...}}
+\DoxyCodeLine{00499\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00500\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecmult\_pippenger\_wnaf(secp256k1\_gej\ *buckets,\ \textcolor{keywordtype}{int}\ bucket\_window,\ \textcolor{keyword}{struct}\ secp256k1\_pippenger\_state\ *state,\ secp256k1\_gej\ *r,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *sc,\ \textcolor{keyword}{const}\ secp256k1\_ge\ *pt,\ \textcolor{keywordtype}{size\_t}\ num)\ \{}
+\DoxyCodeLine{00501\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\_wnaf\ =\ WNAF\_SIZE(bucket\_window+1);}
+\DoxyCodeLine{00502\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ np;}
+\DoxyCodeLine{00503\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ no\ =\ 0;}
+\DoxyCodeLine{00504\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00505\ \ \ \ \ \textcolor{keywordtype}{int}\ j;}
+\DoxyCodeLine{00506\ }
+\DoxyCodeLine{00507\ \ \ \ \ \textcolor{keywordflow}{for}\ (np\ =\ 0;\ np\ <\ num;\ ++np)\ \{}
+\DoxyCodeLine{00508\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_scalar\_is\_zero(\&sc[np])\ ||\ secp256k1\_ge\_is\_infinity(\&pt[np]))\ \{}
+\DoxyCodeLine{00509\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00510\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00511\ \ \ \ \ \ \ \ \ state-\/>ps[no].input\_pos\ =\ np;}
+\DoxyCodeLine{00512\ \ \ \ \ \ \ \ \ state-\/>ps[no].skew\_na\ =\ secp256k1\_wnaf\_fixed(\&state-\/>wnaf\_na[no*n\_wnaf],\ \&sc[np],\ bucket\_window+1);}
+\DoxyCodeLine{00513\ \ \ \ \ \ \ \ \ no++;}
+\DoxyCodeLine{00514\ \ \ \ \ \}}
+\DoxyCodeLine{00515\ \ \ \ \ secp256k1\_gej\_set\_infinity(r);}
+\DoxyCodeLine{00516\ }
+\DoxyCodeLine{00517\ \ \ \ \ \textcolor{keywordflow}{if}\ (no\ ==\ 0)\ \{}
+\DoxyCodeLine{00518\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00519\ \ \ \ \ \}}
+\DoxyCodeLine{00520\ }
+\DoxyCodeLine{00521\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ n\_wnaf\ -\/\ 1;\ i\ >=\ 0;\ i-\/-\/)\ \{}
+\DoxyCodeLine{00522\ \ \ \ \ \ \ \ \ secp256k1\_gej\ running\_sum;}
+\DoxyCodeLine{00523\ }
+\DoxyCodeLine{00524\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}(j\ =\ 0;\ j\ <\ ECMULT\_TABLE\_SIZE(bucket\_window+2);\ j++)\ \{}
+\DoxyCodeLine{00525\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_set\_infinity(\&buckets[j]);}
+\DoxyCodeLine{00526\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00527\ }
+\DoxyCodeLine{00528\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (np\ =\ 0;\ np\ <\ no;\ ++np)\ \{}
+\DoxyCodeLine{00529\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ n\ =\ state-\/>wnaf\_na[np*n\_wnaf\ +\ i];}
+\DoxyCodeLine{00530\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{struct\ }secp256k1\_pippenger\_point\_state\ point\_state\ =\ state-\/>ps[np];}
+\DoxyCodeLine{00531\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ge\ tmp;}
+\DoxyCodeLine{00532\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ idx;}
+\DoxyCodeLine{00533\ }
+\DoxyCodeLine{00534\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ ==\ 0)\ \{}
+\DoxyCodeLine{00535\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ correct\ for\ wnaf\ skew\ */}}
+\DoxyCodeLine{00536\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ skew\ =\ point\_state.skew\_na;}
+\DoxyCodeLine{00537\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (skew)\ \{}
+\DoxyCodeLine{00538\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ge\_neg(\&tmp,\ \&pt[point\_state.input\_pos]);}
+\DoxyCodeLine{00539\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_ge\_var(\&buckets[0],\ \&buckets[0],\ \&tmp,\ NULL);}
+\DoxyCodeLine{00540\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00541\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00542\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ >\ 0)\ \{}
+\DoxyCodeLine{00543\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ idx\ =\ (n\ -\/\ 1)/2;}
+\DoxyCodeLine{00544\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_ge\_var(\&buckets[idx],\ \&buckets[idx],\ \&pt[point\_state.input\_pos],\ NULL);}
+\DoxyCodeLine{00545\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ <\ 0)\ \{}
+\DoxyCodeLine{00546\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ idx\ =\ -\/(n\ +\ 1)/2;}
+\DoxyCodeLine{00547\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ge\_neg(\&tmp,\ \&pt[point\_state.input\_pos]);}
+\DoxyCodeLine{00548\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_ge\_var(\&buckets[idx],\ \&buckets[idx],\ \&tmp,\ NULL);}
+\DoxyCodeLine{00549\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00550\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00551\ }
+\DoxyCodeLine{00552\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}(j\ =\ 0;\ j\ <\ bucket\_window;\ j++)\ \{}
+\DoxyCodeLine{00553\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_double\_var(r,\ r,\ NULL);}
+\DoxyCodeLine{00554\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00555\ }
+\DoxyCodeLine{00556\ \ \ \ \ \ \ \ \ secp256k1\_gej\_set\_infinity(\&running\_sum);}
+\DoxyCodeLine{00557\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Accumulate\ the\ sum:\ bucket[0]\ +\ 3*bucket[1]\ +\ 5*bucket[2]\ +\ 7*bucket[3]\ +\ ...}}
+\DoxyCodeLine{00558\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ =\ bucket[0]\ +\ \ \ bucket[1]\ +\ \ \ bucket[2]\ +\ \ \ bucket[3]\ +\ ...}}
+\DoxyCodeLine{00559\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ +\ \ \ \ \ \ \ \ \ 2\ *\ \ (bucket[1]\ +\ 2*bucket[2]\ +\ 3*bucket[3]\ +\ ...)}}
+\DoxyCodeLine{00560\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ using\ an\ intermediate\ running\ sum:}}
+\DoxyCodeLine{00561\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ running\_sum\ =\ bucket[0]\ +\ \ \ bucket[1]\ +\ \ \ bucket[2]\ +\ ...}}
+\DoxyCodeLine{00562\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00563\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ The\ doubling\ is\ done\ implicitly\ by\ deferring\ the\ final\ window\ doubling\ (of\ 'r').}}
+\DoxyCodeLine{00564\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ */}}
+\DoxyCodeLine{00565\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}(j\ =\ ECMULT\_TABLE\_SIZE(bucket\_window+2)\ -\/\ 1;\ j\ >\ 0;\ j-\/-\/)\ \{}
+\DoxyCodeLine{00566\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_var(\&running\_sum,\ \&running\_sum,\ \&buckets[j],\ NULL);}
+\DoxyCodeLine{00567\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_var(r,\ r,\ \&running\_sum,\ NULL);}
+\DoxyCodeLine{00568\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00569\ }
+\DoxyCodeLine{00570\ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_var(\&running\_sum,\ \&running\_sum,\ \&buckets[0],\ NULL);}
+\DoxyCodeLine{00571\ \ \ \ \ \ \ \ \ secp256k1\_gej\_double\_var(r,\ r,\ NULL);}
+\DoxyCodeLine{00572\ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_var(r,\ r,\ \&running\_sum,\ NULL);}
+\DoxyCodeLine{00573\ \ \ \ \ \}}
+\DoxyCodeLine{00574\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00575\ \}}
+\DoxyCodeLine{00576\ }
+\DoxyCodeLine{00581\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_pippenger\_bucket\_window(\textcolor{keywordtype}{size\_t}\ n)\ \{}
+\DoxyCodeLine{00582\ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ <=\ 1)\ \{}
+\DoxyCodeLine{00583\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00584\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ <=\ 4)\ \{}
+\DoxyCodeLine{00585\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 2;}
+\DoxyCodeLine{00586\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ <=\ 20)\ \{}
+\DoxyCodeLine{00587\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 3;}
+\DoxyCodeLine{00588\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ <=\ 57)\ \{}
+\DoxyCodeLine{00589\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 4;}
+\DoxyCodeLine{00590\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ <=\ 136)\ \{}
+\DoxyCodeLine{00591\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 5;}
+\DoxyCodeLine{00592\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ <=\ 235)\ \{}
+\DoxyCodeLine{00593\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 6;}
+\DoxyCodeLine{00594\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ <=\ 1260)\ \{}
+\DoxyCodeLine{00595\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 7;}
+\DoxyCodeLine{00596\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ <=\ 4420)\ \{}
+\DoxyCodeLine{00597\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 9;}
+\DoxyCodeLine{00598\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ <=\ 7880)\ \{}
+\DoxyCodeLine{00599\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 10;}
+\DoxyCodeLine{00600\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ <=\ 16050)\ \{}
+\DoxyCodeLine{00601\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 11;}
+\DoxyCodeLine{00602\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00603\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ PIPPENGER\_MAX\_BUCKET\_WINDOW;}
+\DoxyCodeLine{00604\ \ \ \ \ \}}
+\DoxyCodeLine{00605\ \}}
+\DoxyCodeLine{00606\ }
+\DoxyCodeLine{00610\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ secp256k1\_pippenger\_bucket\_window\_inv(\textcolor{keywordtype}{int}\ bucket\_window)\ \{}
+\DoxyCodeLine{00611\ \ \ \ \ \textcolor{keywordflow}{switch}(bucket\_window)\ \{}
+\DoxyCodeLine{00612\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 1:\ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00613\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 2:\ \textcolor{keywordflow}{return}\ 4;}
+\DoxyCodeLine{00614\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 3:\ \textcolor{keywordflow}{return}\ 20;}
+\DoxyCodeLine{00615\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 4:\ \textcolor{keywordflow}{return}\ 57;}
+\DoxyCodeLine{00616\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 5:\ \textcolor{keywordflow}{return}\ 136;}
+\DoxyCodeLine{00617\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 6:\ \textcolor{keywordflow}{return}\ 235;}
+\DoxyCodeLine{00618\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 7:\ \textcolor{keywordflow}{return}\ 1260;}
+\DoxyCodeLine{00619\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 8:\ \textcolor{keywordflow}{return}\ 1260;}
+\DoxyCodeLine{00620\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 9:\ \textcolor{keywordflow}{return}\ 4420;}
+\DoxyCodeLine{00621\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 10:\ \textcolor{keywordflow}{return}\ 7880;}
+\DoxyCodeLine{00622\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ 11:\ \textcolor{keywordflow}{return}\ 16050;}
+\DoxyCodeLine{00623\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ PIPPENGER\_MAX\_BUCKET\_WINDOW:\ \textcolor{keywordflow}{return}\ SIZE\_MAX;}
+\DoxyCodeLine{00624\ \ \ \ \ \}}
+\DoxyCodeLine{00625\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00626\ \}}
+\DoxyCodeLine{00627\ }
+\DoxyCodeLine{00628\ }
+\DoxyCodeLine{00629\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_endo\_split(secp256k1\_scalar\ *s1,\ secp256k1\_scalar\ *s2,\ secp256k1\_ge\ *p1,\ secp256k1\_ge\ *p2)\ \{}
+\DoxyCodeLine{00630\ \ \ \ \ secp256k1\_scalar\ tmp\ =\ *s1;}
+\DoxyCodeLine{00631\ \ \ \ \ secp256k1\_scalar\_split\_lambda(s1,\ s2,\ \&tmp);}
+\DoxyCodeLine{00632\ \ \ \ \ secp256k1\_ge\_mul\_lambda(p2,\ p1);}
+\DoxyCodeLine{00633\ }
+\DoxyCodeLine{00634\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_scalar\_is\_high(s1))\ \{}
+\DoxyCodeLine{00635\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_negate(s1,\ s1);}
+\DoxyCodeLine{00636\ \ \ \ \ \ \ \ \ secp256k1\_ge\_neg(p1,\ p1);}
+\DoxyCodeLine{00637\ \ \ \ \ \}}
+\DoxyCodeLine{00638\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_scalar\_is\_high(s2))\ \{}
+\DoxyCodeLine{00639\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_negate(s2,\ s2);}
+\DoxyCodeLine{00640\ \ \ \ \ \ \ \ \ secp256k1\_ge\_neg(p2,\ p2);}
+\DoxyCodeLine{00641\ \ \ \ \ \}}
+\DoxyCodeLine{00642\ \}}
+\DoxyCodeLine{00643\ }
+\DoxyCodeLine{00648\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ secp256k1\_pippenger\_scratch\_size(\textcolor{keywordtype}{size\_t}\ n\_points,\ \textcolor{keywordtype}{int}\ bucket\_window)\ \{}
+\DoxyCodeLine{00649\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ entries\ =\ 2*n\_points\ +\ 2;}
+\DoxyCodeLine{00650\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ entry\_size\ =\ \textcolor{keyword}{sizeof}(secp256k1\_ge)\ +\ \textcolor{keyword}{sizeof}(secp256k1\_scalar)\ +\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{struct\ }secp256k1\_pippenger\_point\_state)\ +\ (WNAF\_SIZE(bucket\_window+1)+1)*\textcolor{keyword}{sizeof}(int);}
+\DoxyCodeLine{00651\ \ \ \ \ \textcolor{keywordflow}{return}\ (\textcolor{keyword}{sizeof}(secp256k1\_gej)\ <<\ bucket\_window)\ +\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{struct}\ secp256k1\_pippenger\_state)\ +\ entries\ *\ entry\_size;}
+\DoxyCodeLine{00652\ \}}
+\DoxyCodeLine{00653\ }
+\DoxyCodeLine{00654\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecmult\_pippenger\_batch(\textcolor{keyword}{const}\ secp256k1\_callback*\ error\_callback,\ secp256k1\_scratch\ *scratch,\ secp256k1\_gej\ *r,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *inp\_g\_sc,\ secp256k1\_ecmult\_multi\_callback\ cb,\ \textcolor{keywordtype}{void}\ *cbdata,\ \textcolor{keywordtype}{size\_t}\ n\_points,\ \textcolor{keywordtype}{size\_t}\ cb\_offset)\ \{}
+\DoxyCodeLine{00655\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ scratch\_checkpoint\ =\ secp256k1\_scratch\_checkpoint(error\_callback,\ scratch);}
+\DoxyCodeLine{00656\ \ \ \ \ \textcolor{comment}{/*\ Use\ 2(n+1)\ with\ the\ endomorphism,\ when\ calculating\ batch}}
+\DoxyCodeLine{00657\ \textcolor{comment}{\ \ \ \ \ *\ sizes.\ The\ reason\ for\ +1\ is\ that\ we\ add\ the\ G\ scalar\ to\ the\ list\ of}}
+\DoxyCodeLine{00658\ \textcolor{comment}{\ \ \ \ \ *\ other\ scalars.\ */}}
+\DoxyCodeLine{00659\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ entries\ =\ 2*n\_points\ +\ 2;}
+\DoxyCodeLine{00660\ \ \ \ \ secp256k1\_ge\ *points;}
+\DoxyCodeLine{00661\ \ \ \ \ secp256k1\_scalar\ *scalars;}
+\DoxyCodeLine{00662\ \ \ \ \ secp256k1\_gej\ *buckets;}
+\DoxyCodeLine{00663\ \ \ \ \ \textcolor{keyword}{struct\ }secp256k1\_pippenger\_state\ *state\_space;}
+\DoxyCodeLine{00664\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ idx\ =\ 0;}
+\DoxyCodeLine{00665\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ point\_idx\ =\ 0;}
+\DoxyCodeLine{00666\ \ \ \ \ \textcolor{keywordtype}{int}\ bucket\_window;}
+\DoxyCodeLine{00667\ }
+\DoxyCodeLine{00668\ \ \ \ \ secp256k1\_gej\_set\_infinity(r);}
+\DoxyCodeLine{00669\ \ \ \ \ \textcolor{keywordflow}{if}\ (inp\_g\_sc\ ==\ NULL\ \&\&\ n\_points\ ==\ 0)\ \{}
+\DoxyCodeLine{00670\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00671\ \ \ \ \ \}}
+\DoxyCodeLine{00672\ \ \ \ \ bucket\_window\ =\ secp256k1\_pippenger\_bucket\_window(n\_points);}
+\DoxyCodeLine{00673\ }
+\DoxyCodeLine{00674\ \ \ \ \ \textcolor{comment}{/*\ We\ allocate\ PIPPENGER\_SCRATCH\_OBJECTS\ objects\ on\ the\ scratch\ space.\ If}}
+\DoxyCodeLine{00675\ \textcolor{comment}{\ \ \ \ \ *\ these\ allocations\ change,\ make\ sure\ to\ update\ the}}
+\DoxyCodeLine{00676\ \textcolor{comment}{\ \ \ \ \ *\ PIPPENGER\_SCRATCH\_OBJECTS\ constant\ and\ pippenger\_scratch\_size}}
+\DoxyCodeLine{00677\ \textcolor{comment}{\ \ \ \ \ *\ accordingly.\ */}}
+\DoxyCodeLine{00678\ \ \ \ \ points\ =\ (secp256k1\_ge\ *)\ secp256k1\_scratch\_alloc(error\_callback,\ scratch,\ entries\ *\ \textcolor{keyword}{sizeof}(*points));}
+\DoxyCodeLine{00679\ \ \ \ \ scalars\ =\ (secp256k1\_scalar\ *)\ secp256k1\_scratch\_alloc(error\_callback,\ scratch,\ entries\ *\ \textcolor{keyword}{sizeof}(*scalars));}
+\DoxyCodeLine{00680\ \ \ \ \ state\_space\ =\ (\textcolor{keyword}{struct\ }secp256k1\_pippenger\_state\ *)\ secp256k1\_scratch\_alloc(error\_callback,\ scratch,\ \textcolor{keyword}{sizeof}(*state\_space));}
+\DoxyCodeLine{00681\ \ \ \ \ \textcolor{keywordflow}{if}\ (points\ ==\ NULL\ ||\ scalars\ ==\ NULL\ ||\ state\_space\ ==\ NULL)\ \{}
+\DoxyCodeLine{00682\ \ \ \ \ \ \ \ \ secp256k1\_scratch\_apply\_checkpoint(error\_callback,\ scratch,\ scratch\_checkpoint);}
+\DoxyCodeLine{00683\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00684\ \ \ \ \ \}}
+\DoxyCodeLine{00685\ \ \ \ \ state\_space-\/>ps\ =\ (\textcolor{keyword}{struct\ }secp256k1\_pippenger\_point\_state\ *)\ secp256k1\_scratch\_alloc(error\_callback,\ scratch,\ entries\ *\ \textcolor{keyword}{sizeof}(*state\_space-\/>ps));}
+\DoxyCodeLine{00686\ \ \ \ \ state\_space-\/>wnaf\_na\ =\ (\textcolor{keywordtype}{int}\ *)\ secp256k1\_scratch\_alloc(error\_callback,\ scratch,\ entries*(WNAF\_SIZE(bucket\_window+1))\ *\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{int}));}
+\DoxyCodeLine{00687\ \ \ \ \ buckets\ =\ (secp256k1\_gej\ *)\ secp256k1\_scratch\_alloc(error\_callback,\ scratch,\ ((\textcolor{keywordtype}{size\_t})1\ <<\ bucket\_window)\ *\ \textcolor{keyword}{sizeof}(*buckets));}
+\DoxyCodeLine{00688\ \ \ \ \ \textcolor{keywordflow}{if}\ (state\_space-\/>ps\ ==\ NULL\ ||\ state\_space-\/>wnaf\_na\ ==\ NULL\ ||\ buckets\ ==\ NULL)\ \{}
+\DoxyCodeLine{00689\ \ \ \ \ \ \ \ \ secp256k1\_scratch\_apply\_checkpoint(error\_callback,\ scratch,\ scratch\_checkpoint);}
+\DoxyCodeLine{00690\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00691\ \ \ \ \ \}}
+\DoxyCodeLine{00692\ }
+\DoxyCodeLine{00693\ \ \ \ \ \textcolor{keywordflow}{if}\ (inp\_g\_sc\ !=\ NULL)\ \{}
+\DoxyCodeLine{00694\ \ \ \ \ \ \ \ \ scalars[0]\ =\ *inp\_g\_sc;}
+\DoxyCodeLine{00695\ \ \ \ \ \ \ \ \ points[0]\ =\ secp256k1\_ge\_const\_g;}
+\DoxyCodeLine{00696\ \ \ \ \ \ \ \ \ idx++;}
+\DoxyCodeLine{00697\ \ \ \ \ \ \ \ \ secp256k1\_ecmult\_endo\_split(\&scalars[0],\ \&scalars[1],\ \&points[0],\ \&points[1]);}
+\DoxyCodeLine{00698\ \ \ \ \ \ \ \ \ idx++;}
+\DoxyCodeLine{00699\ \ \ \ \ \}}
+\DoxyCodeLine{00700\ }
+\DoxyCodeLine{00701\ \ \ \ \ \textcolor{keywordflow}{while}\ (point\_idx\ <\ n\_points)\ \{}
+\DoxyCodeLine{00702\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!cb(\&scalars[idx],\ \&points[idx],\ point\_idx\ +\ cb\_offset,\ cbdata))\ \{}
+\DoxyCodeLine{00703\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_scratch\_apply\_checkpoint(error\_callback,\ scratch,\ scratch\_checkpoint);}
+\DoxyCodeLine{00704\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00705\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00706\ \ \ \ \ \ \ \ \ idx++;}
+\DoxyCodeLine{00707\ \ \ \ \ \ \ \ \ secp256k1\_ecmult\_endo\_split(\&scalars[idx\ -\/\ 1],\ \&scalars[idx],\ \&points[idx\ -\/\ 1],\ \&points[idx]);}
+\DoxyCodeLine{00708\ \ \ \ \ \ \ \ \ idx++;}
+\DoxyCodeLine{00709\ \ \ \ \ \ \ \ \ point\_idx++;}
+\DoxyCodeLine{00710\ \ \ \ \ \}}
+\DoxyCodeLine{00711\ }
+\DoxyCodeLine{00712\ \ \ \ \ secp256k1\_ecmult\_pippenger\_wnaf(buckets,\ bucket\_window,\ state\_space,\ r,\ scalars,\ points,\ idx);}
+\DoxyCodeLine{00713\ \ \ \ \ secp256k1\_scratch\_apply\_checkpoint(error\_callback,\ scratch,\ scratch\_checkpoint);}
+\DoxyCodeLine{00714\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00715\ \}}
+\DoxyCodeLine{00716\ }
+\DoxyCodeLine{00717\ \textcolor{comment}{/*\ Wrapper\ for\ secp256k1\_ecmult\_multi\_func\ interface\ */}}
+\DoxyCodeLine{00718\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecmult\_pippenger\_batch\_single(\textcolor{keyword}{const}\ secp256k1\_callback*\ error\_callback,\ secp256k1\_scratch\ *scratch,\ secp256k1\_gej\ *r,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *inp\_g\_sc,\ secp256k1\_ecmult\_multi\_callback\ cb,\ \textcolor{keywordtype}{void}\ *cbdata,\ \textcolor{keywordtype}{size\_t}\ n)\ \{}
+\DoxyCodeLine{00719\ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_ecmult\_pippenger\_batch(error\_callback,\ scratch,\ r,\ inp\_g\_sc,\ cb,\ cbdata,\ n,\ 0);}
+\DoxyCodeLine{00720\ \}}
+\DoxyCodeLine{00721\ }
+\DoxyCodeLine{00727\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ secp256k1\_pippenger\_max\_points(\textcolor{keyword}{const}\ secp256k1\_callback*\ error\_callback,\ secp256k1\_scratch\ *scratch)\ \{}
+\DoxyCodeLine{00728\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ max\_alloc\ =\ secp256k1\_scratch\_max\_allocation(error\_callback,\ scratch,\ PIPPENGER\_SCRATCH\_OBJECTS);}
+\DoxyCodeLine{00729\ \ \ \ \ \textcolor{keywordtype}{int}\ bucket\_window;}
+\DoxyCodeLine{00730\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ res\ =\ 0;}
+\DoxyCodeLine{00731\ }
+\DoxyCodeLine{00732\ \ \ \ \ \textcolor{keywordflow}{for}\ (bucket\_window\ =\ 1;\ bucket\_window\ <=\ PIPPENGER\_MAX\_BUCKET\_WINDOW;\ bucket\_window++)\ \{}
+\DoxyCodeLine{00733\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\_points;}
+\DoxyCodeLine{00734\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ max\_points\ =\ secp256k1\_pippenger\_bucket\_window\_inv(bucket\_window);}
+\DoxyCodeLine{00735\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ space\_for\_points;}
+\DoxyCodeLine{00736\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ space\_overhead;}
+\DoxyCodeLine{00737\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ entry\_size\ =\ \textcolor{keyword}{sizeof}(secp256k1\_ge)\ +\ \textcolor{keyword}{sizeof}(secp256k1\_scalar)\ +\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{struct\ }secp256k1\_pippenger\_point\_state)\ +\ (WNAF\_SIZE(bucket\_window+1)+1)*\textcolor{keyword}{sizeof}(int);}
+\DoxyCodeLine{00738\ }
+\DoxyCodeLine{00739\ \ \ \ \ \ \ \ \ entry\_size\ =\ 2*entry\_size;}
+\DoxyCodeLine{00740\ \ \ \ \ \ \ \ \ space\_overhead\ =\ (\textcolor{keyword}{sizeof}(secp256k1\_gej)\ <<\ bucket\_window)\ +\ entry\_size\ +\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{struct\ }secp256k1\_pippenger\_state);}
+\DoxyCodeLine{00741\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (space\_overhead\ >\ max\_alloc)\ \{}
+\DoxyCodeLine{00742\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00743\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00744\ \ \ \ \ \ \ \ \ space\_for\_points\ =\ max\_alloc\ -\/\ space\_overhead;}
+\DoxyCodeLine{00745\ }
+\DoxyCodeLine{00746\ \ \ \ \ \ \ \ \ n\_points\ =\ space\_for\_points/entry\_size;}
+\DoxyCodeLine{00747\ \ \ \ \ \ \ \ \ n\_points\ =\ n\_points\ >\ max\_points\ ?\ max\_points\ :\ n\_points;}
+\DoxyCodeLine{00748\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\_points\ >\ res)\ \{}
+\DoxyCodeLine{00749\ \ \ \ \ \ \ \ \ \ \ \ \ res\ =\ n\_points;}
+\DoxyCodeLine{00750\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00751\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\_points\ <\ max\_points)\ \{}
+\DoxyCodeLine{00752\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ A\ larger\ bucket\_window\ may\ support\ even\ more\ points.\ But\ if\ we}}
+\DoxyCodeLine{00753\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ would\ choose\ that\ then\ the\ caller\ couldn't\ safely\ use\ any\ number}}
+\DoxyCodeLine{00754\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ smaller\ than\ what\ this\ function\ returns\ */}}
+\DoxyCodeLine{00755\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00756\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00757\ \ \ \ \ \}}
+\DoxyCodeLine{00758\ \ \ \ \ \textcolor{keywordflow}{return}\ res;}
+\DoxyCodeLine{00759\ \}}
+\DoxyCodeLine{00760\ }
+\DoxyCodeLine{00761\ \textcolor{comment}{/*\ Computes\ ecmult\_multi\ by\ simply\ multiplying\ and\ adding\ each\ point.\ Does\ not}}
+\DoxyCodeLine{00762\ \textcolor{comment}{\ *\ require\ a\ scratch\ space\ */}}
+\DoxyCodeLine{00763\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecmult\_multi\_simple\_var(secp256k1\_gej\ *r,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *inp\_g\_sc,\ secp256k1\_ecmult\_multi\_callback\ cb,\ \textcolor{keywordtype}{void}\ *cbdata,\ \textcolor{keywordtype}{size\_t}\ n\_points)\ \{}
+\DoxyCodeLine{00764\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ point\_idx;}
+\DoxyCodeLine{00765\ \ \ \ \ secp256k1\_gej\ tmpj;}
+\DoxyCodeLine{00766\ }
+\DoxyCodeLine{00767\ \ \ \ \ secp256k1\_gej\_set\_infinity(r);}
+\DoxyCodeLine{00768\ \ \ \ \ secp256k1\_gej\_set\_infinity(\&tmpj);}
+\DoxyCodeLine{00769\ \ \ \ \ \textcolor{comment}{/*\ r\ =\ inp\_g\_sc*G\ */}}
+\DoxyCodeLine{00770\ \ \ \ \ secp256k1\_ecmult(r,\ \&tmpj,\ \&secp256k1\_scalar\_zero,\ inp\_g\_sc);}
+\DoxyCodeLine{00771\ \ \ \ \ \textcolor{keywordflow}{for}\ (point\_idx\ =\ 0;\ point\_idx\ <\ n\_points;\ point\_idx++)\ \{}
+\DoxyCodeLine{00772\ \ \ \ \ \ \ \ \ secp256k1\_ge\ point;}
+\DoxyCodeLine{00773\ \ \ \ \ \ \ \ \ secp256k1\_gej\ pointj;}
+\DoxyCodeLine{00774\ \ \ \ \ \ \ \ \ secp256k1\_scalar\ scalar;}
+\DoxyCodeLine{00775\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!cb(\&scalar,\ \&point,\ point\_idx,\ cbdata))\ \{}
+\DoxyCodeLine{00776\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00777\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00778\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ r\ +=\ scalar*point\ */}}
+\DoxyCodeLine{00779\ \ \ \ \ \ \ \ \ secp256k1\_gej\_set\_ge(\&pointj,\ \&point);}
+\DoxyCodeLine{00780\ \ \ \ \ \ \ \ \ secp256k1\_ecmult(\&tmpj,\ \&pointj,\ \&scalar,\ NULL);}
+\DoxyCodeLine{00781\ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_var(r,\ r,\ \&tmpj,\ NULL);}
+\DoxyCodeLine{00782\ \ \ \ \ \}}
+\DoxyCodeLine{00783\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00784\ \}}
+\DoxyCodeLine{00785\ }
+\DoxyCodeLine{00786\ \textcolor{comment}{/*\ Compute\ the\ number\ of\ batches\ and\ the\ batch\ size\ given\ the\ maximum\ batch\ size\ and\ the}}
+\DoxyCodeLine{00787\ \textcolor{comment}{\ *\ total\ number\ of\ points\ */}}
+\DoxyCodeLine{00788\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecmult\_multi\_batch\_size\_helper(\textcolor{keywordtype}{size\_t}\ *n\_batches,\ \textcolor{keywordtype}{size\_t}\ *n\_batch\_points,\ \textcolor{keywordtype}{size\_t}\ max\_n\_batch\_points,\ \textcolor{keywordtype}{size\_t}\ n)\ \{}
+\DoxyCodeLine{00789\ \ \ \ \ \textcolor{keywordflow}{if}\ (max\_n\_batch\_points\ ==\ 0)\ \{}
+\DoxyCodeLine{00790\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00791\ \ \ \ \ \}}
+\DoxyCodeLine{00792\ \ \ \ \ \textcolor{keywordflow}{if}\ (max\_n\_batch\_points\ >\ ECMULT\_MAX\_POINTS\_PER\_BATCH)\ \{}
+\DoxyCodeLine{00793\ \ \ \ \ \ \ \ \ max\_n\_batch\_points\ =\ ECMULT\_MAX\_POINTS\_PER\_BATCH;}
+\DoxyCodeLine{00794\ \ \ \ \ \}}
+\DoxyCodeLine{00795\ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ ==\ 0)\ \{}
+\DoxyCodeLine{00796\ \ \ \ \ \ \ \ \ *n\_batches\ =\ 0;}
+\DoxyCodeLine{00797\ \ \ \ \ \ \ \ \ *n\_batch\_points\ =\ 0;}
+\DoxyCodeLine{00798\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00799\ \ \ \ \ \}}
+\DoxyCodeLine{00800\ \ \ \ \ \textcolor{comment}{/*\ Compute\ ceil(n/max\_n\_batch\_points)\ and\ ceil(n/n\_batches)\ */}}
+\DoxyCodeLine{00801\ \ \ \ \ *n\_batches\ =\ CEIL\_DIV(n,\ max\_n\_batch\_points);}
+\DoxyCodeLine{00802\ \ \ \ \ *n\_batch\_points\ =\ CEIL\_DIV(n,\ *n\_batches);}
+\DoxyCodeLine{00803\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00804\ \}}
+\DoxyCodeLine{00805\ }
+\DoxyCodeLine{00806\ \textcolor{keyword}{typedef}\ int\ (*secp256k1\_ecmult\_multi\_func)(\textcolor{keyword}{const}\ secp256k1\_callback*\ error\_callback,\ secp256k1\_scratch*,\ secp256k1\_gej*,\ \textcolor{keyword}{const}\ secp256k1\_scalar*,\ secp256k1\_ecmult\_multi\_callback\ cb,\ \textcolor{keywordtype}{void}*,\ size\_t);}
+\DoxyCodeLine{00807\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecmult\_multi\_var(\textcolor{keyword}{const}\ secp256k1\_callback*\ error\_callback,\ secp256k1\_scratch\ *scratch,\ secp256k1\_gej\ *r,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *inp\_g\_sc,\ secp256k1\_ecmult\_multi\_callback\ cb,\ \textcolor{keywordtype}{void}\ *cbdata,\ \textcolor{keywordtype}{size\_t}\ n)\ \{}
+\DoxyCodeLine{00808\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i;}
+\DoxyCodeLine{00809\ }
+\DoxyCodeLine{00810\ \ \ \ \ int\ (*f)(\textcolor{keyword}{const}\ secp256k1\_callback*\ error\_callback,\ secp256k1\_scratch*,\ secp256k1\_gej*,\ \textcolor{keyword}{const}\ secp256k1\_scalar*,\ secp256k1\_ecmult\_multi\_callback\ cb,\ \textcolor{keywordtype}{void}*,\ size\_t,\ size\_t);}
+\DoxyCodeLine{00811\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\_batches;}
+\DoxyCodeLine{00812\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\_batch\_points;}
+\DoxyCodeLine{00813\ }
+\DoxyCodeLine{00814\ \ \ \ \ secp256k1\_gej\_set\_infinity(r);}
+\DoxyCodeLine{00815\ \ \ \ \ \textcolor{keywordflow}{if}\ (inp\_g\_sc\ ==\ NULL\ \&\&\ n\ ==\ 0)\ \{}
+\DoxyCodeLine{00816\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00817\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ ==\ 0)\ \{}
+\DoxyCodeLine{00818\ \ \ \ \ \ \ \ \ secp256k1\_ecmult(r,\ r,\ \&secp256k1\_scalar\_zero,\ inp\_g\_sc);}
+\DoxyCodeLine{00819\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00820\ \ \ \ \ \}}
+\DoxyCodeLine{00821\ \ \ \ \ \textcolor{keywordflow}{if}\ (scratch\ ==\ NULL)\ \{}
+\DoxyCodeLine{00822\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_ecmult\_multi\_simple\_var(r,\ inp\_g\_sc,\ cb,\ cbdata,\ n);}
+\DoxyCodeLine{00823\ \ \ \ \ \}}
+\DoxyCodeLine{00824\ }
+\DoxyCodeLine{00825\ \ \ \ \ \textcolor{comment}{/*\ Compute\ the\ batch\ sizes\ for\ Pippenger's\ algorithm\ given\ a\ scratch\ space.\ If\ it's\ greater\ than}}
+\DoxyCodeLine{00826\ \textcolor{comment}{\ \ \ \ \ *\ a\ threshold\ use\ Pippenger's\ algorithm.\ Otherwise\ use\ Strauss'\ algorithm.}}
+\DoxyCodeLine{00827\ \textcolor{comment}{\ \ \ \ \ *\ As\ a\ first\ step\ check\ if\ there's\ enough\ space\ for\ Pippenger's\ algo\ (which\ requires\ less\ space}}
+\DoxyCodeLine{00828\ \textcolor{comment}{\ \ \ \ \ *\ than\ Strauss'\ algo)\ and\ if\ not,\ use\ the\ simple\ algorithm.\ */}}
+\DoxyCodeLine{00829\ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_ecmult\_multi\_batch\_size\_helper(\&n\_batches,\ \&n\_batch\_points,\ secp256k1\_pippenger\_max\_points(error\_callback,\ scratch),\ n))\ \{}
+\DoxyCodeLine{00830\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_ecmult\_multi\_simple\_var(r,\ inp\_g\_sc,\ cb,\ cbdata,\ n);}
+\DoxyCodeLine{00831\ \ \ \ \ \}}
+\DoxyCodeLine{00832\ \ \ \ \ \textcolor{keywordflow}{if}\ (n\_batch\_points\ >=\ ECMULT\_PIPPENGER\_THRESHOLD)\ \{}
+\DoxyCodeLine{00833\ \ \ \ \ \ \ \ \ f\ =\ secp256k1\_ecmult\_pippenger\_batch;}
+\DoxyCodeLine{00834\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00835\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_ecmult\_multi\_batch\_size\_helper(\&n\_batches,\ \&n\_batch\_points,\ secp256k1\_strauss\_max\_points(error\_callback,\ scratch),\ n))\ \{}
+\DoxyCodeLine{00836\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_ecmult\_multi\_simple\_var(r,\ inp\_g\_sc,\ cb,\ cbdata,\ n);}
+\DoxyCodeLine{00837\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00838\ \ \ \ \ \ \ \ \ f\ =\ secp256k1\_ecmult\_strauss\_batch;}
+\DoxyCodeLine{00839\ \ \ \ \ \}}
+\DoxyCodeLine{00840\ \ \ \ \ \textcolor{keywordflow}{for}(i\ =\ 0;\ i\ <\ n\_batches;\ i++)\ \{}
+\DoxyCodeLine{00841\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ nbp\ =\ n\ <\ n\_batch\_points\ ?\ n\ :\ n\_batch\_points;}
+\DoxyCodeLine{00842\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ offset\ =\ n\_batch\_points*i;}
+\DoxyCodeLine{00843\ \ \ \ \ \ \ \ \ secp256k1\_gej\ tmp;}
+\DoxyCodeLine{00844\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!f(error\_callback,\ scratch,\ \&tmp,\ i\ ==\ 0\ ?\ inp\_g\_sc\ :\ NULL,\ cb,\ cbdata,\ nbp,\ offset))\ \{}
+\DoxyCodeLine{00845\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00846\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00847\ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_var(r,\ r,\ \&tmp,\ NULL);}
+\DoxyCodeLine{00848\ \ \ \ \ \ \ \ \ n\ -\/=\ nbp;}
+\DoxyCodeLine{00849\ \ \ \ \ \}}
+\DoxyCodeLine{00850\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00851\ \}}
+\DoxyCodeLine{00852\ }
+\DoxyCodeLine{00853\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_ECMULT\_IMPL\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

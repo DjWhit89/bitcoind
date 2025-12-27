@@ -1,0 +1,149 @@
+\doxysection{spend.\+h}
+\label{spend_8h_source}\index{src/wallet/spend.h@{src/wallet/spend.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2021-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_WALLET\_SPEND\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_WALLET\_SPEND\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <policy/fees/block\_policy\_estimator.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <util/result.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <wallet/coinselection.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <wallet/transaction.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <wallet/wallet.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <unordered\_set>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00025\ \textcolor{keywordtype}{int}\ CalculateMaximumSignedInputSize(\textcolor{keyword}{const}\ CTxOut\&\ txout,\ \textcolor{keyword}{const}\ CWallet*\ pwallet,\ \textcolor{keyword}{const}\ CCoinControl*\ coin\_control);}
+\DoxyCodeLine{00026\ \textcolor{keywordtype}{int}\ CalculateMaximumSignedInputSize(\textcolor{keyword}{const}\ CTxOut\&\ txout,\ \textcolor{keyword}{const}\ COutPoint\ outpoint,\ \textcolor{keyword}{const}\ SigningProvider*\ pwallet,\ \textcolor{keywordtype}{bool}\ can\_grind\_r,\ \textcolor{keyword}{const}\ CCoinControl*\ coin\_control);}
+\DoxyCodeLine{00027\ \textcolor{keyword}{struct\ }TxSize\ \{}
+\DoxyCodeLine{00028\ \ \ \ \ int64\_t\ vsize\{-\/1\};}
+\DoxyCodeLine{00029\ \ \ \ \ int64\_t\ weight\{-\/1\};}
+\DoxyCodeLine{00030\ \};}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00034\ TxSize\ CalculateMaximumSignedTxSize(\textcolor{keyword}{const}\ CTransaction\&\ tx,\ \textcolor{keyword}{const}\ CWallet*\ wallet,\ \textcolor{keyword}{const}\ std::vector<CTxOut>\&\ txouts,\ \textcolor{keyword}{const}\ CCoinControl*\ coin\_control\ =\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00035\ TxSize\ CalculateMaximumSignedTxSize(\textcolor{keyword}{const}\ CTransaction\&\ tx,\ \textcolor{keyword}{const}\ CWallet*\ wallet,\ \textcolor{keyword}{const}\ CCoinControl*\ coin\_control\ =\ \textcolor{keyword}{nullptr})\ EXCLUSIVE\_LOCKS\_REQUIRED(wallet-\/>cs\_wallet);}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00045\ struct\ CoinsResult\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ std::map<OutputType,\ std::vector<COutput>>\ coins;}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00049\ \ \ \ \ std::vector<COutput>\ All()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ Size()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ TypesCount()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ coins.size();\ \}}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{void}\ Clear();}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{void}\ Erase(\textcolor{keyword}{const}\ std::unordered\_set<COutPoint,\ SaltedOutpointHasher>\&\ coins\_to\_remove);}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordtype}{void}\ Shuffle(FastRandomContext\&\ rng\_fast);}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keywordtype}{void}\ Add(OutputType\ type,\ \textcolor{keyword}{const}\ COutput\&\ out);}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \ \ CAmount\ GetTotalAmount()\ \{\ \textcolor{keywordflow}{return}\ total\_amount;\ \}}
+\DoxyCodeLine{00062\ \ \ \ \ std::optional<CAmount>\ GetEffectiveTotalAmount()\ \{\textcolor{keywordflow}{return}\ total\_effective\_amount;\ \}}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00066\ \ \ \ \ CAmount\ total\_amount\{0\};}
+\DoxyCodeLine{00068\ \ \ \ \ std::optional<CAmount>\ total\_effective\_amount\{0\};}
+\DoxyCodeLine{00069\ \};}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \textcolor{keyword}{struct\ }CoinFilterParams\ \{}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{comment}{//\ Outputs\ below\ the\ minimum\ amount\ will\ not\ get\ selected}}
+\DoxyCodeLine{00073\ \ \ \ \ CAmount\ min\_amount\{1\};}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{comment}{//\ Outputs\ above\ the\ maximum\ amount\ will\ not\ get\ selected}}
+\DoxyCodeLine{00075\ \ \ \ \ CAmount\ max\_amount\{MAX\_MONEY\};}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{comment}{//\ Return\ outputs\ until\ the\ minimum\ sum\ amount\ is\ covered}}
+\DoxyCodeLine{00077\ \ \ \ \ CAmount\ min\_sum\_amount\{MAX\_MONEY\};}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{comment}{//\ Maximum\ number\ of\ outputs\ that\ can\ be\ returned}}
+\DoxyCodeLine{00079\ \ \ \ \ uint64\_t\ max\_count\{0\};}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{comment}{//\ By\ default,\ do\ not\ include\ immature\ coinbase\ outputs}}
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{keywordtype}{bool}\ include\_immature\_coinbase\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{comment}{//\ By\ default,\ skip\ locked\ UTXOs}}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordtype}{bool}\ skip\_locked\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{comment}{//\ When\ true,\ filter\ unconfirmed\ coins\ by\ whether\ their}}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{comment}{//\ version's\ TRUCness\ matches\ what\ is\ set\ by\ CCoinControl.}}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keywordtype}{bool}\ check\_version\_trucness\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00087\ \};}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00092\ CoinsResult\ AvailableCoins(\textcolor{keyword}{const}\ CWallet\&\ wallet,}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CCoinControl*\ coinControl\ =\ \textcolor{keyword}{nullptr},}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::optional<CFeeRate>\ feerate\ =\ std::nullopt,}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CoinFilterParams\&\ params\ =\ \{\})\ EXCLUSIVE\_LOCKS\_REQUIRED(wallet.cs\_wallet);}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00100\ \textcolor{keyword}{const}\ CTxOut\&\ FindNonChangeParentOutput(\textcolor{keyword}{const}\ CWallet\&\ wallet,\ \textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ EXCLUSIVE\_LOCKS\_REQUIRED(wallet.cs\_wallet);}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00105\ std::map<CTxDestination,\ std::vector<COutput>>\ ListCoins(\textcolor{keyword}{const}\ CWallet\&\ wallet)\ EXCLUSIVE\_LOCKS\_REQUIRED(wallet.cs\_wallet);}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \textcolor{keyword}{struct\ }SelectionFilter\ \{}
+\DoxyCodeLine{00108\ \ \ \ \ CoinEligibilityFilter\ filter;}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keywordtype}{bool}\ allow\_mixed\_output\_types\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00110\ \};}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00115\ FilteredOutputGroups\ GroupOutputs(\textcolor{keyword}{const}\ CWallet\&\ wallet,}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CoinsResult\&\ coins,}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CoinSelectionParams\&\ coin\_sel\_params,}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<SelectionFilter>\&\ filters);}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00136\ util::Result<SelectionResult>\ AttemptSelection(interfaces::Chain\&\ chain,\ \textcolor{keyword}{const}\ CAmount\&\ nTargetValue,\ OutputGroupTypeMap\&\ groups,}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CoinSelectionParams\&\ coin\_selection\_params,\ \textcolor{keywordtype}{bool}\ allow\_mixed\_output\_types);}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00153\ util::Result<SelectionResult>\ ChooseSelectionResult(interfaces::Chain\&\ chain,\ \textcolor{keyword}{const}\ CAmount\&\ nTargetValue,\ Groups\&\ groups,\ \textcolor{keyword}{const}\ CoinSelectionParams\&\ coin\_selection\_params);}
+\DoxyCodeLine{00154\ }
+\DoxyCodeLine{00155\ \textcolor{comment}{//\ User\ manually\ selected\ inputs\ that\ must\ be\ part\ of\ the\ transaction}}
+\DoxyCodeLine{00156\ \textcolor{keyword}{struct\ }PreSelectedInputs}
+\DoxyCodeLine{00157\ \{}
+\DoxyCodeLine{00158\ \ \ \ \ std::set<std::shared\_ptr<COutput>>\ coins;}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{comment}{//\ If\ subtract\ fee\ from\ outputs\ is\ disabled,\ the\ 'total\_amount'}}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{comment}{//\ will\ be\ the\ sum\ of\ each\ output\ effective\ value}}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{comment}{//\ instead\ of\ the\ sum\ of\ the\ outputs\ amount}}
+\DoxyCodeLine{00162\ \ \ \ \ CAmount\ total\_amount\{0\};}
+\DoxyCodeLine{00163\ }
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keywordtype}{void}\ Insert(\textcolor{keyword}{const}\ COutput\&\ output,\ \textcolor{keywordtype}{bool}\ subtract\_fee\_outputs)}
+\DoxyCodeLine{00165\ \ \ \ \ \{}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (subtract\_fee\_outputs)\ \{}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \ \ \ \ total\_amount\ +=\ output.txout.nValue;}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ \ \ \ \ total\_amount\ +=\ output.GetEffectiveValue();}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ coins.insert(std::make\_shared<COutput>(output));}
+\DoxyCodeLine{00172\ \ \ \ \ \}}
+\DoxyCodeLine{00173\ \};}
+\DoxyCodeLine{00174\ }
+\DoxyCodeLine{00179\ util::Result<PreSelectedInputs>\ FetchSelectedInputs(\textcolor{keyword}{const}\ CWallet\&\ wallet,\ \textcolor{keyword}{const}\ CCoinControl\&\ coin\_control,}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CoinSelectionParams\&\ coin\_selection\_params)\ EXCLUSIVE\_LOCKS\_REQUIRED(wallet.cs\_wallet);}
+\DoxyCodeLine{00181\ }
+\DoxyCodeLine{00194\ util::Result<SelectionResult>\ AutomaticCoinSelection(\textcolor{keyword}{const}\ CWallet\&\ wallet,\ CoinsResult\&\ available\_coins,\ \textcolor{keyword}{const}\ CAmount\&\ nTargetValue,}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CoinSelectionParams\&\ coin\_selection\_params)\ EXCLUSIVE\_LOCKS\_REQUIRED(wallet.cs\_wallet);}
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00201\ util::Result<SelectionResult>\ SelectCoins(\textcolor{keyword}{const}\ CWallet\&\ wallet,\ CoinsResult\&\ available\_coins,\ \textcolor{keyword}{const}\ PreSelectedInputs\&\ pre\_set\_inputs,}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CAmount\&\ nTargetValue,\ \textcolor{keyword}{const}\ CCoinControl\&\ coin\_control,}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CoinSelectionParams\&\ coin\_selection\_params)\ EXCLUSIVE\_LOCKS\_REQUIRED(wallet.cs\_wallet);}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \textcolor{keyword}{struct\ }CreatedTransactionResult}
+\DoxyCodeLine{00206\ \{}
+\DoxyCodeLine{00207\ \ \ \ \ CTransactionRef\ tx;}
+\DoxyCodeLine{00208\ \ \ \ \ CAmount\ fee;}
+\DoxyCodeLine{00209\ \ \ \ \ FeeCalculation\ fee\_calc;}
+\DoxyCodeLine{00210\ \ \ \ \ std::optional<unsigned\ int>\ change\_pos;}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \ \ \ \ CreatedTransactionResult(CTransactionRef\ \_tx,\ CAmount\ \_fee,\ std::optional<unsigned\ int>\ \_change\_pos,\ \textcolor{keyword}{const}\ FeeCalculation\&\ \_fee\_calc)}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ :\ tx(\_tx),\ fee(\_fee),\ fee\_calc(\_fee\_calc),\ change\_pos(\_change\_pos)\ \{\}}
+\DoxyCodeLine{00214\ \};}
+\DoxyCodeLine{00215\ }
+\DoxyCodeLine{00220\ \textcolor{keywordtype}{void}\ DiscourageFeeSniping(CMutableTransaction\&\ tx,\ FastRandomContext\&\ rng\_fast,\ interfaces::Chain\&\ chain,\ \textcolor{keyword}{const}\ uint256\&\ block\_hash,\ \textcolor{keywordtype}{int}\ block\_height);}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00227\ util::Result<CreatedTransactionResult>\ CreateTransaction(CWallet\&\ wallet,\ \textcolor{keyword}{const}\ std::vector<CRecipient>\&\ vecSend,\ std::optional<unsigned\ int>\ change\_pos,\ \textcolor{keyword}{const}\ CCoinControl\&\ coin\_control,\ \textcolor{keywordtype}{bool}\ sign\ =\ \textcolor{keyword}{true});}
+\DoxyCodeLine{00228\ }
+\DoxyCodeLine{00233\ util::Result<CreatedTransactionResult>\ FundTransaction(CWallet\&\ wallet,\ \textcolor{keyword}{const}\ CMutableTransaction\&\ tx,\ \textcolor{keyword}{const}\ std::vector<CRecipient>\&\ recipients,\ std::optional<unsigned\ int>\ change\_pos,\ \textcolor{keywordtype}{bool}\ lockUnspents,\ CCoinControl);}
+\DoxyCodeLine{00234\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{00235\ }
+\DoxyCodeLine{00236\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_WALLET\_SPEND\_H}}
+
+\end{DoxyCode}

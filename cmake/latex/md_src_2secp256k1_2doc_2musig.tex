@@ -1,0 +1,33 @@
+\chapter{Notes on the musig module API }
+\label{md_src_2secp256k1_2doc_2musig}\index{Notes on the musig module API@{Notes on the musig module API}}
+The following sections contain additional notes on the API of the musig module ({\ttfamily \doxyref{include/secp256k1\+\_\+musig.\+h}{p.}{secp256k1__musig_8h}}). A usage example can be found in {\ttfamily \doxyref{examples/musig.\+c}{p.}{musig_8c}}.\doxysection{API misuse}\label{md_src_2secp256k1_2doc_2musig_autotoc_md194}
+The musig API is designed with a focus on misuse resistance. However, due to the interactive nature of the Mu\+Sig protocol, there are additional failure modes that are not present in regular (single-\/party) Schnorr signature creation. While the results can be catastrophic (e.\+g. leaking of the secret key), it is unfortunately not possible for the musig implementation to prevent all such failure modes.
+
+Therefore, users of the musig module must take great care to make sure of the following\+:
+
+
+\begin{DoxyEnumerate}
+\item A unique nonce per signing session is generated in {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+nonce\+\_\+gen}{p.}{secp256k1__musig_8h_a7ec24f575d1e46794f3ce3532a03615b}}. See the corresponding comment in {\ttfamily \doxyref{include/secp256k1\+\_\+musig.\+h}{p.}{secp256k1__musig_8h}} for how to ensure that.
+\item The {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+secnonce}{p.}{structsecp256k1__musig__secnonce}} structure is never copied or serialized. See also the comment on {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+secnonce}{p.}{structsecp256k1__musig__secnonce}} in {\ttfamily \doxyref{include/secp256k1\+\_\+musig.\+h}{p.}{secp256k1__musig_8h}}.
+\item Opaque data structures are never written to or read from directly. Instead, only the provided accessor functions are used.
+\end{DoxyEnumerate}\doxysection{Key Aggregation and (Taproot) Tweaking}\label{md_src_2secp256k1_2doc_2musig_autotoc_md195}
+Given a set of public keys, the aggregate public key is computed with {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+pubkey\+\_\+agg}{p.}{secp256k1__musig_8h_ad0ad82976282fb6cbc20e24994ab6d94}}. A plain tweak can be added to the resulting public key with {\ttfamily \doxyref{secp256k1\+\_\+ec\+\_\+pubkey\+\_\+tweak\+\_\+add}{p.}{secp256k1_8h_aaac0a0211f7ebfa1af55ab571cd57751}} by setting the {\ttfamily tweak32} argument to the hash defined in BIP 32. Similarly, a Taproot tweak can be added with {\ttfamily \doxyref{secp256k1\+\_\+xonly\+\_\+pubkey\+\_\+tweak\+\_\+add}{p.}{secp256k1__extrakeys_8h_aaf832fa110c2610d69dee6ca74c856e8}} by setting the {\ttfamily tweak32} argument to the Tap\+Tweak hash defined in BIP 341. Both types of tweaking can be combined and invoked multiple times if the specific application requires it.\doxysection{Signing}\label{md_src_2secp256k1_2doc_2musig_autotoc_md196}
+This is covered by {\ttfamily \doxyref{examples/musig.\+c}{p.}{musig_8c}}. Essentially, the protocol proceeds in the following steps\+:
+
+
+\begin{DoxyEnumerate}
+\item Generate a keypair with {\ttfamily \doxyref{secp256k1\+\_\+keypair\+\_\+create}{p.}{secp256k1__extrakeys_8h_a61b1362ada2435ab10240e52ff738476}} and obtain the public key with {\ttfamily \doxyref{secp256k1\+\_\+keypair\+\_\+pub}{p.}{secp256k1__extrakeys_8h_af9c115df738fabe6b04574d4880495bc}}.
+\item Call {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+pubkey\+\_\+agg}{p.}{secp256k1__musig_8h_ad0ad82976282fb6cbc20e24994ab6d94}} with the pubkeys of all participants.
+\item Optionally add a (Taproot) tweak with {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+pubkey\+\_\+xonly\+\_\+tweak\+\_\+add}{p.}{secp256k1__musig_8h_a10a46b293f9744518c660bcbc8775db1}} and a plain tweak with {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+pubkey\+\_\+ec\+\_\+tweak\+\_\+add}{p.}{secp256k1__musig_8h_a01eeb0d31dee13d208245a478b777d9c}}.
+\item Generate a pair of secret and public nonce with {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+nonce\+\_\+gen}{p.}{secp256k1__musig_8h_a7ec24f575d1e46794f3ce3532a03615b}} and send the public nonce to the other signers.
+\item Someone (not necessarily the signer) aggregates the public nonces with {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+nonce\+\_\+agg}{p.}{secp256k1__musig_8h_a32c50c1197c2e1c817893b037cd8d721}} and sends it to the signers.
+\item Process the aggregate nonce with {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+nonce\+\_\+process}{p.}{secp256k1__musig_8h_ae2294b047f341afacce48e9f9a509f11}}.
+\item Create a partial signature with {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+partial\+\_\+sign}{p.}{secp256k1__musig_8h_a37c235ba487df277f97464708c06f98e}}.
+\item Verify the partial signatures (optional in some scenarios) with {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+partial\+\_\+sig\+\_\+verify}{p.}{secp256k1__musig_8h_a94cce9a0b321047ba1f341bc8f3f8ee3}}.
+\item Someone (not necessarily the signer) obtains all partial signatures and aggregates them into the final Schnorr signature using {\ttfamily \doxyref{secp256k1\+\_\+musig\+\_\+partial\+\_\+sig\+\_\+agg}{p.}{secp256k1__musig_8h_aa001ebd3ea7185c01e571e27e736cde1}}.
+\end{DoxyEnumerate}
+
+The aggregate signature can be verified with {\ttfamily \doxyref{secp256k1\+\_\+schnorrsig\+\_\+verify}{p.}{secp256k1__schnorrsig_8h_ad8c9ecde1b1b561bb0a864ef307a48cb}}.
+
+Steps 1 through 5 above can occur before or after the signers are aware of the message to be signed. Whenever possible, it is recommended to generate the nonces only after the message is known. This provides enhanced defense-\/in-\/depth measures, protecting against potential API misuse in certain scenarios. However, it does require two rounds of communication during the signing process. The alternative, generating the nonces in a pre-\/processing step before the message is known, eliminates these additional protective measures but allows for non-\/interactive signing. Similarly, the API supports an alternative protocol flow where generating the aggregate key (steps 1 to 3) is allowed to happen after exchanging nonces (steps 4 to 5).\doxysection{Verification}\label{md_src_2secp256k1_2doc_2musig_autotoc_md197}
+A participant who wants to verify the partial signatures, but does not sign itself may do so using the above instructions except that the verifier skips steps 1, 4 and 7. 

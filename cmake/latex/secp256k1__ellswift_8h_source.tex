@@ -1,0 +1,101 @@
+\doxysection{secp256k1\+\_\+ellswift.\+h}
+\label{secp256k1__ellswift_8h_source}\index{src/secp256k1/include/secp256k1\_ellswift.h@{src/secp256k1/include/secp256k1\_ellswift.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_ELLSWIFT\_H}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#define\ SECP256K1\_ELLSWIFT\_H}}
+\DoxyCodeLine{00003\ }
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}secp256k1.h"{}}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifdef\ \_\_cplusplus}}
+\DoxyCodeLine{00007\ \textcolor{keyword}{extern}\ \textcolor{stringliteral}{"{}C"{}}\ \{}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{comment}{/*\ This\ module\ provides\ an\ implementation\ of\ ElligatorSwift\ as\ well\ as\ a}}
+\DoxyCodeLine{00011\ \textcolor{comment}{\ *\ version\ of\ x-\/only\ ECDH\ using\ it\ (including\ compatibility\ with\ BIP324).}}
+\DoxyCodeLine{00012\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00013\ \textcolor{comment}{\ *\ ElligatorSwift\ is\ described\ in\ https://eprint.iacr.org/2022/759\ by}}
+\DoxyCodeLine{00014\ \textcolor{comment}{\ *\ Chavez-\/Saab,\ Rodriguez-\/Henriquez,\ and\ Tibouchi.\ It\ permits\ encoding}}
+\DoxyCodeLine{00015\ \textcolor{comment}{\ *\ uniformly\ chosen\ public\ keys\ as\ 64-\/byte\ arrays\ which\ are\ indistinguishable}}
+\DoxyCodeLine{00016\ \textcolor{comment}{\ *\ from\ uniformly\ random\ arrays.}}
+\DoxyCodeLine{00017\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00018\ \textcolor{comment}{\ *\ Let\ f\ be\ the\ function\ from\ pairs\ of\ field\ elements\ to\ point\ X\ coordinates,}}
+\DoxyCodeLine{00019\ \textcolor{comment}{\ *\ defined\ as\ follows\ (all\ operations\ modulo\ p\ =\ 2\string^256\ -\/\ 2\string^32\ -\/\ 977)}}
+\DoxyCodeLine{00020\ \textcolor{comment}{\ *\ f(u,t):}}
+\DoxyCodeLine{00021\ \textcolor{comment}{\ *\ -\/\ Let\ C\ =\ 0xa2d2ba93507f1df233770c2a797962cc61f6d15da14ecd47d8d27ae1cd5f852,}}
+\DoxyCodeLine{00022\ \textcolor{comment}{\ *\ \ \ a\ square\ root\ of\ -\/3.}}
+\DoxyCodeLine{00023\ \textcolor{comment}{\ *\ -\/\ If\ u=0,\ set\ u=1\ instead.}}
+\DoxyCodeLine{00024\ \textcolor{comment}{\ *\ -\/\ If\ t=0,\ set\ t=1\ instead.}}
+\DoxyCodeLine{00025\ \textcolor{comment}{\ *\ -\/\ If\ u\string^3\ +\ t\string^2\ +\ 7\ =\ 0,\ multiply\ t\ by\ 2.}}
+\DoxyCodeLine{00026\ \textcolor{comment}{\ *\ -\/\ Let\ X\ =\ (u\string^3\ +\ 7\ -\/\ t\string^2)\ /\ (2\ *\ t)}}
+\DoxyCodeLine{00027\ \textcolor{comment}{\ *\ -\/\ Let\ Y\ =\ (X\ +\ t)\ /\ (C\ *\ u)}}
+\DoxyCodeLine{00028\ \textcolor{comment}{\ *\ -\/\ Return\ the\ first\ in\ [u\ +\ 4\ *\ Y\string^2,\ (-\/X/Y\ -\/\ u)\ /\ 2,\ (X/Y\ -\/\ u)\ /\ 2]\ that\ is\ an}}
+\DoxyCodeLine{00029\ \textcolor{comment}{\ *\ \ \ X\ coordinate\ on\ the\ curve\ (at\ least\ one\ of\ them\ is,\ for\ any\ u\ and\ t).}}
+\DoxyCodeLine{00030\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00031\ \textcolor{comment}{\ *\ Then\ an\ ElligatorSwift\ encoding\ of\ x\ consists\ of\ the\ 32-\/byte\ big-\/endian}}
+\DoxyCodeLine{00032\ \textcolor{comment}{\ *\ encodings\ of\ field\ elements\ u\ and\ t\ concatenated,\ where\ f(u,t)\ =\ x.}}
+\DoxyCodeLine{00033\ \textcolor{comment}{\ *\ The\ encoding\ algorithm\ is\ described\ in\ the\ paper,\ and\ effectively\ picks\ a}}
+\DoxyCodeLine{00034\ \textcolor{comment}{\ *\ uniformly\ random\ pair\ (u,t)\ among\ those\ which\ encode\ x.}}
+\DoxyCodeLine{00035\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00036\ \textcolor{comment}{\ *\ If\ the\ Y\ coordinate\ is\ relevant,\ it\ is\ given\ the\ same\ parity\ as\ t.}}
+\DoxyCodeLine{00037\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00038\ \textcolor{comment}{\ *\ Changes\ w.r.t.\ the\ paper:}}
+\DoxyCodeLine{00039\ \textcolor{comment}{\ *\ -\/\ The\ u=0,\ t=0,\ and\ u\string^3+t\string^2+7=0\ conditions\ result\ in\ decoding\ to\ the\ point}}
+\DoxyCodeLine{00040\ \textcolor{comment}{\ *\ \ \ at\ infinity\ in\ the\ paper.\ Here\ they\ are\ remapped\ to\ finite\ points.}}
+\DoxyCodeLine{00041\ \textcolor{comment}{\ *\ -\/\ The\ paper\ uses\ an\ additional\ encoding\ bit\ for\ the\ parity\ of\ y.\ Here\ the}}
+\DoxyCodeLine{00042\ \textcolor{comment}{\ *\ \ \ parity\ of\ t\ is\ used\ (negating\ t\ does\ not\ affect\ the\ decoded\ x\ coordinate,}}
+\DoxyCodeLine{00043\ \textcolor{comment}{\ *\ \ \ so\ this\ is\ possible).}}
+\DoxyCodeLine{00044\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00045\ \textcolor{comment}{\ *\ For\ mathematical\ background\ about\ the\ scheme,\ see\ the\ doc/ellswift.md\ file.}}
+\DoxyCodeLine{00046\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00064\ \textcolor{keyword}{typedef}\ int\ (*secp256k1\_ellswift\_xdh\_hash\_function)(}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *output,}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *x32,}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell\_a64,}
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell\_b64,}
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordtype}{void}\ *data}
+\DoxyCodeLine{00070\ );}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00075\ SECP256K1\_API\ \textcolor{keyword}{const}\ secp256k1\_ellswift\_xdh\_hash\_function\ secp256k1\_ellswift\_xdh\_hash\_function\_prefix;}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00083\ SECP256K1\_API\ \textcolor{keyword}{const}\ secp256k1\_ellswift\_xdh\_hash\_function\ secp256k1\_ellswift\_xdh\_hash\_function\_bip324;}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00107\ SECP256K1\_API\ \textcolor{keywordtype}{int}\ secp256k1\_ellswift\_encode(}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_context\ *ctx,}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell64,}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_pubkey\ *pubkey,}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *rnd32}
+\DoxyCodeLine{00112\ )\ SECP256K1\_ARG\_NONNULL(1)\ SECP256K1\_ARG\_NONNULL(2)\ SECP256K1\_ARG\_NONNULL(3)\ SECP256K1\_ARG\_NONNULL(4);}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00123\ SECP256K1\_API\ \textcolor{keywordtype}{int}\ secp256k1\_ellswift\_decode(}
+\DoxyCodeLine{00124\ \ \ \ \ const\ secp256k1\_context\ *ctx,}
+\DoxyCodeLine{00125\ \ \ \ \ secp256k1\_pubkey\ *pubkey,}
+\DoxyCodeLine{00126\ \ \ \ \ const\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell64}
+\DoxyCodeLine{00127\ )\ SECP256K1\_ARG\_NONNULL(1)\ SECP256K1\_ARG\_NONNULL(2)\ SECP256K1\_ARG\_NONNULL(3);}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00154\ SECP256K1\_API\ SECP256K1\_WARN\_UNUSED\_RESULT\ \textcolor{keywordtype}{int}\ secp256k1\_ellswift\_create(}
+\DoxyCodeLine{00155\ \ \ \ \ const\ secp256k1\_context\ *ctx,}
+\DoxyCodeLine{00156\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell64,}
+\DoxyCodeLine{00157\ \ \ \ \ const\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *seckey32,}
+\DoxyCodeLine{00158\ \ \ \ \ const\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *auxrnd32}
+\DoxyCodeLine{00159\ )\ SECP256K1\_ARG\_NONNULL(1)\ SECP256K1\_ARG\_NONNULL(2)\ SECP256K1\_ARG\_NONNULL(3);}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00185\ SECP256K1\_API\ SECP256K1\_WARN\_UNUSED\_RESULT\ \textcolor{keywordtype}{int}\ secp256k1\_ellswift\_xdh(}
+\DoxyCodeLine{00186\ \ \ const\ secp256k1\_context\ *ctx,}
+\DoxyCodeLine{00187\ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *output,}
+\DoxyCodeLine{00188\ \ \ const\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell\_a64,}
+\DoxyCodeLine{00189\ \ \ const\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell\_b64,}
+\DoxyCodeLine{00190\ \ \ const\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *seckey32,}
+\DoxyCodeLine{00191\ \ \ \textcolor{keywordtype}{int}\ party,}
+\DoxyCodeLine{00192\ \ \ secp256k1\_ellswift\_xdh\_hash\_function\ hashfp,}
+\DoxyCodeLine{00193\ \ \ \textcolor{keywordtype}{void}\ *data}
+\DoxyCodeLine{00194\ )\ SECP256K1\_ARG\_NONNULL(1)\ SECP256K1\_ARG\_NONNULL(2)\ SECP256K1\_ARG\_NONNULL(3)\ SECP256K1\_ARG\_NONNULL(4)\ SECP256K1\_ARG\_NONNULL(5)\ SECP256K1\_ARG\_NONNULL(7);}
+\DoxyCodeLine{00195\ }
+\DoxyCodeLine{00196\ \textcolor{preprocessor}{\#ifdef\ \_\_cplusplus}}
+\DoxyCodeLine{00197\ \}}
+\DoxyCodeLine{00198\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_ELLSWIFT\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

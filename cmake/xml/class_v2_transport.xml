@@ -1,0 +1,1017 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="class_v2_transport" kind="class" language="C++" prot="public" final="yes">
+    <compoundname>V2Transport</compoundname>
+    <basecompoundref refid="class_transport" prot="public" virt="non-virtual">Transport</basecompoundref>
+    <includes refid="net_8h" local="no">net.h</includes>
+    <sectiondef kind="private-type">
+      <memberdef kind="enum" id="class_v2_transport_1a02aca434c3728b590591f3254edcb754" prot="private" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>RecvState</name>
+        <qualifiedname>V2Transport::RecvState</qualifiedname>
+        <enumvalue id="class_v2_transport_1a02aca434c3728b590591f3254edcb754afc942b2d10eb343755dbcf07d0ed6e7c" prot="private">
+          <name>KEY_MAYBE_V1</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>(Responder only) either v2 public key or v1 header.</para>
+<para>This is the initial state for responders, before data has been received to distinguish v1 from v2 connections. When that happens, the state becomes either KEY (for v2) or V1 (for v1). </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="class_v2_transport_1a02aca434c3728b590591f3254edcb754a3b5949e0c26b87767a4752a276de9570" prot="private">
+          <name>KEY</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>Public key.</para>
+<para>This is the initial state for initiators, during which the other side&apos;s public key is received. When that information arrives, the ciphers get initialized and the state becomes GARB_GARBTERM. </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="class_v2_transport_1a02aca434c3728b590591f3254edcb754a31ed436acc05f097ba60eca3978b2ff5" prot="private">
+          <name>GARB_GARBTERM</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>Garbage and garbage terminator.</para>
+<para>Whenever a byte is received, the last 16 bytes are compared with the expected garbage terminator. When that happens, the state becomes VERSION. If no matching terminator is received in 4111 bytes (4095 for the maximum garbage length, and 16 bytes for the terminator), the connection aborts. </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="class_v2_transport_1a02aca434c3728b590591f3254edcb754a021321e8c168ba3ae39ce3a2e7b3ec87" prot="private">
+          <name>VERSION</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>Version packet.</para>
+<para>A packet is received, and decrypted/verified. If that fails, the connection aborts. The first received packet in this state (whether it&apos;s a decoy or not) is expected to authenticate the garbage received during the GARB_GARBTERM state as associated authenticated data (AAD). The first non-decoy packet in this state is interpreted as version negotiation (currently, that means ignoring the contents, but it can be used for negotiating future extensions), and afterwards the state becomes APP. </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="class_v2_transport_1a02aca434c3728b590591f3254edcb754a0bdbb2c325525e986d55ef50ca66d056" prot="private">
+          <name>APP</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>Application packet.</para>
+<para>A packet is received, and decrypted/verified. If that succeeds, the state becomes APP_READY and the decrypted contents is kept in m_recv_decode_buffer until it is retrieved as a message by GetMessage(). </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="class_v2_transport_1a02aca434c3728b590591f3254edcb754afd64ee773bffb29a448b1ab6042dde6f" prot="private">
+          <name>APP_READY</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>Nothing (an application packet is available for GetMessage()).</para>
+<para>Nothing can be received in this state. When the message is retrieved by GetMessage, the state becomes APP again. </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="class_v2_transport_1a02aca434c3728b590591f3254edcb754ab4daca084ad9eabfc8de231929477ed6" prot="private">
+          <name>V1</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>Nothing (this transport is using v1 fallback).</para>
+<para>All receive operations are redirected to m_v1_fallback. </para>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="headers__sync__chainwork__tests_8cpp_1ae883f65c4951396ab945f766e09e3c94" kindref="member">State</ref> type that defines the current contents of the receive buffer and/or how the next received bytes added to it will be interpreted.</para>
+<para>Diagram:</para>
+<para>start(responder) | | start(initiator) /------<mdash/>\ | | | | v v v | KEY_MAYBE_V1 -&gt; KEY -&gt; GARB_GARBTERM -&gt; VERSION -&gt; APP -&gt; APP_READY | -------&gt; V1 </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="483" column="5" bodyfile="src/net.h" bodystart="483" bodyend="533"/>
+      </memberdef>
+      <memberdef kind="enum" id="class_v2_transport_1a5727f2287453638c46f9f9aaf7970224" prot="private" static="no" strong="yes">
+        <type>uint8_t</type>
+        <name>SendState</name>
+        <qualifiedname>V2Transport::SendState</qualifiedname>
+        <enumvalue id="class_v2_transport_1a5727f2287453638c46f9f9aaf7970224adc613062022d0a722fad14a0adae93dd" prot="private">
+          <name>MAYBE_V1</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>(Responder only) Not sending until v1 or v2 is detected.</para>
+<para>This is the initial state for responders. The send buffer is empty. When the receiver determines whether this is a V1 or V2 connection, the sender state becomes AWAITING_KEY (for v2) or V1 (for v1). </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="class_v2_transport_1a5727f2287453638c46f9f9aaf7970224a4941f4296932610c997369dbb777f4a5" prot="private">
+          <name>AWAITING_KEY</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>Waiting for the other side&apos;s public key.</para>
+<para>This is the initial state for initiators. The public key and garbage is sent out. When the receiver receives the other side&apos;s public key and transitions to GARB_GARBTERM, the sender state becomes READY. </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="class_v2_transport_1a5727f2287453638c46f9f9aaf7970224a2baa69eafc7204f3bd8648eba580c489" prot="private">
+          <name>READY</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>Normal sending state.</para>
+<para>In this state, the ciphers are initialized, so packets can be sent. When this state is entered, the garbage terminator and version packet are appended to the send buffer (in addition to the key and garbage which may still be there). In this state a message can be provided if the send buffer is empty. </para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="class_v2_transport_1a5727f2287453638c46f9f9aaf7970224ab4daca084ad9eabfc8de231929477ed6" prot="private">
+          <name>V1</name>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+<para>This transport is using v1 fallback.</para>
+<para>All send operations are redirected to m_v1_fallback. </para>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="headers__sync__chainwork__tests_8cpp_1ae883f65c4951396ab945f766e09e3c94" kindref="member">State</ref> type that controls the sender side.</para>
+<para>Diagram:</para>
+<para>start(responder) | | start(initiator) | | v v MAYBE_V1 -&gt; AWAITING_KEY -&gt; READY | -----&gt; V1 </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="548" column="5" bodyfile="src/net.h" bodystart="548" bodyend="576"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="class_v2_transport_1aa74835952be64d871d81b0996ad87ff8" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>std::array&lt; std::byte, 0 &gt;</type>
+        <definition>std::array&lt;std::byte, 0&gt; VERSION_CONTENTS</definition>
+        <argsstring></argsstring>
+        <name>VERSION_CONTENTS</name>
+        <qualifiedname>V2Transport::VERSION_CONTENTS</qualifiedname>
+        <initializer>= {}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Contents of the version packet to send. BIP324 stipulates that senders should leave this empty, and receivers should ignore it. Future extensions can change what is sent as long as an empty version packet contents is interpreted as no extensions supported. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="458" column="33" bodyfile="src/net.h" bodystart="458" bodyend="458"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_v2_transport_1aae3fa1ad6affbe94d3e4653da3c44f25" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type>size_t</type>
+        <definition>size_t V1_PREFIX_LEN</definition>
+        <argsstring></argsstring>
+        <name>V1_PREFIX_LEN</name>
+        <qualifiedname>V2Transport::V1_PREFIX_LEN</qualifiedname>
+        <initializer>= 16</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>The length of the V1 prefix to match bytes initially received by responders with to determine if their peer is speaking V1 or V2. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="462" column="29" bodyfile="src/net.h" bodystart="462" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="class_v2_transport_1ac7c0d2b2425dcb36ebcbe18ce21bad12" prot="private" static="no" mutable="no">
+        <type><ref refid="class_b_i_p324_cipher" kindref="compound">BIP324Cipher</ref></type>
+        <definition>BIP324Cipher m_cipher</definition>
+        <argsstring></argsstring>
+        <name>m_cipher</name>
+        <qualifiedname>V2Transport::m_cipher</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Cipher state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="579" column="18" bodyfile="src/net.h" bodystart="579" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_v2_transport_1a548c52ce1ab8c60e0e069af5fe9b6300" prot="private" static="no" mutable="no">
+        <type>const bool</type>
+        <definition>const bool m_initiating</definition>
+        <argsstring></argsstring>
+        <name>m_initiating</name>
+        <qualifiedname>V2Transport::m_initiating</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Whether we are the initiator side. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="581" column="16" bodyfile="src/net.h" bodystart="581" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_v2_transport_1a596cc3f3bff0ed441be124a6edb03e5d" prot="private" static="no" mutable="no">
+        <type>const <ref refid="net_8h_1aa637b11e18b77724b35db2229cd12788" kindref="member">NodeId</ref></type>
+        <definition>const NodeId m_nodeid</definition>
+        <argsstring></argsstring>
+        <name>m_nodeid</name>
+        <qualifiedname>V2Transport::m_nodeid</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><ref refid="net_8h_1aa637b11e18b77724b35db2229cd12788" kindref="member">NodeId</ref> (for debug logging). </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="583" column="18" bodyfile="src/net.h" bodystart="583" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_v2_transport_1a02e3c5646cbdc94d498984c9bfc19968" prot="private" static="no" mutable="no">
+        <type><ref refid="class_v1_transport" kindref="compound">V1Transport</ref></type>
+        <definition>V1Transport m_v1_fallback</definition>
+        <argsstring></argsstring>
+        <name>m_v1_fallback</name>
+        <qualifiedname>V2Transport::m_v1_fallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Encapsulate a <ref refid="class_v1_transport" kindref="compound">V1Transport</ref> to fall back to. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="585" column="17" bodyfile="src/net.h" bodystart="585" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_v2_transport_1a091d21ccc9859fb5dee71fbaaa531789" prot="private" static="no" mutable="no">
+        <type>void</type>
+        <definition>bool !m_send_mutex</definition>
+        <argsstring></argsstring>
+        <name>!m_send_mutex</name>
+        <qualifiedname>V2Transport::!m_send_mutex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="628" column="48" bodyfile="src/net.h" bodystart="628" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="class_v2_transport_1a091d21ccc9859fb5dee71fbaaa531789" prot="private" static="no" mutable="no">
+        <type>bool</type>
+        <definition>bool !m_send_mutex</definition>
+        <argsstring></argsstring>
+        <name>!m_send_mutex</name>
+        <qualifiedname>V2Transport::!m_send_mutex</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="630" column="44" bodyfile="src/net.h" bodystart="630" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="class_v2_transport_1a426eec4f0246a40d6c4b4f3d821b396b" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type>uint32_t</type>
+        <definition>uint32_t MAX_GARBAGE_LEN</definition>
+        <argsstring></argsstring>
+        <name>MAX_GARBAGE_LEN</name>
+        <qualifiedname>V2Transport::MAX_GARBAGE_LEN</qualifiedname>
+        <initializer>= 4095</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="637" column="31" bodyfile="src/net.h" bodystart="637" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="class_v2_transport_1a5d003cf2d54b6cd9e67d446ff5a71f90" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="sync_8h_1a326d1d46ce05b5316d8ebe2694a10a6e" kindref="member">Mutex</ref> m_recv_mutex</type>
+        <definition>Mutex m_recv_mutex ACQUIRED_BEFORE</definition>
+        <argsstring>(m_send_mutex)</argsstring>
+        <name>ACQUIRED_BEFORE</name>
+        <qualifiedname>V2Transport::ACQUIRED_BEFORE</qualifiedname>
+        <param>
+          <type>m_send_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Lock for receiver-side fields. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="588" column="32"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1addb099dd4e522d3d9d63b762d2664b68" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>uint32_t m_recv_len</type>
+        <definition>uint32_t m_recv_len GUARDED_BY</definition>
+        <argsstring>(m_recv_mutex)</argsstring>
+        <name>GUARDED_BY</name>
+        <qualifiedname>V2Transport::GUARDED_BY</qualifiedname>
+        <param>
+          <type>m_recv_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>In {VERSION, APP}, the decrypted packet length, if m_recv_buffer.size() &gt;= <ref refid="class_b_i_p324_cipher_1a99be1c6d1d32b0c22578082196e92f83" kindref="member">BIP324Cipher::LENGTH_LEN</ref>. Unspecified otherwise. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="591" column="25" bodyfile="src/net.h" bodystart="591" bodyend="591"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1aee0c2434a25bd79ffe6171a5f3d07d05" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt; m_recv_buffer</type>
+        <definition>std::vector&lt; uint8_t &gt; m_recv_buffer GUARDED_BY</definition>
+        <argsstring>(m_recv_mutex)</argsstring>
+        <name>GUARDED_BY</name>
+        <qualifiedname>V2Transport::GUARDED_BY</qualifiedname>
+        <param>
+          <type>m_recv_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Receive buffer; meaning is determined by m_recv_state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="593" column="31"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a762596a99719976a709870a2f66f7353" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt; m_recv_aad</type>
+        <definition>std::vector&lt; uint8_t &gt; m_recv_aad GUARDED_BY</definition>
+        <argsstring>(m_recv_mutex)</argsstring>
+        <name>GUARDED_BY</name>
+        <qualifiedname>V2Transport::GUARDED_BY</qualifiedname>
+        <param>
+          <type>m_recv_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>AAD expected in next received packet (currently used only for garbage). </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="595" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1ae4a8965c4d2025281c5f660fef05e921" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt; m_recv_decode_buffer</type>
+        <definition>std::vector&lt; uint8_t &gt; m_recv_decode_buffer GUARDED_BY</definition>
+        <argsstring>(m_recv_mutex)</argsstring>
+        <name>GUARDED_BY</name>
+        <qualifiedname>V2Transport::GUARDED_BY</qualifiedname>
+        <param>
+          <type>m_recv_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Buffer to put decrypted contents in, for converting to <ref refid="class_c_net_message" kindref="compound">CNetMessage</ref>. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="597" column="38"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a65b4522bf91e0280a7175ea778f93e91" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>RecvState m_recv_state</type>
+        <definition>RecvState m_recv_state GUARDED_BY</definition>
+        <argsstring>(m_recv_mutex)</argsstring>
+        <name>GUARDED_BY</name>
+        <qualifiedname>V2Transport::GUARDED_BY</qualifiedname>
+        <param>
+          <type>m_recv_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Current receiver state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="599" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1af3bd91c42f503005636afc00c6cbb968" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="sync_8h_1a326d1d46ce05b5316d8ebe2694a10a6e" kindref="member">Mutex</ref> m_send_mutex</type>
+        <definition>Mutex m_send_mutex ACQUIRED_AFTER</definition>
+        <argsstring>(m_recv_mutex)</argsstring>
+        <name>ACQUIRED_AFTER</name>
+        <qualifiedname>V2Transport::ACQUIRED_AFTER</qualifiedname>
+        <param>
+          <type>m_recv_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Lock for sending-side fields. If both sending and receiving fields are accessed, m_recv_mutex must be acquired before m_send_mutex. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="603" column="32"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a84e267d365fa324aa03d42e579b7ac06" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt; m_send_buffer</type>
+        <definition>std::vector&lt; uint8_t &gt; m_send_buffer GUARDED_BY</definition>
+        <argsstring>(m_send_mutex)</argsstring>
+        <name>GUARDED_BY</name>
+        <qualifiedname>V2Transport::GUARDED_BY</qualifiedname>
+        <param>
+          <type>m_send_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>The send buffer; meaning is determined by m_send_state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="605" column="31"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a60b06909cfaebe1079db4f922708fd1c" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>uint32_t m_send_pos</type>
+        <definition>uint32_t m_send_pos GUARDED_BY</definition>
+        <argsstring>(m_send_mutex)</argsstring>
+        <name>GUARDED_BY</name>
+        <qualifiedname>V2Transport::GUARDED_BY</qualifiedname>
+        <param>
+          <type>m_send_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>How many bytes from the send buffer have been sent so far. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="607" column="25" bodyfile="src/net.h" bodystart="607" bodyend="607"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1ae06c311197d5b26ac877d201af9f21e6" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; uint8_t &gt; m_send_garbage</type>
+        <definition>std::vector&lt; uint8_t &gt; m_send_garbage GUARDED_BY</definition>
+        <argsstring>(m_send_mutex)</argsstring>
+        <name>GUARDED_BY</name>
+        <qualifiedname>V2Transport::GUARDED_BY</qualifiedname>
+        <param>
+          <type>m_send_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>The garbage sent, or to be sent (MAYBE_V1 and AWAITING_KEY state only). </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="609" column="32"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a568bf34a2b6f7ab7e02ec08466262218" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string m_send_type</type>
+        <definition>std::string m_send_type GUARDED_BY</definition>
+        <argsstring>(m_send_mutex)</argsstring>
+        <name>GUARDED_BY</name>
+        <qualifiedname>V2Transport::GUARDED_BY</qualifiedname>
+        <param>
+          <type>m_send_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Type of the message being sent. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="611" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a85c1a770ab18f6070988a74805c4f48e" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>SendState m_send_state</type>
+        <definition>SendState m_send_state GUARDED_BY</definition>
+        <argsstring>(m_send_mutex)</argsstring>
+        <name>GUARDED_BY</name>
+        <qualifiedname>V2Transport::GUARDED_BY</qualifiedname>
+        <param>
+          <type>m_send_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Current sender state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="613" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a899985cdc5299627b499b0b3011dd4f0" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type>bool m_sent_v1_header_worth</type>
+        <definition>bool m_sent_v1_header_worth GUARDED_BY</definition>
+        <argsstring>(m_send_mutex)</argsstring>
+        <name>GUARDED_BY</name>
+        <qualifiedname>V2Transport::GUARDED_BY</qualifiedname>
+        <param>
+          <type>m_send_mutex</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Whether we&apos;ve sent at least 24 bytes (which would trigger disconnect for V1 peers). </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="615" column="33" bodyfile="src/net.h" bodystart="615" bodyend="615"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a1a2012e7768749e59f7d5261bd800d6e" prot="private" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void SetReceiveState</definition>
+        <argsstring>(RecvState recv_state) noexcept EXCLUSIVE_LOCKS_REQUIRED(m_recv_mutex)</argsstring>
+        <name>SetReceiveState</name>
+        <qualifiedname>V2Transport::SetReceiveState</qualifiedname>
+        <param>
+          <type>RecvState</type>
+          <declname>recv_state</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Change the receive state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="618" column="10" bodyfile="src/net.cpp" bodystart="1018" bodyend="1047"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a868401329f7caa411f44139c564e7448" prot="private" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void SetSendState</definition>
+        <argsstring>(SendState send_state) noexcept EXCLUSIVE_LOCKS_REQUIRED(m_send_mutex)</argsstring>
+        <name>SetSendState</name>
+        <qualifiedname>V2Transport::SetSendState</qualifiedname>
+        <param>
+          <type>SendState</type>
+          <declname>send_state</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Change the send state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="620" column="10" bodyfile="src/net.cpp" bodystart="1049" bodyend="1067"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1abe7fc03f8802b34b861b02f21ac4e015" prot="private" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t GetMaxBytesToProcess</definition>
+        <argsstring>() noexcept EXCLUSIVE_LOCKS_REQUIRED(m_recv_mutex)</argsstring>
+        <name>GetMaxBytesToProcess</name>
+        <qualifiedname>V2Transport::GetMaxBytesToProcess</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Determine how many received bytes can be processed in one go (not allowed in V1 state). </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="624" column="12" bodyfile="src/net.cpp" bodystart="1272" bodyend="1319"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a4954915726f6587e8330c8d61bbe6ec0" prot="private" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void StartSendingHandshake</definition>
+        <argsstring>() noexcept EXCLUSIVE_LOCKS_REQUIRED(m_send_mutex)</argsstring>
+        <name>StartSendingHandshake</name>
+        <qualifiedname>V2Transport::StartSendingHandshake</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Put our public key + garbage in the send buffer. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="626" column="10" bodyfile="src/net.cpp" bodystart="985" bodyend="995"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1aebe839d787864f293e873af16a8da629" prot="private" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>void</type>
+        <definition>void ProcessReceivedMaybeV1Bytes</definition>
+        <argsstring>() noexcept EXCLUSIVE_LOCKS_REQUIRED(m_recv_mutex</argsstring>
+        <name>ProcessReceivedMaybeV1Bytes</name>
+        <qualifiedname>V2Transport::ProcessReceivedMaybeV1Bytes</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Process bytes in m_recv_buffer, while in KEY_MAYBE_V1 state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="628" column="10" bodyfile="src/net.cpp" bodystart="1078" bodyend="1114"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1aae218a0292492b54b67fe2fcb34967c0" prot="private" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool ProcessReceivedKeyBytes</definition>
+        <argsstring>() noexcept EXCLUSIVE_LOCKS_REQUIRED(m_recv_mutex</argsstring>
+        <name>ProcessReceivedKeyBytes</name>
+        <qualifiedname>V2Transport::ProcessReceivedKeyBytes</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Process bytes in m_recv_buffer, while in KEY state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="630" column="10" bodyfile="src/net.cpp" bodystart="1116" bodyend="1174"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1ac78a6fe38182ecf43b815436c95f09d0" prot="private" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool ProcessReceivedGarbageBytes</definition>
+        <argsstring>() noexcept EXCLUSIVE_LOCKS_REQUIRED(m_recv_mutex)</argsstring>
+        <name>ProcessReceivedGarbageBytes</name>
+        <qualifiedname>V2Transport::ProcessReceivedGarbageBytes</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Process bytes in m_recv_buffer, while in GARB_GARBTERM state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="632" column="10" bodyfile="src/net.cpp" bodystart="1176" bodyend="1201"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1ac8e567007469cec5b2584997396ff41c" prot="private" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool ProcessReceivedPacketBytes</definition>
+        <argsstring>() noexcept EXCLUSIVE_LOCKS_REQUIRED(m_recv_mutex)</argsstring>
+        <name>ProcessReceivedPacketBytes</name>
+        <qualifiedname>V2Transport::ProcessReceivedPacketBytes</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Process bytes in m_recv_buffer, while in VERSION/APP state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="634" column="10" bodyfile="src/net.cpp" bodystart="1203" bodyend="1270"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="class_v2_transport_1a5fe21672f242d198a41d1375c037a849" prot="private" static="yes" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type>std::optional&lt; std::string &gt;</type>
+        <definition>std::optional&lt; std::string &gt; GetMessageType</definition>
+        <argsstring>(std::span&lt; const uint8_t &gt; &amp;contents) noexcept</argsstring>
+        <name>GetMessageType</name>
+        <qualifiedname>V2Transport::GetMessageType</qualifiedname>
+        <param>
+          <type>std::span&lt; const uint8_t &gt; &amp;</type>
+          <declname>contents</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Given a packet&apos;s contents, find the message type (if valid), and strip it from contents. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="622" column="26" bodyfile="src/net.cpp" bodystart="1411" bodyend="1449"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="class_v2_transport_1a8e35b001b48519575f9b2702c9885275" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>V2Transport</definition>
+        <argsstring>(NodeId nodeid, bool initiating) noexcept</argsstring>
+        <name>V2Transport</name>
+        <qualifiedname>V2Transport::V2Transport</qualifiedname>
+        <param>
+          <type><ref refid="net_8h_1aa637b11e18b77724b35db2229cd12788" kindref="member">NodeId</ref></type>
+          <declname>nodeid</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>initiating</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Construct a V2 transport with securely generated random keys.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">nodeid</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the node&apos;s <ref refid="net_8h_1aa637b11e18b77724b35db2229cd12788" kindref="member">NodeId</ref> (only for debug log output). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="in">initiating</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>whether we are the initiator side. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="644" column="5" bodyfile="src/net.cpp" bodystart="1014" bodyend="1016"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1abccf3f4eb2119f48b780a98aa749da2d" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>V2Transport</definition>
+        <argsstring>(NodeId nodeid, bool initiating, const CKey &amp;key, std::span&lt; const std::byte &gt; ent32, std::vector&lt; uint8_t &gt; garbage) noexcept</argsstring>
+        <name>V2Transport</name>
+        <qualifiedname>V2Transport::V2Transport</qualifiedname>
+        <param>
+          <type><ref refid="net_8h_1aa637b11e18b77724b35db2229cd12788" kindref="member">NodeId</ref></type>
+          <declname>nodeid</declname>
+        </param>
+        <param>
+          <type>bool</type>
+          <declname>initiating</declname>
+        </param>
+        <param>
+          <type>const <ref refid="class_c_key" kindref="compound">CKey</ref> &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type>std::span&lt; const std::byte &gt;</type>
+          <declname>ent32</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; uint8_t &gt;</type>
+          <declname>garbage</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Construct a V2 transport with specified keys and garbage (test use only). </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="647" column="5" bodyfile="src/net.cpp" bodystart="997" bodyend="1012"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a4f36f118f8160d80099867d6649af983" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="virtual">
+        <type>bool</type>
+        <definition>bool ReceivedMessageComplete</definition>
+        <argsstring>() const noexcept override EXCLUSIVE_LOCKS_REQUIRED(!m_recv_mutex)</argsstring>
+        <name>ReceivedMessageComplete</name>
+        <qualifiedname>V2Transport::ReceivedMessageComplete</qualifiedname>
+        <reimplements refid="class_transport_1ad72f1df14e7c2b557c3f780d25361073">ReceivedMessageComplete</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns true if the current message is complete (so GetReceivedMessage can be called). </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="650" column="10" bodyfile="src/net.cpp" bodystart="1069" bodyend="1076"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a5691fd1213bde99a8f6b51b0db49c799" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="virtual">
+        <type>bool</type>
+        <definition>bool ReceivedBytes</definition>
+        <argsstring>(std::span&lt; const uint8_t &gt; &amp;msg_bytes) noexcept override EXCLUSIVE_LOCKS_REQUIRED(!m_recv_mutex</argsstring>
+        <name>ReceivedBytes</name>
+        <qualifiedname>V2Transport::ReceivedBytes</qualifiedname>
+        <reimplements refid="class_transport_1af5340b2062e8681b6fb7d8f5a724102d">ReceivedBytes</reimplements>
+        <param>
+          <type>std::span&lt; const uint8_t &gt; &amp;</type>
+          <declname>msg_bytes</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Feed wire bytes to the transport.</para>
+<para><simplesect kind="return"><para>false if some bytes were invalid, in which case the transport can&apos;t be used anymore.</para>
+</simplesect>
+Consumed bytes are chopped off the front of msg_bytes. </para>
+        </detaileddescription>
+        <inbodydescription>
+<para>How many bytes to allocate in the receive buffer at most above what is received so far.</para>
+        </inbodydescription>
+        <location file="src/net.h" line="651" column="10" bodyfile="src/net.cpp" bodystart="1321" bodyend="1409"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a12316f223ad2873017e085b2aacaa6ec" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="virtual">
+        <type><ref refid="class_c_net_message" kindref="compound">CNetMessage</ref></type>
+        <definition>CNetMessage GetReceivedMessage</definition>
+        <argsstring>(std::chrono::microseconds time, bool &amp;reject_message) noexcept override EXCLUSIVE_LOCKS_REQUIRED(!m_recv_mutex)</argsstring>
+        <name>GetReceivedMessage</name>
+        <qualifiedname>V2Transport::GetReceivedMessage</qualifiedname>
+        <reimplements refid="class_transport_1a65899c32e93818026372178488912881">GetReceivedMessage</reimplements>
+        <param>
+          <type>std::chrono::microseconds</type>
+          <declname>time</declname>
+        </param>
+        <param>
+          <type>bool &amp;</type>
+          <declname>reject_message</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Retrieve a completed message from transport.</para>
+<para>This can only be called when <ref refid="class_v2_transport_1a4f36f118f8160d80099867d6649af983" kindref="member">ReceivedMessageComplete()</ref> is true.</para>
+<para>If reject_message=true is returned the message itself is invalid, but (other than false returned by ReceivedBytes) the transport is not in an inconsistent state. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="652" column="17" bodyfile="src/net.cpp" bodystart="1451" bodyend="1478"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1ae61bb32e8ff51cb3802156ab3eb10556" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="virtual">
+        <type>bool</type>
+        <definition>bool SetMessageToSend</definition>
+        <argsstring>(CSerializedNetMsg &amp;msg) noexcept override EXCLUSIVE_LOCKS_REQUIRED(!m_send_mutex)</argsstring>
+        <name>SetMessageToSend</name>
+        <qualifiedname>V2Transport::SetMessageToSend</qualifiedname>
+        <reimplements refid="class_transport_1a7f7875e9c9bf5903f84dba2123309c01">SetMessageToSend</reimplements>
+        <param>
+          <type><ref refid="struct_c_serialized_net_msg" kindref="compound">CSerializedNetMsg</ref> &amp;</type>
+          <declname>msg</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Set the next message to send.</para>
+<para>If no message can currently be set (perhaps because the previous one is not yet done being sent), returns false, and msg will be unmodified. Otherwise msg is enqueued (and possibly moved-from) and true is returned. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="655" column="10" bodyfile="src/net.cpp" bodystart="1480" bodyend="1510"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a39dcf7de09089dc617df00c6850647b3" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="virtual">
+        <type><ref refid="class_transport_1af6ca4dbfbf45f9bd26bc6bf4a6adfb9f" kindref="member">BytesToSend</ref></type>
+        <definition>Transport::BytesToSend GetBytesToSend</definition>
+        <argsstring>(bool have_next_message) const noexcept override EXCLUSIVE_LOCKS_REQUIRED(!m_send_mutex)</argsstring>
+        <name>GetBytesToSend</name>
+        <qualifiedname>V2Transport::GetBytesToSend</qualifiedname>
+        <reimplements refid="class_transport_1afe903c5a52b321e189d97c6edbb64e95">GetBytesToSend</reimplements>
+        <param>
+          <type>bool</type>
+          <declname>have_next_message</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Get bytes to send on the wire, if any, along with other information about it.</para>
+<para>As a const function, it does not modify the transport&apos;s observable state, and is thus safe to be called multiple times.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="in">have_next_message</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>If true, the &quot;more&quot; return value reports whether more will be sendable after a SetMessageToSend call. It is set by the caller when they know they have another message ready to send, and only care about what happens after that. The have_next_message argument only affects this &quot;more&quot; return value and nothing else.</para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+Effectively, there are three possible outcomes about whether there are more bytes to send:<itemizedlist>
+<listitem><para>Yes: the transport itself has more bytes to send later. For example, for <ref refid="class_v1_transport" kindref="compound">V1Transport</ref> this happens during the sending of the header of a message, when there is a non-empty payload that follows.</para>
+</listitem><listitem><para>No: the transport itself has no more bytes to send, but will have bytes to send if handed a message through SetMessageToSend. In <ref refid="class_v1_transport" kindref="compound">V1Transport</ref> this happens when sending the payload of a message.</para>
+</listitem><listitem><para>Blocked: the transport itself has no more bytes to send, and is also incapable of sending anything more at all now, if it were handed another message to send. This occurs in <ref refid="class_v2_transport" kindref="compound">V2Transport</ref> before the handshake is complete, as the encryption ciphers are not set up for sending messages before that point.</para>
+</listitem></itemizedlist>
+</para>
+<para>The boolean &apos;more&apos; is true for Yes, false for Blocked, and have_next_message controls what is returned for No.</para>
+<para><simplesect kind="return"><para>a <ref refid="class_transport_1af6ca4dbfbf45f9bd26bc6bf4a6adfb9f" kindref="member">BytesToSend</ref> object. The to_send member returned acts as a stream which is only ever appended to. This means that with the exception of MarkBytesSent (which pops bytes off the front of later to_sends), operations on the transport can only append to what is being returned. Also note that m_type and to_send refer to data that is internal to the transport, and calling any non-const function on this object may invalidate them. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="656" column="17" bodyfile="src/net.cpp" bodystart="1512" bodyend="1527"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1ac69707799060ee90f662f6139bf01505" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="virtual">
+        <type>void</type>
+        <definition>void MarkBytesSent</definition>
+        <argsstring>(size_t bytes_sent) noexcept override EXCLUSIVE_LOCKS_REQUIRED(!m_send_mutex)</argsstring>
+        <name>MarkBytesSent</name>
+        <qualifiedname>V2Transport::MarkBytesSent</qualifiedname>
+        <reimplements refid="class_transport_1a915249a31c6d363883f933cbbd07d22f">MarkBytesSent</reimplements>
+        <param>
+          <type>size_t</type>
+          <declname>bytes_sent</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Report how many bytes returned by the last <ref refid="class_v2_transport_1a39dcf7de09089dc617df00c6850647b3" kindref="member">GetBytesToSend()</ref> have been sent.</para>
+<para>bytes_sent cannot exceed to_send.size() of the last <ref refid="class_v2_transport_1a39dcf7de09089dc617df00c6850647b3" kindref="member">GetBytesToSend()</ref> result.</para>
+<para>If bytes_sent=0, this call has no effect. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="657" column="10" bodyfile="src/net.cpp" bodystart="1529" bodyend="1549"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a6064b63ffba8cdc3f48a4217f75e3f93" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="virtual">
+        <type>size_t</type>
+        <definition>size_t GetSendMemoryUsage</definition>
+        <argsstring>() const noexcept override EXCLUSIVE_LOCKS_REQUIRED(!m_send_mutex)</argsstring>
+        <name>GetSendMemoryUsage</name>
+        <qualifiedname>V2Transport::GetSendMemoryUsage</qualifiedname>
+        <reimplements refid="class_transport_1a091196a6bab12cd2fe571129015bba8b">GetSendMemoryUsage</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Return the memory usage of this transport attributable to buffered data to send. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="658" column="12" bodyfile="src/net.cpp" bodystart="1568" bodyend="1575"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1ab392835ec6771ddb918c7322a2bf1826" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="virtual">
+        <type>bool</type>
+        <definition>bool ShouldReconnectV1</definition>
+        <argsstring>() const noexcept override EXCLUSIVE_LOCKS_REQUIRED(!m_recv_mutex</argsstring>
+        <name>ShouldReconnectV1</name>
+        <qualifiedname>V2Transport::ShouldReconnectV1</qualifiedname>
+        <reimplements refid="class_transport_1ab8e03c4ee651c248fe3c67c55844681c">ShouldReconnectV1</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Whether upon disconnections, a reconnect with V1 is warranted. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="661" column="10" bodyfile="src/net.cpp" bodystart="1551" bodyend="1566"/>
+      </memberdef>
+      <memberdef kind="function" id="class_v2_transport_1a52d0c2171a477c4f78137f806a4871f0" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="virtual">
+        <type><ref refid="struct_transport_1_1_info" kindref="compound">Info</ref></type>
+        <definition>Transport::Info GetInfo</definition>
+        <argsstring>() const noexcept override EXCLUSIVE_LOCKS_REQUIRED(!m_recv_mutex)</argsstring>
+        <name>GetInfo</name>
+        <qualifiedname>V2Transport::GetInfo</qualifiedname>
+        <reimplements refid="class_transport_1a48296f31d432a8809164b3f97bbc1e4a">GetInfo</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Retrieve information about this transport. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/net.h" line="662" column="10" bodyfile="src/net.cpp" bodystart="1577" bodyend="1596"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>Transport</label>
+        <link refid="class_transport"/>
+      </node>
+      <node id="1">
+        <label>V2Transport</label>
+        <link refid="class_v2_transport"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>Transport</label>
+        <link refid="class_transport"/>
+      </node>
+      <node id="1">
+        <label>V2Transport</label>
+        <link refid="class_v2_transport"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/net.h" line="452" column="1" bodyfile="src/net.h" bodystart="453" bodyend="663"/>
+    <listofallmembers>
+      <member refid="class_v2_transport_1a091d21ccc9859fb5dee71fbaaa531789" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>!m_send_mutex</name></member>
+      <member refid="class_v2_transport_1a091d21ccc9859fb5dee71fbaaa531789" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>!m_send_mutex</name></member>
+      <member refid="class_v2_transport_1af3bd91c42f503005636afc00c6cbb968" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>ACQUIRED_AFTER</name></member>
+      <member refid="class_v2_transport_1a5d003cf2d54b6cd9e67d446ff5a71f90" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>ACQUIRED_BEFORE</name></member>
+      <member refid="class_transport_1af6ca4dbfbf45f9bd26bc6bf4a6adfb9f" prot="public" virt="non-virtual"><scope>V2Transport</scope><name>BytesToSend</name></member>
+      <member refid="class_v2_transport_1a39dcf7de09089dc617df00c6850647b3" prot="public" virt="virtual"><scope>V2Transport</scope><name>GetBytesToSend</name></member>
+      <member refid="class_v2_transport_1a52d0c2171a477c4f78137f806a4871f0" prot="public" virt="virtual"><scope>V2Transport</scope><name>GetInfo</name></member>
+      <member refid="class_v2_transport_1abe7fc03f8802b34b861b02f21ac4e015" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GetMaxBytesToProcess</name></member>
+      <member refid="class_v2_transport_1a5fe21672f242d198a41d1375c037a849" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GetMessageType</name></member>
+      <member refid="class_v2_transport_1a12316f223ad2873017e085b2aacaa6ec" prot="public" virt="virtual"><scope>V2Transport</scope><name>GetReceivedMessage</name></member>
+      <member refid="class_v2_transport_1a6064b63ffba8cdc3f48a4217f75e3f93" prot="public" virt="virtual"><scope>V2Transport</scope><name>GetSendMemoryUsage</name></member>
+      <member refid="class_v2_transport_1addb099dd4e522d3d9d63b762d2664b68" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GUARDED_BY</name></member>
+      <member refid="class_v2_transport_1aee0c2434a25bd79ffe6171a5f3d07d05" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GUARDED_BY</name></member>
+      <member refid="class_v2_transport_1a762596a99719976a709870a2f66f7353" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GUARDED_BY</name></member>
+      <member refid="class_v2_transport_1ae4a8965c4d2025281c5f660fef05e921" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GUARDED_BY</name></member>
+      <member refid="class_v2_transport_1a65b4522bf91e0280a7175ea778f93e91" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GUARDED_BY</name></member>
+      <member refid="class_v2_transport_1a84e267d365fa324aa03d42e579b7ac06" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GUARDED_BY</name></member>
+      <member refid="class_v2_transport_1a60b06909cfaebe1079db4f922708fd1c" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GUARDED_BY</name></member>
+      <member refid="class_v2_transport_1ae06c311197d5b26ac877d201af9f21e6" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GUARDED_BY</name></member>
+      <member refid="class_v2_transport_1a568bf34a2b6f7ab7e02ec08466262218" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GUARDED_BY</name></member>
+      <member refid="class_v2_transport_1a85c1a770ab18f6070988a74805c4f48e" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GUARDED_BY</name></member>
+      <member refid="class_v2_transport_1a899985cdc5299627b499b0b3011dd4f0" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>GUARDED_BY</name></member>
+      <member refid="class_v2_transport_1ac7c0d2b2425dcb36ebcbe18ce21bad12" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>m_cipher</name></member>
+      <member refid="class_v2_transport_1a548c52ce1ab8c60e0e069af5fe9b6300" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>m_initiating</name></member>
+      <member refid="class_v2_transport_1a596cc3f3bff0ed441be124a6edb03e5d" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>m_nodeid</name></member>
+      <member refid="class_v2_transport_1a02e3c5646cbdc94d498984c9bfc19968" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>m_v1_fallback</name></member>
+      <member refid="class_v2_transport_1ac69707799060ee90f662f6139bf01505" prot="public" virt="virtual"><scope>V2Transport</scope><name>MarkBytesSent</name></member>
+      <member refid="class_v2_transport_1a426eec4f0246a40d6c4b4f3d821b396b" prot="public" virt="non-virtual"><scope>V2Transport</scope><name>MAX_GARBAGE_LEN</name></member>
+      <member refid="class_v2_transport_1ac78a6fe38182ecf43b815436c95f09d0" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>ProcessReceivedGarbageBytes</name></member>
+      <member refid="class_v2_transport_1aae218a0292492b54b67fe2fcb34967c0" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>ProcessReceivedKeyBytes</name></member>
+      <member refid="class_v2_transport_1aebe839d787864f293e873af16a8da629" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>ProcessReceivedMaybeV1Bytes</name></member>
+      <member refid="class_v2_transport_1ac8e567007469cec5b2584997396ff41c" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>ProcessReceivedPacketBytes</name></member>
+      <member refid="class_v2_transport_1a5691fd1213bde99a8f6b51b0db49c799" prot="public" virt="virtual"><scope>V2Transport</scope><name>ReceivedBytes</name></member>
+      <member refid="class_v2_transport_1a4f36f118f8160d80099867d6649af983" prot="public" virt="virtual"><scope>V2Transport</scope><name>ReceivedMessageComplete</name></member>
+      <member refid="class_v2_transport_1a02aca434c3728b590591f3254edcb754" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>RecvState</name></member>
+      <member refid="class_v2_transport_1a5727f2287453638c46f9f9aaf7970224" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>SendState</name></member>
+      <member refid="class_v2_transport_1ae61bb32e8ff51cb3802156ab3eb10556" prot="public" virt="virtual"><scope>V2Transport</scope><name>SetMessageToSend</name></member>
+      <member refid="class_v2_transport_1a1a2012e7768749e59f7d5261bd800d6e" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>SetReceiveState</name></member>
+      <member refid="class_v2_transport_1a868401329f7caa411f44139c564e7448" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>SetSendState</name></member>
+      <member refid="class_v2_transport_1ab392835ec6771ddb918c7322a2bf1826" prot="public" virt="virtual"><scope>V2Transport</scope><name>ShouldReconnectV1</name></member>
+      <member refid="class_v2_transport_1a4954915726f6587e8330c8d61bbe6ec0" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>StartSendingHandshake</name></member>
+      <member refid="class_v2_transport_1aae3fa1ad6affbe94d3e4653da3c44f25" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>V1_PREFIX_LEN</name></member>
+      <member refid="class_v2_transport_1a8e35b001b48519575f9b2702c9885275" prot="public" virt="non-virtual"><scope>V2Transport</scope><name>V2Transport</name></member>
+      <member refid="class_v2_transport_1abccf3f4eb2119f48b780a98aa749da2d" prot="public" virt="non-virtual"><scope>V2Transport</scope><name>V2Transport</name></member>
+      <member refid="class_v2_transport_1aa74835952be64d871d81b0996ad87ff8" prot="private" virt="non-virtual"><scope>V2Transport</scope><name>VERSION_CONTENTS</name></member>
+      <member refid="class_transport_1a9c4cb2756aafdbaa8e42942407e42e6c" prot="public" virt="virtual"><scope>V2Transport</scope><name>~Transport</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

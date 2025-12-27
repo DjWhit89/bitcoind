@@ -1,0 +1,118 @@
+\doxysection{checkmem.\+h}
+\label{checkmem_8h_source}\index{src/secp256k1/src/checkmem.h@{src/secp256k1/src/checkmem.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2022\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{comment}{/*\ The\ code\ here\ is\ inspired\ by\ Kris\ Kwiatkowski's\ approach\ in}}
+\DoxyCodeLine{00008\ \textcolor{comment}{\ *\ https://github.com/kriskwiatkowski/pqc/blob/main/src/common/ct\_check.h}}
+\DoxyCodeLine{00009\ \textcolor{comment}{\ *\ to\ provide\ a\ general\ interface\ for\ memory-\/checking\ mechanisms,\ primarily}}
+\DoxyCodeLine{00010\ \textcolor{comment}{\ *\ for\ constant-\/time\ checking.}}
+\DoxyCodeLine{00011\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{comment}{/*\ These\ macros\ are\ defined\ by\ this\ header\ file:}}
+\DoxyCodeLine{00014\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00015\ \textcolor{comment}{\ *\ -\/\ SECP256K1\_CHECKMEM\_ENABLED:}}
+\DoxyCodeLine{00016\ \textcolor{comment}{\ *\ \ \ -\/\ 1\ if\ memory-\/checking\ integration\ is\ available,\ 0\ otherwise.}}
+\DoxyCodeLine{00017\ \textcolor{comment}{\ *\ \ \ \ \ This\ is\ just\ a\ compile-\/time\ macro.\ Use\ the\ next\ macro\ to\ check\ it\ is\ actually}}
+\DoxyCodeLine{00018\ \textcolor{comment}{\ *\ \ \ \ \ available\ at\ runtime.}}
+\DoxyCodeLine{00019\ \textcolor{comment}{\ *\ -\/\ SECP256K1\_CHECKMEM\_RUNNING():}}
+\DoxyCodeLine{00020\ \textcolor{comment}{\ *\ \ \ -\/\ Acts\ like\ a\ function\ call,\ returning\ 1\ if\ memory\ checking\ is\ available}}
+\DoxyCodeLine{00021\ \textcolor{comment}{\ *\ \ \ \ \ at\ runtime.}}
+\DoxyCodeLine{00022\ \textcolor{comment}{\ *\ -\/\ SECP256K1\_CHECKMEM\_CHECK(p,\ len):}}
+\DoxyCodeLine{00023\ \textcolor{comment}{\ *\ \ \ -\/\ Assert\ or\ otherwise\ fail\ in\ case\ the\ len-\/byte\ memory\ block\ pointed\ to\ by\ p\ is}}
+\DoxyCodeLine{00024\ \textcolor{comment}{\ *\ \ \ \ \ not\ considered\ entirely\ defined.}}
+\DoxyCodeLine{00025\ \textcolor{comment}{\ *\ -\/\ SECP256K1\_CHECKMEM\_CHECK\_VERIFY(p,\ len):}}
+\DoxyCodeLine{00026\ \textcolor{comment}{\ *\ \ \ -\/\ Like\ SECP256K1\_CHECKMEM\_CHECK,\ but\ only\ works\ in\ VERIFY\ mode.}}
+\DoxyCodeLine{00027\ \textcolor{comment}{\ *\ -\/\ SECP256K1\_CHECKMEM\_UNDEFINE(p,\ len):}}
+\DoxyCodeLine{00028\ \textcolor{comment}{\ *\ \ \ -\/\ marks\ the\ len-\/byte\ memory\ block\ pointed\ to\ by\ p\ as\ undefined\ data\ (secret\ data,}}
+\DoxyCodeLine{00029\ \textcolor{comment}{\ *\ \ \ \ \ in\ the\ context\ of\ constant-\/time\ checking).}}
+\DoxyCodeLine{00030\ \textcolor{comment}{\ *\ -\/\ SECP256K1\_CHECKMEM\_DEFINE(p,\ len):}}
+\DoxyCodeLine{00031\ \textcolor{comment}{\ *\ \ \ -\/\ marks\ the\ len-\/byte\ memory\ pointed\ to\ by\ p\ as\ defined\ data\ (public\ data,\ in\ the}}
+\DoxyCodeLine{00032\ \textcolor{comment}{\ *\ \ \ \ \ context\ of\ constant-\/time\ checking).}}
+\DoxyCodeLine{00033\ \textcolor{comment}{\ *\ -\/\ SECP256K1\_CHECKMEM\_MSAN\_DEFINE(p,\ len):}}
+\DoxyCodeLine{00034\ \textcolor{comment}{\ *\ \ \ -\/\ Like\ SECP256K1\_CHECKMEM\_DEFINE,\ but\ applies\ only\ to\ memory\_sanitizer.}}
+\DoxyCodeLine{00035\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00036\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_CHECKMEM\_H}}
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#define\ SECP256K1\_CHECKMEM\_H}}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \textcolor{comment}{/*\ Define\ a\ statement-\/like\ macro\ that\ ignores\ the\ arguments.\ */}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#define\ SECP256K1\_CHECKMEM\_NOOP(p,\ len)\ do\ \{\ (void)(p);\ (void)(len);\ \}\ while(0)}}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \textcolor{comment}{/*\ If\ compiling\ under\ msan,\ map\ the\ SECP256K1\_CHECKMEM\_*\ functionality\ to\ msan.}}
+\DoxyCodeLine{00045\ \textcolor{comment}{\ *\ Choose\ this\ preferentially,\ even\ when\ VALGRIND\ is\ defined,\ as\ msan-\/compiled}}
+\DoxyCodeLine{00046\ \textcolor{comment}{\ *\ binaries\ can't\ be\ run\ under\ valgrind\ anyway.\ */}}
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\#if\ defined(\_\_has\_feature)}}
+\DoxyCodeLine{00048\ \textcolor{preprocessor}{\#\ \ if\ \_\_has\_feature(memory\_sanitizer)}}
+\DoxyCodeLine{00049\ \textcolor{preprocessor}{\#\ \ \ \ include\ <sanitizer/msan\_interface.h>}}
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\#\ \ \ \ define\ SECP256K1\_CHECKMEM\_ENABLED\ 1}}
+\DoxyCodeLine{00051\ \textcolor{preprocessor}{\#\ \ \ \ if\ defined(\_\_clang\_\_)\ \&\&\ ((\_\_clang\_major\_\_\ ==\ 21\ \&\&\ \_\_clang\_minor\_\_\ >=\ 1)\ ||\ \_\_clang\_major\_\_\ >=\ 22)}}
+\DoxyCodeLine{00052\ \textcolor{preprocessor}{\#\ \ \ \ \ \ define\ SECP256K1\_CHECKMEM\_UNDEFINE(p,\ len)\ do\ \{\ \(\backslash\)}}
+\DoxyCodeLine{00053\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \ }\textcolor{comment}{/*\ Work\ around\ https://github.com/llvm/llvm-\/project/issues/160094\ */}\textcolor{preprocessor}{\ \(\backslash\)}}
+\DoxyCodeLine{00054\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \ \_Pragma("{}clang\ diagnostic\ push"{})\ \(\backslash\)}}
+\DoxyCodeLine{00055\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \ \_Pragma("{}clang\ diagnostic\ ignored\ \(\backslash\)"{}-\/Wuninitialized-\/const-\/pointer\(\backslash\)"{}"{})\ \(\backslash\)}}
+\DoxyCodeLine{00056\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \ \_\_msan\_allocated\_memory((p),\ (len));\ \(\backslash\)}}
+\DoxyCodeLine{00057\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \ \_Pragma("{}clang\ diagnostic\ pop"{})\ \(\backslash\)}}
+\DoxyCodeLine{00058\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \ \}\ while(0)}}
+\DoxyCodeLine{00059\ \textcolor{preprocessor}{\#\ \ \ \ else}}
+\DoxyCodeLine{00060\ \textcolor{preprocessor}{\#\ \ \ \ \ \ define\ SECP256K1\_CHECKMEM\_UNDEFINE(p,\ len)\ \_\_msan\_allocated\_memory((p),\ (len))}}
+\DoxyCodeLine{00061\ \textcolor{preprocessor}{\#\ \ \ \ endif}}
+\DoxyCodeLine{00062\ \textcolor{preprocessor}{\#\ \ \ \ define\ SECP256K1\_CHECKMEM\_DEFINE(p,\ len)\ \_\_msan\_unpoison((p),\ (len))}}
+\DoxyCodeLine{00063\ \textcolor{preprocessor}{\#\ \ \ \ define\ SECP256K1\_CHECKMEM\_MSAN\_DEFINE(p,\ len)\ \_\_msan\_unpoison((p),\ (len))}}
+\DoxyCodeLine{00064\ \textcolor{preprocessor}{\#\ \ \ \ define\ SECP256K1\_CHECKMEM\_CHECK(p,\ len)\ \_\_msan\_check\_mem\_is\_initialized((p),\ (len))}}
+\DoxyCodeLine{00065\ \textcolor{preprocessor}{\#\ \ \ \ define\ SECP256K1\_CHECKMEM\_RUNNING()\ (1)}}
+\DoxyCodeLine{00066\ \textcolor{preprocessor}{\#\ \ endif}}
+\DoxyCodeLine{00067\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \textcolor{preprocessor}{\#if\ !defined\ SECP256K1\_CHECKMEM\_MSAN\_DEFINE}}
+\DoxyCodeLine{00070\ \textcolor{preprocessor}{\#\ \ define\ SECP256K1\_CHECKMEM\_MSAN\_DEFINE(p,\ len)\ SECP256K1\_CHECKMEM\_NOOP((p),\ (len))}}
+\DoxyCodeLine{00071\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \textcolor{comment}{/*\ If\ valgrind\ integration\ is\ desired\ (through\ the\ VALGRIND\ define),\ implement\ the}}
+\DoxyCodeLine{00074\ \textcolor{comment}{\ *\ SECP256K1\_CHECKMEM\_*\ macros\ using\ valgrind.\ */}}
+\DoxyCodeLine{00075\ \textcolor{preprocessor}{\#if\ !defined\ SECP256K1\_CHECKMEM\_ENABLED}}
+\DoxyCodeLine{00076\ \textcolor{preprocessor}{\#\ \ if\ defined\ VALGRIND}}
+\DoxyCodeLine{00077\ \textcolor{preprocessor}{\#\ \ \ \ include\ <stddef.h>}}
+\DoxyCodeLine{00078\ \textcolor{preprocessor}{\#\ \ if\ defined(\_\_clang\_\_)\ \&\&\ defined(\_\_APPLE\_\_)}}
+\DoxyCodeLine{00079\ \textcolor{preprocessor}{\#\ \ \ \ pragma\ clang\ diagnostic\ push}}
+\DoxyCodeLine{00080\ \textcolor{preprocessor}{\#\ \ \ \ pragma\ clang\ diagnostic\ ignored\ "{}-\/Wreserved-\/identifier"{}}}
+\DoxyCodeLine{00081\ \textcolor{preprocessor}{\#\ \ endif}}
+\DoxyCodeLine{00082\ \textcolor{preprocessor}{\#\ \ \ \ include\ <valgrind/memcheck.h>}}
+\DoxyCodeLine{00083\ \textcolor{preprocessor}{\#\ \ if\ defined(\_\_clang\_\_)\ \&\&\ defined(\_\_APPLE\_\_)}}
+\DoxyCodeLine{00084\ \textcolor{preprocessor}{\#\ \ \ \ pragma\ clang\ diagnostic\ pop}}
+\DoxyCodeLine{00085\ \textcolor{preprocessor}{\#\ \ endif}}
+\DoxyCodeLine{00086\ \textcolor{preprocessor}{\#\ \ \ \ define\ SECP256K1\_CHECKMEM\_ENABLED\ 1}}
+\DoxyCodeLine{00087\ \textcolor{preprocessor}{\#\ \ \ \ define\ SECP256K1\_CHECKMEM\_UNDEFINE(p,\ len)\ VALGRIND\_MAKE\_MEM\_UNDEFINED((p),\ (len))}}
+\DoxyCodeLine{00088\ \textcolor{preprocessor}{\#\ \ \ \ define\ SECP256K1\_CHECKMEM\_DEFINE(p,\ len)\ VALGRIND\_MAKE\_MEM\_DEFINED((p),\ (len))}}
+\DoxyCodeLine{00089\ \textcolor{preprocessor}{\#\ \ \ \ define\ SECP256K1\_CHECKMEM\_CHECK(p,\ len)\ VALGRIND\_CHECK\_MEM\_IS\_DEFINED((p),\ (len))}}
+\DoxyCodeLine{00090\ \ \ \ \ \ \textcolor{comment}{/*\ VALGRIND\_MAKE\_MEM\_DEFINED\ returns\ 0\ iff\ not\ running\ on\ memcheck.}}
+\DoxyCodeLine{00091\ \textcolor{comment}{\ \ \ \ \ \ *\ This\ is\ more\ precise\ than\ the\ RUNNING\_ON\_VALGRIND\ macro,\ which}}
+\DoxyCodeLine{00092\ \textcolor{comment}{\ \ \ \ \ \ *\ checks\ for\ valgrind\ in\ general\ instead\ of\ memcheck\ specifically.\ */}}
+\DoxyCodeLine{00093\ \textcolor{preprocessor}{\#\ \ \ \ define\ SECP256K1\_CHECKMEM\_RUNNING()\ (VALGRIND\_MAKE\_MEM\_DEFINED(NULL,\ 0)\ !=\ 0)}}
+\DoxyCodeLine{00094\ \textcolor{preprocessor}{\#\ \ endif}}
+\DoxyCodeLine{00095\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00097\ \textcolor{comment}{/*\ As\ a\ fall-\/back,\ map\ these\ macros\ to\ dummy\ statements.\ */}}
+\DoxyCodeLine{00098\ \textcolor{preprocessor}{\#if\ !defined\ SECP256K1\_CHECKMEM\_ENABLED}}
+\DoxyCodeLine{00099\ \textcolor{preprocessor}{\#\ \ define\ SECP256K1\_CHECKMEM\_ENABLED\ 0}}
+\DoxyCodeLine{00100\ \textcolor{preprocessor}{\#\ \ define\ SECP256K1\_CHECKMEM\_UNDEFINE(p,\ len)\ SECP256K1\_CHECKMEM\_NOOP((p),\ (len))}}
+\DoxyCodeLine{00101\ \textcolor{preprocessor}{\#\ \ define\ SECP256K1\_CHECKMEM\_DEFINE(p,\ len)\ SECP256K1\_CHECKMEM\_NOOP((p),\ (len))}}
+\DoxyCodeLine{00102\ \textcolor{preprocessor}{\#\ \ define\ SECP256K1\_CHECKMEM\_CHECK(p,\ len)\ SECP256K1\_CHECKMEM\_NOOP((p),\ (len))}}
+\DoxyCodeLine{00103\ \textcolor{preprocessor}{\#\ \ define\ SECP256K1\_CHECKMEM\_RUNNING()\ (0)}}
+\DoxyCodeLine{00104\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \textcolor{preprocessor}{\#if\ defined\ VERIFY}}
+\DoxyCodeLine{00107\ \textcolor{preprocessor}{\#define\ SECP256K1\_CHECKMEM\_CHECK\_VERIFY(p,\ len)\ SECP256K1\_CHECKMEM\_CHECK((p),\ (len))}}
+\DoxyCodeLine{00108\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00109\ \textcolor{preprocessor}{\#define\ SECP256K1\_CHECKMEM\_CHECK\_VERIFY(p,\ len)\ SECP256K1\_CHECKMEM\_NOOP((p),\ (len))}}
+\DoxyCodeLine{00110\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_CHECKMEM\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

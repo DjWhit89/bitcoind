@@ -1,0 +1,118 @@
+\doxysection{torcontrol.\+h}
+\label{torcontrol_8h_source}\index{src/torcontrol.h@{src/torcontrol.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2015-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_TORCONTROL\_H}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#define\ BITCOIN\_TORCONTROL\_H}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <netaddress.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <util/fs.h>}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <event2/util.h>}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <deque>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{constexpr}\ uint16\_t\ DEFAULT\_TOR\_SOCKS\_PORT\{9050\};}
+\DoxyCodeLine{00023\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ DEFAULT\_TOR\_CONTROL\_PORT\ =\ 9051;}
+\DoxyCodeLine{00024\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::string\ DEFAULT\_TOR\_CONTROL;}
+\DoxyCodeLine{00025\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_LISTEN\_ONION\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{keywordtype}{void}\ StartTorControl(CService\ onion\_service\_target);}
+\DoxyCodeLine{00028\ \textcolor{keywordtype}{void}\ InterruptTorControl();}
+\DoxyCodeLine{00029\ \textcolor{keywordtype}{void}\ StopTorControl();}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ CService\ DefaultOnionServiceTarget(uint16\_t\ port);}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00034\ \textcolor{keyword}{class\ }TorControlReply}
+\DoxyCodeLine{00035\ \{}
+\DoxyCodeLine{00036\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00037\ \ \ \ \ TorControlReply()\ \{\ Clear();\ \}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{int}\ code;}
+\DoxyCodeLine{00040\ \ \ \ \ std::vector<std::string>\ lines;}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordtype}{void}\ Clear()}
+\DoxyCodeLine{00043\ \ \ \ \ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ code\ =\ 0;}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ lines.clear();}
+\DoxyCodeLine{00046\ \ \ \ \ \}}
+\DoxyCodeLine{00047\ \};}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00052\ \textcolor{keyword}{class\ }TorControlConnection}
+\DoxyCodeLine{00053\ \{}
+\DoxyCodeLine{00054\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keyword}{typedef}\ std::function<void(TorControlConnection\&)>\ ConnectionCB;}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keyword}{typedef}\ std::function<void(TorControlConnection\ \&,\textcolor{keyword}{const}\ TorControlReply\ \&)>\ ReplyHandlerCB;}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keyword}{explicit}\ TorControlConnection(\textcolor{keyword}{struct}\ event\_base\ *base);}
+\DoxyCodeLine{00061\ \ \ \ \ \string~TorControlConnection();}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keywordtype}{bool}\ Connect(\textcolor{keyword}{const}\ std::string\&\ tor\_control\_center,\ \textcolor{keyword}{const}\ ConnectionCB\&\ connected,\ \textcolor{keyword}{const}\ ConnectionCB\&\ disconnected);}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keywordtype}{void}\ Disconnect();}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{keywordtype}{bool}\ Command(\textcolor{keyword}{const}\ std::string\ \&cmd,\ \textcolor{keyword}{const}\ ReplyHandlerCB\&\ reply\_handler);}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00085\ \ \ \ \ std::function<void(TorControlConnection\&)>\ connected;}
+\DoxyCodeLine{00087\ \ \ \ \ std::function<void(TorControlConnection\&)>\ disconnected;}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keyword}{struct\ }event\_base\ *base;}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{keyword}{struct\ }bufferevent*\ b\_conn\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00093\ \ \ \ \ TorControlReply\ message;}
+\DoxyCodeLine{00095\ \ \ \ \ std::deque<ReplyHandlerCB>\ reply\_handlers;}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ readcb(\textcolor{keyword}{struct}\ bufferevent\ *bev,\ \textcolor{keywordtype}{void}\ *ctx);}
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ eventcb(\textcolor{keyword}{struct}\ bufferevent\ *bev,\ \textcolor{keywordtype}{short}\ what,\ \textcolor{keywordtype}{void}\ *ctx);}
+\DoxyCodeLine{00100\ \};}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \textcolor{comment}{/******\ Bitcoin\ specific\ TorController\ implementation\ ********/}}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00107\ \textcolor{keyword}{class\ }TorController}
+\DoxyCodeLine{00108\ \{}
+\DoxyCodeLine{00109\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00110\ \ \ \ \ TorController(\textcolor{keyword}{struct}\ event\_base*\ base,\ \textcolor{keyword}{const}\ std::string\&\ tor\_control\_center,\ \textcolor{keyword}{const}\ CService\&\ target);}
+\DoxyCodeLine{00111\ \ \ \ \ TorController()\ :\ conn\{nullptr\}\ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Used\ for\ testing\ only.}}
+\DoxyCodeLine{00113\ \ \ \ \ \}}
+\DoxyCodeLine{00114\ \ \ \ \ \string~TorController();}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00117\ \ \ \ \ fs::path\ GetPrivateKeyFile();}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keywordtype}{void}\ Reconnect();}
+\DoxyCodeLine{00121\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{keyword}{struct\ }event\_base*\ base;}
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{keyword}{const}\ std::string\ m\_tor\_control\_center;}
+\DoxyCodeLine{00124\ \ \ \ \ TorControlConnection\ conn;}
+\DoxyCodeLine{00125\ \ \ \ \ std::string\ private\_key;}
+\DoxyCodeLine{00126\ \ \ \ \ std::string\ service\_id;}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keywordtype}{bool}\ reconnect;}
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keyword}{struct\ }event\ *reconnect\_ev\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{keywordtype}{float}\ reconnect\_timeout;}
+\DoxyCodeLine{00130\ \ \ \ \ CService\ service;}
+\DoxyCodeLine{00131\ \ \ \ \ \textcolor{keyword}{const}\ CService\ m\_target;}
+\DoxyCodeLine{00133\ \ \ \ \ std::vector<uint8\_t>\ cookie;}
+\DoxyCodeLine{00135\ \ \ \ \ std::vector<uint8\_t>\ clientNonce;}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00139\ \ \ \ \ \textcolor{keywordtype}{void}\ get\_socks\_cb(TorControlConnection\&\ conn,\ \textcolor{keyword}{const}\ TorControlReply\&\ reply);}
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{keywordtype}{void}\ add\_onion\_cb(TorControlConnection\&\ conn,\ \textcolor{keyword}{const}\ TorControlReply\&\ reply);}
+\DoxyCodeLine{00143\ \ \ \ \ \textcolor{keywordtype}{void}\ auth\_cb(TorControlConnection\&\ conn,\ \textcolor{keyword}{const}\ TorControlReply\&\ reply);}
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keywordtype}{void}\ authchallenge\_cb(TorControlConnection\&\ conn,\ \textcolor{keyword}{const}\ TorControlReply\&\ reply);}
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordtype}{void}\ protocolinfo\_cb(TorControlConnection\&\ conn,\ \textcolor{keyword}{const}\ TorControlReply\&\ reply);}
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keywordtype}{void}\ connected\_cb(TorControlConnection\&\ conn);}
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{keywordtype}{void}\ disconnected\_cb(TorControlConnection\&\ conn);}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00154\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ reconnect\_cb(evutil\_socket\_t\ fd,\ \textcolor{keywordtype}{short}\ what,\ \textcolor{keywordtype}{void}\ *arg);}
+\DoxyCodeLine{00155\ \};}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_TORCONTROL\_H}}
+
+\end{DoxyCode}

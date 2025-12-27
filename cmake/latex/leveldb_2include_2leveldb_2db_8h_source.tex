@@ -1,0 +1,173 @@
+\doxysection{db.\+h}
+\label{leveldb_2include_2leveldb_2db_8h_source}\index{src/leveldb/include/leveldb/db.h@{src/leveldb/include/leveldb/db.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_DB\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_DB\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <stdio.h>}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}leveldb/iterator.h"{}}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}leveldb/options.h"{}}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{comment}{//\ Update\ CMakeLists.txt\ if\ you\ change\ these}}
+\DoxyCodeLine{00018\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ kMajorVersion\ =\ 1;}
+\DoxyCodeLine{00019\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ kMinorVersion\ =\ 22;}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{struct\ }Options;}
+\DoxyCodeLine{00022\ \textcolor{keyword}{struct\ }ReadOptions;}
+\DoxyCodeLine{00023\ \textcolor{keyword}{struct\ }WriteOptions;}
+\DoxyCodeLine{00024\ \textcolor{keyword}{class\ }WriteBatch;}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{comment}{//\ Abstract\ handle\ to\ particular\ state\ of\ a\ DB.}}
+\DoxyCodeLine{00027\ \textcolor{comment}{//\ A\ Snapshot\ is\ an\ immutable\ object\ and\ can\ therefore\ be\ safely}}
+\DoxyCodeLine{00028\ \textcolor{comment}{//\ accessed\ from\ multiple\ threads\ without\ any\ external\ synchronization.}}
+\DoxyCodeLine{00029\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ Snapshot\ \{}
+\DoxyCodeLine{00030\ \ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00031\ \ \ \textcolor{keyword}{virtual}\ \string~Snapshot();}
+\DoxyCodeLine{00032\ \};}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \textcolor{comment}{//\ A\ range\ of\ keys}}
+\DoxyCodeLine{00035\ \textcolor{keyword}{struct\ }LEVELDB\_EXPORT\ Range\ \{}
+\DoxyCodeLine{00036\ \ \ Range()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00037\ \ \ Range(\textcolor{keyword}{const}\ Slice\&\ s,\ \textcolor{keyword}{const}\ Slice\&\ l)\ :\ start(s),\ limit(l)\ \{\}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ Slice\ start;\ \ \textcolor{comment}{//\ Included\ in\ the\ range}}
+\DoxyCodeLine{00040\ \ \ Slice\ limit;\ \ \textcolor{comment}{//\ Not\ included\ in\ the\ range}}
+\DoxyCodeLine{00041\ \};}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \textcolor{comment}{//\ A\ DB\ is\ a\ persistent\ ordered\ map\ from\ keys\ to\ values.}}
+\DoxyCodeLine{00044\ \textcolor{comment}{//\ A\ DB\ is\ safe\ for\ concurrent\ access\ from\ multiple\ threads\ without}}
+\DoxyCodeLine{00045\ \textcolor{comment}{//\ any\ external\ synchronization.}}
+\DoxyCodeLine{00046\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ DB\ \{}
+\DoxyCodeLine{00047\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00048\ \ \ \textcolor{comment}{//\ Open\ the\ database\ with\ the\ specified\ "{}name"{}.}}
+\DoxyCodeLine{00049\ \ \ \textcolor{comment}{//\ Stores\ a\ pointer\ to\ a\ heap-\/allocated\ database\ in\ *dbptr\ and\ returns}}
+\DoxyCodeLine{00050\ \ \ \textcolor{comment}{//\ OK\ on\ success.}}
+\DoxyCodeLine{00051\ \ \ \textcolor{comment}{//\ Stores\ nullptr\ in\ *dbptr\ and\ returns\ a\ non-\/OK\ status\ on\ error.}}
+\DoxyCodeLine{00052\ \ \ \textcolor{comment}{//\ Caller\ should\ delete\ *dbptr\ when\ it\ is\ no\ longer\ needed.}}
+\DoxyCodeLine{00053\ \ \ \textcolor{keyword}{static}\ Status\ Open(\textcolor{keyword}{const}\ Options\&\ options,\ \textcolor{keyword}{const}\ std::string\&\ name,}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DB**\ dbptr);}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ DB()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ DB(\textcolor{keyword}{const}\ DB\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00059\ \ \ DB\&\ operator=(\textcolor{keyword}{const}\ DB\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \textcolor{keyword}{virtual}\ \string~DB();}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \textcolor{comment}{//\ Set\ the\ database\ entry\ for\ "{}key"{}\ to\ "{}value"{}.\ \ Returns\ OK\ on\ success,}}
+\DoxyCodeLine{00064\ \ \ \textcolor{comment}{//\ and\ a\ non-\/OK\ status\ on\ error.}}
+\DoxyCodeLine{00065\ \ \ \textcolor{comment}{//\ Note:\ consider\ setting\ options.sync\ =\ true.}}
+\DoxyCodeLine{00066\ \ \ \textcolor{keyword}{virtual}\ Status\ Put(\textcolor{keyword}{const}\ WriteOptions\&\ options,\ \textcolor{keyword}{const}\ Slice\&\ key,}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Slice\&\ value)\ =\ 0;}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \textcolor{comment}{//\ Remove\ the\ database\ entry\ (if\ any)\ for\ "{}key"{}.\ \ Returns\ OK\ on}}
+\DoxyCodeLine{00070\ \ \ \textcolor{comment}{//\ success,\ and\ a\ non-\/OK\ status\ on\ error.\ \ It\ is\ not\ an\ error\ if\ "{}key"{}}}
+\DoxyCodeLine{00071\ \ \ \textcolor{comment}{//\ did\ not\ exist\ in\ the\ database.}}
+\DoxyCodeLine{00072\ \ \ \textcolor{comment}{//\ Note:\ consider\ setting\ options.sync\ =\ true.}}
+\DoxyCodeLine{00073\ \ \ \textcolor{keyword}{virtual}\ Status\ Delete(\textcolor{keyword}{const}\ WriteOptions\&\ options,\ \textcolor{keyword}{const}\ Slice\&\ key)\ =\ 0;}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ \textcolor{comment}{//\ Apply\ the\ specified\ updates\ to\ the\ database.}}
+\DoxyCodeLine{00076\ \ \ \textcolor{comment}{//\ Returns\ OK\ on\ success,\ non-\/OK\ on\ failure.}}
+\DoxyCodeLine{00077\ \ \ \textcolor{comment}{//\ Note:\ consider\ setting\ options.sync\ =\ true.}}
+\DoxyCodeLine{00078\ \ \ \textcolor{keyword}{virtual}\ Status\ Write(\textcolor{keyword}{const}\ WriteOptions\&\ options,\ WriteBatch*\ updates)\ =\ 0;}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \ \ \textcolor{comment}{//\ If\ the\ database\ contains\ an\ entry\ for\ "{}key"{}\ store\ the}}
+\DoxyCodeLine{00081\ \ \ \textcolor{comment}{//\ corresponding\ value\ in\ *value\ and\ return\ OK.}}
+\DoxyCodeLine{00082\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00083\ \ \ \textcolor{comment}{//\ If\ there\ is\ no\ entry\ for\ "{}key"{}\ leave\ *value\ unchanged\ and\ return}}
+\DoxyCodeLine{00084\ \ \ \textcolor{comment}{//\ a\ status\ for\ which\ Status::IsNotFound()\ returns\ true.}}
+\DoxyCodeLine{00085\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00086\ \ \ \textcolor{comment}{//\ May\ return\ some\ other\ Status\ on\ an\ error.}}
+\DoxyCodeLine{00087\ \ \ \textcolor{keyword}{virtual}\ Status\ Get(\textcolor{keyword}{const}\ ReadOptions\&\ options,\ \textcolor{keyword}{const}\ Slice\&\ key,}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::string*\ value)\ =\ 0;}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00090\ \ \ \textcolor{comment}{//\ Return\ a\ heap-\/allocated\ iterator\ over\ the\ contents\ of\ the\ database.}}
+\DoxyCodeLine{00091\ \ \ \textcolor{comment}{//\ The\ result\ of\ NewIterator()\ is\ initially\ invalid\ (caller\ must}}
+\DoxyCodeLine{00092\ \ \ \textcolor{comment}{//\ call\ one\ of\ the\ Seek\ methods\ on\ the\ iterator\ before\ using\ it).}}
+\DoxyCodeLine{00093\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00094\ \ \ \textcolor{comment}{//\ Caller\ should\ delete\ the\ iterator\ when\ it\ is\ no\ longer\ needed.}}
+\DoxyCodeLine{00095\ \ \ \textcolor{comment}{//\ The\ returned\ iterator\ should\ be\ deleted\ before\ this\ db\ is\ deleted.}}
+\DoxyCodeLine{00096\ \ \ \textcolor{keyword}{virtual}\ Iterator*\ NewIterator(\textcolor{keyword}{const}\ ReadOptions\&\ options)\ =\ 0;}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \ \ \textcolor{comment}{//\ Return\ a\ handle\ to\ the\ current\ DB\ state.\ \ Iterators\ created\ with}}
+\DoxyCodeLine{00099\ \ \ \textcolor{comment}{//\ this\ handle\ will\ all\ observe\ a\ stable\ snapshot\ of\ the\ current\ DB}}
+\DoxyCodeLine{00100\ \ \ \textcolor{comment}{//\ state.\ \ The\ caller\ must\ call\ ReleaseSnapshot(result)\ when\ the}}
+\DoxyCodeLine{00101\ \ \ \textcolor{comment}{//\ snapshot\ is\ no\ longer\ needed.}}
+\DoxyCodeLine{00102\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keyword}{const}\ Snapshot*\ GetSnapshot()\ =\ 0;}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \ \ \textcolor{comment}{//\ Release\ a\ previously\ acquired\ snapshot.\ \ The\ caller\ must\ not}}
+\DoxyCodeLine{00105\ \ \ \textcolor{comment}{//\ use\ "{}snapshot"{}\ after\ this\ call.}}
+\DoxyCodeLine{00106\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ ReleaseSnapshot(\textcolor{keyword}{const}\ Snapshot*\ snapshot)\ =\ 0;}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ \textcolor{comment}{//\ DB\ implementations\ can\ export\ properties\ about\ their\ state}}
+\DoxyCodeLine{00109\ \ \ \textcolor{comment}{//\ via\ this\ method.\ \ If\ "{}property"{}\ is\ a\ valid\ property\ understood\ by\ this}}
+\DoxyCodeLine{00110\ \ \ \textcolor{comment}{//\ DB\ implementation,\ fills\ "{}*value"{}\ with\ its\ current\ value\ and\ returns}}
+\DoxyCodeLine{00111\ \ \ \textcolor{comment}{//\ true.\ \ Otherwise\ returns\ false.}}
+\DoxyCodeLine{00112\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00113\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00114\ \ \ \textcolor{comment}{//\ Valid\ property\ names\ include:}}
+\DoxyCodeLine{00115\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00116\ \ \ \textcolor{comment}{//\ \ "{}leveldb.num-\/files-\/at-\/level<N>"{}\ -\/\ return\ the\ number\ of\ files\ at\ level\ <N>,}}
+\DoxyCodeLine{00117\ \ \ \textcolor{comment}{//\ \ \ \ \ where\ <N>\ is\ an\ ASCII\ representation\ of\ a\ level\ number\ (e.g.\ "{}0"{}).}}
+\DoxyCodeLine{00118\ \ \ \textcolor{comment}{//\ \ "{}leveldb.stats"{}\ -\/\ returns\ a\ multi-\/line\ string\ that\ describes\ statistics}}
+\DoxyCodeLine{00119\ \ \ \textcolor{comment}{//\ \ \ \ \ about\ the\ internal\ operation\ of\ the\ DB.}}
+\DoxyCodeLine{00120\ \ \ \textcolor{comment}{//\ \ "{}leveldb.sstables"{}\ -\/\ returns\ a\ multi-\/line\ string\ that\ describes\ all}}
+\DoxyCodeLine{00121\ \ \ \textcolor{comment}{//\ \ \ \ \ of\ the\ sstables\ that\ make\ up\ the\ db\ contents.}}
+\DoxyCodeLine{00122\ \ \ \textcolor{comment}{//\ \ "{}leveldb.approximate-\/memory-\/usage"{}\ -\/\ returns\ the\ approximate\ number\ of}}
+\DoxyCodeLine{00123\ \ \ \textcolor{comment}{//\ \ \ \ \ bytes\ of\ memory\ in\ use\ by\ the\ DB.}}
+\DoxyCodeLine{00124\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetProperty(\textcolor{keyword}{const}\ Slice\&\ property,\ std::string*\ value)\ =\ 0;}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \ \ \textcolor{comment}{//\ For\ each\ i\ in\ [0,n-\/1],\ store\ in\ "{}sizes[i]"{},\ the\ approximate}}
+\DoxyCodeLine{00127\ \ \ \textcolor{comment}{//\ file\ system\ space\ used\ by\ keys\ in\ "{}[range[i].start\ ..\ range[i].limit)"{}.}}
+\DoxyCodeLine{00128\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00129\ \ \ \textcolor{comment}{//\ Note\ that\ the\ returned\ sizes\ measure\ file\ system\ space\ usage,\ so}}
+\DoxyCodeLine{00130\ \ \ \textcolor{comment}{//\ if\ the\ user\ data\ compresses\ by\ a\ factor\ of\ ten,\ the\ returned}}
+\DoxyCodeLine{00131\ \ \ \textcolor{comment}{//\ sizes\ will\ be\ one-\/tenth\ the\ size\ of\ the\ corresponding\ user\ data\ size.}}
+\DoxyCodeLine{00132\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00133\ \ \ \textcolor{comment}{//\ The\ results\ may\ not\ include\ the\ sizes\ of\ recently\ written\ data.}}
+\DoxyCodeLine{00134\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ GetApproximateSizes(\textcolor{keyword}{const}\ Range*\ range,\ \textcolor{keywordtype}{int}\ n,}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t*\ sizes)\ =\ 0;}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \ \ \textcolor{comment}{//\ Compact\ the\ underlying\ storage\ for\ the\ key\ range\ [*begin,*end].}}
+\DoxyCodeLine{00138\ \ \ \textcolor{comment}{//\ In\ particular,\ deleted\ and\ overwritten\ versions\ are\ discarded,}}
+\DoxyCodeLine{00139\ \ \ \textcolor{comment}{//\ and\ the\ data\ is\ rearranged\ to\ reduce\ the\ cost\ of\ operations}}
+\DoxyCodeLine{00140\ \ \ \textcolor{comment}{//\ needed\ to\ access\ the\ data.\ \ This\ operation\ should\ typically\ only}}
+\DoxyCodeLine{00141\ \ \ \textcolor{comment}{//\ be\ invoked\ by\ users\ who\ understand\ the\ underlying\ implementation.}}
+\DoxyCodeLine{00142\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00143\ \ \ \textcolor{comment}{//\ begin==nullptr\ is\ treated\ as\ a\ key\ before\ all\ keys\ in\ the\ database.}}
+\DoxyCodeLine{00144\ \ \ \textcolor{comment}{//\ end==nullptr\ is\ treated\ as\ a\ key\ after\ all\ keys\ in\ the\ database.}}
+\DoxyCodeLine{00145\ \ \ \textcolor{comment}{//\ Therefore\ the\ following\ call\ will\ compact\ the\ entire\ database:}}
+\DoxyCodeLine{00146\ \ \ \textcolor{comment}{//\ \ \ \ db-\/>CompactRange(nullptr,\ nullptr);}}
+\DoxyCodeLine{00147\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ CompactRange(\textcolor{keyword}{const}\ Slice*\ begin,\ \textcolor{keyword}{const}\ Slice*\ end)\ =\ 0;}
+\DoxyCodeLine{00148\ \};}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00150\ \textcolor{comment}{//\ Destroy\ the\ contents\ of\ the\ specified\ database.}}
+\DoxyCodeLine{00151\ \textcolor{comment}{//\ Be\ very\ careful\ using\ this\ method.}}
+\DoxyCodeLine{00152\ \textcolor{comment}{//}}
+\DoxyCodeLine{00153\ \textcolor{comment}{//\ Note:\ For\ backwards\ compatibility,\ if\ DestroyDB\ is\ unable\ to\ list\ the}}
+\DoxyCodeLine{00154\ \textcolor{comment}{//\ database\ files,\ Status::OK()\ will\ still\ be\ returned\ masking\ this\ failure.}}
+\DoxyCodeLine{00155\ LEVELDB\_EXPORT\ Status\ DestroyDB(\textcolor{keyword}{const}\ std::string\&\ name,}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Options\&\ options);}
+\DoxyCodeLine{00157\ }
+\DoxyCodeLine{00158\ \textcolor{comment}{//\ If\ a\ DB\ cannot\ be\ opened,\ you\ may\ attempt\ to\ call\ this\ method\ to}}
+\DoxyCodeLine{00159\ \textcolor{comment}{//\ resurrect\ as\ much\ of\ the\ contents\ of\ the\ database\ as\ possible.}}
+\DoxyCodeLine{00160\ \textcolor{comment}{//\ Some\ data\ may\ be\ lost,\ so\ be\ careful\ when\ calling\ this\ function}}
+\DoxyCodeLine{00161\ \textcolor{comment}{//\ on\ a\ database\ that\ contains\ important\ information.}}
+\DoxyCodeLine{00162\ LEVELDB\_EXPORT\ Status\ RepairDB(\textcolor{keyword}{const}\ std::string\&\ dbname,}
+\DoxyCodeLine{00163\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Options\&\ options);}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00166\ }
+\DoxyCodeLine{00167\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_INCLUDE\_DB\_H\_}}
+
+\end{DoxyCode}

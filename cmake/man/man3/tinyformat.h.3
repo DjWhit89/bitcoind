@@ -1,0 +1,590 @@
+.TH "src/tinyformat.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/tinyformat.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <algorithm>\fP
+.br
+\fR#include <attributes\&.h>\fP
+.br
+\fR#include <iostream>\fP
+.br
+\fR#include <sstream>\fP
+.br
+\fR#include <stdexcept>\fP
+.br
+\fR#include <util/string\&.h>\fP
+.br
+\fR#include <cassert>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBRuntimeFormat\fP"
+.br
+.ti -1c
+.RI "struct \fBFormatStringCheck< num_params >\fP"
+.br
+.ti -1c
+.RI "class \fBformat_error\fP"
+.br
+.ti -1c
+.RI "struct \fBis_convertible< T1, T2 >\fP"
+.br
+.ti -1c
+.RI "struct \fBis_wchar< T >\fP"
+.br
+.ti -1c
+.RI "struct \fBis_wchar< wchar_t * >\fP"
+.br
+.ti -1c
+.RI "struct \fBis_wchar< const wchar_t * >\fP"
+.br
+.ti -1c
+.RI "struct \fBis_wchar< const wchar_t[n]>\fP"
+.br
+.ti -1c
+.RI "struct \fBis_wchar< wchar_t[n]>\fP"
+.br
+.ti -1c
+.RI "struct \fBformatValueAsType< T, fmtT, convertible >\fP"
+.br
+.ti -1c
+.RI "struct \fBformatValueAsType< T, fmtT, true >\fP"
+.br
+.ti -1c
+.RI "struct \fBconvertToInt< T, convertible >\fP"
+.br
+.ti -1c
+.RI "struct \fBconvertToInt< T, true >\fP"
+.br
+.ti -1c
+.RI "class \fBFormatArg\fP"
+.br
+.ti -1c
+.RI "class \fBFormatList\fP"
+.br
+.ti -1c
+.RI "class \fBFormatListN< N >\fP"
+.br
+.ti -1c
+.RI "class \fBFormatListN< 0 >\fP"
+.br
+.in -1c
+.SS "Namespaces"
+
+.in +1c
+.ti -1c
+.RI "namespace \fBtinyformat\fP"
+.br
+.ti -1c
+.RI "namespace \fBtinyformat::detail\fP"
+.br
+.in -1c
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBTINYFORMAT_ERROR\fP(reasonString)"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_USE_VARIADIC_TEMPLATES\fP"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ASSERT\fP(cond)"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_HIDDEN\fP"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_DEFINE_FORMAT_TRUNCATED_CSTR\fP(type)"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_DEFINE_FORMATVALUE_CHAR\fP(charType)"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES\fP(n)"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS\fP(n)"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS\fP(n)"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL\fP(n)"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_1\fP   class T1"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_2\fP   class T1, class T2"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_3\fP   class T1, class T2, class T3"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_4\fP   class T1, class T2, class T3, class T4"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_5\fP   class T1, class T2, class T3, class T4, class T5"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_6\fP   class T1, class T2, class T3, class T4, class T5, class T6"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_7\fP   class T1, class T2, class T3, class T4, class T5, class T6, class T7"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_8\fP   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_9\fP   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_10\fP   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_11\fP   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_12\fP   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11, class T12"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_13\fP   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11, class T12, class T13"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_14\fP   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11, class T12, class T13, class T14"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_15\fP   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11, class T12, class T13, class T14, class T15"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_ARGTYPES_16\fP   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11, class T12, class T13, class T14, class T15, class T16"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_1\fP   const T1& v1"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_2\fP   const T1& v1, const T2& v2"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_3\fP   const T1& v1, const T2& v2, const T3& v3"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_4\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_5\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_6\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_7\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_8\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_9\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_10\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_11\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_12\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11, const T12& v12"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_13\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11, const T12& v12, const T13& v13"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_14\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11, const T12& v12, const T13& v13, const T14& v14"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_15\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11, const T12& v12, const T13& v13, const T14& v14, const T15& v15"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_VARARGS_16\fP   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11, const T12& v12, const T13& v13, const T14& v14, const T15& v15, const T16& v16"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_1\fP   v1"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_2\fP   v1, v2"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_3\fP   v1, v2, v3"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_4\fP   v1, v2, v3, v4"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_5\fP   v1, v2, v3, v4, v5"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_6\fP   v1, v2, v3, v4, v5, v6"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_7\fP   v1, v2, v3, v4, v5, v6, v7"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_8\fP   v1, v2, v3, v4, v5, v6, v7, v8"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_9\fP   v1, v2, v3, v4, v5, v6, v7, v8, v9"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_10\fP   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_11\fP   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_12\fP   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_13\fP   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_14\fP   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_15\fP   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_16\fP   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_1\fP"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_2\fP   , v2"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_3\fP   , v2, v3"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_4\fP   , v2, v3, v4"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_5\fP   , v2, v3, v4, v5"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_6\fP   , v2, v3, v4, v5, v6"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_7\fP   , v2, v3, v4, v5, v6, v7"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_8\fP   , v2, v3, v4, v5, v6, v7, v8"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_9\fP   , v2, v3, v4, v5, v6, v7, v8, v9"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_10\fP   , v2, v3, v4, v5, v6, v7, v8, v9, v10"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_11\fP   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_12\fP   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_13\fP   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_14\fP   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_15\fP   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_PASSARGS_TAIL_16\fP   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16"
+.br
+.ti -1c
+.RI "#define \fBTINYFORMAT_FOREACH_ARGNUM\fP(m)"
+.br
+.ti -1c
+.RI "#define \fBstrprintf\fP   \fBtfm::format\fP"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "typedef const \fBFormatList\fP & \fBFormatListRef\fP"
+.br
+.RI "Reference to type-opaque format list for passing to \fBvformat()\fP\&. "
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "template<typename \fBT\fP> void \fBformatTruncated\fP (std::ostream &out, const \fBT\fP &value, int ntrunc)"
+.br
+.ti -1c
+.RI "template<typename \fBT\fP> void \fBformatValue\fP (std::ostream &out, const char *, const char *fmtEnd, int ntrunc, const \fBT\fP &value)"
+.br
+.ti -1c
+.RI "int \fBparseIntAndAdvance\fP (const char *&c)"
+.br
+.ti -1c
+.RI "bool \fBparseWidthOrPrecision\fP (int &n, const char *&c, bool positionalMode, const \fBdetail::FormatArg\fP *\fBargs\fP, int &argIndex, int numArgs)"
+.br
+.ti -1c
+.RI "const char * \fBprintFormatStringLiteral\fP (std::ostream &out, const char *fmt)"
+.br
+.ti -1c
+.RI "const char * \fBstreamStateFromFormat\fP (std::ostream &out, bool &positionalMode, bool &spacePadPositive, int &ntrunc, const char *fmtStart, const \fBdetail::FormatArg\fP *\fBargs\fP, int &argIndex, int numArgs)"
+.br
+.ti -1c
+.RI "void \fBformatImpl\fP (std::ostream &out, const char *fmt, const \fBdetail::FormatArg\fP *\fBargs\fP, int numArgs)"
+.br
+.ti -1c
+.RI "template<typename\&.\&.\&. Args> \fBdetail::FormatListN\fP< sizeof\&.\&.\&.(Args)> \fBmakeFormatList\fP (const Args &\&.\&.\&. \fBargs\fP)"
+.br
+.ti -1c
+.RI "void \fBvformat\fP (std::ostream &out, const char *fmt, \fBFormatListRef\fP list)"
+.br
+.ti -1c
+.RI "template<typename\&.\&.\&. Args> void \fBformat\fP (std::ostream &out, \fBFormatStringCheck\fP< sizeof\&.\&.\&.(Args)> fmt, const Args &\&.\&.\&. \fBargs\fP)"
+.br
+.RI "\fBFormat\fP list of arguments to the stream according to given format string\&. "
+.ti -1c
+.RI "template<typename\&.\&.\&. Args> std::string \fBformat\fP (\fBFormatStringCheck\fP< sizeof\&.\&.\&.(Args)> fmt, const Args &\&.\&.\&. \fBargs\fP)"
+.br
+.ti -1c
+.RI "template<typename\&.\&.\&. Args> void \fBprintf\fP (\fBFormatStringCheck\fP< sizeof\&.\&.\&.(Args)> fmt, const Args &\&.\&.\&. \fBargs\fP)"
+.br
+.RI "\fBFormat\fP list of arguments to std::cout, according to the given format string\&. "
+.ti -1c
+.RI "template<typename\&.\&.\&. Args> void \fBprintfln\fP (\fBFormatStringCheck\fP< sizeof\&.\&.\&.(Args)> fmt, const Args &\&.\&.\&. \fBargs\fP)"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define strprintf   \fBtfm::format\fP"
+\fBFormat\fP arguments and return the string or write to given std::ostream (see \fBtinyformat::format\fP doc for details) 
+.SS "#define TINYFORMAT_ARGTYPES( n)"
+\fBValue:\fP
+.nf
+TINYFORMAT_ARGTYPES_ ## n
+.PP
+.fi
+
+.SS "#define TINYFORMAT_ARGTYPES_1   class T1"
+
+.SS "#define TINYFORMAT_ARGTYPES_10   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10"
+
+.SS "#define TINYFORMAT_ARGTYPES_11   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11"
+
+.SS "#define TINYFORMAT_ARGTYPES_12   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11, class T12"
+
+.SS "#define TINYFORMAT_ARGTYPES_13   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11, class T12, class T13"
+
+.SS "#define TINYFORMAT_ARGTYPES_14   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11, class T12, class T13, class T14"
+
+.SS "#define TINYFORMAT_ARGTYPES_15   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11, class T12, class T13, class T14, class T15"
+
+.SS "#define TINYFORMAT_ARGTYPES_16   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9, class T10, class T11, class T12, class T13, class T14, class T15, class T16"
+
+.SS "#define TINYFORMAT_ARGTYPES_2   class T1, class T2"
+
+.SS "#define TINYFORMAT_ARGTYPES_3   class T1, class T2, class T3"
+
+.SS "#define TINYFORMAT_ARGTYPES_4   class T1, class T2, class T3, class T4"
+
+.SS "#define TINYFORMAT_ARGTYPES_5   class T1, class T2, class T3, class T4, class T5"
+
+.SS "#define TINYFORMAT_ARGTYPES_6   class T1, class T2, class T3, class T4, class T5, class T6"
+
+.SS "#define TINYFORMAT_ARGTYPES_7   class T1, class T2, class T3, class T4, class T5, class T6, class T7"
+
+.SS "#define TINYFORMAT_ARGTYPES_8   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8"
+
+.SS "#define TINYFORMAT_ARGTYPES_9   class T1, class T2, class T3, class T4, class T5, class T6, class T7, class T8, class T9"
+
+.SS "#define TINYFORMAT_ASSERT( cond)"
+\fBValue:\fP
+.nf
+assert(cond)
+.PP
+.fi
+
+.SS "#define TINYFORMAT_DEFINE_FORMAT_TRUNCATED_CSTR( type)"
+\fBValue:\fP
+.nf
+inline void formatTruncated(std::ostream& out, type* value, int ntrunc) \\
+{                                                           \\
+    std::streamsize len = 0;                                \\
+    while (len < ntrunc && value[len] != 0)                 \\
+        ++len;                                              \\
+    out\&.write(value, len);                                  \\
+}
+.PP
+.fi
+
+.SS "#define TINYFORMAT_DEFINE_FORMATVALUE_CHAR( charType)"
+\fBValue:\fP
+.nf
+inline void formatValue(std::ostream& out, const char* /*fmtBegin*/,  \\
+                        const char* fmtEnd, int , charType value) \\
+{                                                                     \\
+    switch (*(fmtEnd\-1)) {                                            \\
+        case 'u': case 'd': case 'i': case 'o': case 'X': case 'x':   \\
+            out << static_cast<int>(value); break;                    \\
+        default:                                                      \\
+            out << value;                   break;                    \\
+    }                                                                 \\
+}
+.PP
+.fi
+
+.SS "#define TINYFORMAT_ERROR( reasonString)"
+\fBValue:\fP
+.nf
+throw tinyformat::format_error(reasonString)
+.PP
+.fi
+
+.SS "#define TINYFORMAT_FOREACH_ARGNUM( m)"
+\fBValue:\fP
+.nf
+    m(1) m(2) m(3) m(4) m(5) m(6) m(7) m(8) m(9) m(10) m(11) m(12) m(13) m(14) m(15) m(16)
+.PP
+.fi
+
+.SS "#define TINYFORMAT_HIDDEN"
+
+.SS "#define TINYFORMAT_PASSARGS( n)"
+\fBValue:\fP
+.nf
+TINYFORMAT_PASSARGS_ ## n
+.PP
+.fi
+
+.SS "#define TINYFORMAT_PASSARGS_1   v1"
+
+.SS "#define TINYFORMAT_PASSARGS_10   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10"
+
+.SS "#define TINYFORMAT_PASSARGS_11   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11"
+
+.SS "#define TINYFORMAT_PASSARGS_12   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12"
+
+.SS "#define TINYFORMAT_PASSARGS_13   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13"
+
+.SS "#define TINYFORMAT_PASSARGS_14   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14"
+
+.SS "#define TINYFORMAT_PASSARGS_15   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15"
+
+.SS "#define TINYFORMAT_PASSARGS_16   v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16"
+
+.SS "#define TINYFORMAT_PASSARGS_2   v1, v2"
+
+.SS "#define TINYFORMAT_PASSARGS_3   v1, v2, v3"
+
+.SS "#define TINYFORMAT_PASSARGS_4   v1, v2, v3, v4"
+
+.SS "#define TINYFORMAT_PASSARGS_5   v1, v2, v3, v4, v5"
+
+.SS "#define TINYFORMAT_PASSARGS_6   v1, v2, v3, v4, v5, v6"
+
+.SS "#define TINYFORMAT_PASSARGS_7   v1, v2, v3, v4, v5, v6, v7"
+
+.SS "#define TINYFORMAT_PASSARGS_8   v1, v2, v3, v4, v5, v6, v7, v8"
+
+.SS "#define TINYFORMAT_PASSARGS_9   v1, v2, v3, v4, v5, v6, v7, v8, v9"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL( n)"
+\fBValue:\fP
+.nf
+TINYFORMAT_PASSARGS_TAIL_ ## n
+.PP
+.fi
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_1"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_10   , v2, v3, v4, v5, v6, v7, v8, v9, v10"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_11   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_12   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_13   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_14   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_15   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_16   , v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_2   , v2"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_3   , v2, v3"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_4   , v2, v3, v4"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_5   , v2, v3, v4, v5"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_6   , v2, v3, v4, v5, v6"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_7   , v2, v3, v4, v5, v6, v7"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_8   , v2, v3, v4, v5, v6, v7, v8"
+
+.SS "#define TINYFORMAT_PASSARGS_TAIL_9   , v2, v3, v4, v5, v6, v7, v8, v9"
+
+.SS "#define TINYFORMAT_USE_VARIADIC_TEMPLATES"
+
+.SS "#define TINYFORMAT_VARARGS( n)"
+\fBValue:\fP
+.nf
+TINYFORMAT_VARARGS_ ## n
+.PP
+.fi
+
+.SS "#define TINYFORMAT_VARARGS_1   const T1& v1"
+
+.SS "#define TINYFORMAT_VARARGS_10   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10"
+
+.SS "#define TINYFORMAT_VARARGS_11   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11"
+
+.SS "#define TINYFORMAT_VARARGS_12   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11, const T12& v12"
+
+.SS "#define TINYFORMAT_VARARGS_13   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11, const T12& v12, const T13& v13"
+
+.SS "#define TINYFORMAT_VARARGS_14   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11, const T12& v12, const T13& v13, const T14& v14"
+
+.SS "#define TINYFORMAT_VARARGS_15   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11, const T12& v12, const T13& v13, const T14& v14, const T15& v15"
+
+.SS "#define TINYFORMAT_VARARGS_16   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9, const T10& v10, const T11& v11, const T12& v12, const T13& v13, const T14& v14, const T15& v15, const T16& v16"
+
+.SS "#define TINYFORMAT_VARARGS_2   const T1& v1, const T2& v2"
+
+.SS "#define TINYFORMAT_VARARGS_3   const T1& v1, const T2& v2, const T3& v3"
+
+.SS "#define TINYFORMAT_VARARGS_4   const T1& v1, const T2& v2, const T3& v3, const T4& v4"
+
+.SS "#define TINYFORMAT_VARARGS_5   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5"
+
+.SS "#define TINYFORMAT_VARARGS_6   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6"
+
+.SS "#define TINYFORMAT_VARARGS_7   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7"
+
+.SS "#define TINYFORMAT_VARARGS_8   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8"
+
+.SS "#define TINYFORMAT_VARARGS_9   const T1& v1, const T2& v2, const T3& v3, const T4& v4, const T5& v5, const T6& v6, const T7& v7, const T8& v8, const T9& v9"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

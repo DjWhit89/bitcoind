@@ -1,0 +1,154 @@
+\doxysection{blockencodings.\+h}
+\label{blockencodings_8h_source}\index{src/blockencodings.h@{src/blockencodings.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2016-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_BLOCKENCODINGS\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_BLOCKENCODINGS\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <crypto/siphash.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <primitives/block.h>}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{class\ }CTxMemPool;}
+\DoxyCodeLine{00014\ \textcolor{keyword}{class\ }BlockValidationState;}
+\DoxyCodeLine{00015\ \textcolor{keyword}{namespace\ }Consensus\ \{}
+\DoxyCodeLine{00016\ \textcolor{keyword}{struct\ }Params;}
+\DoxyCodeLine{00017\ \};}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{comment}{//\ Transaction\ compression\ schemes\ for\ compact\ block\ relay\ can\ be\ introduced\ by\ writing}}
+\DoxyCodeLine{00020\ \textcolor{comment}{//\ an\ actual\ formatter\ here.}}
+\DoxyCodeLine{00021\ \textcolor{keyword}{using\ }TransactionCompression\ =\ DefaultFormatter;}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{class\ }DifferenceFormatter}
+\DoxyCodeLine{00024\ \{}
+\DoxyCodeLine{00025\ \ \ \ \ uint64\_t\ m\_shift\ =\ 0;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keywordtype}{void}\ Ser(Stream\&\ s,\ I\ v)}
+\DoxyCodeLine{00030\ \ \ \ \ \{}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (v\ <\ m\_shift\ ||\ v\ >=\ std::numeric\_limits<uint64\_t>::max())\ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}differential\ value\ overflow"{}});}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ WriteCompactSize(s,\ v\ -\/\ m\_shift);}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ m\_shift\ =\ uint64\_t(v)\ +\ 1;}
+\DoxyCodeLine{00034\ \ \ \ \ \}}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordtype}{void}\ Unser(Stream\&\ s,\ I\&\ v)}
+\DoxyCodeLine{00037\ \ \ \ \ \{}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ uint64\_t\ n\ =\ ReadCompactSize(s);}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ m\_shift\ +=\ n;}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_shift\ <\ n\ ||\ m\_shift\ >=\ std::numeric\_limits<uint64\_t>::max()\ ||\ m\_shift\ <\ std::numeric\_limits<I>::min()\ ||\ m\_shift\ >\ std::numeric\_limits<I>::max())\ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}differential\ value\ overflow"{}});}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ v\ =\ I(m\_shift++);}
+\DoxyCodeLine{00042\ \ \ \ \ \}}
+\DoxyCodeLine{00043\ \};}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \textcolor{keyword}{class\ }BlockTransactionsRequest\ \{}
+\DoxyCodeLine{00046\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{comment}{//\ A\ BlockTransactionsRequest\ message}}
+\DoxyCodeLine{00048\ \ \ \ \ uint256\ blockhash;}
+\DoxyCodeLine{00049\ \ \ \ \ std::vector<uint16\_t>\ indexes;}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \ \ SERIALIZE\_METHODS(BlockTransactionsRequest,\ obj)}
+\DoxyCodeLine{00052\ \ \ \ \ \{}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ READWRITE(obj.blockhash,\ Using<VectorFormatter<DifferenceFormatter>>(obj.indexes));}
+\DoxyCodeLine{00054\ \ \ \ \ \}}
+\DoxyCodeLine{00055\ \};}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \textcolor{keyword}{class\ }BlockTransactions\ \{}
+\DoxyCodeLine{00058\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{comment}{//\ A\ BlockTransactions\ message}}
+\DoxyCodeLine{00060\ \ \ \ \ uint256\ blockhash;}
+\DoxyCodeLine{00061\ \ \ \ \ std::vector<CTransactionRef>\ txn;}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \ \ BlockTransactions()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keyword}{explicit}\ BlockTransactions(\textcolor{keyword}{const}\ BlockTransactionsRequest\&\ req)\ :}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ blockhash(req.blockhash),\ txn(req.indexes.size())\ \{\}}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \ \ SERIALIZE\_METHODS(BlockTransactions,\ obj)}
+\DoxyCodeLine{00068\ \ \ \ \ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ READWRITE(obj.blockhash,\ TX\_WITH\_WITNESS(Using<VectorFormatter<TransactionCompression>>(obj.txn)));}
+\DoxyCodeLine{00070\ \ \ \ \ \}}
+\DoxyCodeLine{00071\ \};}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \textcolor{comment}{//\ Dumb\ serialization/storage-\/helper\ for\ CBlockHeaderAndShortTxIDs\ and\ PartiallyDownloadedBlock}}
+\DoxyCodeLine{00074\ \textcolor{keyword}{struct\ }PrefilledTransaction\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{comment}{//\ Used\ as\ an\ offset\ since\ last\ prefilled\ tx\ in\ CBlockHeaderAndShortTxIDs,}}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{comment}{//\ as\ a\ proper\ transaction-\/in-\/block-\/index\ in\ PartiallyDownloadedBlock}}
+\DoxyCodeLine{00077\ \ \ \ \ uint16\_t\ index;}
+\DoxyCodeLine{00078\ \ \ \ \ CTransactionRef\ tx;}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \ \ \ \ SERIALIZE\_METHODS(PrefilledTransaction,\ obj)\ \{\ READWRITE(COMPACTSIZE(obj.index),\ TX\_WITH\_WITNESS(Using<TransactionCompression>(obj.tx)));\ \}}
+\DoxyCodeLine{00081\ \};}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{enum}\ ReadStatus\_t}
+\DoxyCodeLine{00084\ \{}
+\DoxyCodeLine{00085\ \ \ \ \ READ\_STATUS\_OK,}
+\DoxyCodeLine{00086\ \ \ \ \ READ\_STATUS\_INVALID,\ \textcolor{comment}{//\ Invalid\ object,\ peer\ is\ sending\ bogus\ crap}}
+\DoxyCodeLine{00087\ \ \ \ \ READ\_STATUS\_FAILED,\ \textcolor{comment}{//\ Failed\ to\ process\ object}}
+\DoxyCodeLine{00088\ \}\ ReadStatus;}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00090\ \textcolor{keyword}{class\ }CBlockHeaderAndShortTxIDs\ \{}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{keyword}{mutable}\ std::optional<PresaltedSipHasher>\ m\_hasher;}
+\DoxyCodeLine{00092\ \ \ \ \ uint64\_t\ nonce;}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keywordtype}{void}\ FillShortTxIDSelector()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }PartiallyDownloadedBlock;}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00099\ \ \ \ \ std::vector<uint64\_t>\ shorttxids;}
+\DoxyCodeLine{00100\ \ \ \ \ std::vector<PrefilledTransaction>\ prefilledtxn;}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ SHORTTXIDS\_LENGTH\ =\ 6;}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \ \ \ \ CBlockHeader\ header;}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00110\ \ \ \ \ CBlockHeaderAndShortTxIDs()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00115\ \ \ \ \ CBlockHeaderAndShortTxIDs(\textcolor{keyword}{const}\ CBlock\&\ block,\ uint64\_t\ nonce);}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \ \ \ \ uint64\_t\ GetShortID(\textcolor{keyword}{const}\ Wtxid\&\ wtxid)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ BlockTxCount()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ shorttxids.size()\ +\ prefilledtxn.size();\ \}}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \ \ \ \ SERIALIZE\_METHODS(CBlockHeaderAndShortTxIDs,\ obj)}
+\DoxyCodeLine{00122\ \ \ \ \ \{}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ READWRITE(obj.header,\ obj.nonce,\ Using<VectorFormatter<CustomUintFormatter<SHORTTXIDS\_LENGTH>>>(obj.shorttxids),\ obj.prefilledtxn);}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (ser\_action.ForRead())\ \{}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (obj.BlockTxCount()\ >\ std::numeric\_limits<uint16\_t>::max())\ \{}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}indexes\ overflowed\ 16\ bits"{}});}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ \ \ \ \ obj.FillShortTxIDSelector();}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00130\ \ \ \ \ \}}
+\DoxyCodeLine{00131\ \};}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00133\ \textcolor{keyword}{class\ }PartiallyDownloadedBlock\ \{}
+\DoxyCodeLine{00134\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00135\ \ \ \ \ std::vector<CTransactionRef>\ txn\_available;}
+\DoxyCodeLine{00136\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ prefilled\_count\ =\ 0,\ mempool\_count\ =\ 0,\ extra\_count\ =\ 0;}
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keyword}{const}\ CTxMemPool*\ pool;}
+\DoxyCodeLine{00138\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00139\ \ \ \ \ CBlockHeader\ header;}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{comment}{//\ Can\ be\ overridden\ for\ testing}}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keyword}{using\ }IsBlockMutatedFn\ =\ std::function<bool(\textcolor{keyword}{const}\ CBlock\&,\ \textcolor{keywordtype}{bool})>;}
+\DoxyCodeLine{00143\ \ \ \ \ IsBlockMutatedFn\ m\_check\_block\_mutated\_mock\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keyword}{explicit}\ PartiallyDownloadedBlock(CTxMemPool*\ poolIn)\ :\ pool(poolIn)\ \{\}}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{comment}{//\ extra\_txn\ is\ a\ list\ of\ extra\ transactions\ to\ look\ at,\ in\ <witness\ hash,\ reference>\ form}}
+\DoxyCodeLine{00148\ \ \ \ \ ReadStatus\ InitData(\textcolor{keyword}{const}\ CBlockHeaderAndShortTxIDs\&\ cmpctblock,\ \textcolor{keyword}{const}\ std::vector<std::pair<Wtxid,\ CTransactionRef>>\&\ extra\_txn);}
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsTxAvailable(\textcolor{keywordtype}{size\_t}\ index)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00150\ \ \ \ \ \textcolor{comment}{//\ segwit\_active\ enforces\ witness\ mutation\ checks\ just\ before\ reporting\ a\ healthy\ status}}
+\DoxyCodeLine{00151\ \ \ \ \ ReadStatus\ FillBlock(CBlock\&\ block,\ \textcolor{keyword}{const}\ std::vector<CTransactionRef>\&\ vtx\_missing,\ \textcolor{keywordtype}{bool}\ segwit\_active);}
+\DoxyCodeLine{00152\ \};}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_BLOCKENCODINGS\_H}}
+
+\end{DoxyCode}

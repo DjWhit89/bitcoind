@@ -1,0 +1,193 @@
+\doxysection{options.\+h}
+\label{options_8h_source}\index{src/leveldb/include/leveldb/options.h@{src/leveldb/include/leveldb/options.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_OPTIONS\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_OPTIONS\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <stddef.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{keyword}{class\ }Cache;}
+\DoxyCodeLine{00015\ \textcolor{keyword}{class\ }Comparator;}
+\DoxyCodeLine{00016\ \textcolor{keyword}{class\ }Env;}
+\DoxyCodeLine{00017\ \textcolor{keyword}{class\ }FilterPolicy;}
+\DoxyCodeLine{00018\ \textcolor{keyword}{class\ }Logger;}
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }Snapshot;}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{comment}{//\ DB\ contents\ are\ stored\ in\ a\ set\ of\ blocks,\ each\ of\ which\ holds\ a}}
+\DoxyCodeLine{00022\ \textcolor{comment}{//\ sequence\ of\ key,value\ pairs.\ \ Each\ block\ may\ be\ compressed\ before}}
+\DoxyCodeLine{00023\ \textcolor{comment}{//\ being\ stored\ in\ a\ file.\ \ The\ following\ enum\ describes\ which}}
+\DoxyCodeLine{00024\ \textcolor{comment}{//\ compression\ method\ (if\ any)\ is\ used\ to\ compress\ a\ block.}}
+\DoxyCodeLine{00025\ \textcolor{keyword}{enum}\ CompressionType\ \{}
+\DoxyCodeLine{00026\ \ \ \textcolor{comment}{//\ NOTE:\ do\ not\ change\ the\ values\ of\ existing\ entries,\ as\ these\ are}}
+\DoxyCodeLine{00027\ \ \ \textcolor{comment}{//\ part\ of\ the\ persistent\ format\ on\ disk.}}
+\DoxyCodeLine{00028\ \ \ kNoCompression\ =\ 0x0,}
+\DoxyCodeLine{00029\ \ \ kSnappyCompression\ =\ 0x1}
+\DoxyCodeLine{00030\ \};}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \textcolor{comment}{//\ Options\ to\ control\ the\ behavior\ of\ a\ database\ (passed\ to\ DB::Open)}}
+\DoxyCodeLine{00033\ \textcolor{keyword}{struct\ }LEVELDB\_EXPORT\ Options\ \{}
+\DoxyCodeLine{00034\ \ \ \textcolor{comment}{//\ Create\ an\ Options\ object\ with\ default\ values\ for\ all\ fields.}}
+\DoxyCodeLine{00035\ \ \ Options();}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00038\ \ \ \textcolor{comment}{//\ Parameters\ that\ affect\ behavior}}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \ \ \textcolor{comment}{//\ Comparator\ used\ to\ define\ the\ order\ of\ keys\ in\ the\ table.}}
+\DoxyCodeLine{00041\ \ \ \textcolor{comment}{//\ Default:\ a\ comparator\ that\ uses\ lexicographic\ byte-\/wise\ ordering}}
+\DoxyCodeLine{00042\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00043\ \ \ \textcolor{comment}{//\ REQUIRES:\ The\ client\ must\ ensure\ that\ the\ comparator\ supplied}}
+\DoxyCodeLine{00044\ \ \ \textcolor{comment}{//\ here\ has\ the\ same\ name\ and\ orders\ keys\ *exactly*\ the\ same\ as\ the}}
+\DoxyCodeLine{00045\ \ \ \textcolor{comment}{//\ comparator\ provided\ to\ previous\ open\ calls\ on\ the\ same\ DB.}}
+\DoxyCodeLine{00046\ \ \ \textcolor{keyword}{const}\ Comparator*\ comparator;}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \textcolor{comment}{//\ If\ true,\ the\ database\ will\ be\ created\ if\ it\ is\ missing.}}
+\DoxyCodeLine{00049\ \ \ \textcolor{keywordtype}{bool}\ create\_if\_missing\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \textcolor{comment}{//\ If\ true,\ an\ error\ is\ raised\ if\ the\ database\ already\ exists.}}
+\DoxyCodeLine{00052\ \ \ \textcolor{keywordtype}{bool}\ error\_if\_exists\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \textcolor{comment}{//\ If\ true,\ the\ implementation\ will\ do\ aggressive\ checking\ of\ the}}
+\DoxyCodeLine{00055\ \ \ \textcolor{comment}{//\ data\ it\ is\ processing\ and\ will\ stop\ early\ if\ it\ detects\ any}}
+\DoxyCodeLine{00056\ \ \ \textcolor{comment}{//\ errors.\ \ This\ may\ have\ unforeseen\ ramifications:\ for\ example,\ a}}
+\DoxyCodeLine{00057\ \ \ \textcolor{comment}{//\ corruption\ of\ one\ DB\ entry\ may\ cause\ a\ large\ number\ of\ entries\ to}}
+\DoxyCodeLine{00058\ \ \ \textcolor{comment}{//\ become\ unreadable\ or\ for\ the\ entire\ DB\ to\ become\ unopenable.}}
+\DoxyCodeLine{00059\ \ \ \textcolor{keywordtype}{bool}\ paranoid\_checks\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \textcolor{comment}{//\ Use\ the\ specified\ object\ to\ interact\ with\ the\ environment,}}
+\DoxyCodeLine{00062\ \ \ \textcolor{comment}{//\ e.g.\ to\ read/write\ files,\ schedule\ background\ work,\ etc.}}
+\DoxyCodeLine{00063\ \ \ \textcolor{comment}{//\ Default:\ Env::Default()}}
+\DoxyCodeLine{00064\ \ \ Env*\ env;}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \ \ \textcolor{comment}{//\ Any\ internal\ progress/error\ information\ generated\ by\ the\ db\ will}}
+\DoxyCodeLine{00067\ \ \ \textcolor{comment}{//\ be\ written\ to\ info\_log\ if\ it\ is\ non-\/null,\ or\ to\ a\ file\ stored}}
+\DoxyCodeLine{00068\ \ \ \textcolor{comment}{//\ in\ the\ same\ directory\ as\ the\ DB\ contents\ if\ info\_log\ is\ null.}}
+\DoxyCodeLine{00069\ \ \ Logger*\ info\_log\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00072\ \ \ \textcolor{comment}{//\ Parameters\ that\ affect\ performance}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ \textcolor{comment}{//\ Amount\ of\ data\ to\ build\ up\ in\ memory\ (backed\ by\ an\ unsorted\ log}}
+\DoxyCodeLine{00075\ \ \ \textcolor{comment}{//\ on\ disk)\ before\ converting\ to\ a\ sorted\ on-\/disk\ file.}}
+\DoxyCodeLine{00076\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00077\ \ \ \textcolor{comment}{//\ Larger\ values\ increase\ performance,\ especially\ during\ bulk\ loads.}}
+\DoxyCodeLine{00078\ \ \ \textcolor{comment}{//\ Up\ to\ two\ write\ buffers\ may\ be\ held\ in\ memory\ at\ the\ same\ time,}}
+\DoxyCodeLine{00079\ \ \ \textcolor{comment}{//\ so\ you\ may\ wish\ to\ adjust\ this\ parameter\ to\ control\ memory\ usage.}}
+\DoxyCodeLine{00080\ \ \ \textcolor{comment}{//\ Also,\ a\ larger\ write\ buffer\ will\ result\ in\ a\ longer\ recovery\ time}}
+\DoxyCodeLine{00081\ \ \ \textcolor{comment}{//\ the\ next\ time\ the\ database\ is\ opened.}}
+\DoxyCodeLine{00082\ \ \ \textcolor{keywordtype}{size\_t}\ write\_buffer\_size\ =\ 4\ *\ 1024\ *\ 1024;}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \ \ \textcolor{comment}{//\ Number\ of\ open\ files\ that\ can\ be\ used\ by\ the\ DB.\ \ You\ may\ need\ to}}
+\DoxyCodeLine{00085\ \ \ \textcolor{comment}{//\ increase\ this\ if\ your\ database\ has\ a\ large\ working\ set\ (budget}}
+\DoxyCodeLine{00086\ \ \ \textcolor{comment}{//\ one\ open\ file\ per\ 2MB\ of\ working\ set).}}
+\DoxyCodeLine{00087\ \ \ \textcolor{keywordtype}{int}\ max\_open\_files\ =\ 1000;}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \ \ \textcolor{comment}{//\ Control\ over\ blocks\ (user\ data\ is\ stored\ in\ a\ set\ of\ blocks,\ and}}
+\DoxyCodeLine{00090\ \ \ \textcolor{comment}{//\ a\ block\ is\ the\ unit\ of\ reading\ from\ disk).}}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \ \ \textcolor{comment}{//\ If\ non-\/null,\ use\ the\ specified\ cache\ for\ blocks.}}
+\DoxyCodeLine{00093\ \ \ \textcolor{comment}{//\ If\ null,\ leveldb\ will\ automatically\ create\ and\ use\ an\ 8MB\ internal\ cache.}}
+\DoxyCodeLine{00094\ \ \ Cache*\ block\_cache\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \ \ \textcolor{comment}{//\ Approximate\ size\ of\ user\ data\ packed\ per\ block.\ \ Note\ that\ the}}
+\DoxyCodeLine{00097\ \ \ \textcolor{comment}{//\ block\ size\ specified\ here\ corresponds\ to\ uncompressed\ data.\ \ The}}
+\DoxyCodeLine{00098\ \ \ \textcolor{comment}{//\ actual\ size\ of\ the\ unit\ read\ from\ disk\ may\ be\ smaller\ if}}
+\DoxyCodeLine{00099\ \ \ \textcolor{comment}{//\ compression\ is\ enabled.\ \ This\ parameter\ can\ be\ changed\ dynamically.}}
+\DoxyCodeLine{00100\ \ \ \textcolor{keywordtype}{size\_t}\ block\_size\ =\ 4\ *\ 1024;}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \ \ \textcolor{comment}{//\ Number\ of\ keys\ between\ restart\ points\ for\ delta\ encoding\ of\ keys.}}
+\DoxyCodeLine{00103\ \ \ \textcolor{comment}{//\ This\ parameter\ can\ be\ changed\ dynamically.\ \ Most\ clients\ should}}
+\DoxyCodeLine{00104\ \ \ \textcolor{comment}{//\ leave\ this\ parameter\ alone.}}
+\DoxyCodeLine{00105\ \ \ \textcolor{keywordtype}{int}\ block\_restart\_interval\ =\ 16;}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \ \ \textcolor{comment}{//\ Leveldb\ will\ write\ up\ to\ this\ amount\ of\ bytes\ to\ a\ file\ before}}
+\DoxyCodeLine{00108\ \ \ \textcolor{comment}{//\ switching\ to\ a\ new\ one.}}
+\DoxyCodeLine{00109\ \ \ \textcolor{comment}{//\ Most\ clients\ should\ leave\ this\ parameter\ alone.\ \ However\ if\ your}}
+\DoxyCodeLine{00110\ \ \ \textcolor{comment}{//\ filesystem\ is\ more\ efficient\ with\ larger\ files,\ you\ could}}
+\DoxyCodeLine{00111\ \ \ \textcolor{comment}{//\ consider\ increasing\ the\ value.\ \ The\ downside\ will\ be\ longer}}
+\DoxyCodeLine{00112\ \ \ \textcolor{comment}{//\ compactions\ and\ hence\ longer\ latency/performance\ hiccups.}}
+\DoxyCodeLine{00113\ \ \ \textcolor{comment}{//\ Another\ reason\ to\ increase\ this\ parameter\ might\ be\ when\ you\ are}}
+\DoxyCodeLine{00114\ \ \ \textcolor{comment}{//\ initially\ populating\ a\ large\ database.}}
+\DoxyCodeLine{00115\ \ \ \textcolor{keywordtype}{size\_t}\ max\_file\_size\ =\ 2\ *\ 1024\ *\ 1024;}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \ \ \textcolor{comment}{//\ Compress\ blocks\ using\ the\ specified\ compression\ algorithm.\ \ This}}
+\DoxyCodeLine{00118\ \ \ \textcolor{comment}{//\ parameter\ can\ be\ changed\ dynamically.}}
+\DoxyCodeLine{00119\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00120\ \ \ \textcolor{comment}{//\ Default:\ kSnappyCompression,\ which\ gives\ lightweight\ but\ fast}}
+\DoxyCodeLine{00121\ \ \ \textcolor{comment}{//\ compression.}}
+\DoxyCodeLine{00122\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00123\ \ \ \textcolor{comment}{//\ Typical\ speeds\ of\ kSnappyCompression\ on\ an\ Intel(R)\ Core(TM)2\ 2.4GHz:}}
+\DoxyCodeLine{00124\ \ \ \textcolor{comment}{//\ \ \ \ \string~200-\/500MB/s\ compression}}
+\DoxyCodeLine{00125\ \ \ \textcolor{comment}{//\ \ \ \ \string~400-\/800MB/s\ decompression}}
+\DoxyCodeLine{00126\ \ \ \textcolor{comment}{//\ Note\ that\ these\ speeds\ are\ significantly\ faster\ than\ most}}
+\DoxyCodeLine{00127\ \ \ \textcolor{comment}{//\ persistent\ storage\ speeds,\ and\ therefore\ it\ is\ typically\ never}}
+\DoxyCodeLine{00128\ \ \ \textcolor{comment}{//\ worth\ switching\ to\ kNoCompression.\ \ Even\ if\ the\ input\ data\ is}}
+\DoxyCodeLine{00129\ \ \ \textcolor{comment}{//\ incompressible,\ the\ kSnappyCompression\ implementation\ will}}
+\DoxyCodeLine{00130\ \ \ \textcolor{comment}{//\ efficiently\ detect\ that\ and\ will\ switch\ to\ uncompressed\ mode.}}
+\DoxyCodeLine{00131\ \ \ CompressionType\ compression\ =\ kSnappyCompression;}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00133\ \ \ \textcolor{comment}{//\ EXPERIMENTAL:\ If\ true,\ append\ to\ existing\ MANIFEST\ and\ log\ files}}
+\DoxyCodeLine{00134\ \ \ \textcolor{comment}{//\ when\ a\ database\ is\ opened.\ \ This\ can\ significantly\ speed\ up\ open.}}
+\DoxyCodeLine{00135\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00136\ \ \ \textcolor{comment}{//\ Default:\ currently\ false,\ but\ may\ become\ true\ later.}}
+\DoxyCodeLine{00137\ \ \ \textcolor{keywordtype}{bool}\ reuse\_logs\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00139\ \ \ \textcolor{comment}{//\ If\ non-\/null,\ use\ the\ specified\ filter\ policy\ to\ reduce\ disk\ reads.}}
+\DoxyCodeLine{00140\ \ \ \textcolor{comment}{//\ Many\ applications\ will\ benefit\ from\ passing\ the\ result\ of}}
+\DoxyCodeLine{00141\ \ \ \textcolor{comment}{//\ NewBloomFilterPolicy()\ here.}}
+\DoxyCodeLine{00142\ \ \ \textcolor{keyword}{const}\ FilterPolicy*\ filter\_policy\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00143\ \};}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ \textcolor{comment}{//\ Options\ that\ control\ read\ operations}}
+\DoxyCodeLine{00146\ \textcolor{keyword}{struct\ }LEVELDB\_EXPORT\ ReadOptions\ \{}
+\DoxyCodeLine{00147\ \ \ ReadOptions()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00149\ \ \ \textcolor{comment}{//\ If\ true,\ all\ data\ read\ from\ underlying\ storage\ will\ be}}
+\DoxyCodeLine{00150\ \ \ \textcolor{comment}{//\ verified\ against\ corresponding\ checksums.}}
+\DoxyCodeLine{00151\ \ \ \textcolor{keywordtype}{bool}\ verify\_checksums\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00153\ \ \ \textcolor{comment}{//\ Should\ the\ data\ read\ for\ this\ iteration\ be\ cached\ in\ memory?}}
+\DoxyCodeLine{00154\ \ \ \textcolor{comment}{//\ Callers\ may\ wish\ to\ set\ this\ field\ to\ false\ for\ bulk\ scans.}}
+\DoxyCodeLine{00155\ \ \ \textcolor{keywordtype}{bool}\ fill\_cache\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ \ \ \textcolor{comment}{//\ If\ "{}snapshot"{}\ is\ non-\/null,\ read\ as\ of\ the\ supplied\ snapshot}}
+\DoxyCodeLine{00158\ \ \ \textcolor{comment}{//\ (which\ must\ belong\ to\ the\ DB\ that\ is\ being\ read\ and\ which\ must}}
+\DoxyCodeLine{00159\ \ \ \textcolor{comment}{//\ not\ have\ been\ released).\ \ If\ "{}snapshot"{}\ is\ null,\ use\ an\ implicit}}
+\DoxyCodeLine{00160\ \ \ \textcolor{comment}{//\ snapshot\ of\ the\ state\ at\ the\ beginning\ of\ this\ read\ operation.}}
+\DoxyCodeLine{00161\ \ \ \textcolor{keyword}{const}\ Snapshot*\ snapshot\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00162\ \};}
+\DoxyCodeLine{00163\ }
+\DoxyCodeLine{00164\ \textcolor{comment}{//\ Options\ that\ control\ write\ operations}}
+\DoxyCodeLine{00165\ \textcolor{keyword}{struct\ }LEVELDB\_EXPORT\ WriteOptions\ \{}
+\DoxyCodeLine{00166\ \ \ WriteOptions()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ \ \ \textcolor{comment}{//\ If\ true,\ the\ write\ will\ be\ flushed\ from\ the\ operating\ system}}
+\DoxyCodeLine{00169\ \ \ \textcolor{comment}{//\ buffer\ cache\ (by\ calling\ WritableFile::Sync())\ before\ the\ write}}
+\DoxyCodeLine{00170\ \ \ \textcolor{comment}{//\ is\ considered\ complete.\ \ If\ this\ flag\ is\ true,\ writes\ will\ be}}
+\DoxyCodeLine{00171\ \ \ \textcolor{comment}{//\ slower.}}
+\DoxyCodeLine{00172\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00173\ \ \ \textcolor{comment}{//\ If\ this\ flag\ is\ false,\ and\ the\ machine\ crashes,\ some\ recent}}
+\DoxyCodeLine{00174\ \ \ \textcolor{comment}{//\ writes\ may\ be\ lost.\ \ Note\ that\ if\ it\ is\ just\ the\ process\ that}}
+\DoxyCodeLine{00175\ \ \ \textcolor{comment}{//\ crashes\ (i.e.,\ the\ machine\ does\ not\ reboot),\ no\ writes\ will\ be}}
+\DoxyCodeLine{00176\ \ \ \textcolor{comment}{//\ lost\ even\ if\ sync==false.}}
+\DoxyCodeLine{00177\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00178\ \ \ \textcolor{comment}{//\ In\ other\ words,\ a\ DB\ write\ with\ sync==false\ has\ similar}}
+\DoxyCodeLine{00179\ \ \ \textcolor{comment}{//\ crash\ semantics\ as\ the\ "{}write()"{}\ system\ call.\ \ A\ DB\ write}}
+\DoxyCodeLine{00180\ \ \ \textcolor{comment}{//\ with\ sync==true\ has\ similar\ crash\ semantics\ to\ a\ "{}write()"{}}}
+\DoxyCodeLine{00181\ \ \ \textcolor{comment}{//\ system\ call\ followed\ by\ "{}fsync()"{}.}}
+\DoxyCodeLine{00182\ \ \ \textcolor{keywordtype}{bool}\ sync\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00183\ \};}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00185\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00186\ }
+\DoxyCodeLine{00187\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_INCLUDE\_OPTIONS\_H\_}}
+
+\end{DoxyCode}

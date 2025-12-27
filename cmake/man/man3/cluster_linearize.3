@@ -1,0 +1,137 @@
+.TH "cluster_linearize" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+cluster_linearize
+.SH SYNOPSIS
+.br
+.PP
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBDepGraph\fP"
+.br
+.ti -1c
+.RI "struct \fBSetInfo\fP"
+.br
+.ti -1c
+.RI "class \fBSpanningForestState\fP"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "using \fBDepGraphIndex\fP = uint32_t"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "template<typename SetType> std::vector< \fBSetInfo\fP< SetType > > \fBChunkLinearizationInfo\fP (const \fBDepGraph\fP< SetType > &depgraph, std::span< const \fBDepGraphIndex\fP > linearization) noexcept"
+.br
+.ti -1c
+.RI "template<typename SetType> std::vector< \fBFeeFrac\fP > \fBChunkLinearization\fP (const \fBDepGraph\fP< SetType > &depgraph, std::span< const \fBDepGraphIndex\fP > linearization) noexcept"
+.br
+.ti -1c
+.RI "template<typename SetType> std::tuple< std::vector< \fBDepGraphIndex\fP >, bool, uint64_t > \fBLinearize\fP (const \fBDepGraph\fP< SetType > &depgraph, uint64_t max_iterations, uint64_t rng_seed, std::span< const \fBDepGraphIndex\fP > old_linearization={}) noexcept"
+.br
+.ti -1c
+.RI "template<typename SetType> void \fBPostLinearize\fP (const \fBDepGraph\fP< SetType > &depgraph, std::span< \fBDepGraphIndex\fP > linearization)"
+.br
+.ti -1c
+.RI "template<typename SetType> void \fBFixLinearization\fP (const \fBDepGraph\fP< SetType > &depgraph, std::span< \fBDepGraphIndex\fP > linearization) noexcept"
+.br
+.in -1c
+.SH "Typedef Documentation"
+.PP 
+.SS "using \fBDepGraphIndex\fP = uint32_t"
+Data type to represent transaction indices in DepGraphs and the clusters they represent\&. 
+.SH "Function Documentation"
+.PP 
+.SS "template<typename SetType> std::vector< \fBFeeFrac\fP > ChunkLinearization (const \fBDepGraph\fP< SetType > & depgraph, std::span< const \fBDepGraphIndex\fP > linearization)\fR [noexcept]\fP"
+Compute the feerates of the chunks of linearization\&. Identical to ChunkLinearizationInfo, but only returns the chunk feerates, not the corresponding transaction sets\&. The new chunk to be added, initially a singleton\&.
+.SS "template<typename SetType> std::vector< \fBSetInfo\fP< SetType > > ChunkLinearizationInfo (const \fBDepGraph\fP< SetType > & depgraph, std::span< const \fBDepGraphIndex\fP > linearization)\fR [noexcept]\fP"
+Compute the chunks of linearization as SetInfos\&. The new chunk to be added, initially a singleton\&.
+.SS "template<typename SetType> void FixLinearization (const \fBDepGraph\fP< SetType > & depgraph, std::span< \fBDepGraphIndex\fP > linearization)\fR [noexcept]\fP"
+Make linearization topological, retaining its ordering where possible\&. The element at that position\&.
+
+.PP
+j represents how far from the back of the linearization elem should be placed\&.
+.SS "template<typename SetType> std::tuple< std::vector< \fBDepGraphIndex\fP >, bool, uint64_t > Linearize (const \fBDepGraph\fP< SetType > & depgraph, uint64_t max_iterations, uint64_t rng_seed, std::span< const \fBDepGraphIndex\fP > old_linearization = \fR{}\fP)\fR [noexcept]\fP"
+Find or improve a linearization for a cluster\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIdepgraph\fP Dependency graph of the cluster to be linearized\&. 
+.br
+\fImax_iterations\fP Upper bound on the amount of work that will be done\&. 
+.br
+\fIrng_seed\fP A random number seed to control search order\&. This prevents peers from predicting exactly which clusters would be hard for us to linearize\&. 
+.br
+\fIold_linearization\fP An existing linearization for the cluster (which must be topologically valid), or empty\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A tuple of:
+.IP "\(bu" 2
+The resulting linearization\&. It is guaranteed to be at least as good (in the feerate diagram sense) as old_linearization\&.
+.IP "\(bu" 2
+A boolean indicating whether the result is guaranteed to be optimal\&.
+.IP "\(bu" 2
+How many optimization steps were actually performed\&. 
+.PP
+.RE
+.PP
+Initialize a spanning forest data structure for this cluster\&.
+.SS "template<typename SetType> void PostLinearize (const \fBDepGraph\fP< SetType > & depgraph, std::span< \fBDepGraphIndex\fP > linearization)"
+Improve a given linearization\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIdepgraph\fP Dependency graph of the cluster being linearized\&. 
+.br
+\fIlinearization\fP On input, an existing linearization for depgraph\&. On output, a potentially better linearization for the same graph\&.
+.RE
+.PP
+Postlinearization guarantees:
+.IP "\(bu" 2
+The resulting chunks are connected\&.
+.IP "\(bu" 2
+If the input has a tree shape (either all transactions have at most one child, or all transactions have at most one parent), the result is optimal\&.
+.IP "\(bu" 2
+Given a linearization L1 and a leaf transaction T in it\&. Let L2 be L1 with T moved to the end, optionally with its fee increased\&. Let L3 be the postlinearization of L2\&. L3 will be at least as good as L1\&. This means that replacing transactions with same-size higher-fee transactions will not worsen linearizations through a "drop conflicts, append new transactions,  postlinearize" process\&. 
+.PP
+Index of the sentinel in the entries array below\&.
+
+.PP
+Indicator that a group has no previous transaction\&.
+
+.PP
+Data structure per transaction entry\&.
+
+.PP
+The index of the previous transaction in this group; NO_PREV_TX if this is the first entry of a group\&.
+
+.PP
+Index of the first transaction in this group, possibly itself\&.
+
+.PP
+Index of the last transaction in the previous group\&. The first group (the sentinel) points back to the last group here, making it a singly-linked circular list\&.
+
+.PP
+All transactions in the group\&. Empty for the sentinel\&.
+
+.PP
+All dependencies of the group (descendants in even passes; ancestors in odd ones)\&.
+
+.PP
+The combined fee/size of transactions in the group\&. Fee is negated in even passes\&.
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

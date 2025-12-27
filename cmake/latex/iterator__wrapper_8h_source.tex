@@ -1,0 +1,98 @@
+\doxysection{iterator\+\_\+wrapper.\+h}
+\label{iterator__wrapper_8h_source}\index{src/leveldb/table/iterator\_wrapper.h@{src/leveldb/table/iterator\_wrapper.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_TABLE\_ITERATOR\_WRAPPER\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_TABLE\_ITERATOR\_WRAPPER\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ "{}leveldb/iterator.h"{}}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ "{}leveldb/slice.h"{}}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{comment}{//\ A\ internal\ wrapper\ class\ with\ an\ interface\ similar\ to\ Iterator\ that}}
+\DoxyCodeLine{00014\ \textcolor{comment}{//\ caches\ the\ valid()\ and\ key()\ results\ for\ an\ underlying\ iterator.}}
+\DoxyCodeLine{00015\ \textcolor{comment}{//\ This\ can\ help\ avoid\ virtual\ function\ calls\ and\ also\ gives\ better}}
+\DoxyCodeLine{00016\ \textcolor{comment}{//\ cache\ locality.}}
+\DoxyCodeLine{00017\ \textcolor{keyword}{class\ }IteratorWrapper\ \{}
+\DoxyCodeLine{00018\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00019\ \ \ IteratorWrapper()\ :\ iter\_(nullptr),\ valid\_(false)\ \{\}}
+\DoxyCodeLine{00020\ \ \ \textcolor{keyword}{explicit}\ IteratorWrapper(Iterator*\ iter)\ :\ iter\_(nullptr)\ \{\ Set(iter);\ \}}
+\DoxyCodeLine{00021\ \ \ \string~IteratorWrapper()\ \{\ \textcolor{keyword}{delete}\ iter\_;\ \}}
+\DoxyCodeLine{00022\ \ \ Iterator*\ iter()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ iter\_;\ \}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \ \ \textcolor{comment}{//\ Takes\ ownership\ of\ "{}iter"{}\ and\ will\ delete\ it\ when\ destroyed,\ or}}
+\DoxyCodeLine{00025\ \ \ \textcolor{comment}{//\ when\ Set()\ is\ invoked\ again.}}
+\DoxyCodeLine{00026\ \ \ \textcolor{keywordtype}{void}\ Set(Iterator*\ iter)\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keyword}{delete}\ iter\_;}
+\DoxyCodeLine{00028\ \ \ \ \ iter\_\ =\ iter;}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keywordflow}{if}\ (iter\_\ ==\ \textcolor{keyword}{nullptr})\ \{}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ valid\_\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00031\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ Update();}
+\DoxyCodeLine{00033\ \ \ \ \ \}}
+\DoxyCodeLine{00034\ \ \ \}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \textcolor{comment}{//\ Iterator\ interface\ methods}}
+\DoxyCodeLine{00037\ \ \ \textcolor{keywordtype}{bool}\ Valid()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ valid\_;\ \}}
+\DoxyCodeLine{00038\ \ \ Slice\ key()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00039\ \ \ \ \ assert(Valid());}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordflow}{return}\ key\_;}
+\DoxyCodeLine{00041\ \ \ \}}
+\DoxyCodeLine{00042\ \ \ Slice\ value()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00043\ \ \ \ \ assert(Valid());}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordflow}{return}\ iter\_-\/>value();}
+\DoxyCodeLine{00045\ \ \ \}}
+\DoxyCodeLine{00046\ \ \ \textcolor{comment}{//\ Methods\ below\ require\ iter()\ !=\ nullptr}}
+\DoxyCodeLine{00047\ \ \ Status\ status()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00048\ \ \ \ \ assert(iter\_);}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordflow}{return}\ iter\_-\/>status();}
+\DoxyCodeLine{00050\ \ \ \}}
+\DoxyCodeLine{00051\ \ \ \textcolor{keywordtype}{void}\ Next()\ \{}
+\DoxyCodeLine{00052\ \ \ \ \ assert(iter\_);}
+\DoxyCodeLine{00053\ \ \ \ \ iter\_-\/>Next();}
+\DoxyCodeLine{00054\ \ \ \ \ Update();}
+\DoxyCodeLine{00055\ \ \ \}}
+\DoxyCodeLine{00056\ \ \ \textcolor{keywordtype}{void}\ Prev()\ \{}
+\DoxyCodeLine{00057\ \ \ \ \ assert(iter\_);}
+\DoxyCodeLine{00058\ \ \ \ \ iter\_-\/>Prev();}
+\DoxyCodeLine{00059\ \ \ \ \ Update();}
+\DoxyCodeLine{00060\ \ \ \}}
+\DoxyCodeLine{00061\ \ \ \textcolor{keywordtype}{void}\ Seek(\textcolor{keyword}{const}\ Slice\&\ k)\ \{}
+\DoxyCodeLine{00062\ \ \ \ \ assert(iter\_);}
+\DoxyCodeLine{00063\ \ \ \ \ iter\_-\/>Seek(k);}
+\DoxyCodeLine{00064\ \ \ \ \ Update();}
+\DoxyCodeLine{00065\ \ \ \}}
+\DoxyCodeLine{00066\ \ \ \textcolor{keywordtype}{void}\ SeekToFirst()\ \{}
+\DoxyCodeLine{00067\ \ \ \ \ assert(iter\_);}
+\DoxyCodeLine{00068\ \ \ \ \ iter\_-\/>SeekToFirst();}
+\DoxyCodeLine{00069\ \ \ \ \ Update();}
+\DoxyCodeLine{00070\ \ \ \}}
+\DoxyCodeLine{00071\ \ \ \textcolor{keywordtype}{void}\ SeekToLast()\ \{}
+\DoxyCodeLine{00072\ \ \ \ \ assert(iter\_);}
+\DoxyCodeLine{00073\ \ \ \ \ iter\_-\/>SeekToLast();}
+\DoxyCodeLine{00074\ \ \ \ \ Update();}
+\DoxyCodeLine{00075\ \ \ \}}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00078\ \ \ \textcolor{keywordtype}{void}\ Update()\ \{}
+\DoxyCodeLine{00079\ \ \ \ \ valid\_\ =\ iter\_-\/>Valid();}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keywordflow}{if}\ (valid\_)\ \{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ key\_\ =\ iter\_-\/>key();}
+\DoxyCodeLine{00082\ \ \ \ \ \}}
+\DoxyCodeLine{00083\ \ \ \}}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \ \ Iterator*\ iter\_;}
+\DoxyCodeLine{00086\ \ \ \textcolor{keywordtype}{bool}\ valid\_;}
+\DoxyCodeLine{00087\ \ \ Slice\ key\_;}
+\DoxyCodeLine{00088\ \};}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00090\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_TABLE\_ITERATOR\_WRAPPER\_H\_}}
+
+\end{DoxyCode}

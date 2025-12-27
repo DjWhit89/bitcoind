@@ -1,0 +1,150 @@
+.TH "HeadersSyncState" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+HeadersSyncState
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <headerssync\&.h>\fP
+.PP
+Inherited by \fBFuzzedHeadersSyncState\fP\&.
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBProcessingResult\fP"
+.br
+.in -1c
+.SS "Public Types"
+
+.in +1c
+.ti -1c
+.RI "enum class \fBState\fP { \fBPRESYNC\fP, \fBREDOWNLOAD\fP, \fBFINAL\fP }"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fB~HeadersSyncState\fP ()=default"
+.br
+.ti -1c
+.RI "\fBState\fP \fBGetState\fP () const"
+.br
+.ti -1c
+.RI "int64_t \fBGetPresyncHeight\fP () const"
+.br
+.ti -1c
+.RI "uint32_t \fBGetPresyncTime\fP () const"
+.br
+.ti -1c
+.RI "\fBarith_uint256\fP \fBGetPresyncWork\fP () const"
+.br
+.ti -1c
+.RI "\fBHeadersSyncState\fP (\fBNodeId\fP id, const \fBConsensus::Params\fP &consensus_params, const \fBHeadersSyncParams\fP &params, const \fBCBlockIndex\fP *chain_start, const \fBarith_uint256\fP &minimum_required_work)"
+.br
+.ti -1c
+.RI "\fBProcessingResult\fP \fBProcessNextHeaders\fP (std::span< const \fBCBlockHeader\fP > received_headers, bool full_headers_message)"
+.br
+.ti -1c
+.RI "\fBCBlockLocator\fP \fBNextHeadersRequestLocator\fP () const"
+.br
+.in -1c
+.SS "Protected Attributes"
+
+.in +1c
+.ti -1c
+.RI "const size_t \fBm_commit_offset\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+\fBHeadersSyncState\fP:
+
+.PP
+We wish to download a peer's headers chain in a DoS-resistant way\&.
+
+.PP
+The Bitcoin protocol does not offer an easy way to determine the work on a peer's chain\&. Currently, we can query a peer's headers by using a GETHEADERS message, and our peer can return a set of up to 2000 headers that connect to something we know\&. If a peer's chain has more than 2000 blocks, then we need a way to verify that the chain actually has enough work on it to be useful to us -- by being above our anti-DoS minimum-chain-work threshold -- before we commit to storing those headers in memory\&. Otherwise, it would be cheap for an attacker to waste all our memory by serving us low-work headers (particularly for a new node coming online for the first time)\&.
+
+.PP
+To prevent memory-DoS with low-work headers, while still always being able to reorg to whatever the most-work chain is, we require that a chain meet a work threshold before committing it to memory\&. We can do this by downloading a peer's headers twice, whenever we are not sure that the chain has sufficient work:
+
+.PP
+.IP "\(bu" 2
+In the first download phase, called pre-synchronization, we can calculate the work on the chain as we go (just by checking the nBits value on each header, and validating the proof-of-work)\&.
+.IP "\(bu" 2
+Once we have reached a header where the cumulative chain work is sufficient, we switch to downloading the headers a second time, this time processing them fully, and possibly storing them in memory\&.
+.PP
+
+.PP
+To prevent an attacker from using (eg) the honest chain to convince us that they have a high-work chain, but then feeding us an alternate set of low-difficulty headers in the second phase, we store commitments to the chain we see in the first download phase that we check in the second phase, as follows:
+
+.PP
+.IP "\(bu" 2
+In phase 1 (presync), store 1 bit (using a salted hash function) for every N headers that we see\&. With a reasonable choice of N, this uses relatively little memory even for a very long chain\&.
+.IP "\(bu" 2
+In phase 2 (redownload), keep a lookahead buffer and only accept headers from that buffer into the block index (permanent memory usage) once they have some target number of verified commitments on top of them\&. With this parametrization, we can achieve a given security target for potential permanent memory usage, while choosing N to minimize memory use during the sync (temporary, per-peer storage)\&. 
+.PP
+
+.SH "Member Enumeration Documentation"
+.PP 
+.SS "enum class \fBState\fP\fR [strong]\fP"
+
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BIPRESYNC \fP
+PRESYNC means the peer has not yet demonstrated their chain has sufficient work and we're only building commitments to the chain they serve us\&. 
+.TP
+\f(BIREDOWNLOAD \fP
+REDOWNLOAD means the peer has given us a high-enough-work chain, and now we're redownloading the headers we saw before and trying to accept them 
+.TP
+\f(BIFINAL \fP
+We're done syncing with this peer and can discard any remaining state 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "~\fBHeadersSyncState\fP ()\fR [default]\fP"
+
+.SS "\fBHeadersSyncState\fP (\fBNodeId\fP id, const \fBConsensus::Params\fP & consensus_params, const \fBHeadersSyncParams\fP & params, const \fBCBlockIndex\fP * chain_start, const \fBarith_uint256\fP & minimum_required_work)"
+Construct a \fBHeadersSyncState\fP object representing a headers sync via this download-twice mechanism)\&.
+
+.PP
+id: node id (for logging) consensus_params: parameters needed for difficulty adjustment validation chain_start: best known fork point that the peer's headers branch from minimum_required_work: amount of chain work required to accept the chain 
+.SH "Member Function Documentation"
+.PP 
+.SS "int64_t GetPresyncHeight () const\fR [inline]\fP"
+Return the height reached during the PRESYNC phase 
+.SS "uint32_t GetPresyncTime () const\fR [inline]\fP"
+Return the block timestamp of the last header received during the PRESYNC phase\&. 
+.SS "\fBarith_uint256\fP GetPresyncWork () const\fR [inline]\fP"
+Return the amount of work in the chain received during the PRESYNC phase\&. 
+.SS "\fBState\fP GetState () const\fR [inline]\fP"
+Return the current state of our download 
+.SS "\fBCBlockLocator\fP NextHeadersRequestLocator () const"
+Issue the next GETHEADERS message to our peer\&.
+
+.PP
+This will return a locator appropriate for the current sync object, to continue the synchronization phase it is in\&. 
+.SS "\fBHeadersSyncState::ProcessingResult\fP ProcessNextHeaders (std::span< const \fBCBlockHeader\fP > received_headers, bool full_headers_message)"
+Process a batch of headers, once a sync via this mechanism has started
+
+.PP
+received_headers: headers that were received over the network for processing\&. Assumes the caller has already verified the headers are continuous, and has checked that each header satisfies the proof-of-work target included in the header (but not necessarily verified that the proof-of-work target is correct and passes consensus rules)\&. full_headers_message: true if the message was at max capacity, indicating more headers may be available \fBProcessingResult\&.pow_validated_headers\fP: will be filled in with any headers that the caller can fully process and validate now (because these returned headers are on a chain with sufficient work) \fBProcessingResult\&.success\fP: set to false if an error is detected and the sync is aborted; true otherwise\&. \fBProcessingResult\&.request_more\fP: if true, the caller is suggested to call NextHeadersRequestLocator and send a getheaders message using it\&.
+
+.PP
+Process the next batch of headers received from our peer\&. Validate and store commitments, and compare total chainwork to our target to see if we can switch to REDOWNLOAD mode\&. 
+.SH "Field Documentation"
+.PP 
+.SS "const size_t m_commit_offset\fR [protected]\fP"
+The (secret) offset on the heights for which to create commitments\&.
+
+.PP
+m_header_commitments entries are created at any height h for which (h % m_params\&.commitment_period) == m_commit_offset\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

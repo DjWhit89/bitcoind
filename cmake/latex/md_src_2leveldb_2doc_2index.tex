@@ -1,0 +1,383 @@
+\chapter{leveldb }
+\label{md_src_2leveldb_2doc_2index}\index{leveldb@{leveldb}}
+{\itshape Jeff Dean, Sanjay Ghemawat}
+
+The leveldb library provides a persistent key value store. Keys and values are arbitrary byte arrays. The keys are ordered within the key value store according to a user-\/specified comparator function.\doxysection{Opening A Database}\label{md_src_2leveldb_2doc_2index_autotoc_md41}
+A leveldb database has a name which corresponds to a file system directory. All of the contents of database are stored in this directory. The following example shows how to open a database, creating it if necessary\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{\textcolor{preprocessor}{\#include\ "{}leveldb/db.h"{}}}
+\DoxyCodeLine{}
+\DoxyCodeLine{leveldb::DB*\ db;}
+\DoxyCodeLine{leveldb::Options\ options;}
+\DoxyCodeLine{options.create\_if\_missing\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{leveldb::Status\ status\ =\ leveldb::DB::Open(options,\ \textcolor{stringliteral}{"{}/tmp/testdb"{}},\ \&db);}
+\DoxyCodeLine{assert(status.ok());}
+\DoxyCodeLine{...}
+
+\end{DoxyCode}
+
+
+If you want to raise an error if the database already exists, add the following line before the {\ttfamily \doxyref{leveldb\+::\+DB\+::\+Open}{p.}{classleveldb_1_1_d_b_a26c15fb67157cbad02208d0f949393dd}} call\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{options.error\_if\_exists\ =\ \textcolor{keyword}{true};}
+
+\end{DoxyCode}
+\doxysection{Status}\label{md_src_2leveldb_2doc_2index_autotoc_md42}
+You may have noticed the {\ttfamily \doxyref{leveldb\+::\+Status}{p.}{classleveldb_1_1_status}} type above. Values of this type are returned by most functions in leveldb that may encounter an error. You can check if such a result is ok, and also print an associated error message\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{leveldb::Status\ s\ =\ ...;}
+\DoxyCodeLine{\textcolor{keywordflow}{if}\ (!s.ok())\ cerr\ <<\ s.ToString()\ <<\ endl;}
+
+\end{DoxyCode}
+\doxysection{Closing A Database}\label{md_src_2leveldb_2doc_2index_autotoc_md43}
+When you are done with a database, just delete the database object. Example\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{...\ open\ the\ db\ as\ described\ above\ ...}
+\DoxyCodeLine{...\ \textcolor{keywordflow}{do}\ something\ with\ db\ ...}
+\DoxyCodeLine{delete\ db;}
+
+\end{DoxyCode}
+\doxysection{Reads And Writes}\label{md_src_2leveldb_2doc_2index_autotoc_md44}
+The database provides Put, Delete, and Get methods to modify/query the database. For example, the following code moves the value stored under key1 to key2.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{std::string\ value;}
+\DoxyCodeLine{leveldb::Status\ s\ =\ db-\/>Get(leveldb::ReadOptions(),\ key1,\ \&value);}
+\DoxyCodeLine{\textcolor{keywordflow}{if}\ (s.ok())\ s\ =\ db-\/>Put(leveldb::WriteOptions(),\ key2,\ value);}
+\DoxyCodeLine{\textcolor{keywordflow}{if}\ (s.ok())\ s\ =\ db-\/>Delete(leveldb::WriteOptions(),\ key1);}
+
+\end{DoxyCode}
+\doxysection{Atomic Updates}\label{md_src_2leveldb_2doc_2index_autotoc_md45}
+Note that if the process dies after the Put of key2 but before the delete of key1, the same value may be left stored under multiple keys. Such problems can be avoided by using the {\ttfamily \doxyref{Write\+Batch}{p.}{class_write_batch}} class to atomically apply a set of updates\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{preprocessor}{\#include\ "{}leveldb/write\_batch.h"{}}}
+\DoxyCodeLine{...}
+\DoxyCodeLine{std::string\ value;}
+\DoxyCodeLine{leveldb::Status\ s\ =\ db-\/>Get(leveldb::ReadOptions(),\ key1,\ \&value);}
+\DoxyCodeLine{\textcolor{keywordflow}{if}\ (s.ok())\ \{}
+\DoxyCodeLine{\ \ leveldb::WriteBatch\ batch;}
+\DoxyCodeLine{\ \ batch.Delete(key1);}
+\DoxyCodeLine{\ \ batch.Put(key2,\ value);}
+\DoxyCodeLine{\ \ s\ =\ db-\/>Write(leveldb::WriteOptions(),\ \&batch);}
+\DoxyCodeLine{\}}
+
+\end{DoxyCode}
+
+
+The {\ttfamily \doxyref{Write\+Batch}{p.}{class_write_batch}} holds a sequence of edits to be made to the database, and these edits within the batch are applied in order. Note that we called Delete before Put so that if key1 is identical to key2, we do not end up erroneously dropping the value entirely.
+
+Apart from its atomicity benefits, {\ttfamily \doxyref{Write\+Batch}{p.}{class_write_batch}} may also be used to speed up bulk updates by placing lots of individual mutations into the same batch.\doxysection{Synchronous Writes}\label{md_src_2leveldb_2doc_2index_autotoc_md46}
+By default, each write to leveldb is asynchronous\+: it returns after pushing the write from the process into the operating system. The transfer from operating system memory to the underlying persistent storage happens asynchronously. The sync flag can be turned on for a particular write to make the write operation not return until the data being written has been pushed all the way to persistent storage. (On Posix systems, this is implemented by calling either {\ttfamily fsync(...)} or {\ttfamily fdatasync(...)} or {\ttfamily msync(..., MS\+\_\+\+SYNC)} before the write operation returns.)
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{leveldb::WriteOptions\ write\_options;}
+\DoxyCodeLine{write\_options.sync\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{db-\/>Put(write\_options,\ ...);}
+
+\end{DoxyCode}
+
+
+Asynchronous writes are often more than a thousand times as fast as synchronous writes. The downside of asynchronous writes is that a crash of the machine may cause the last few updates to be lost. Note that a crash of just the writing process (i.\+e., not a reboot) will not cause any loss since even when sync is false, an update is pushed from the process memory into the operating system before it is considered done.
+
+Asynchronous writes can often be used safely. For example, when loading a large amount of data into the database you can handle lost updates by restarting the bulk load after a crash. A hybrid scheme is also possible where every Nth write is synchronous, and in the event of a crash, the bulk load is restarted just after the last synchronous write finished by the previous run. (The synchronous write can update a marker that describes where to restart on a crash.)
+
+{\ttfamily \doxyref{Write\+Batch}{p.}{class_write_batch}} provides an alternative to asynchronous writes. Multiple updates may be placed in the same \doxyref{Write\+Batch}{p.}{class_write_batch} and applied together using a synchronous write (i.\+e., {\ttfamily write\+\_\+options.\+sync} is set to true). The extra cost of the synchronous write will be amortized across all of the writes in the batch.\doxysection{Concurrency}\label{md_src_2leveldb_2doc_2index_autotoc_md47}
+A database may only be opened by one process at a time. The leveldb implementation acquires a lock from the operating system to prevent misuse. Within a single process, the same {\ttfamily \doxyref{leveldb\+::\+DB}{p.}{classleveldb_1_1_d_b}} object may be safely shared by multiple concurrent threads. I.\+e., different threads may write into or fetch iterators or call Get on the same database without any external synchronization (the leveldb implementation will automatically do the required synchronization). However other objects (like \doxyref{Iterator}{p.}{class_iterator} and {\ttfamily \doxyref{Write\+Batch}{p.}{class_write_batch}}) may require external synchronization. If two threads share such an object, they must protect access to it using their own locking protocol. More details are available in the public header files.\doxysection{Iteration}\label{md_src_2leveldb_2doc_2index_autotoc_md48}
+The following example demonstrates how to print all key,value pairs in a database.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{leveldb::Iterator*\ it\ =\ db-\/>NewIterator(leveldb::ReadOptions());}
+\DoxyCodeLine{\textcolor{keywordflow}{for}\ (it-\/>SeekToFirst();\ it-\/>Valid();\ it-\/>Next())\ \{}
+\DoxyCodeLine{\ \ cout\ <<\ it-\/>key().ToString()\ <<\ \textcolor{stringliteral}{"{}:\ "{}}\ \ <<\ it-\/>value().ToString()\ <<\ endl;}
+\DoxyCodeLine{\}}
+\DoxyCodeLine{assert(it-\/>status().ok());\ \ \textcolor{comment}{//\ Check\ for\ any\ errors\ found\ during\ the\ scan}}
+\DoxyCodeLine{\textcolor{keyword}{delete}\ it;}
+
+\end{DoxyCode}
+
+
+The following variation shows how to process just the keys in the range [start,limit)\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{keywordflow}{for}\ (it-\/>Seek(start);}
+\DoxyCodeLine{\ \ \ it-\/>Valid()\ \&\&\ it-\/>key().ToString()\ <\ limit;}
+\DoxyCodeLine{\ \ \ it-\/>Next())\ \{}
+\DoxyCodeLine{\ \ ...}
+\DoxyCodeLine{\}}
+
+\end{DoxyCode}
+
+
+You can also process entries in reverse order. (Caveat\+: reverse iteration may be somewhat slower than forward iteration.)
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{keywordflow}{for}\ (it-\/>SeekToLast();\ it-\/>Valid();\ it-\/>Prev())\ \{}
+\DoxyCodeLine{\ \ ...}
+\DoxyCodeLine{\}}
+
+\end{DoxyCode}
+\doxysection{Snapshots}\label{md_src_2leveldb_2doc_2index_autotoc_md49}
+Snapshots provide consistent read-\/only views over the entire state of the key-\/value store. {\ttfamily \doxyref{Read\+Options\+::snapshot}{p.}{struct_read_options_a6e703d6a814fc977ccb6b6a7aa441cf7}} may be non-\/\+NULL to indicate that a read should operate on a particular version of the \doxyref{DB}{p.}{class_d_b} state. If {\ttfamily \doxyref{Read\+Options\+::snapshot}{p.}{struct_read_options_a6e703d6a814fc977ccb6b6a7aa441cf7}} is NULL, the read will operate on an implicit snapshot of the current state.
+
+Snapshots are created by the {\ttfamily \doxyref{DB\+::\+Get\+Snapshot()}{p.}{class_d_b_a97d4baa430a8a5df1a70bf5fe152b4f4}} method\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{leveldb::ReadOptions\ options;}
+\DoxyCodeLine{options.snapshot\ =\ db-\/>GetSnapshot();}
+\DoxyCodeLine{...\ apply\ some\ updates\ to\ db\ ...}
+\DoxyCodeLine{leveldb::Iterator*\ iter\ =\ db-\/>NewIterator(options);}
+\DoxyCodeLine{...\ read\ \textcolor{keyword}{using\ }iter\ to\ view\ the\ state\ when\ the\ snapshot\ was\ created\ ...}
+\DoxyCodeLine{delete\ iter;}
+\DoxyCodeLine{db-\/>ReleaseSnapshot(options.snapshot);}
+
+\end{DoxyCode}
+
+
+Note that when a snapshot is no longer needed, it should be released using the {\ttfamily \doxyref{DB\+::\+Release\+Snapshot}{p.}{class_d_b_a9bde7504ecef36d21478f7e10afafa2a}} interface. This allows the implementation to get rid of state that was being maintained just to support reading as of that snapshot.\doxysection{Slice}\label{md_src_2leveldb_2doc_2index_autotoc_md50}
+The return value of the {\ttfamily it-\/$>$key()} and {\ttfamily it-\/$>$value()} calls above are instances of the {\ttfamily \doxyref{leveldb\+::\+Slice}{p.}{classleveldb_1_1_slice}} type. \doxyref{Slice}{p.}{class_slice} is a simple structure that contains a length and a pointer to an external byte array. Returning a \doxyref{Slice}{p.}{class_slice} is a cheaper alternative to returning a {\ttfamily std\+::string} since we do not need to copy potentially large keys and values. In addition, leveldb methods do not return null-\/terminated C-\/style strings since leveldb keys and values are allowed to contain {\ttfamily \textquotesingle{}\textbackslash{}0\textquotesingle{}} bytes.
+
+C++ strings and null-\/terminated C-\/style strings can be easily converted to a \doxyref{Slice}{p.}{class_slice}\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{leveldb::Slice\ s1\ =\ \textcolor{stringliteral}{"{}hello"{}};}
+\DoxyCodeLine{}
+\DoxyCodeLine{std::string\ str(\textcolor{stringliteral}{"{}world"{}});}
+\DoxyCodeLine{leveldb::Slice\ s2\ =\ str;}
+
+\end{DoxyCode}
+
+
+A \doxyref{Slice}{p.}{class_slice} can be easily converted back to a C++ string\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{std::string\ str\ =\ s1.ToString();}
+\DoxyCodeLine{assert(str\ ==\ std::string(\textcolor{stringliteral}{"{}hello"{}}));}
+
+\end{DoxyCode}
+
+
+Be careful when using Slices since it is up to the caller to ensure that the external byte array into which the \doxyref{Slice}{p.}{class_slice} points remains live while the \doxyref{Slice}{p.}{class_slice} is in use. For example, the following is buggy\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{leveldb::Slice\ slice;}
+\DoxyCodeLine{\textcolor{keywordflow}{if}\ (...)\ \{}
+\DoxyCodeLine{\ \ std::string\ str\ =\ ...;}
+\DoxyCodeLine{\ \ slice\ =\ str;}
+\DoxyCodeLine{\}}
+\DoxyCodeLine{Use(slice);}
+
+\end{DoxyCode}
+
+
+When the if statement goes out of scope, str will be destroyed and the backing storage for slice will disappear.\doxysection{Comparators}\label{md_src_2leveldb_2doc_2index_autotoc_md51}
+The preceding examples used the default ordering function for key, which orders bytes lexicographically. You can however supply a custom comparator when opening a database. For example, suppose each database key consists of two numbers and we should sort by the first number, breaking ties by the second number. First, define a proper subclass of {\ttfamily \doxyref{leveldb\+::\+Comparator}{p.}{structleveldb_1_1_comparator}} that expresses these rules\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{keyword}{class\ }TwoPartComparator\ :\ \textcolor{keyword}{public}\ leveldb::Comparator\ \{}
+\DoxyCodeLine{\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\ \ \textcolor{comment}{//\ Three-\/way\ comparison\ function:}}
+\DoxyCodeLine{\ \ \textcolor{comment}{//\ \ \ if\ a\ <\ b:\ negative\ result}}
+\DoxyCodeLine{\ \ \textcolor{comment}{//\ \ \ if\ a\ >\ b:\ positive\ result}}
+\DoxyCodeLine{\ \ \textcolor{comment}{//\ \ \ else:\ zero\ result}}
+\DoxyCodeLine{\ \ \textcolor{keywordtype}{int}\ Compare(\textcolor{keyword}{const}\ leveldb::Slice\&\ a,\ \textcolor{keyword}{const}\ leveldb::Slice\&\ b)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordtype}{int}\ a1,\ a2,\ b1,\ b2;}
+\DoxyCodeLine{\ \ \ \ ParseKey(a,\ \&a1,\ \&a2);}
+\DoxyCodeLine{\ \ \ \ ParseKey(b,\ \&b1,\ \&b2);}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordflow}{if}\ (a1\ <\ b1)\ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordflow}{if}\ (a1\ >\ b1)\ \textcolor{keywordflow}{return}\ +1;}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordflow}{if}\ (a2\ <\ b2)\ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordflow}{if}\ (a2\ >\ b2)\ \textcolor{keywordflow}{return}\ +1;}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{\ \ \}}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \textcolor{comment}{//\ Ignore\ the\ following\ methods\ for\ now:}}
+\DoxyCodeLine{\ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ Name()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{stringliteral}{"{}TwoPartComparator"{}};\ \}}
+\DoxyCodeLine{\ \ \textcolor{keywordtype}{void}\ FindShortestSeparator(std::string*,\ \textcolor{keyword}{const}\ leveldb::Slice\&)\textcolor{keyword}{\ const\ }\{\}}
+\DoxyCodeLine{\ \ \textcolor{keywordtype}{void}\ FindShortSuccessor(std::string*)\textcolor{keyword}{\ const\ }\{\}}
+\DoxyCodeLine{\};}
+
+\end{DoxyCode}
+
+
+Now create a database using this custom comparator\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{TwoPartComparator\ cmp;}
+\DoxyCodeLine{leveldb::DB*\ db;}
+\DoxyCodeLine{leveldb::Options\ options;}
+\DoxyCodeLine{options.create\_if\_missing\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{options.comparator\ =\ \&cmp;}
+\DoxyCodeLine{leveldb::Status\ status\ =\ leveldb::DB::Open(options,\ \textcolor{stringliteral}{"{}/tmp/testdb"{}},\ \&db);}
+\DoxyCodeLine{...}
+
+\end{DoxyCode}
+\doxysubsection{Backwards compatibility}\label{md_src_2leveldb_2doc_2index_autotoc_md52}
+The result of the comparator\textquotesingle{}s Name method is attached to the database when it is created, and is checked on every subsequent database open. If the name changes, the {\ttfamily \doxyref{leveldb\+::\+DB\+::\+Open}{p.}{classleveldb_1_1_d_b_a26c15fb67157cbad02208d0f949393dd}} call will fail. Therefore, change the name if and only if the new key format and comparison function are incompatible with existing databases, and it is ok to discard the contents of all existing databases.
+
+You can however still gradually evolve your key format over time with a little bit of pre-\/planning. For example, you could store a version number at the end of each key (one byte should suffice for most uses). When you wish to switch to a new key format (e.\+g., adding an optional third part to the keys processed by {\ttfamily Two\+Part\+Comparator}), (a) keep the same comparator name (b) increment the version number for new keys (c) change the comparator function so it uses the version numbers found in the keys to decide how to interpret them.\doxysection{Performance}\label{md_src_2leveldb_2doc_2index_autotoc_md53}
+Performance can be tuned by changing the default values of the types defined in {\ttfamily include/options.\+h}.\doxysubsection{Block size}\label{md_src_2leveldb_2doc_2index_autotoc_md54}
+leveldb groups adjacent keys together into the same block and such a block is the unit of transfer to and from persistent storage. The default block size is approximately 4096 uncompressed bytes. Applications that mostly do bulk scans over the contents of the database may wish to increase this size. Applications that do a lot of point reads of small values may wish to switch to a smaller block size if performance measurements indicate an improvement. There isn\textquotesingle{}t much benefit in using blocks smaller than one kilobyte, or larger than a few megabytes. Also note that compression will be more effective with larger block sizes.\doxysubsection{Compression}\label{md_src_2leveldb_2doc_2index_autotoc_md55}
+Each block is individually compressed before being written to persistent storage. Compression is on by default since the default compression method is very fast, and is automatically disabled for incompressible data. In rare cases, applications may want to disable compression entirely, but should only do so if benchmarks show a performance improvement\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{leveldb::Options\ options;}
+\DoxyCodeLine{options.compression\ =\ leveldb::kNoCompression;}
+\DoxyCodeLine{...\ leveldb::DB::Open(options,\ name,\ ...)\ ....}
+
+\end{DoxyCode}
+\doxysubsection{Cache}\label{md_src_2leveldb_2doc_2index_autotoc_md56}
+The contents of the database are stored in a set of files in the filesystem and each file stores a sequence of compressed blocks. If options.\+block\+\_\+cache is non-\/\+NULL, it is used to cache frequently used uncompressed block contents.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{preprocessor}{\#include\ "{}leveldb/cache.h"{}}}
+\DoxyCodeLine{}
+\DoxyCodeLine{leveldb::Options\ options;}
+\DoxyCodeLine{options.block\_cache\ =\ leveldb::NewLRUCache(100\ *\ 1048576);\ \ \textcolor{comment}{//\ 100MB\ cache}}
+\DoxyCodeLine{leveldb::DB*\ db;}
+\DoxyCodeLine{leveldb::DB::Open(options,\ name,\ \&db);}
+\DoxyCodeLine{...\ use\ the\ db\ ...}
+\DoxyCodeLine{delete\ db}
+\DoxyCodeLine{\textcolor{keyword}{delete}\ options.block\_cache;}
+
+\end{DoxyCode}
+
+
+Note that the cache holds uncompressed data, and therefore it should be sized according to application level data sizes, without any reduction from compression. (Caching of compressed blocks is left to the operating system buffer cache, or any custom \doxyref{Env}{p.}{class_env} implementation provided by the client.)
+
+When performing a bulk read, the application may wish to disable caching so that the data processed by the bulk read does not end up displacing most of the cached contents. A per-\/iterator option can be used to achieve this\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{leveldb::ReadOptions\ options;}
+\DoxyCodeLine{options.fill\_cache\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{leveldb::Iterator*\ it\ =\ db-\/>NewIterator(options);}
+\DoxyCodeLine{\textcolor{keywordflow}{for}\ (it-\/>SeekToFirst();\ it-\/>Valid();\ it-\/>Next())\ \{}
+\DoxyCodeLine{\ \ ...}
+\DoxyCodeLine{\}}
+
+\end{DoxyCode}
+\doxysubsection{Key Layout}\label{md_src_2leveldb_2doc_2index_autotoc_md57}
+Note that the unit of disk transfer and caching is a block. Adjacent keys (according to the database sort order) will usually be placed in the same block. Therefore the application can improve its performance by placing keys that are accessed together near each other and placing infrequently used keys in a separate region of the key space.
+
+For example, suppose we are implementing a simple file system on top of leveldb. The types of entries we might wish to store are\+: \begin{DoxyVerb}filename -> permission-bits, length, list of file_block_ids
+file_block_id -> data
+\end{DoxyVerb}
+
+
+We might want to prefix filename keys with one letter (say \textquotesingle{}/\textquotesingle{}) and the {\ttfamily file\+\_\+block\+\_\+id} keys with a different letter (say \textquotesingle{}0\textquotesingle{}) so that scans over just the metadata do not force us to fetch and cache bulky file contents.\doxysubsection{Filters}\label{md_src_2leveldb_2doc_2index_autotoc_md58}
+Because of the way leveldb data is organized on disk, a single {\ttfamily Get()} call may involve multiple reads from disk. The optional \doxyref{Filter\+Policy}{p.}{class_filter_policy} mechanism can be used to reduce the number of disk reads substantially.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{leveldb::Options\ options;}
+\DoxyCodeLine{options.filter\_policy\ =\ NewBloomFilterPolicy(10);}
+\DoxyCodeLine{leveldb::DB*\ db;}
+\DoxyCodeLine{leveldb::DB::Open(options,\ \textcolor{stringliteral}{"{}/tmp/testdb"{}},\ \&db);}
+\DoxyCodeLine{...\ use\ the\ database\ ...}
+\DoxyCodeLine{delete\ db;}
+\DoxyCodeLine{\textcolor{keyword}{delete}\ options.filter\_policy;}
+
+\end{DoxyCode}
+
+
+The preceding code associates a Bloom filter based filtering policy with the database. Bloom filter based filtering relies on keeping some number of bits of data in memory per key (in this case 10 bits per key since that is the argument we passed to {\ttfamily \doxyref{New\+Bloom\+Filter\+Policy}{p.}{c_8cc_a3e8016272c0a64b20d954afcc4a87009}}). This filter will reduce the number of unnecessary disk reads needed for Get() calls by a factor of approximately a 100. Increasing the bits per key will lead to a larger reduction at the cost of more memory usage. We recommend that applications whose working set does not fit in memory and that do a lot of random reads set a filter policy.
+
+If you are using a custom comparator, you should ensure that the filter policy you are using is compatible with your comparator. For example, consider a comparator that ignores trailing spaces when comparing keys. {\ttfamily \doxyref{New\+Bloom\+Filter\+Policy}{p.}{c_8cc_a3e8016272c0a64b20d954afcc4a87009}} must not be used with such a comparator. Instead, the application should provide a custom filter policy that also ignores trailing spaces. For example\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{keyword}{class\ }CustomFilterPolicy\ :\ \textcolor{keyword}{public}\ leveldb::FilterPolicy\ \{}
+\DoxyCodeLine{\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{\ \ FilterPolicy*\ builtin\_policy\_;}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{\ \ CustomFilterPolicy()\ :\ builtin\_policy\_(NewBloomFilterPolicy(10))\ \{\}}
+\DoxyCodeLine{\ \ \string~CustomFilterPolicy()\ \{\ \textcolor{keyword}{delete}\ builtin\_policy\_;\ \}}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ Name()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{stringliteral}{"{}IgnoreTrailingSpacesFilter"{}};\ \}}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \textcolor{keywordtype}{void}\ CreateFilter(\textcolor{keyword}{const}\ Slice*\ keys,\ \textcolor{keywordtype}{int}\ n,\ std::string*\ dst)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{\ \ \ \ \textcolor{comment}{//\ Use\ builtin\ bloom\ filter\ code\ after\ removing\ trailing\ spaces}}
+\DoxyCodeLine{\ \ \ \ std::vector<Slice>\ trimmed(n);}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ n;\ i++)\ \{}
+\DoxyCodeLine{\ \ \ \ \ \ trimmed[i]\ =\ RemoveTrailingSpaces(keys[i]);}
+\DoxyCodeLine{\ \ \ \ \}}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordflow}{return}\ builtin\_policy\_-\/>CreateFilter(\&trimmed[i],\ n,\ dst);}
+\DoxyCodeLine{\ \ \}}
+\DoxyCodeLine{\};}
+
+\end{DoxyCode}
+
+
+Advanced applications may provide a filter policy that does not use a bloom filter but uses some other mechanism for summarizing a set of keys. See {\ttfamily \doxyref{leveldb/filter\+\_\+policy.\+h}{p.}{filter__policy_8h}} for detail.\doxysection{Checksums}\label{md_src_2leveldb_2doc_2index_autotoc_md59}
+leveldb associates checksums with all data it stores in the file system. There are two separate controls provided over how aggressively these checksums are verified\+:
+
+{\ttfamily \doxyref{Read\+Options\+::verify\+\_\+checksums}{p.}{struct_read_options_a746d25cabe5e8fc6b92c1e480fc2c319}} may be set to true to force checksum verification of all data that is read from the file system on behalf of a particular read. By default, no such verification is done.
+
+{\ttfamily \doxyref{Options\+::paranoid\+\_\+checks}{p.}{struct_options_a19e3dfb797bfb0f305bfdadd127ead24}} may be set to true before opening a database to make the database implementation raise an error as soon as it detects an internal corruption. Depending on which portion of the database has been corrupted, the error may be raised when the database is opened, or later by another database operation. By default, paranoid checking is off so that the database can be used even if parts of its persistent storage have been corrupted.
+
+If a database is corrupted (perhaps it cannot be opened when paranoid checking is turned on), the {\ttfamily \doxyref{leveldb\+::\+Repair\+DB}{p.}{namespaceleveldb_affc6507c0c910cf5844d2ee3be2b6607}} function may be used to recover as much of the data as possible\doxysection{Approximate Sizes}\label{md_src_2leveldb_2doc_2index_autotoc_md60}
+The {\ttfamily Get\+Approximate\+Sizes} method can used to get the approximate number of bytes of file system space used by one or more key ranges.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{leveldb::Range\ ranges[2];}
+\DoxyCodeLine{ranges[0]\ =\ leveldb::Range(\textcolor{stringliteral}{"{}a"{}},\ \textcolor{stringliteral}{"{}c"{}});}
+\DoxyCodeLine{ranges[1]\ =\ leveldb::Range(\textcolor{stringliteral}{"{}x"{}},\ \textcolor{stringliteral}{"{}z"{}});}
+\DoxyCodeLine{uint64\_t\ sizes[2];}
+\DoxyCodeLine{leveldb::Status\ s\ =\ db-\/>GetApproximateSizes(ranges,\ 2,\ sizes);}
+
+\end{DoxyCode}
+
+
+The preceding call will set {\ttfamily sizes[0]} to the approximate number of bytes of file system space used by the key range {\ttfamily [a..c)} and {\ttfamily sizes[1]} to the approximate number of bytes used by the key range {\ttfamily [x..z)}.\doxysection{Environment}\label{md_src_2leveldb_2doc_2index_autotoc_md61}
+All file operations (and other operating system calls) issued by the leveldb implementation are routed through a {\ttfamily \doxyref{leveldb\+::\+Env}{p.}{classleveldb_1_1_env}} object. Sophisticated clients may wish to provide their own \doxyref{Env}{p.}{class_env} implementation to get better control. For example, an application may introduce artificial delays in the file IO paths to limit the impact of leveldb on other activities in the system.
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{keyword}{class\ }SlowEnv\ :\ \textcolor{keyword}{public}\ leveldb::Env\ \{}
+\DoxyCodeLine{\ \ ...\ implementation\ of\ the\ Env\ \textcolor{keyword}{interface\ }...}
+\DoxyCodeLine{\};}
+\DoxyCodeLine{}
+\DoxyCodeLine{SlowEnv\ env;}
+\DoxyCodeLine{leveldb::Options\ options;}
+\DoxyCodeLine{options.env\ =\ \&env;}
+\DoxyCodeLine{Status\ s\ =\ leveldb::DB::Open(options,\ ...);}
+
+\end{DoxyCode}
+\doxysection{Porting}\label{md_src_2leveldb_2doc_2index_autotoc_md62}
+leveldb may be ported to a new platform by providing platform specific implementations of the types/methods/functions exported by {\ttfamily \doxyref{leveldb/port/port.\+h}{p.}{port_8h}}. See {\ttfamily \doxyref{leveldb/port/port\+\_\+example.\+h}{p.}{port__example_8h}} for more details.
+
+In addition, the new platform may need a new default {\ttfamily \doxyref{leveldb\+::\+Env}{p.}{classleveldb_1_1_env}} implementation. See {\ttfamily leveldb/util/env\+\_\+posix.\+h} for an example.\doxysection{Other Information}\label{md_src_2leveldb_2doc_2index_autotoc_md63}
+Details about the leveldb implementation may be found in the following documents\+:
+
+
+\begin{DoxyEnumerate}
+\item \doxysectref{Implementation notes}{p.}{md_src_2leveldb_2doc_2impl}{0}
+\item \doxysectref{Format of an immutable Table file}{p.}{md_src_2leveldb_2doc_2table__format}{0}
+\item \doxysectref{Format of a log file}{p.}{md_src_2leveldb_2doc_2log__format}{0} 
+\end{DoxyEnumerate}

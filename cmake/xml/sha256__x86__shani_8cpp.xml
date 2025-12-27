@@ -1,0 +1,372 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="sha256__x86__shani_8cpp" kind="file" language="C++">
+    <compoundname>sha256_x86_shani.cpp</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="comment">//<sp/>Copyright<sp/>(c)<sp/>2018-present<sp/>The<sp/>Bitcoin<sp/>Core<sp/>developers</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Distributed<sp/>under<sp/>the<sp/>MIT<sp/>software<sp/>license,<sp/>see<sp/>the<sp/>accompanying</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="comment">//<sp/>file<sp/>COPYING<sp/>or<sp/>http://www.opensource.org/licenses/mit-license.php.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight><highlight class="comment">//</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Based<sp/>on<sp/>https://github.com/noloader/SHA-Intrinsics/blob/master/sha256-x86.c,</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Written<sp/>and<sp/>placed<sp/>in<sp/>public<sp/>domain<sp/>by<sp/>Jeffrey<sp/>Walton.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Based<sp/>on<sp/>code<sp/>from<sp/>Intel,<sp/>and<sp/>by<sp/>Sean<sp/>Gulley<sp/>for<sp/>the<sp/>miTLS<sp/>project.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(ENABLE_SSE41)<sp/>&amp;&amp;<sp/>defined(ENABLE_X86_SHANI)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstddef&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;immintrin.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;<ref refid="attributes_8h" kindref="compound">attributes.h</ref>&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="keyword">alignas</highlight><highlight class="normal">(__m128i)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t<sp/>MASK[16]<sp/>=<sp/>{0x03,<sp/>0x02,<sp/>0x01,<sp/>0x00,<sp/>0x07,<sp/>0x06,<sp/>0x05,<sp/>0x04,<sp/>0x0b,<sp/>0x0a,<sp/>0x09,<sp/>0x08,<sp/>0x0f,<sp/>0x0e,<sp/>0x0d,<sp/>0x0c};</highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="keyword">alignas</highlight><highlight class="normal">(__m128i)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t<sp/>INIT0[16]<sp/>=<sp/>{0x8c,<sp/>0x68,<sp/>0x05,<sp/>0x9b,<sp/>0x7f,<sp/>0x52,<sp/>0x0e,<sp/>0x51,<sp/>0x85,<sp/>0xae,<sp/>0x67,<sp/>0xbb,<sp/>0x67,<sp/>0xe6,<sp/>0x09,<sp/>0x6a};</highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="keyword">alignas</highlight><highlight class="normal">(__m128i)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t<sp/>INIT1[16]<sp/>=<sp/>{0x19,<sp/>0xcd,<sp/>0xe0,<sp/>0x5b,<sp/>0xab,<sp/>0xd9,<sp/>0x83,<sp/>0x1f,<sp/>0x3a,<sp/>0xf5,<sp/>0x4f,<sp/>0xa5,<sp/>0x72,<sp/>0xf3,<sp/>0x6e,<sp/>0x3c};</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>ALWAYS_INLINE<sp/>QuadRound(__m128i&amp;<sp/>state0,<sp/>__m128i&amp;<sp/>state1,<sp/>uint64_t<sp/>k1,<sp/>uint64_t<sp/>k0)</highlight></codeline>
+<codeline lineno="24"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i<sp/><ref refid="namespacetests__wycheproof__generate__ecdsa_1a10a0f35066079abd150539d0d13dbf3e" kindref="member">msg</ref><sp/>=<sp/>_mm_set_epi64x(k1,<sp/>k0);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"><sp/><sp/><sp/><sp/>state1<sp/>=<sp/>_mm_sha256rnds2_epu32(state1,<sp/>state0,<sp/>msg);</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"><sp/><sp/><sp/><sp/>state0<sp/>=<sp/>_mm_sha256rnds2_epu32(state0,<sp/>state1,<sp/>_mm_shuffle_epi32(msg,<sp/>0x0e));</highlight></codeline>
+<codeline lineno="28"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>ALWAYS_INLINE<sp/>QuadRound(__m128i&amp;<sp/>state0,<sp/>__m128i&amp;<sp/>state1,<sp/>__m128i<sp/><ref refid="strencodings_8h_1a7a8fe8e8ebe30d3329bb57478f49ae2ca6f8f57715090da2632453988d9a1501b" kindref="member">m</ref>,<sp/>uint64_t<sp/>k1,<sp/>uint64_t<sp/>k0)</highlight></codeline>
+<codeline lineno="31"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i<sp/><ref refid="namespacetests__wycheproof__generate__ecdsa_1a10a0f35066079abd150539d0d13dbf3e" kindref="member">msg</ref><sp/>=<sp/>_mm_add_epi32(<ref refid="strencodings_8h_1a7a8fe8e8ebe30d3329bb57478f49ae2ca6f8f57715090da2632453988d9a1501b" kindref="member">m</ref>,<sp/>_mm_set_epi64x(k1,<sp/>k0));</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/>state1<sp/>=<sp/>_mm_sha256rnds2_epu32(state1,<sp/>state0,<sp/>msg);</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/>state0<sp/>=<sp/>_mm_sha256rnds2_epu32(state0,<sp/>state1,<sp/>_mm_shuffle_epi32(msg,<sp/>0x0e));</highlight></codeline>
+<codeline lineno="35"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>ALWAYS_INLINE<sp/>ShiftMessageA(__m128i&amp;<sp/>m0,<sp/>__m128i<sp/>m1)</highlight></codeline>
+<codeline lineno="38"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"><sp/><sp/><sp/><sp/>m0<sp/>=<sp/>_mm_sha256msg1_epu32(m0,<sp/>m1);</highlight></codeline>
+<codeline lineno="40"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>ALWAYS_INLINE<sp/>ShiftMessageC(__m128i&amp;<sp/>m0,<sp/>__m128i<sp/>m1,<sp/>__m128i&amp;<sp/>m2)</highlight></codeline>
+<codeline lineno="43"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/>m2<sp/>=<sp/>_mm_sha256msg2_epu32(_mm_add_epi32(m2,<sp/>_mm_alignr_epi8(m1,<sp/>m0,<sp/>4)),<sp/>m1);</highlight></codeline>
+<codeline lineno="45"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>ALWAYS_INLINE<sp/>ShiftMessageB(__m128i&amp;<sp/>m0,<sp/>__m128i<sp/>m1,<sp/>__m128i&amp;<sp/>m2)</highlight></codeline>
+<codeline lineno="48"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageC(m0,<sp/>m1,<sp/>m2);</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageA(m0,<sp/>m1);</highlight></codeline>
+<codeline lineno="51"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>ALWAYS_INLINE<sp/>Shuffle(__m128i&amp;<sp/>s0,<sp/>__m128i&amp;<sp/>s1)</highlight></codeline>
+<codeline lineno="54"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i<sp/>t1<sp/>=<sp/>_mm_shuffle_epi32(s0,<sp/>0xB1);</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i<sp/>t2<sp/>=<sp/>_mm_shuffle_epi32(s1,<sp/>0x1B);</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/>s0<sp/>=<sp/>_mm_alignr_epi8(t1,<sp/>t2,<sp/>0x08);</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/>s1<sp/>=<sp/>_mm_blend_epi16(t2,<sp/>t1,<sp/>0xF0);</highlight></codeline>
+<codeline lineno="59"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>ALWAYS_INLINE<sp/>Unshuffle(__m128i&amp;<sp/>s0,<sp/>__m128i&amp;<sp/>s1)</highlight></codeline>
+<codeline lineno="62"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i<sp/>t1<sp/>=<sp/>_mm_shuffle_epi32(s0,<sp/>0x1B);</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i<sp/>t2<sp/>=<sp/>_mm_shuffle_epi32(s1,<sp/>0xB1);</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/>s0<sp/>=<sp/>_mm_blend_epi16(t1,<sp/>t2,<sp/>0xF0);</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/>s1<sp/>=<sp/>_mm_alignr_epi8(t2,<sp/>t1,<sp/>0x08);</highlight></codeline>
+<codeline lineno="67"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="69"><highlight class="normal">__m128i<sp/>ALWAYS_INLINE<sp/>Load(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>in)</highlight></codeline>
+<codeline lineno="70"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>_mm_shuffle_epi8(_mm_loadu_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)in),<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)MASK));</highlight></codeline>
+<codeline lineno="72"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"></highlight></codeline>
+<codeline lineno="74"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>ALWAYS_INLINE<sp/>Save(</highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>out,<sp/>__m128i<sp/>s)</highlight></codeline>
+<codeline lineno="75"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/>_mm_storeu_si128((__m128i*)out,<sp/>_mm_shuffle_epi8(s,<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)MASK)));</highlight></codeline>
+<codeline lineno="77"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="78"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="namespacesha256__x86__shani" kindref="compound">sha256_x86_shani</ref><sp/>{</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="namespacesha256__x86__shani_1a63ba46a170d02e0b3b7c683b430487c3" kindref="member">Transform</ref>(uint32_t*<sp/>s,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>chunk,<sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>blocks)</highlight></codeline>
+<codeline lineno="82"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>__m128i<sp/>m0,<sp/>m1,<sp/>m2,<sp/>m3,<sp/>s0,<sp/>s1,<sp/>so0,<sp/>so1;</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>Load<sp/>state<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/>s0<sp/>=<sp/>_mm_loadu_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)s);</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/>s1<sp/>=<sp/>_mm_loadu_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)(s<sp/>+<sp/>4));</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/>Shuffle(s0,<sp/>s1);</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(blocks--)<sp/>{</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>Remember<sp/>old<sp/>state<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="92"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>so0<sp/>=<sp/>s0;</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>so1<sp/>=<sp/>s1;</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"></highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>Load<sp/>data<sp/>and<sp/>transform<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>m0<sp/>=<sp/>Load(chunk);</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m0,<sp/>0xe9b5dba5b5c0fbcfull,<sp/>0x71374491428a2f98ull);</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>m1<sp/>=<sp/>Load(chunk<sp/>+<sp/>16);</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m1,<sp/>0xab1c5ed5923f82a4ull,<sp/>0x59f111f13956c25bull);</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageA(m0,<sp/>m1);</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>m2<sp/>=<sp/>Load(chunk<sp/>+<sp/>32);</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m2,<sp/>0x550c7dc3243185beull,<sp/>0x12835b01d807aa98ull);</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageA(m1,<sp/>m2);</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>m3<sp/>=<sp/>Load(chunk<sp/>+<sp/>48);</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m3,<sp/>0xc19bf1749bdc06a7ull,<sp/>0x80deb1fe72be5d74ull);</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageB(m2,<sp/>m3,<sp/>m0);</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m0,<sp/>0x240ca1cc0fc19dc6ull,<sp/>0xefbe4786E49b69c1ull);</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageB(m3,<sp/>m0,<sp/>m1);</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m1,<sp/>0x76f988da5cb0a9dcull,<sp/>0x4a7484aa2de92c6full);</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageB(m0,<sp/>m1,<sp/>m2);</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m2,<sp/>0xbf597fc7b00327c8ull,<sp/>0xa831c66d983e5152ull);</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageB(m1,<sp/>m2,<sp/>m3);</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m3,<sp/>0x1429296706ca6351ull,<sp/>0xd5a79147c6e00bf3ull);</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageB(m2,<sp/>m3,<sp/>m0);</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m0,<sp/>0x53380d134d2c6dfcull,<sp/>0x2e1b213827b70a85ull);</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageB(m3,<sp/>m0,<sp/>m1);</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m1,<sp/>0x92722c8581c2c92eull,<sp/>0x766a0abb650a7354ull);</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageB(m0,<sp/>m1,<sp/>m2);</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m2,<sp/>0xc76c51A3c24b8b70ull,<sp/>0xa81a664ba2bfe8a1ull);</highlight></codeline>
+<codeline lineno="120"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageB(m1,<sp/>m2,<sp/>m3);</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m3,<sp/>0x106aa070f40e3585ull,<sp/>0xd6990624d192e819ull);</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageB(m2,<sp/>m3,<sp/>m0);</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m0,<sp/>0x34b0bcb52748774cull,<sp/>0x1e376c0819a4c116ull);</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageB(m3,<sp/>m0,<sp/>m1);</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m1,<sp/>0x682e6ff35b9cca4full,<sp/>0x4ed8aa4a391c0cb3ull);</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageC(m0,<sp/>m1,<sp/>m2);</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m2,<sp/>0x8cc7020884c87814ull,<sp/>0x78a5636f748f82eeull);</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ShiftMessageC(m1,<sp/>m2,<sp/>m3);</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>QuadRound(s0,<sp/>s1,<sp/>m3,<sp/>0xc67178f2bef9A3f7ull,<sp/>0xa4506ceb90befffaull);</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"></highlight></codeline>
+<codeline lineno="131"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>Combine<sp/>with<sp/>old<sp/>state<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>s0<sp/>=<sp/>_mm_add_epi32(s0,<sp/>so0);</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>s1<sp/>=<sp/>_mm_add_epi32(s1,<sp/>so1);</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"></highlight></codeline>
+<codeline lineno="135"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>Advance<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="136"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>chunk<sp/>+=<sp/>64;</highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"></highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/>Unshuffle(s0,<sp/>s1);</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/>_mm_storeu_si128((__m128i*)s,<sp/>s0);</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"><sp/><sp/><sp/><sp/>_mm_storeu_si128((__m128i*)(s<sp/>+<sp/>4),<sp/>s1);</highlight></codeline>
+<codeline lineno="142"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="143"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="144"><highlight class="normal"></highlight></codeline>
+<codeline lineno="145"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="namespacesha256d64__x86__shani" kindref="compound">sha256d64_x86_shani</ref><sp/>{</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"></highlight></codeline>
+<codeline lineno="147"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="namespacesha256d64__x86__shani_1af1c8adc99e07259395b14fbb96958781" kindref="member">Transform_2way</ref>(</highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>out,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>in)</highlight></codeline>
+<codeline lineno="148"><highlight class="normal">{</highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/>__m128i<sp/>am0,<sp/>am1,<sp/>am2,<sp/>am3,<sp/>as0,<sp/>as1,<sp/>aso0,<sp/>aso1;</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"><sp/><sp/><sp/><sp/>__m128i<sp/>bm0,<sp/>bm1,<sp/>bm2,<sp/>bm3,<sp/>bs0,<sp/>bs1,<sp/>bso0,<sp/>bso1;</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"></highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>Transform<sp/>1<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="153"><highlight class="normal"><sp/><sp/><sp/><sp/>bs0<sp/>=<sp/>as0<sp/>=<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT0);</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"><sp/><sp/><sp/><sp/>bs1<sp/>=<sp/>as1<sp/>=<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT1);</highlight></codeline>
+<codeline lineno="155"><highlight class="normal"><sp/><sp/><sp/><sp/>am0<sp/>=<sp/>Load(in);</highlight></codeline>
+<codeline lineno="156"><highlight class="normal"><sp/><sp/><sp/><sp/>bm0<sp/>=<sp/>Load(in<sp/>+<sp/>64);</highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am0,<sp/>0xe9b5dba5b5c0fbcfull,<sp/>0x71374491428a2f98ull);</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm0,<sp/>0xe9b5dba5b5c0fbcfull,<sp/>0x71374491428a2f98ull);</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"><sp/><sp/><sp/><sp/>am1<sp/>=<sp/>Load(in<sp/>+<sp/>16);</highlight></codeline>
+<codeline lineno="160"><highlight class="normal"><sp/><sp/><sp/><sp/>bm1<sp/>=<sp/>Load(in<sp/>+<sp/>80);</highlight></codeline>
+<codeline lineno="161"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am1,<sp/>0xab1c5ed5923f82a4ull,<sp/>0x59f111f13956c25bull);</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm1,<sp/>0xab1c5ed5923f82a4ull,<sp/>0x59f111f13956c25bull);</highlight></codeline>
+<codeline lineno="163"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageA(am0,<sp/>am1);</highlight></codeline>
+<codeline lineno="164"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageA(bm0,<sp/>bm1);</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/>am2<sp/>=<sp/>Load(in<sp/>+<sp/>32);</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"><sp/><sp/><sp/><sp/>bm2<sp/>=<sp/>Load(in<sp/>+<sp/>96);</highlight></codeline>
+<codeline lineno="167"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am2,<sp/>0x550c7dc3243185beull,<sp/>0x12835b01d807aa98ull);</highlight></codeline>
+<codeline lineno="168"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm2,<sp/>0x550c7dc3243185beull,<sp/>0x12835b01d807aa98ull);</highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageA(am1,<sp/>am2);</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageA(bm1,<sp/>bm2);</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/>am3<sp/>=<sp/>Load(in<sp/>+<sp/>48);</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"><sp/><sp/><sp/><sp/>bm3<sp/>=<sp/>Load(in<sp/>+<sp/>112);</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am3,<sp/>0xc19bf1749bdc06a7ull,<sp/>0x80deb1fe72be5d74ull);</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm3,<sp/>0xc19bf1749bdc06a7ull,<sp/>0x80deb1fe72be5d74ull);</highlight></codeline>
+<codeline lineno="175"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am2,<sp/>am3,<sp/>am0);</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm2,<sp/>bm3,<sp/>bm0);</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am0,<sp/>0x240ca1cc0fc19dc6ull,<sp/>0xefbe4786E49b69c1ull);</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm0,<sp/>0x240ca1cc0fc19dc6ull,<sp/>0xefbe4786E49b69c1ull);</highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am3,<sp/>am0,<sp/>am1);</highlight></codeline>
+<codeline lineno="180"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm3,<sp/>bm0,<sp/>bm1);</highlight></codeline>
+<codeline lineno="181"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am1,<sp/>0x76f988da5cb0a9dcull,<sp/>0x4a7484aa2de92c6full);</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm1,<sp/>0x76f988da5cb0a9dcull,<sp/>0x4a7484aa2de92c6full);</highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am0,<sp/>am1,<sp/>am2);</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm0,<sp/>bm1,<sp/>bm2);</highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am2,<sp/>0xbf597fc7b00327c8ull,<sp/>0xa831c66d983e5152ull);</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm2,<sp/>0xbf597fc7b00327c8ull,<sp/>0xa831c66d983e5152ull);</highlight></codeline>
+<codeline lineno="187"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am1,<sp/>am2,<sp/>am3);</highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm1,<sp/>bm2,<sp/>bm3);</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am3,<sp/>0x1429296706ca6351ull,<sp/>0xd5a79147c6e00bf3ull);</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm3,<sp/>0x1429296706ca6351ull,<sp/>0xd5a79147c6e00bf3ull);</highlight></codeline>
+<codeline lineno="191"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am2,<sp/>am3,<sp/>am0);</highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm2,<sp/>bm3,<sp/>bm0);</highlight></codeline>
+<codeline lineno="193"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am0,<sp/>0x53380d134d2c6dfcull,<sp/>0x2e1b213827b70a85ull);</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm0,<sp/>0x53380d134d2c6dfcull,<sp/>0x2e1b213827b70a85ull);</highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am3,<sp/>am0,<sp/>am1);</highlight></codeline>
+<codeline lineno="196"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm3,<sp/>bm0,<sp/>bm1);</highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am1,<sp/>0x92722c8581c2c92eull,<sp/>0x766a0abb650a7354ull);</highlight></codeline>
+<codeline lineno="198"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm1,<sp/>0x92722c8581c2c92eull,<sp/>0x766a0abb650a7354ull);</highlight></codeline>
+<codeline lineno="199"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am0,<sp/>am1,<sp/>am2);</highlight></codeline>
+<codeline lineno="200"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm0,<sp/>bm1,<sp/>bm2);</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am2,<sp/>0xc76c51A3c24b8b70ull,<sp/>0xa81a664ba2bfe8a1ull);</highlight></codeline>
+<codeline lineno="202"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm2,<sp/>0xc76c51A3c24b8b70ull,<sp/>0xa81a664ba2bfe8a1ull);</highlight></codeline>
+<codeline lineno="203"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am1,<sp/>am2,<sp/>am3);</highlight></codeline>
+<codeline lineno="204"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm1,<sp/>bm2,<sp/>bm3);</highlight></codeline>
+<codeline lineno="205"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am3,<sp/>0x106aa070f40e3585ull,<sp/>0xd6990624d192e819ull);</highlight></codeline>
+<codeline lineno="206"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm3,<sp/>0x106aa070f40e3585ull,<sp/>0xd6990624d192e819ull);</highlight></codeline>
+<codeline lineno="207"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am2,<sp/>am3,<sp/>am0);</highlight></codeline>
+<codeline lineno="208"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm2,<sp/>bm3,<sp/>bm0);</highlight></codeline>
+<codeline lineno="209"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am0,<sp/>0x34b0bcb52748774cull,<sp/>0x1e376c0819a4c116ull);</highlight></codeline>
+<codeline lineno="210"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm0,<sp/>0x34b0bcb52748774cull,<sp/>0x1e376c0819a4c116ull);</highlight></codeline>
+<codeline lineno="211"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am3,<sp/>am0,<sp/>am1);</highlight></codeline>
+<codeline lineno="212"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm3,<sp/>bm0,<sp/>bm1);</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am1,<sp/>0x682e6ff35b9cca4full,<sp/>0x4ed8aa4a391c0cb3ull);</highlight></codeline>
+<codeline lineno="214"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm1,<sp/>0x682e6ff35b9cca4full,<sp/>0x4ed8aa4a391c0cb3ull);</highlight></codeline>
+<codeline lineno="215"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageC(am0,<sp/>am1,<sp/>am2);</highlight></codeline>
+<codeline lineno="216"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageC(bm0,<sp/>bm1,<sp/>bm2);</highlight></codeline>
+<codeline lineno="217"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am2,<sp/>0x8cc7020884c87814ull,<sp/>0x78a5636f748f82eeull);</highlight></codeline>
+<codeline lineno="218"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm2,<sp/>0x8cc7020884c87814ull,<sp/>0x78a5636f748f82eeull);</highlight></codeline>
+<codeline lineno="219"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageC(am1,<sp/>am2,<sp/>am3);</highlight></codeline>
+<codeline lineno="220"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageC(bm1,<sp/>bm2,<sp/>bm3);</highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am3,<sp/>0xc67178f2bef9A3f7ull,<sp/>0xa4506ceb90befffaull);</highlight></codeline>
+<codeline lineno="222"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm3,<sp/>0xc67178f2bef9A3f7ull,<sp/>0xa4506ceb90befffaull);</highlight></codeline>
+<codeline lineno="223"><highlight class="normal"><sp/><sp/><sp/><sp/>as0<sp/>=<sp/>_mm_add_epi32(as0,<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT0));</highlight></codeline>
+<codeline lineno="224"><highlight class="normal"><sp/><sp/><sp/><sp/>bs0<sp/>=<sp/>_mm_add_epi32(bs0,<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT0));</highlight></codeline>
+<codeline lineno="225"><highlight class="normal"><sp/><sp/><sp/><sp/>as1<sp/>=<sp/>_mm_add_epi32(as1,<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT1));</highlight></codeline>
+<codeline lineno="226"><highlight class="normal"><sp/><sp/><sp/><sp/>bs1<sp/>=<sp/>_mm_add_epi32(bs1,<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT1));</highlight></codeline>
+<codeline lineno="227"><highlight class="normal"></highlight></codeline>
+<codeline lineno="228"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>Transform<sp/>2<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="229"><highlight class="normal"><sp/><sp/><sp/><sp/>aso0<sp/>=<sp/>as0;</highlight></codeline>
+<codeline lineno="230"><highlight class="normal"><sp/><sp/><sp/><sp/>bso0<sp/>=<sp/>bs0;</highlight></codeline>
+<codeline lineno="231"><highlight class="normal"><sp/><sp/><sp/><sp/>aso1<sp/>=<sp/>as1;</highlight></codeline>
+<codeline lineno="232"><highlight class="normal"><sp/><sp/><sp/><sp/>bso1<sp/>=<sp/>bs1;</highlight></codeline>
+<codeline lineno="233"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0xe9b5dba5b5c0fbcfull,<sp/>0x71374491c28a2f98ull);</highlight></codeline>
+<codeline lineno="234"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0xe9b5dba5b5c0fbcfull,<sp/>0x71374491c28a2f98ull);</highlight></codeline>
+<codeline lineno="235"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0xab1c5ed5923f82a4ull,<sp/>0x59f111f13956c25bull);</highlight></codeline>
+<codeline lineno="236"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0xab1c5ed5923f82a4ull,<sp/>0x59f111f13956c25bull);</highlight></codeline>
+<codeline lineno="237"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0x550c7dc3243185beull,<sp/>0x12835b01d807aa98ull);</highlight></codeline>
+<codeline lineno="238"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0x550c7dc3243185beull,<sp/>0x12835b01d807aa98ull);</highlight></codeline>
+<codeline lineno="239"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0xc19bf3749bdc06a7ull,<sp/>0x80deb1fe72be5d74ull);</highlight></codeline>
+<codeline lineno="240"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0xc19bf3749bdc06a7ull,<sp/>0x80deb1fe72be5d74ull);</highlight></codeline>
+<codeline lineno="241"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0x240cf2540fe1edc6ull,<sp/>0xf0fe4786649b69c1ull);</highlight></codeline>
+<codeline lineno="242"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0x240cf2540fe1edc6ull,<sp/>0xf0fe4786649b69c1ull);</highlight></codeline>
+<codeline lineno="243"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0x16f988fa61b9411eull,<sp/>0x6cc984be4fe9346full);</highlight></codeline>
+<codeline lineno="244"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0x16f988fa61b9411eull,<sp/>0x6cc984be4fe9346full);</highlight></codeline>
+<codeline lineno="245"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0xb9d99ec7b019fc65ull,<sp/>0xa88e5a6df2c65152ull);</highlight></codeline>
+<codeline lineno="246"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0xb9d99ec7b019fc65ull,<sp/>0xa88e5a6df2c65152ull);</highlight></codeline>
+<codeline lineno="247"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0xc7353eb0fdb1232bull,<sp/>0xe70eeaa09a1231c3ull);</highlight></codeline>
+<codeline lineno="248"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0xc7353eb0fdb1232bull,<sp/>0xe70eeaa09a1231c3ull);</highlight></codeline>
+<codeline lineno="249"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0xdc1eeefd5a0f118full,<sp/>0xcb976d5f3069bad5ull);</highlight></codeline>
+<codeline lineno="250"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0xdc1eeefd5a0f118full,<sp/>0xcb976d5f3069bad5ull);</highlight></codeline>
+<codeline lineno="251"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0xe15d5b1658f4ca9dull,<sp/>0xde0b7a040a35b689ull);</highlight></codeline>
+<codeline lineno="252"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0xe15d5b1658f4ca9dull,<sp/>0xde0b7a040a35b689ull);</highlight></codeline>
+<codeline lineno="253"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0x6fab9537a507ea32ull,<sp/>0x37088980007f3e86ull);</highlight></codeline>
+<codeline lineno="254"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0x6fab9537a507ea32ull,<sp/>0x37088980007f3e86ull);</highlight></codeline>
+<codeline lineno="255"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0xc0bbbe37cdaa3b6dull,<sp/>0x0d8cd6f117406110ull);</highlight></codeline>
+<codeline lineno="256"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0xc0bbbe37cdaa3b6dull,<sp/>0x0d8cd6f117406110ull);</highlight></codeline>
+<codeline lineno="257"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0x6fd15ca70b02e931ull,<sp/>0xdb48a36383613bdaull);</highlight></codeline>
+<codeline lineno="258"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0x6fd15ca70b02e931ull,<sp/>0xdb48a36383613bdaull);</highlight></codeline>
+<codeline lineno="259"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0x6d4378906ed41a95ull,<sp/>0x31338431521afacaull);</highlight></codeline>
+<codeline lineno="260"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0x6d4378906ed41a95ull,<sp/>0x31338431521afacaull);</highlight></codeline>
+<codeline lineno="261"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0x532fb63cb5c9a0e6ull,<sp/>0x9eccabbdc39c91f2ull);</highlight></codeline>
+<codeline lineno="262"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0x532fb63cb5c9a0e6ull,<sp/>0x9eccabbdc39c91f2ull);</highlight></codeline>
+<codeline lineno="263"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0x4c191d76a4954b68ull,<sp/>0x07237ea3d2c741c6ull);</highlight></codeline>
+<codeline lineno="264"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0x4c191d76a4954b68ull,<sp/>0x07237ea3d2c741c6ull);</highlight></codeline>
+<codeline lineno="265"><highlight class="normal"><sp/><sp/><sp/><sp/>as0<sp/>=<sp/>_mm_add_epi32(as0,<sp/>aso0);</highlight></codeline>
+<codeline lineno="266"><highlight class="normal"><sp/><sp/><sp/><sp/>bs0<sp/>=<sp/>_mm_add_epi32(bs0,<sp/>bso0);</highlight></codeline>
+<codeline lineno="267"><highlight class="normal"><sp/><sp/><sp/><sp/>as1<sp/>=<sp/>_mm_add_epi32(as1,<sp/>aso1);</highlight></codeline>
+<codeline lineno="268"><highlight class="normal"><sp/><sp/><sp/><sp/>bs1<sp/>=<sp/>_mm_add_epi32(bs1,<sp/>bso1);</highlight></codeline>
+<codeline lineno="269"><highlight class="normal"></highlight></codeline>
+<codeline lineno="270"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>Extract<sp/>hash<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="271"><highlight class="normal"><sp/><sp/><sp/><sp/>Unshuffle(as0,<sp/>as1);</highlight></codeline>
+<codeline lineno="272"><highlight class="normal"><sp/><sp/><sp/><sp/>Unshuffle(bs0,<sp/>bs1);</highlight></codeline>
+<codeline lineno="273"><highlight class="normal"><sp/><sp/><sp/><sp/>am0<sp/>=<sp/>as0;</highlight></codeline>
+<codeline lineno="274"><highlight class="normal"><sp/><sp/><sp/><sp/>bm0<sp/>=<sp/>bs0;</highlight></codeline>
+<codeline lineno="275"><highlight class="normal"><sp/><sp/><sp/><sp/>am1<sp/>=<sp/>as1;</highlight></codeline>
+<codeline lineno="276"><highlight class="normal"><sp/><sp/><sp/><sp/>bm1<sp/>=<sp/>bs1;</highlight></codeline>
+<codeline lineno="277"><highlight class="normal"></highlight></codeline>
+<codeline lineno="278"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>Transform<sp/>3<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="279"><highlight class="normal"><sp/><sp/><sp/><sp/>bs0<sp/>=<sp/>as0<sp/>=<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT0);</highlight></codeline>
+<codeline lineno="280"><highlight class="normal"><sp/><sp/><sp/><sp/>bs1<sp/>=<sp/>as1<sp/>=<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT1);</highlight></codeline>
+<codeline lineno="281"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am0,<sp/>0xe9b5dba5B5c0fbcfull,<sp/>0x71374491428a2f98ull);</highlight></codeline>
+<codeline lineno="282"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm0,<sp/>0xe9b5dba5B5c0fbcfull,<sp/>0x71374491428a2f98ull);</highlight></codeline>
+<codeline lineno="283"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am1,<sp/>0xab1c5ed5923f82a4ull,<sp/>0x59f111f13956c25bull);</highlight></codeline>
+<codeline lineno="284"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm1,<sp/>0xab1c5ed5923f82a4ull,<sp/>0x59f111f13956c25bull);</highlight></codeline>
+<codeline lineno="285"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageA(am0,<sp/>am1);</highlight></codeline>
+<codeline lineno="286"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageA(bm0,<sp/>bm1);</highlight></codeline>
+<codeline lineno="287"><highlight class="normal"><sp/><sp/><sp/><sp/>bm2<sp/>=<sp/>am2<sp/>=<sp/>_mm_set_epi64x(0x0ull,<sp/>0x80000000ull);</highlight></codeline>
+<codeline lineno="288"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0x550c7dc3243185beull,<sp/>0x12835b015807aa98ull);</highlight></codeline>
+<codeline lineno="289"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0x550c7dc3243185beull,<sp/>0x12835b015807aa98ull);</highlight></codeline>
+<codeline lineno="290"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageA(am1,<sp/>am2);</highlight></codeline>
+<codeline lineno="291"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageA(bm1,<sp/>bm2);</highlight></codeline>
+<codeline lineno="292"><highlight class="normal"><sp/><sp/><sp/><sp/>bm3<sp/>=<sp/>am3<sp/>=<sp/>_mm_set_epi64x(0x10000000000ull,<sp/>0x0ull);</highlight></codeline>
+<codeline lineno="293"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>0xc19bf2749bdc06a7ull,<sp/>0x80deb1fe72be5d74ull);</highlight></codeline>
+<codeline lineno="294"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>0xc19bf2749bdc06a7ull,<sp/>0x80deb1fe72be5d74ull);</highlight></codeline>
+<codeline lineno="295"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am2,<sp/>am3,<sp/>am0);</highlight></codeline>
+<codeline lineno="296"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm2,<sp/>bm3,<sp/>bm0);</highlight></codeline>
+<codeline lineno="297"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am0,<sp/>0x240ca1cc0fc19dc6ull,<sp/>0xefbe4786e49b69c1ull);</highlight></codeline>
+<codeline lineno="298"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm0,<sp/>0x240ca1cc0fc19dc6ull,<sp/>0xefbe4786e49b69c1ull);</highlight></codeline>
+<codeline lineno="299"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am3,<sp/>am0,<sp/>am1);</highlight></codeline>
+<codeline lineno="300"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm3,<sp/>bm0,<sp/>bm1);</highlight></codeline>
+<codeline lineno="301"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am1,<sp/>0x76f988da5cb0a9dcull,<sp/>0x4a7484aa2de92c6full);</highlight></codeline>
+<codeline lineno="302"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm1,<sp/>0x76f988da5cb0a9dcull,<sp/>0x4a7484aa2de92c6full);</highlight></codeline>
+<codeline lineno="303"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am0,<sp/>am1,<sp/>am2);</highlight></codeline>
+<codeline lineno="304"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm0,<sp/>bm1,<sp/>bm2);</highlight></codeline>
+<codeline lineno="305"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am2,<sp/>0xbf597fc7b00327c8ull,<sp/>0xa831c66d983e5152ull);</highlight></codeline>
+<codeline lineno="306"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm2,<sp/>0xbf597fc7b00327c8ull,<sp/>0xa831c66d983e5152ull);</highlight></codeline>
+<codeline lineno="307"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am1,<sp/>am2,<sp/>am3);</highlight></codeline>
+<codeline lineno="308"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm1,<sp/>bm2,<sp/>bm3);</highlight></codeline>
+<codeline lineno="309"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am3,<sp/>0x1429296706ca6351ull,<sp/>0xd5a79147c6e00bf3ull);</highlight></codeline>
+<codeline lineno="310"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm3,<sp/>0x1429296706ca6351ull,<sp/>0xd5a79147c6e00bf3ull);</highlight></codeline>
+<codeline lineno="311"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am2,<sp/>am3,<sp/>am0);</highlight></codeline>
+<codeline lineno="312"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm2,<sp/>bm3,<sp/>bm0);</highlight></codeline>
+<codeline lineno="313"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am0,<sp/>0x53380d134d2c6dfcull,<sp/>0x2e1b213827b70a85ull);</highlight></codeline>
+<codeline lineno="314"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm0,<sp/>0x53380d134d2c6dfcull,<sp/>0x2e1b213827b70a85ull);</highlight></codeline>
+<codeline lineno="315"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am3,<sp/>am0,<sp/>am1);</highlight></codeline>
+<codeline lineno="316"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm3,<sp/>bm0,<sp/>bm1);</highlight></codeline>
+<codeline lineno="317"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am1,<sp/>0x92722c8581c2c92eull,<sp/>0x766a0abb650a7354ull);</highlight></codeline>
+<codeline lineno="318"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm1,<sp/>0x92722c8581c2c92eull,<sp/>0x766a0abb650a7354ull);</highlight></codeline>
+<codeline lineno="319"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am0,<sp/>am1,<sp/>am2);</highlight></codeline>
+<codeline lineno="320"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm0,<sp/>bm1,<sp/>bm2);</highlight></codeline>
+<codeline lineno="321"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am2,<sp/>0xc76c51a3c24b8b70ull,<sp/>0xa81a664ba2bfe8A1ull);</highlight></codeline>
+<codeline lineno="322"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm2,<sp/>0xc76c51a3c24b8b70ull,<sp/>0xa81a664ba2bfe8A1ull);</highlight></codeline>
+<codeline lineno="323"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am1,<sp/>am2,<sp/>am3);</highlight></codeline>
+<codeline lineno="324"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm1,<sp/>bm2,<sp/>bm3);</highlight></codeline>
+<codeline lineno="325"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am3,<sp/>0x106aa070f40e3585ull,<sp/>0xd6990624d192e819ull);</highlight></codeline>
+<codeline lineno="326"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm3,<sp/>0x106aa070f40e3585ull,<sp/>0xd6990624d192e819ull);</highlight></codeline>
+<codeline lineno="327"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am2,<sp/>am3,<sp/>am0);</highlight></codeline>
+<codeline lineno="328"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm2,<sp/>bm3,<sp/>bm0);</highlight></codeline>
+<codeline lineno="329"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am0,<sp/>0x34b0bcb52748774cull,<sp/>0x1e376c0819a4c116ull);</highlight></codeline>
+<codeline lineno="330"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm0,<sp/>0x34b0bcb52748774cull,<sp/>0x1e376c0819a4c116ull);</highlight></codeline>
+<codeline lineno="331"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(am3,<sp/>am0,<sp/>am1);</highlight></codeline>
+<codeline lineno="332"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageB(bm3,<sp/>bm0,<sp/>bm1);</highlight></codeline>
+<codeline lineno="333"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am1,<sp/>0x682e6ff35b9cca4full,<sp/>0x4ed8aa4a391c0cb3ull);</highlight></codeline>
+<codeline lineno="334"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm1,<sp/>0x682e6ff35b9cca4full,<sp/>0x4ed8aa4a391c0cb3ull);</highlight></codeline>
+<codeline lineno="335"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageC(am0,<sp/>am1,<sp/>am2);</highlight></codeline>
+<codeline lineno="336"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageC(bm0,<sp/>bm1,<sp/>bm2);</highlight></codeline>
+<codeline lineno="337"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am2,<sp/>0x8cc7020884c87814ull,<sp/>0x78a5636f748f82eeull);</highlight></codeline>
+<codeline lineno="338"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm2,<sp/>0x8cc7020884c87814ull,<sp/>0x78a5636f748f82eeull);</highlight></codeline>
+<codeline lineno="339"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageC(am1,<sp/>am2,<sp/>am3);</highlight></codeline>
+<codeline lineno="340"><highlight class="normal"><sp/><sp/><sp/><sp/>ShiftMessageC(bm1,<sp/>bm2,<sp/>bm3);</highlight></codeline>
+<codeline lineno="341"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(as0,<sp/>as1,<sp/>am3,<sp/>0xc67178f2bef9a3f7ull,<sp/>0xa4506ceb90befffaull);</highlight></codeline>
+<codeline lineno="342"><highlight class="normal"><sp/><sp/><sp/><sp/>QuadRound(bs0,<sp/>bs1,<sp/>bm3,<sp/>0xc67178f2bef9a3f7ull,<sp/>0xa4506ceb90befffaull);</highlight></codeline>
+<codeline lineno="343"><highlight class="normal"><sp/><sp/><sp/><sp/>as0<sp/>=<sp/>_mm_add_epi32(as0,<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT0));</highlight></codeline>
+<codeline lineno="344"><highlight class="normal"><sp/><sp/><sp/><sp/>bs0<sp/>=<sp/>_mm_add_epi32(bs0,<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT0));</highlight></codeline>
+<codeline lineno="345"><highlight class="normal"><sp/><sp/><sp/><sp/>as1<sp/>=<sp/>_mm_add_epi32(as1,<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT1));</highlight></codeline>
+<codeline lineno="346"><highlight class="normal"><sp/><sp/><sp/><sp/>bs1<sp/>=<sp/>_mm_add_epi32(bs1,<sp/>_mm_load_si128((</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>__m128i*)INIT1));</highlight></codeline>
+<codeline lineno="347"><highlight class="normal"></highlight></codeline>
+<codeline lineno="348"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">/*<sp/>Extract<sp/>hash<sp/>into<sp/>out<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="349"><highlight class="normal"><sp/><sp/><sp/><sp/>Unshuffle(as0,<sp/>as1);</highlight></codeline>
+<codeline lineno="350"><highlight class="normal"><sp/><sp/><sp/><sp/>Unshuffle(bs0,<sp/>bs1);</highlight></codeline>
+<codeline lineno="351"><highlight class="normal"><sp/><sp/><sp/><sp/>Save(out,<sp/>as0);</highlight></codeline>
+<codeline lineno="352"><highlight class="normal"><sp/><sp/><sp/><sp/>Save(out<sp/>+<sp/>16,<sp/>as1);</highlight></codeline>
+<codeline lineno="353"><highlight class="normal"><sp/><sp/><sp/><sp/>Save(out<sp/>+<sp/>32,<sp/>bs0);</highlight></codeline>
+<codeline lineno="354"><highlight class="normal"><sp/><sp/><sp/><sp/>Save(out<sp/>+<sp/>48,<sp/>bs1);</highlight></codeline>
+<codeline lineno="355"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="356"><highlight class="normal"></highlight></codeline>
+<codeline lineno="357"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="358"><highlight class="normal"></highlight></codeline>
+<codeline lineno="359"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+    </programlisting>
+    <location file="src/crypto/sha256_x86_shani.cpp"/>
+  </compounddef>
+</doxygen>

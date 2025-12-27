@@ -1,0 +1,72 @@
+.TH "ThreadContext" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+ThreadContext
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <proxy\-io\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBConnThreads\fP callback_threads \fBMP_GUARDED_BY\fP (\fBwaiter\fP\->m_mutex)"
+.br
+.ti -1c
+.RI "\fBConnThreads\fP request_threads \fBMP_GUARDED_BY\fP (\fBwaiter\fP\->m_mutex)"
+.br
+.in -1c
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "std::string \fBthread_name\fP"
+.br
+.RI "Identifying string for debug\&. "
+.ti -1c
+.RI "std::unique_ptr< \fBWaiter\fP > \fBwaiter\fP = nullptr"
+.br
+.ti -1c
+.RI "bool \fBloop_thread\fP = false"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+The thread_local \fBThreadContext\fP g_thread_context struct provides information about individual threads and a way of communicating between them\&. Because it's a thread local struct, each \fBThreadContext\fP instance is initialized by the thread that owns it\&.
+
+.PP
+\fBThreadContext\fP is used for any client threads created externally which make IPC calls, and for server threads created by \fBProxyServer<ThreadMap>::makeThread()\fP which execute IPC calls for clients\&.
+
+.PP
+In both cases, the struct holds information like the thread name, and a \fBWaiter\fP object where the \fBEventLoop\fP can post incoming IPC requests to execute on the thread\&. The struct also holds \fBConnThread\fP maps associating the thread with local and remote \fBProxyClient<Thread>\fP objects\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "\fBConnThreads\fP request_threads MP_GUARDED_BY (\fBwaiter\fP\-> m_mutex)"
+When client is making a request to a server, this is the \fRthread\fP argument it passes in the request, used to control which thread on server will be responsible for executing it\&. If client call is being made from a local thread, this will be a remote thread object returned by makeThread\&. If a client call is being made from a thread currently handling a server request, this will be set to the \fRcallbackThread\fP request thread argument passed in that request\&.
+
+.PP
+Synchronization note: \fBcallback_threads\fP note applies here as well\&. 
+.SS "\fBConnThreads\fP callback_threads MP_GUARDED_BY (\fBwaiter\fP\-> m_mutex)"
+When client is making a request to a server, this is the \fRcallbackThread\fP argument it passes in the request, used by the server in case it needs to make callbacks into the client that need to execute while the client is waiting\&. This will be set to a local thread object\&.
+
+.PP
+Synchronization note: The callback_thread and request_thread maps are only ever accessed internally by this thread's destructor and externally by Cap'n Proto event loop threads\&. Since it's possible for IPC client threads to make calls over different connections that could have different event loops, these maps are guarded by \fBWaiter::m_mutex\fP in case different event loop threads add or remove map entries simultaneously\&. However, individual \fBProxyClient<Thread>\fP objects in the maps will only be associated with one event loop and guarded by \fBEventLoop::m_mutex\fP\&. So \fBWaiter::m_mutex\fP does not need to be held while accessing individual \fBProxyClient<Thread>\fP instances, and may even need to be released to respect lock order and avoid locking \fBWaiter::m_mutex\fP before \fBEventLoop::m_mutex\fP\&. 
+.SH "Field Documentation"
+.PP 
+.SS "bool loop_thread = false"
+Whether this thread is a capnp event loop thread\&. Not really used except to assert false if there's an attempt to execute a blocking operation which could deadlock the thread\&. 
+.SS "std::string thread_name"
+
+.PP
+Identifying string for debug\&. 
+.SS "std::unique_ptr<\fBWaiter\fP> waiter = nullptr"
+\fBWaiter\fP object used to allow remote clients to execute code on this thread\&. For server threads created by \fBProxyServer<ThreadMap>::makeThread()\fP, this is initialized in that function\&. Otherwise, for client threads created externally, this is initialized the first time the thread tries to make an IPC call\&. Having a waiter is necessary for threads making IPC calls in case a server they are calling expects them to execute a callback during the call, before it sends a response\&.
+
+.PP
+For IPC client threads, the \fBWaiter\fP pointer is never cleared and the \fBWaiter\fP just gets destroyed when the thread does\&. For server threads created by makeThread(), this pointer is set to null in the ~ProxyServer<Thread> as a signal for the thread to exit and destroy itself\&. In both cases, the same \fBWaiter\fP object is used across different calls and only created and destroyed once for the lifetime of the thread\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

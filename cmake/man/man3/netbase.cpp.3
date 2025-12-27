@@ -1,0 +1,582 @@
+.TH "src/netbase.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/netbase.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <bitcoin\-build\-config\&.h>\fP
+.br
+\fR#include <netbase\&.h>\fP
+.br
+\fR#include <compat/compat\&.h>\fP
+.br
+\fR#include <logging\&.h>\fP
+.br
+\fR#include <sync\&.h>\fP
+.br
+\fR#include <tinyformat\&.h>\fP
+.br
+\fR#include <util/sock\&.h>\fP
+.br
+\fR#include <util/strencodings\&.h>\fP
+.br
+\fR#include <util/string\&.h>\fP
+.br
+\fR#include <util/time\&.h>\fP
+.br
+\fR#include <atomic>\fP
+.br
+\fR#include <chrono>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include <functional>\fP
+.br
+\fR#include <limits>\fP
+.br
+\fR#include <memory>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBTorStreamIsolationCredentialsGenerator\fP"
+.br
+.in -1c
+.SS "Enumerations"
+
+.in +1c
+.ti -1c
+.RI "enum \fBSOCKSVersion\fP : uint8_t { \fBSOCKS4\fP = 0x04, \fBSOCKS5\fP = 0x05 }"
+.br
+.ti -1c
+.RI "enum \fBSOCKS5Method\fP : uint8_t { \fBNOAUTH\fP = 0x00, \fBGSSAPI\fP = 0x01, \fBUSER_PASS\fP = 0x02, \fBNO_ACCEPTABLE\fP = 0xff }"
+.br
+.ti -1c
+.RI "enum \fBSOCKS5Command\fP : uint8_t { \fBCONNECT\fP = 0x01, \fBBIND\fP = 0x02, \fBUDP_ASSOCIATE\fP = 0x03 }"
+.br
+.ti -1c
+.RI "enum \fBSOCKS5Reply\fP : uint8_t { \fBSUCCEEDED\fP = 0x00, \fBGENFAILURE\fP = 0x01, \fBNOTALLOWED\fP = 0x02, \fBNETUNREACHABLE\fP = 0x03, \fBHOSTUNREACHABLE\fP = 0x04, \fBCONNREFUSED\fP = 0x05, \fBTTLEXPIRED\fP = 0x06, \fBCMDUNSUPPORTED\fP = 0x07, \fBATYPEUNSUPPORTED\fP = 0x08, \fBTOR_HS_DESC_NOT_FOUND\fP = 0xf0, \fBTOR_HS_DESC_INVALID\fP = 0xf1, \fBTOR_HS_INTRO_FAILED\fP = 0xf2, \fBTOR_HS_REND_FAILED\fP = 0xf3, \fBTOR_HS_MISSING_CLIENT_AUTH\fP = 0xf4, \fBTOR_HS_WRONG_CLIENT_AUTH\fP = 0xf5, \fBTOR_HS_BAD_ADDRESS\fP = 0xf6, \fBTOR_HS_INTRO_TIMEOUT\fP = 0xf7 }"
+.br
+.ti -1c
+.RI "enum \fBSOCKS5Atyp\fP : uint8_t { \fBIPV4\fP = 0x01, \fBDOMAINNAME\fP = 0x03, \fBIPV6\fP = 0x04 }"
+.br
+.ti -1c
+.RI "enum class \fBIntrRecvError\fP { \fBOK\fP, \fBTimeout\fP, \fBDisconnected\fP, \fBNetworkError\fP, \fBInterrupted\fP }"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "std::vector< \fBCNetAddr\fP > \fBWrappedGetAddrInfo\fP (const std::string &\fBname\fP, bool allow_lookup)"
+.br
+.ti -1c
+.RI "enum \fBNetwork\fP \fBParseNetwork\fP (const std::string &net_in)"
+.br
+.ti -1c
+.RI "std::string \fBGetNetworkName\fP (enum \fBNetwork\fP net)"
+.br
+.ti -1c
+.RI "std::vector< std::string > \fBGetNetworkNames\fP (bool append_unroutable)"
+.br
+.ti -1c
+.RI "std::vector< \fBCNetAddr\fP > \fBLookupHost\fP (const std::string &\fBname\fP, unsigned int nMaxSolutions, bool fAllowLookup, \fBDNSLookupFn\fP dns_lookup_function)"
+.br
+.ti -1c
+.RI "std::optional< \fBCNetAddr\fP > \fBLookupHost\fP (const std::string &\fBname\fP, bool fAllowLookup, \fBDNSLookupFn\fP dns_lookup_function)"
+.br
+.ti -1c
+.RI "std::vector< \fBCService\fP > \fBLookup\fP (const std::string &\fBname\fP, uint16_t portDefault, bool fAllowLookup, unsigned int nMaxSolutions, \fBDNSLookupFn\fP dns_lookup_function)"
+.br
+.ti -1c
+.RI "std::optional< \fBCService\fP > \fBLookup\fP (const std::string &\fBname\fP, uint16_t portDefault, bool fAllowLookup, \fBDNSLookupFn\fP dns_lookup_function)"
+.br
+.ti -1c
+.RI "\fBCService\fP \fBLookupNumeric\fP (const std::string &\fBname\fP, uint16_t portDefault, \fBDNSLookupFn\fP dns_lookup_function)"
+.br
+.ti -1c
+.RI "bool \fBIsUnixSocketPath\fP (const std::string &\fBname\fP)"
+.br
+.ti -1c
+.RI "bool \fBSocks5\fP (const std::string &strDest, uint16_t port, const \fBProxyCredentials\fP *auth, const \fBSock\fP &sock)"
+.br
+.ti -1c
+.RI "std::unique_ptr< \fBSock\fP > \fBCreateSockOS\fP (int domain, int type, int protocol)"
+.br
+.ti -1c
+.RI "std::unique_ptr< \fBSock\fP > \fBConnectDirectly\fP (const \fBCService\fP &dest, bool manual_connection)"
+.br
+.ti -1c
+.RI "bool \fBSetProxy\fP (enum \fBNetwork\fP net, const \fBProxy\fP &addrProxy)"
+.br
+.ti -1c
+.RI "bool \fBGetProxy\fP (enum \fBNetwork\fP net, \fBProxy\fP &proxyInfoOut)"
+.br
+.ti -1c
+.RI "bool \fBSetNameProxy\fP (const \fBProxy\fP &addrProxy)"
+.br
+.ti -1c
+.RI "bool \fBGetNameProxy\fP (\fBProxy\fP &nameProxyOut)"
+.br
+.ti -1c
+.RI "bool \fBHaveNameProxy\fP ()"
+.br
+.ti -1c
+.RI "bool \fBIsProxy\fP (const \fBCNetAddr\fP &addr)"
+.br
+.ti -1c
+.RI "std::unique_ptr< \fBSock\fP > \fBConnectThroughProxy\fP (const \fBProxy\fP &proxy, const std::string &dest, uint16_t port, bool &proxy_connection_failed)"
+.br
+.ti -1c
+.RI "\fBCSubNet\fP \fBLookupSubNet\fP (const std::string &subnet_str)"
+.br
+.ti -1c
+.RI "bool \fBIsBadPort\fP (uint16_t port)"
+.br
+.ti -1c
+.RI "\fBCService\fP \fBMaybeFlipIPv6toCJDNS\fP (const \fBCService\fP &service)"
+.br
+.ti -1c
+.RI "bool \fBContainsNoNUL\fP (std::string_view str) noexcept"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "int \fBnConnectTimeout\fP = DEFAULT_CONNECT_TIMEOUT"
+.br
+.ti -1c
+.RI "bool \fBfNameLookup\fP = DEFAULT_NAME_LOOKUP"
+.br
+.ti -1c
+.RI "std::chrono::milliseconds \fBg_socks5_recv_timeout\fP = 20s"
+.br
+.ti -1c
+.RI "\fBCThreadInterrupt\fP \fBg_socks5_interrupt\fP"
+.br
+.ti -1c
+.RI "\fBReachableNets\fP \fBg_reachable_nets\fP"
+.br
+.ti -1c
+.RI "\fBDNSLookupFn\fP \fBg_dns_lookup\fP {\fBWrappedGetAddrInfo\fP}"
+.br
+.ti -1c
+.RI "std::function< std::unique_ptr< \fBSock\fP >(int, int, int)> \fBCreateSock\fP = \fBCreateSockOS\fP"
+.br
+.in -1c
+.SH "Enumeration Type Documentation"
+.PP 
+.SS "enum class \fBIntrRecvError\fP\fR [strong]\fP"
+\fBStatus\fP codes that can be returned by InterruptibleRecv 
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BIOK \fP
+.TP
+\f(BITimeout \fP
+.TP
+\f(BIDisconnected \fP
+.TP
+\f(BINetworkError \fP
+.TP
+\f(BIInterrupted \fP
+.SS "enum \fBSOCKS5Atyp\fP : uint8_t"
+Values defined for ATYPE in RFC1928 
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BIIPV4 \fP
+.TP
+\f(BIDOMAINNAME \fP
+.TP
+\f(BIIPV6 \fP
+.SS "enum \fBSOCKS5Command\fP : uint8_t"
+Values defined for CMD in RFC1928 
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BICONNECT \fP
+.TP
+\f(BIBIND \fP
+.TP
+\f(BIUDP_ASSOCIATE \fP
+.SS "enum \fBSOCKS5Method\fP : uint8_t"
+Values defined for METHOD in RFC1928 
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BINOAUTH \fP
+No authentication required\&. 
+.TP
+\f(BIGSSAPI \fP
+GSSAPI\&. 
+.TP
+\f(BIUSER_PASS \fP
+Username/password\&. 
+.TP
+\f(BINO_ACCEPTABLE \fP
+No acceptable methods\&. 
+.SS "enum \fBSOCKS5Reply\fP : uint8_t"
+Values defined for REP in RFC1928 and https://spec.torproject.org/socks-extensions.html 
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BISUCCEEDED \fP
+RFC1928: Succeeded\&. 
+.TP
+\f(BIGENFAILURE \fP
+RFC1928: General failure\&. 
+.TP
+\f(BINOTALLOWED \fP
+RFC1928: Connection not allowed by ruleset\&. 
+.TP
+\f(BINETUNREACHABLE \fP
+RFC1928: \fBNetwork\fP unreachable\&. 
+.TP
+\f(BIHOSTUNREACHABLE \fP
+RFC1928: \fBNetwork\fP unreachable\&. 
+.TP
+\f(BICONNREFUSED \fP
+RFC1928: Connection refused\&. 
+.TP
+\f(BITTLEXPIRED \fP
+RFC1928: TTL expired\&. 
+.TP
+\f(BICMDUNSUPPORTED \fP
+RFC1928: Command not supported\&. 
+.TP
+\f(BIATYPEUNSUPPORTED \fP
+RFC1928: Address type not supported\&. 
+.TP
+\f(BITOR_HS_DESC_NOT_FOUND \fP
+Tor: Onion service descriptor can not be found\&. 
+.TP
+\f(BITOR_HS_DESC_INVALID \fP
+Tor: Onion service descriptor is invalid\&. 
+.TP
+\f(BITOR_HS_INTRO_FAILED \fP
+Tor: Onion service introduction failed\&. 
+.TP
+\f(BITOR_HS_REND_FAILED \fP
+Tor: Onion service rendezvous failed\&. 
+.TP
+\f(BITOR_HS_MISSING_CLIENT_AUTH \fP
+Tor: Onion service missing client authorization\&. 
+.TP
+\f(BITOR_HS_WRONG_CLIENT_AUTH \fP
+Tor: Onion service wrong client authorization\&. 
+.TP
+\f(BITOR_HS_BAD_ADDRESS \fP
+Tor: Onion service invalid address\&. 
+.TP
+\f(BITOR_HS_INTRO_TIMEOUT \fP
+Tor: Onion service introduction timed out\&. 
+.SS "enum \fBSOCKSVersion\fP : uint8_t"
+SOCKS version 
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BISOCKS4 \fP
+.TP
+\f(BISOCKS5 \fP
+.SH "Function Documentation"
+.PP 
+.SS "std::unique_ptr< \fBSock\fP > ConnectDirectly (const \fBCService\fP & dest, bool manual_connection)"
+Create a socket and try to connect to the specified service\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIdest\fP The service to which to connect\&. 
+.br
+\fImanual_connection\fP Whether or not the connection was manually requested (e\&.g\&. through the addnode RPC)
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+the connected socket if the operation succeeded, empty unique_ptr otherwise 
+.RE
+.PP
+
+.SS "std::unique_ptr< \fBSock\fP > ConnectThroughProxy (const \fBProxy\fP & proxy, const std::string & dest, uint16_t port, bool & proxy_connection_failed)"
+Connect to a specified destination service through a SOCKS5 proxy by first connecting to the SOCKS5 proxy\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIproxy\fP The SOCKS5 proxy\&. 
+.br
+\fIdest\fP The destination service to which to connect\&. 
+.br
+\fIport\fP The destination port\&. 
+.br
+\fIproxy_connection_failed\fP Whether or not the connection to the SOCKS5 proxy failed\&.
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+the connected socket if the operation succeeded\&. Otherwise an empty unique_ptr\&. 
+.RE
+.PP
+
+.SS "bool ContainsNoNUL (std::string_view str)\fR [inline]\fP, \fR [nodiscard]\fP, \fR [noexcept]\fP"
+Check if a string does not contain any embedded NUL (\\0) characters 
+.SS "std::unique_ptr< \fBSock\fP > CreateSockOS (int domain, int type, int protocol)"
+Create a real socket from the operating system\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIdomain\fP Communications domain, first argument to the socket(2) syscall\&. 
+.br
+\fItype\fP Type of the socket, second argument to the socket(2) syscall\&. 
+.br
+\fIprotocol\fP The particular protocol to be used with the socket, third argument to the socket(2) syscall\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+pointer to the created \fBSock\fP object or unique_ptr that owns nothing in case of failure 
+.RE
+.PP
+
+.SS "bool GetNameProxy (\fBProxy\fP & nameProxyOut)"
+
+.SS "std::string GetNetworkName (enum \fBNetwork\fP net)"
+
+.SS "std::vector< std::string > GetNetworkNames (bool append_unroutable = \fRfalse\fP)"
+Return a vector of publicly routable \fBNetwork\fP names; optionally append NET_UNROUTABLE\&. 
+.SS "bool GetProxy (enum \fBNetwork\fP net, \fBProxy\fP & proxyInfoOut)"
+
+.SS "bool HaveNameProxy ()"
+
+.SS "bool IsBadPort (uint16_t port)"
+Determine if a port is "bad" from the perspective of attempting to connect to a node on that port\&. 
+.PP
+\fBSee also\fP
+.RS 4
+doc/p2p-bad-ports\&.md 
+.RE
+.PP
+\fBParameters\fP
+.RS 4
+\fIport\fP Port to check\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+whether the port is bad 
+.RE
+.PP
+
+.SS "bool IsProxy (const \fBCNetAddr\fP & addr)"
+
+.SS "bool IsUnixSocketPath (const std::string & name)"
+Check if a string is a valid UNIX domain socket path
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIname\fP The string provided by the user representing a local path
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Whether the string has proper format, length, and points to an existing file path 
+.RE
+.PP
+
+.SS "std::optional< \fBCService\fP > Lookup (const std::string & name, uint16_t portDefault, bool fAllowLookup, \fBDNSLookupFn\fP dns_lookup_function = \fR\fBg_dns_lookup\fP\fP)"
+Resolve a service string to its first corresponding service\&.
+
+.PP
+\fBSee also\fP
+.RS 4
+\fBLookup(const std::string&, uint16_t, bool, unsigned int, DNSLookupFn)\fP \fBfor\fP additional parameter descriptions\&. 
+.RE
+.PP
+
+.SS "std::vector< \fBCService\fP > Lookup (const std::string & name, uint16_t portDefault, bool fAllowLookup, unsigned int nMaxSolutions, \fBDNSLookupFn\fP dns_lookup_function = \fR\fBg_dns_lookup\fP\fP)"
+Resolve a service string to its corresponding service\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIname\fP The string representing a service\&. Could be a name or a numerical IP address (IPv6 addresses should be in their disambiguated bracketed form), optionally followed by a uint16_t port number\&. (e\&.g\&. example\&.com:8333 or
+.br
+\fIportDefault\fP The default port for resulting services if not specified by the service string\&. 
+.br
+\fIfAllowLookup\fP Whether or not hostname lookups are permitted\&. If yes, external queries may be performed\&. 
+.br
+\fInMaxSolutions\fP The maximum number of results we want, specifying 0 means "as many solutions as we get\&."
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The resulting services to which the specified service string resolved\&. 
+.RE
+.PP
+
+.SS "std::optional< \fBCNetAddr\fP > LookupHost (const std::string & name, bool fAllowLookup, \fBDNSLookupFn\fP dns_lookup_function = \fR\fBg_dns_lookup\fP\fP)"
+Resolve a host string to its first corresponding network address\&.
+
+.PP
+\fBReturns\fP
+.RS 4
+The resulting network address to which the specified host string resolved or std::nullopt if host does not resolve to an address\&.
+.RE
+.PP
+\fBSee also\fP
+.RS 4
+\fBLookupHost(const std::string&, unsigned int, bool, DNSLookupFn)\fP \fBfor\fP additional parameter descriptions\&. 
+.RE
+.PP
+
+.SS "std::vector< \fBCNetAddr\fP > LookupHost (const std::string & name, unsigned int nMaxSolutions, bool fAllowLookup, \fBDNSLookupFn\fP dns_lookup_function = \fR\fBg_dns_lookup\fP\fP)"
+Resolve a host string to its corresponding network addresses\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIname\fP The string representing a host\&. Could be a name or a numerical IP address (IPv6 addresses in their bracketed form are allowed)\&.
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The resulting network addresses to which the specified host string resolved\&.
+.RE
+.PP
+\fBSee also\fP
+.RS 4
+\fBLookup(const std::string&, uint16_t, bool, unsigned int, DNSLookupFn)\fP \fBfor\fP additional parameter descriptions\&. 
+.RE
+.PP
+
+.SS "\fBCService\fP LookupNumeric (const std::string & name, uint16_t portDefault = \fR0\fP, \fBDNSLookupFn\fP dns_lookup_function = \fR\fBg_dns_lookup\fP\fP)"
+Resolve a service string with a numeric IP to its first corresponding service\&.
+
+.PP
+\fBReturns\fP
+.RS 4
+The resulting \fBCService\fP if the resolution was successful, [::]:0 otherwise\&.
+.RE
+.PP
+\fBSee also\fP
+.RS 4
+\fBLookup(const std::string&, uint16_t, bool, unsigned int, DNSLookupFn)\fP \fBfor\fP additional parameter descriptions\&. 
+.RE
+.PP
+
+.SS "\fBCSubNet\fP LookupSubNet (const std::string & subnet_str)"
+Parse and resolve a specified subnet string into the appropriate internal representation\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIsubnet_str\fP A string representation of a subnet of the form \fRnetwork address [ "/", ( CIDR-style suffix | netmask ) ]\fP e\&.g\&. "2001:db8::/32", "192\&.0\&.2\&.0/255\&.255\&.255\&.0" or "8\&.8\&.8\&.8"\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+a \fBCSubNet\fP object (that may or may not be valid)\&. 
+.RE
+.PP
+
+.SS "\fBCService\fP MaybeFlipIPv6toCJDNS (const \fBCService\fP & service)"
+If an IPv6 address belongs to the address range used by the CJDNS network and the CJDNS network is reachable (-cjdnsreachable config is set), then change the type from NET_IPV6 to NET_CJDNS\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIservice\fP Address to potentially convert\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+a copy of \fRservice\fP either unmodified or changed to CJDNS\&. 
+.RE
+.PP
+
+.SS "enum \fBNetwork\fP ParseNetwork (const std::string & net_in)"
+
+.SS "bool SetNameProxy (const \fBProxy\fP & addrProxy)"
+Set the name proxy to use for all connections to nodes specified by a hostname\&. After setting this proxy, connecting to a node specified by a hostname won't result in a local lookup of said hostname, rather, connect to the node by asking the name proxy for a proxy connection to the hostname, effectively delegating the hostname lookup to the specified proxy\&.
+
+.PP
+This delegation increases privacy for those who set the name proxy as they no longer leak their external hostname queries to their DNS servers\&.
+
+.PP
+\fBReturns\fP
+.RS 4
+Whether or not the operation succeeded\&.
+.RE
+.PP
+\fBNote\fP
+.RS 4
+SOCKS5's support for UDP-over-SOCKS5 has been considered, but no SOCK5 server in common use (most notably Tor) actually implements UDP support, and a DNS resolver is beyond the scope of this project\&. 
+.RE
+.PP
+
+.SS "bool SetProxy (enum \fBNetwork\fP net, const \fBProxy\fP & addrProxy)"
+
+.SS "bool Socks5 (const std::string & strDest, uint16_t port, const \fBProxyCredentials\fP * auth, const \fBSock\fP & socket)"
+Connect to a specified destination service through an already connected SOCKS5 proxy\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIstrDest\fP The destination fully-qualified domain name\&. 
+.br
+\fIport\fP The destination port\&. 
+.br
+\fIauth\fP The credentials with which to authenticate with the specified SOCKS5 proxy\&. 
+.br
+\fIsocket\fP The SOCKS5 proxy socket\&.
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Whether or not the operation succeeded\&.
+.RE
+.PP
+\fBNote\fP
+.RS 4
+The specified SOCKS5 proxy socket must already be connected to the SOCKS5 proxy\&.
+.RE
+.PP
+\fBSee also\fP
+.RS 4
+\fRRFC1928: SOCKS Protocol Version 5\fP 
+.RE
+.PP
+
+.SS "std::vector< \fBCNetAddr\fP > WrappedGetAddrInfo (const std::string & name, bool allow_lookup)"
+\fBWrapper\fP for getaddrinfo(3)\&. Do not use directly: call Lookup/LookupHost/LookupNumeric/LookupSubNet\&. 
+.SH "Variable Documentation"
+.PP 
+.SS "std::function<std::unique_ptr<\fBSock\fP>(int, int, int)> CreateSock = \fBCreateSockOS\fP"
+Socket factory\&. Defaults to \fR\fBCreateSockOS()\fP\fP, but can be overridden by unit tests\&. 
+.SS "bool fNameLookup = DEFAULT_NAME_LOOKUP"
+
+.SS "\fBDNSLookupFn\fP g_dns_lookup {\fBWrappedGetAddrInfo\fP}"
+
+.SS "\fBReachableNets\fP g_reachable_nets"
+
+.SS "\fBCThreadInterrupt\fP g_socks5_interrupt"
+Interrupt SOCKS5 reads or writes\&. 
+.SS "std::chrono::milliseconds g_socks5_recv_timeout = 20s"
+
+.SS "int nConnectTimeout = DEFAULT_CONNECT_TIMEOUT"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

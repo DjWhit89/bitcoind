@@ -1,0 +1,117 @@
+\doxysection{cache.\+h}
+\label{cache_8h_source}\index{src/leveldb/include/leveldb/cache.h@{src/leveldb/include/leveldb/cache.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ A\ Cache\ is\ an\ interface\ that\ maps\ keys\ to\ values.\ \ It\ has\ internal}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//\ synchronization\ and\ may\ be\ safely\ accessed\ concurrently\ from}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//\ multiple\ threads.\ \ It\ may\ automatically\ evict\ entries\ to\ make\ room}}
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ for\ new\ entries.\ \ Values\ have\ a\ specified\ charge\ against\ the\ cache}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//\ capacity.\ \ For\ example,\ a\ cache\ where\ the\ values\ are\ variable}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//\ length\ strings,\ may\ use\ the\ length\ of\ the\ string\ as\ the\ charge\ for}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//\ the\ string.}}
+\DoxyCodeLine{00012\ \textcolor{comment}{//}}
+\DoxyCodeLine{00013\ \textcolor{comment}{//\ A\ builtin\ cache\ implementation\ with\ a\ least-\/recently-\/used\ eviction}}
+\DoxyCodeLine{00014\ \textcolor{comment}{//\ policy\ is\ provided.\ \ Clients\ may\ use\ their\ own\ implementations\ if}}
+\DoxyCodeLine{00015\ \textcolor{comment}{//\ they\ want\ something\ more\ sophisticated\ (like\ scan-\/resistance,\ a}}
+\DoxyCodeLine{00016\ \textcolor{comment}{//\ custom\ eviction\ policy,\ variable\ cache\ sizing,\ etc.)}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_CACHE\_H\_}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_CACHE\_H\_}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ "{}leveldb/slice.h"{}}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ Cache;}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{comment}{//\ Create\ a\ new\ cache\ with\ a\ fixed\ size\ capacity.\ \ This\ implementation}}
+\DoxyCodeLine{00031\ \textcolor{comment}{//\ of\ Cache\ uses\ a\ least-\/recently-\/used\ eviction\ policy.}}
+\DoxyCodeLine{00032\ LEVELDB\_EXPORT\ Cache*\ NewLRUCache(\textcolor{keywordtype}{size\_t}\ capacity);}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ Cache\ \{}
+\DoxyCodeLine{00035\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00036\ \ \ Cache()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ Cache(\textcolor{keyword}{const}\ Cache\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00039\ \ \ Cache\&\ operator=(\textcolor{keyword}{const}\ Cache\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \textcolor{comment}{//\ Destroys\ all\ existing\ entries\ by\ calling\ the\ "{}deleter"{}}}
+\DoxyCodeLine{00042\ \ \ \textcolor{comment}{//\ function\ that\ was\ passed\ to\ the\ constructor.}}
+\DoxyCodeLine{00043\ \ \ \textcolor{keyword}{virtual}\ \string~Cache();}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \ \ \textcolor{comment}{//\ Opaque\ handle\ to\ an\ entry\ stored\ in\ the\ cache.}}
+\DoxyCodeLine{00046\ \ \ \textcolor{keyword}{struct\ }Handle\ \{\};}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \textcolor{comment}{//\ Insert\ a\ mapping\ from\ key-\/>value\ into\ the\ cache\ and\ assign\ it}}
+\DoxyCodeLine{00049\ \ \ \textcolor{comment}{//\ the\ specified\ charge\ against\ the\ total\ cache\ capacity.}}
+\DoxyCodeLine{00050\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00051\ \ \ \textcolor{comment}{//\ Returns\ a\ handle\ that\ corresponds\ to\ the\ mapping.\ \ The\ caller}}
+\DoxyCodeLine{00052\ \ \ \textcolor{comment}{//\ must\ call\ this-\/>Release(handle)\ when\ the\ returned\ mapping\ is\ no}}
+\DoxyCodeLine{00053\ \ \ \textcolor{comment}{//\ longer\ needed.}}
+\DoxyCodeLine{00054\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00055\ \ \ \textcolor{comment}{//\ When\ the\ inserted\ entry\ is\ no\ longer\ needed,\ the\ key\ and}}
+\DoxyCodeLine{00056\ \ \ \textcolor{comment}{//\ value\ will\ be\ passed\ to\ "{}deleter"{}.}}
+\DoxyCodeLine{00057\ \ \ \textcolor{keyword}{virtual}\ Handle*\ Insert(\textcolor{keyword}{const}\ Slice\&\ key,\ \textcolor{keywordtype}{void}*\ value,\ \textcolor{keywordtype}{size\_t}\ charge,}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ (*deleter)(\textcolor{keyword}{const}\ Slice\&\ key,\ \textcolor{keywordtype}{void}*\ value))\ =\ 0;}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \textcolor{comment}{//\ If\ the\ cache\ has\ no\ mapping\ for\ "{}key"{},\ returns\ nullptr.}}
+\DoxyCodeLine{00061\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00062\ \ \ \textcolor{comment}{//\ Else\ return\ a\ handle\ that\ corresponds\ to\ the\ mapping.\ \ The\ caller}}
+\DoxyCodeLine{00063\ \ \ \textcolor{comment}{//\ must\ call\ this-\/>Release(handle)\ when\ the\ returned\ mapping\ is\ no}}
+\DoxyCodeLine{00064\ \ \ \textcolor{comment}{//\ longer\ needed.}}
+\DoxyCodeLine{00065\ \ \ \textcolor{keyword}{virtual}\ Handle*\ Lookup(\textcolor{keyword}{const}\ Slice\&\ key)\ =\ 0;}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \textcolor{comment}{//\ Release\ a\ mapping\ returned\ by\ a\ previous\ Lookup().}}
+\DoxyCodeLine{00068\ \ \ \textcolor{comment}{//\ REQUIRES:\ handle\ must\ not\ have\ been\ released\ yet.}}
+\DoxyCodeLine{00069\ \ \ \textcolor{comment}{//\ REQUIRES:\ handle\ must\ have\ been\ returned\ by\ a\ method\ on\ *this.}}
+\DoxyCodeLine{00070\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Release(Handle*\ handle)\ =\ 0;}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \textcolor{comment}{//\ Return\ the\ value\ encapsulated\ in\ a\ handle\ returned\ by\ a}}
+\DoxyCodeLine{00073\ \ \ \textcolor{comment}{//\ successful\ Lookup().}}
+\DoxyCodeLine{00074\ \ \ \textcolor{comment}{//\ REQUIRES:\ handle\ must\ not\ have\ been\ released\ yet.}}
+\DoxyCodeLine{00075\ \ \ \textcolor{comment}{//\ REQUIRES:\ handle\ must\ have\ been\ returned\ by\ a\ method\ on\ *this.}}
+\DoxyCodeLine{00076\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}*\ Value(Handle*\ handle)\ =\ 0;}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ \textcolor{comment}{//\ If\ the\ cache\ contains\ entry\ for\ key,\ erase\ it.\ \ Note\ that\ the}}
+\DoxyCodeLine{00079\ \ \ \textcolor{comment}{//\ underlying\ entry\ will\ be\ kept\ around\ until\ all\ existing\ handles}}
+\DoxyCodeLine{00080\ \ \ \textcolor{comment}{//\ to\ it\ have\ been\ released.}}
+\DoxyCodeLine{00081\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Erase(\textcolor{keyword}{const}\ Slice\&\ key)\ =\ 0;}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \ \textcolor{comment}{//\ Return\ a\ new\ numeric\ id.\ \ May\ be\ used\ by\ multiple\ clients\ who\ are}}
+\DoxyCodeLine{00084\ \ \ \textcolor{comment}{//\ sharing\ the\ same\ cache\ to\ partition\ the\ key\ space.\ \ Typically\ the}}
+\DoxyCodeLine{00085\ \ \ \textcolor{comment}{//\ client\ will\ allocate\ a\ new\ id\ at\ startup\ and\ prepend\ the\ id\ to}}
+\DoxyCodeLine{00086\ \ \ \textcolor{comment}{//\ its\ cache\ keys.}}
+\DoxyCodeLine{00087\ \ \ \textcolor{keyword}{virtual}\ uint64\_t\ NewId()\ =\ 0;}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \ \ \textcolor{comment}{//\ Remove\ all\ cache\ entries\ that\ are\ not\ actively\ in\ use.\ \ Memory-\/constrained}}
+\DoxyCodeLine{00090\ \ \ \textcolor{comment}{//\ applications\ may\ wish\ to\ call\ this\ method\ to\ reduce\ memory\ usage.}}
+\DoxyCodeLine{00091\ \ \ \textcolor{comment}{//\ Default\ implementation\ of\ Prune()\ does\ nothing.\ \ Subclasses\ are\ strongly}}
+\DoxyCodeLine{00092\ \ \ \textcolor{comment}{//\ encouraged\ to\ override\ the\ default\ implementation.\ \ A\ future\ release\ of}}
+\DoxyCodeLine{00093\ \ \ \textcolor{comment}{//\ leveldb\ may\ change\ Prune()\ to\ a\ pure\ abstract\ method.}}
+\DoxyCodeLine{00094\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Prune()\ \{\}}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \ \ \textcolor{comment}{//\ Return\ an\ estimate\ of\ the\ combined\ charges\ of\ all\ elements\ stored\ in\ the}}
+\DoxyCodeLine{00097\ \ \ \textcolor{comment}{//\ cache.}}
+\DoxyCodeLine{00098\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{size\_t}\ TotalCharge()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00101\ \ \ \textcolor{keywordtype}{void}\ LRU\_Remove(Handle*\ e);}
+\DoxyCodeLine{00102\ \ \ \textcolor{keywordtype}{void}\ LRU\_Append(Handle*\ e);}
+\DoxyCodeLine{00103\ \ \ \textcolor{keywordtype}{void}\ Unref(Handle*\ e);}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \ \ \textcolor{keyword}{struct\ }Rep;}
+\DoxyCodeLine{00106\ \ \ Rep*\ rep\_;}
+\DoxyCodeLine{00107\ \};}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00109\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00111\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_INCLUDE\_CACHE\_H\_}}
+
+\end{DoxyCode}

@@ -1,0 +1,278 @@
+\doxysection{main\+\_\+impl.\+h}
+\label{schnorrsig_2main__impl_8h_source}\index{src/secp256k1/src/modules/schnorrsig/main\_impl.h@{src/secp256k1/src/modules/schnorrsig/main\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2018-\/2020\ Andrew\ Poelstra,\ Jonas\ Nick\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_MODULE\_SCHNORRSIG\_MAIN\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_MODULE\_SCHNORRSIG\_MAIN\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1\_schnorrsig.h"{}}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}../../hash.h"{}}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{comment}{/*\ Initializes\ SHA256\ with\ fixed\ midstate.\ This\ midstate\ was\ computed\ by\ applying}}
+\DoxyCodeLine{00015\ \textcolor{comment}{\ *\ SHA256\ to\ SHA256("{}BIP0340/nonce"{})||SHA256("{}BIP0340/nonce"{}).\ */}}
+\DoxyCodeLine{00016\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_nonce\_function\_bip340\_sha256\_tagged(secp256k1\_sha256\ *sha)\ \{}
+\DoxyCodeLine{00017\ \ \ \ \ secp256k1\_sha256\_initialize(sha);}
+\DoxyCodeLine{00018\ \ \ \ \ sha-\/>s[0]\ =\ 0x46615b35ul;}
+\DoxyCodeLine{00019\ \ \ \ \ sha-\/>s[1]\ =\ 0xf4bfbff7ul;}
+\DoxyCodeLine{00020\ \ \ \ \ sha-\/>s[2]\ =\ 0x9f8dc671ul;}
+\DoxyCodeLine{00021\ \ \ \ \ sha-\/>s[3]\ =\ 0x83627ab3ul;}
+\DoxyCodeLine{00022\ \ \ \ \ sha-\/>s[4]\ =\ 0x60217180ul;}
+\DoxyCodeLine{00023\ \ \ \ \ sha-\/>s[5]\ =\ 0x57358661ul;}
+\DoxyCodeLine{00024\ \ \ \ \ sha-\/>s[6]\ =\ 0x21a29e54ul;}
+\DoxyCodeLine{00025\ \ \ \ \ sha-\/>s[7]\ =\ 0x68b07b4cul;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \ \ sha-\/>bytes\ =\ 64;}
+\DoxyCodeLine{00028\ \}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{comment}{/*\ Initializes\ SHA256\ with\ fixed\ midstate.\ This\ midstate\ was\ computed\ by\ applying}}
+\DoxyCodeLine{00031\ \textcolor{comment}{\ *\ SHA256\ to\ SHA256("{}BIP0340/aux"{})||SHA256("{}BIP0340/aux"{}).\ */}}
+\DoxyCodeLine{00032\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_nonce\_function\_bip340\_sha256\_tagged\_aux(secp256k1\_sha256\ *sha)\ \{}
+\DoxyCodeLine{00033\ \ \ \ \ secp256k1\_sha256\_initialize(sha);}
+\DoxyCodeLine{00034\ \ \ \ \ sha-\/>s[0]\ =\ 0x24dd3219ul;}
+\DoxyCodeLine{00035\ \ \ \ \ sha-\/>s[1]\ =\ 0x4eba7e70ul;}
+\DoxyCodeLine{00036\ \ \ \ \ sha-\/>s[2]\ =\ 0xca0fabb9ul;}
+\DoxyCodeLine{00037\ \ \ \ \ sha-\/>s[3]\ =\ 0x0fa3166dul;}
+\DoxyCodeLine{00038\ \ \ \ \ sha-\/>s[4]\ =\ 0x3afbe4b1ul;}
+\DoxyCodeLine{00039\ \ \ \ \ sha-\/>s[5]\ =\ 0x4c44df97ul;}
+\DoxyCodeLine{00040\ \ \ \ \ sha-\/>s[6]\ =\ 0x4aac2739ul;}
+\DoxyCodeLine{00041\ \ \ \ \ sha-\/>s[7]\ =\ 0x249e850aul;}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \ \ sha-\/>bytes\ =\ 64;}
+\DoxyCodeLine{00044\ \}}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \textcolor{comment}{/*\ algo\ argument\ for\ nonce\_function\_bip340\ to\ derive\ the\ nonce\ exactly\ as\ stated\ in\ BIP-\/340}}
+\DoxyCodeLine{00047\ \textcolor{comment}{\ *\ by\ using\ the\ correct\ tagged\ hash\ function.\ */}}
+\DoxyCodeLine{00048\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ bip340\_algo[]\ =\ \{\textcolor{charliteral}{'B'},\ \textcolor{charliteral}{'I'},\ \textcolor{charliteral}{'P'},\ \textcolor{charliteral}{'0'},\ \textcolor{charliteral}{'3'},\ \textcolor{charliteral}{'4'},\ \textcolor{charliteral}{'0'},\ \textcolor{charliteral}{'/'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'o'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'c'},\ \textcolor{charliteral}{'e'}\};}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ schnorrsig\_extraparams\_magic[4]\ =\ SECP256K1\_SCHNORRSIG\_EXTRAPARAMS\_MAGIC;}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ nonce\_function\_bip340(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *nonce32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg,\ \textcolor{keywordtype}{size\_t}\ msglen,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *key32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *xonly\_pk32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *algo,\ \textcolor{keywordtype}{size\_t}\ algolen,\ \textcolor{keywordtype}{void}\ *data)\ \{}
+\DoxyCodeLine{00053\ \ \ \ \ secp256k1\_sha256\ sha;}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ masked\_key[32];}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordflow}{if}\ (algo\ ==\ NULL)\ \{}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00059\ \ \ \ \ \}}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordflow}{if}\ (data\ !=\ NULL)\ \{}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ secp256k1\_nonce\_function\_bip340\_sha256\_tagged\_aux(\&sha);}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ data,\ 32);}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ secp256k1\_sha256\_finalize(\&sha,\ masked\_key);}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 32;\ i++)\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \ \ \ \ masked\_key[i]\ \string^=\ key32[i];}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00068\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Precomputed\ TaggedHash("{}BIP0340/aux"{},\ 0x0000...00);\ */}}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ ZERO\_MASK[32]\ =\ \{}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 84,\ 241,\ 105,\ 207,\ 201,\ 226,\ 229,\ 114,}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ 116,\ 128,\ \ 68,\ \ 31,\ 144,\ 186,\ \ 37,\ 196,}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ 136,\ 244,\ \ 97,\ 199,\ \ 11,\ \ 94,\ 165,\ 220,}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ 170,\ 247,\ 175,\ 105,\ 39,\ \ 10,\ 165,\ \ 20}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 32;\ i++)\ \{}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ masked\_key[i]\ =\ key32[i]\ \string^\ ZERO\_MASK[i];}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00079\ \ \ \ \ \}}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{comment}{/*\ Tag\ the\ hash\ with\ algo\ which\ is\ important\ to\ avoid\ nonce\ reuse\ across}}
+\DoxyCodeLine{00082\ \textcolor{comment}{\ \ \ \ \ *\ algorithms.\ If\ this\ nonce\ function\ is\ used\ in\ BIP-\/340\ signing\ as\ defined}}
+\DoxyCodeLine{00083\ \textcolor{comment}{\ \ \ \ \ *\ in\ the\ spec,\ an\ optimized\ tagging\ implementation\ is\ used.\ */}}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keywordflow}{if}\ (algolen\ ==\ \textcolor{keyword}{sizeof}(bip340\_algo)}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \&\&\ secp256k1\_memcmp\_var(algo,\ bip340\_algo,\ algolen)\ ==\ 0)\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ secp256k1\_nonce\_function\_bip340\_sha256\_tagged(\&sha);}
+\DoxyCodeLine{00087\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ secp256k1\_sha256\_initialize\_tagged(\&sha,\ algo,\ algolen);}
+\DoxyCodeLine{00089\ \ \ \ \ \}}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{comment}{/*\ Hash\ masked-\/key||pk||msg\ using\ the\ tagged\ hash\ as\ per\ the\ spec\ */}}
+\DoxyCodeLine{00092\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ masked\_key,\ 32);}
+\DoxyCodeLine{00093\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ xonly\_pk32,\ 32);}
+\DoxyCodeLine{00094\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ msg,\ msglen);}
+\DoxyCodeLine{00095\ \ \ \ \ secp256k1\_sha256\_finalize(\&sha,\ nonce32);}
+\DoxyCodeLine{00096\ \ \ \ \ secp256k1\_sha256\_clear(\&sha);}
+\DoxyCodeLine{00097\ \ \ \ \ secp256k1\_memclear\_explicit(masked\_key,\ \textcolor{keyword}{sizeof}(masked\_key));}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00100\ \}}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \textcolor{keyword}{const}\ secp256k1\_nonce\_function\_hardened\ secp256k1\_nonce\_function\_bip340\ =\ nonce\_function\_bip340;}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \textcolor{comment}{/*\ Initializes\ SHA256\ with\ fixed\ midstate.\ This\ midstate\ was\ computed\ by\ applying}}
+\DoxyCodeLine{00105\ \textcolor{comment}{\ *\ SHA256\ to\ SHA256("{}BIP0340/challenge"{})||SHA256("{}BIP0340/challenge"{}).\ */}}
+\DoxyCodeLine{00106\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_schnorrsig\_sha256\_tagged(secp256k1\_sha256\ *sha)\ \{}
+\DoxyCodeLine{00107\ \ \ \ \ secp256k1\_sha256\_initialize(sha);}
+\DoxyCodeLine{00108\ \ \ \ \ sha-\/>s[0]\ =\ 0x9cecba11ul;}
+\DoxyCodeLine{00109\ \ \ \ \ sha-\/>s[1]\ =\ 0x23925381ul;}
+\DoxyCodeLine{00110\ \ \ \ \ sha-\/>s[2]\ =\ 0x11679112ul;}
+\DoxyCodeLine{00111\ \ \ \ \ sha-\/>s[3]\ =\ 0xd1627e0ful;}
+\DoxyCodeLine{00112\ \ \ \ \ sha-\/>s[4]\ =\ 0x97c87550ul;}
+\DoxyCodeLine{00113\ \ \ \ \ sha-\/>s[5]\ =\ 0x003cc765ul;}
+\DoxyCodeLine{00114\ \ \ \ \ sha-\/>s[6]\ =\ 0x90f61164ul;}
+\DoxyCodeLine{00115\ \ \ \ \ sha-\/>s[7]\ =\ 0x33e9b66aul;}
+\DoxyCodeLine{00116\ \ \ \ \ sha-\/>bytes\ =\ 64;}
+\DoxyCodeLine{00117\ \}}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00119\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_schnorrsig\_challenge(secp256k1\_scalar*\ e,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *r32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg,\ \textcolor{keywordtype}{size\_t}\ msglen,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *pubkey32)}
+\DoxyCodeLine{00120\ \{}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ buf[32];}
+\DoxyCodeLine{00122\ \ \ \ \ secp256k1\_sha256\ sha;}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{comment}{/*\ tagged\ hash(r.x,\ pk.x,\ msg)\ */}}
+\DoxyCodeLine{00125\ \ \ \ \ secp256k1\_schnorrsig\_sha256\_tagged(\&sha);}
+\DoxyCodeLine{00126\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ r32,\ 32);}
+\DoxyCodeLine{00127\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ pubkey32,\ 32);}
+\DoxyCodeLine{00128\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ msg,\ msglen);}
+\DoxyCodeLine{00129\ \ \ \ \ secp256k1\_sha256\_finalize(\&sha,\ buf);}
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{comment}{/*\ Set\ scalar\ e\ to\ the\ challenge\ hash\ modulo\ the\ curve\ order\ as\ per}}
+\DoxyCodeLine{00131\ \textcolor{comment}{\ \ \ \ \ *\ BIP340.\ */}}
+\DoxyCodeLine{00132\ \ \ \ \ secp256k1\_scalar\_set\_b32(e,\ buf,\ NULL);}
+\DoxyCodeLine{00133\ \}}
+\DoxyCodeLine{00134\ }
+\DoxyCodeLine{00135\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_schnorrsig\_sign\_internal(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sig64,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg,\ \textcolor{keywordtype}{size\_t}\ msglen,\ \textcolor{keyword}{const}\ secp256k1\_keypair\ *keypair,\ secp256k1\_nonce\_function\_hardened\ noncefp,\ \textcolor{keywordtype}{void}\ *ndata)\ \{}
+\DoxyCodeLine{00136\ \ \ \ \ secp256k1\_scalar\ sk;}
+\DoxyCodeLine{00137\ \ \ \ \ secp256k1\_scalar\ e;}
+\DoxyCodeLine{00138\ \ \ \ \ secp256k1\_scalar\ k;}
+\DoxyCodeLine{00139\ \ \ \ \ secp256k1\_gej\ rj;}
+\DoxyCodeLine{00140\ \ \ \ \ secp256k1\_ge\ pk;}
+\DoxyCodeLine{00141\ \ \ \ \ secp256k1\_ge\ r;}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ nonce32[32]\ =\ \{\ 0\ \};}
+\DoxyCodeLine{00143\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk\_buf[32];}
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ seckey[32];}
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keywordtype}{int}\ ret\ =\ 1;}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00147\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00148\ \ \ \ \ ARG\_CHECK(secp256k1\_ecmult\_gen\_context\_is\_built(\&ctx-\/>ecmult\_gen\_ctx));}
+\DoxyCodeLine{00149\ \ \ \ \ ARG\_CHECK(sig64\ !=\ NULL);}
+\DoxyCodeLine{00150\ \ \ \ \ ARG\_CHECK(msg\ !=\ NULL\ ||\ msglen\ ==\ 0);}
+\DoxyCodeLine{00151\ \ \ \ \ ARG\_CHECK(keypair\ !=\ NULL);}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keywordflow}{if}\ (noncefp\ ==\ NULL)\ \{}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ noncefp\ =\ secp256k1\_nonce\_function\_bip340;}
+\DoxyCodeLine{00155\ \ \ \ \ \}}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ \ \ \ \ ret\ \&=\ secp256k1\_keypair\_load(ctx,\ \&sk,\ \&pk,\ keypair);}
+\DoxyCodeLine{00158\ \ \ \ \ \textcolor{comment}{/*\ Because\ we\ are\ signing\ for\ a\ x-\/only\ pubkey,\ the\ secret\ key\ is\ negated}}
+\DoxyCodeLine{00159\ \textcolor{comment}{\ \ \ \ \ *\ before\ signing\ if\ the\ point\ corresponding\ to\ the\ secret\ key\ does\ not}}
+\DoxyCodeLine{00160\ \textcolor{comment}{\ \ \ \ \ *\ have\ an\ even\ Y.\ */}}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_fe\_is\_odd(\&pk.y))\ \{}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_negate(\&sk,\ \&sk);}
+\DoxyCodeLine{00163\ \ \ \ \ \}}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \ \ \ \ secp256k1\_scalar\_get\_b32(seckey,\ \&sk);}
+\DoxyCodeLine{00166\ \ \ \ \ secp256k1\_fe\_get\_b32(pk\_buf,\ \&pk.x);}
+\DoxyCodeLine{00167\ \ \ \ \ ret\ \&=\ !!noncefp(nonce32,\ msg,\ msglen,\ seckey,\ pk\_buf,\ bip340\_algo,\ \textcolor{keyword}{sizeof}(bip340\_algo),\ ndata);}
+\DoxyCodeLine{00168\ \ \ \ \ secp256k1\_scalar\_set\_b32(\&k,\ nonce32,\ NULL);}
+\DoxyCodeLine{00169\ \ \ \ \ ret\ \&=\ !secp256k1\_scalar\_is\_zero(\&k);}
+\DoxyCodeLine{00170\ \ \ \ \ secp256k1\_scalar\_cmov(\&k,\ \&secp256k1\_scalar\_one,\ !ret);}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00172\ \ \ \ \ secp256k1\_ecmult\_gen(\&ctx-\/>ecmult\_gen\_ctx,\ \&rj,\ \&k);}
+\DoxyCodeLine{00173\ \ \ \ \ secp256k1\_ge\_set\_gej(\&r,\ \&rj);}
+\DoxyCodeLine{00174\ }
+\DoxyCodeLine{00175\ \ \ \ \ \textcolor{comment}{/*\ We\ declassify\ r\ to\ allow\ using\ it\ as\ a\ branch\ point.\ This\ is\ fine}}
+\DoxyCodeLine{00176\ \textcolor{comment}{\ \ \ \ \ *\ because\ r\ is\ not\ a\ secret.\ */}}
+\DoxyCodeLine{00177\ \ \ \ \ secp256k1\_declassify(ctx,\ \&r,\ \textcolor{keyword}{sizeof}(r));}
+\DoxyCodeLine{00178\ \ \ \ \ secp256k1\_fe\_normalize\_var(\&r.y);}
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_fe\_is\_odd(\&r.y))\ \{}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_negate(\&k,\ \&k);}
+\DoxyCodeLine{00181\ \ \ \ \ \}}
+\DoxyCodeLine{00182\ \ \ \ \ secp256k1\_fe\_normalize\_var(\&r.x);}
+\DoxyCodeLine{00183\ \ \ \ \ secp256k1\_fe\_get\_b32(\&sig64[0],\ \&r.x);}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00185\ \ \ \ \ secp256k1\_schnorrsig\_challenge(\&e,\ \&sig64[0],\ msg,\ msglen,\ pk\_buf);}
+\DoxyCodeLine{00186\ \ \ \ \ secp256k1\_scalar\_mul(\&e,\ \&e,\ \&sk);}
+\DoxyCodeLine{00187\ \ \ \ \ secp256k1\_scalar\_add(\&e,\ \&e,\ \&k);}
+\DoxyCodeLine{00188\ \ \ \ \ secp256k1\_scalar\_get\_b32(\&sig64[32],\ \&e);}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00190\ \ \ \ \ secp256k1\_memczero(sig64,\ 64,\ !ret);}
+\DoxyCodeLine{00191\ \ \ \ \ secp256k1\_scalar\_clear(\&k);}
+\DoxyCodeLine{00192\ \ \ \ \ secp256k1\_scalar\_clear(\&sk);}
+\DoxyCodeLine{00193\ \ \ \ \ secp256k1\_memclear\_explicit(seckey,\ \textcolor{keyword}{sizeof}(seckey));}
+\DoxyCodeLine{00194\ \ \ \ \ secp256k1\_memclear\_explicit(nonce32,\ \textcolor{keyword}{sizeof}(nonce32));}
+\DoxyCodeLine{00195\ \ \ \ \ secp256k1\_gej\_clear(\&rj);}
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00198\ \}}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \textcolor{keywordtype}{int}\ secp256k1\_schnorrsig\_sign32(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sig64,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg32,\ \textcolor{keyword}{const}\ secp256k1\_keypair\ *keypair,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *aux\_rand32)\ \{}
+\DoxyCodeLine{00201\ \ \ \ \ \textcolor{comment}{/*\ We\ cast\ away\ const\ from\ the\ passed\ aux\_rand32\ argument\ since\ we\ know\ the\ default\ nonce\ function\ does\ not\ modify\ it.\ */}}
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_schnorrsig\_sign\_internal(ctx,\ sig64,\ msg32,\ 32,\ keypair,\ secp256k1\_nonce\_function\_bip340,\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*)aux\_rand32);}
+\DoxyCodeLine{00203\ \}}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \textcolor{keywordtype}{int}\ secp256k1\_schnorrsig\_sign(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sig64,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg32,\ \textcolor{keyword}{const}\ secp256k1\_keypair\ *keypair,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *aux\_rand32)\ \{}
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_schnorrsig\_sign32(ctx,\ sig64,\ msg32,\ keypair,\ aux\_rand32);}
+\DoxyCodeLine{00207\ \}}
+\DoxyCodeLine{00208\ }
+\DoxyCodeLine{00209\ \textcolor{keywordtype}{int}\ secp256k1\_schnorrsig\_sign\_custom(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sig64,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg,\ \textcolor{keywordtype}{size\_t}\ msglen,\ \textcolor{keyword}{const}\ secp256k1\_keypair\ *keypair,\ secp256k1\_schnorrsig\_extraparams\ *extraparams)\ \{}
+\DoxyCodeLine{00210\ \ \ \ \ secp256k1\_nonce\_function\_hardened\ noncefp\ =\ NULL;}
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{keywordtype}{void}\ *ndata\ =\ NULL;}
+\DoxyCodeLine{00212\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00213\ }
+\DoxyCodeLine{00214\ \ \ \ \ \textcolor{keywordflow}{if}\ (extraparams\ !=\ NULL)\ \{}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ ARG\_CHECK(secp256k1\_memcmp\_var(extraparams-\/>magic,}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ schnorrsig\_extraparams\_magic,}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{sizeof}(extraparams-\/>magic))\ ==\ 0);}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ noncefp\ =\ extraparams-\/>noncefp;}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ ndata\ =\ extraparams-\/>ndata;}
+\DoxyCodeLine{00220\ \ \ \ \ \}}
+\DoxyCodeLine{00221\ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_schnorrsig\_sign\_internal(ctx,\ sig64,\ msg,\ msglen,\ keypair,\ noncefp,\ ndata);}
+\DoxyCodeLine{00222\ \}}
+\DoxyCodeLine{00223\ }
+\DoxyCodeLine{00224\ \textcolor{keywordtype}{int}\ secp256k1\_schnorrsig\_verify(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sig64,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg,\ \textcolor{keywordtype}{size\_t}\ msglen,\ \textcolor{keyword}{const}\ secp256k1\_xonly\_pubkey\ *pubkey)\ \{}
+\DoxyCodeLine{00225\ \ \ \ \ secp256k1\_scalar\ s;}
+\DoxyCodeLine{00226\ \ \ \ \ secp256k1\_scalar\ e;}
+\DoxyCodeLine{00227\ \ \ \ \ secp256k1\_gej\ rj;}
+\DoxyCodeLine{00228\ \ \ \ \ secp256k1\_ge\ pk;}
+\DoxyCodeLine{00229\ \ \ \ \ secp256k1\_gej\ pkj;}
+\DoxyCodeLine{00230\ \ \ \ \ secp256k1\_fe\ rx;}
+\DoxyCodeLine{00231\ \ \ \ \ secp256k1\_ge\ r;}
+\DoxyCodeLine{00232\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ buf[32];}
+\DoxyCodeLine{00233\ \ \ \ \ \textcolor{keywordtype}{int}\ overflow;}
+\DoxyCodeLine{00234\ }
+\DoxyCodeLine{00235\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00236\ \ \ \ \ ARG\_CHECK(sig64\ !=\ NULL);}
+\DoxyCodeLine{00237\ \ \ \ \ ARG\_CHECK(msg\ !=\ NULL\ ||\ msglen\ ==\ 0);}
+\DoxyCodeLine{00238\ \ \ \ \ ARG\_CHECK(pubkey\ !=\ NULL);}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_fe\_set\_b32\_limit(\&rx,\ \&sig64[0]))\ \{}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00242\ \ \ \ \ \}}
+\DoxyCodeLine{00243\ }
+\DoxyCodeLine{00244\ \ \ \ \ secp256k1\_scalar\_set\_b32(\&s,\ \&sig64[32],\ \&overflow);}
+\DoxyCodeLine{00245\ \ \ \ \ \textcolor{keywordflow}{if}\ (overflow)\ \{}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00247\ \ \ \ \ \}}
+\DoxyCodeLine{00248\ }
+\DoxyCodeLine{00249\ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_xonly\_pubkey\_load(ctx,\ \&pk,\ pubkey))\ \{}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00251\ \ \ \ \ \}}
+\DoxyCodeLine{00252\ }
+\DoxyCodeLine{00253\ \ \ \ \ \textcolor{comment}{/*\ Compute\ e.\ */}}
+\DoxyCodeLine{00254\ \ \ \ \ secp256k1\_fe\_get\_b32(buf,\ \&pk.x);}
+\DoxyCodeLine{00255\ \ \ \ \ secp256k1\_schnorrsig\_challenge(\&e,\ \&sig64[0],\ msg,\ msglen,\ buf);}
+\DoxyCodeLine{00256\ }
+\DoxyCodeLine{00257\ \ \ \ \ \textcolor{comment}{/*\ Compute\ rj\ =\ \ s*G\ +\ (-\/e)*pkj\ */}}
+\DoxyCodeLine{00258\ \ \ \ \ secp256k1\_scalar\_negate(\&e,\ \&e);}
+\DoxyCodeLine{00259\ \ \ \ \ secp256k1\_gej\_set\_ge(\&pkj,\ \&pk);}
+\DoxyCodeLine{00260\ \ \ \ \ secp256k1\_ecmult(\&rj,\ \&pkj,\ \&e,\ \&s);}
+\DoxyCodeLine{00261\ }
+\DoxyCodeLine{00262\ \ \ \ \ secp256k1\_ge\_set\_gej\_var(\&r,\ \&rj);}
+\DoxyCodeLine{00263\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_ge\_is\_infinity(\&r))\ \{}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00265\ \ \ \ \ \}}
+\DoxyCodeLine{00266\ }
+\DoxyCodeLine{00267\ \ \ \ \ secp256k1\_fe\_normalize\_var(\&r.y);}
+\DoxyCodeLine{00268\ \ \ \ \ \textcolor{keywordflow}{return}\ !secp256k1\_fe\_is\_odd(\&r.y)\ \&\&}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_fe\_equal(\&rx,\ \&r.x);}
+\DoxyCodeLine{00270\ \}}
+\DoxyCodeLine{00271\ }
+\DoxyCodeLine{00272\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

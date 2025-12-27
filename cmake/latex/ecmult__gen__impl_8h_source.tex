@@ -1,0 +1,333 @@
+\doxysection{ecmult\+\_\+gen\+\_\+impl.\+h}
+\label{ecmult__gen__impl_8h_source}\index{src/secp256k1/src/ecmult\_gen\_impl.h@{src/secp256k1/src/ecmult\_gen\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ Pieter\ Wuille,\ Gregory\ Maxwell,\ Peter\ Dettman\ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_ECMULT\_GEN\_IMPL\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_ECMULT\_GEN\_IMPL\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}scalar.h"{}}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}group.h"{}}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}ecmult\_gen.h"{}}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}hash\_impl.h"{}}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}precomputed\_ecmult\_gen.h"{}}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_gen\_context\_build(secp256k1\_ecmult\_gen\_context\ *ctx)\ \{}
+\DoxyCodeLine{00018\ \ \ \ \ secp256k1\_ecmult\_gen\_blind(ctx,\ NULL);}
+\DoxyCodeLine{00019\ \ \ \ \ ctx-\/>built\ =\ 1;}
+\DoxyCodeLine{00020\ \}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecmult\_gen\_context\_is\_built(\textcolor{keyword}{const}\ secp256k1\_ecmult\_gen\_context*\ ctx)\ \{}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordflow}{return}\ ctx-\/>built;}
+\DoxyCodeLine{00024\ \}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_gen\_context\_clear(secp256k1\_ecmult\_gen\_context\ *ctx)\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ ctx-\/>built\ =\ 0;}
+\DoxyCodeLine{00028\ \ \ \ \ secp256k1\_scalar\_clear(\&ctx-\/>scalar\_offset);}
+\DoxyCodeLine{00029\ \ \ \ \ secp256k1\_ge\_clear(\&ctx-\/>ge\_offset);}
+\DoxyCodeLine{00030\ \ \ \ \ secp256k1\_fe\_clear(\&ctx-\/>proj\_blind);}
+\DoxyCodeLine{00031\ \}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{comment}{/*\ Compute\ the\ scalar\ (2\string^COMB\_BITS\ -\/\ 1)\ /\ 2,\ the\ difference\ between\ the\ gn\ argument\ to}}
+\DoxyCodeLine{00034\ \textcolor{comment}{\ *\ secp256k1\_ecmult\_gen,\ and\ the\ scalar\ whose\ encoding\ the\ table\ lookup\ bits\ are\ drawn}}
+\DoxyCodeLine{00035\ \textcolor{comment}{\ *\ from\ (before\ applying\ blinding).\ */}}
+\DoxyCodeLine{00036\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_gen\_scalar\_diff(secp256k1\_scalar*\ diff)\ \{}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{comment}{/*\ Compute\ scalar\ -\/1/2.\ */}}
+\DoxyCodeLine{00040\ \ \ \ \ secp256k1\_scalar\ neghalf;}
+\DoxyCodeLine{00041\ \ \ \ \ secp256k1\_scalar\_half(\&neghalf,\ \&secp256k1\_scalar\_one);}
+\DoxyCodeLine{00042\ \ \ \ \ secp256k1\_scalar\_negate(\&neghalf,\ \&neghalf);}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{comment}{/*\ Compute\ offset\ =\ 2\string^(COMB\_BITS\ -\/\ 1).\ */}}
+\DoxyCodeLine{00045\ \ \ \ \ *diff\ =\ secp256k1\_scalar\_one;}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ COMB\_BITS\ -\/\ 1;\ ++i)\ \{}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_add(diff,\ diff,\ diff);}
+\DoxyCodeLine{00048\ \ \ \ \ \}}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{comment}{/*\ The\ result\ is\ the\ sum\ 2\string^(COMB\_BITS\ -\/\ 1)\ +\ (-\/1/2).\ */}}
+\DoxyCodeLine{00051\ \ \ \ \ secp256k1\_scalar\_add(diff,\ diff,\ \&neghalf);}
+\DoxyCodeLine{00052\ \}}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_gen(\textcolor{keyword}{const}\ secp256k1\_ecmult\_gen\_context\ *ctx,\ secp256k1\_gej\ *r,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *gn)\ \{}
+\DoxyCodeLine{00055\ \ \ \ \ uint32\_t\ comb\_off;}
+\DoxyCodeLine{00056\ \ \ \ \ secp256k1\_ge\ add;}
+\DoxyCodeLine{00057\ \ \ \ \ secp256k1\_fe\ neg;}
+\DoxyCodeLine{00058\ \ \ \ \ secp256k1\_ge\_storage\ adds;}
+\DoxyCodeLine{00059\ \ \ \ \ secp256k1\_scalar\ d;}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{comment}{/*\ Array\ of\ uint32\_t\ values\ large\ enough\ to\ store\ COMB\_BITS\ bits.\ Only\ the\ bottom}}
+\DoxyCodeLine{00061\ \textcolor{comment}{\ \ \ \ \ *\ 8\ are\ ever\ nonzero,\ but\ having\ the\ zero\ padding\ at\ the\ end\ if\ COMB\_BITS>256}}
+\DoxyCodeLine{00062\ \textcolor{comment}{\ \ \ \ \ *\ avoids\ the\ need\ to\ deal\ with\ out-\/of-\/bounds\ reads\ from\ a\ scalar.\ */}}
+\DoxyCodeLine{00063\ \ \ \ \ uint32\_t\ recoded[(COMB\_BITS\ +\ 31)\ >>\ 5]\ =\ \{0\};}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordtype}{int}\ first\ =\ 1,\ i;}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \ \ \ \ memset(\&adds,\ 0,\ \textcolor{keyword}{sizeof}(adds));}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{comment}{/*\ We\ want\ to\ compute\ R\ =\ gn*G.}}
+\DoxyCodeLine{00069\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00070\ \textcolor{comment}{\ \ \ \ \ *\ To\ blind\ the\ scalar\ used\ in\ the\ computation,\ we\ rewrite\ this\ to\ be}}
+\DoxyCodeLine{00071\ \textcolor{comment}{\ \ \ \ \ *\ R\ =\ (gn\ -\/\ b)*G\ +\ b*G,\ with\ a\ blinding\ value\ b\ determined\ by\ the\ context.}}
+\DoxyCodeLine{00072\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00073\ \textcolor{comment}{\ \ \ \ \ *\ The\ multiplication\ (gn-\/b)*G\ will\ be\ performed\ using\ a\ signed-\/digit\ multi-\/comb\ (see\ Section}}
+\DoxyCodeLine{00074\ \textcolor{comment}{\ \ \ \ \ *\ 3.3\ of\ "{}Fast\ and\ compact\ elliptic-\/curve\ cryptography"{}\ by\ Mike\ Hamburg,}}
+\DoxyCodeLine{00075\ \textcolor{comment}{\ \ \ \ \ *\ https://eprint.iacr.org/2012/309).}}
+\DoxyCodeLine{00076\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00077\ \textcolor{comment}{\ \ \ \ \ *\ Let\ comb(s,\ P)\ =\ sum((2*s[i]-\/1)*2\string^i*P\ for\ i=0..COMB\_BITS-\/1),\ where\ s[i]\ is\ the\ i'th\ bit\ of}}
+\DoxyCodeLine{00078\ \textcolor{comment}{\ \ \ \ \ *\ the\ binary\ representation\ of\ scalar\ s.\ So\ the\ s[i]\ values\ determine\ whether\ -\/2\string^i*P\ (s[i]=0)}}
+\DoxyCodeLine{00079\ \textcolor{comment}{\ \ \ \ \ *\ or\ +2\string^i*P\ (s[i]=1)\ are\ added\ together.\ COMB\_BITS\ is\ at\ least\ 256,\ so\ all\ bits\ of\ s\ are}}
+\DoxyCodeLine{00080\ \textcolor{comment}{\ \ \ \ \ *\ covered.\ By\ manipulating:}}
+\DoxyCodeLine{00081\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00082\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ comb(s,\ P)\ =\ sum((2*s[i]-\/1)*2\string^i*P\ for\ i=0..COMB\_BITS-\/1)}}
+\DoxyCodeLine{00083\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ comb(s,\ P)\ =\ sum((2*s[i]-\/1)*2\string^i\ for\ i=0..COMB\_BITS-\/1)\ *\ P}}
+\DoxyCodeLine{00084\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ comb(s,\ P)\ =\ (2*sum(s[i]*2\string^i\ for\ i=0..COMB\_BITS-\/1)\ -\/\ sum(2\string^i\ for\ i=0..COMB\_BITS-\/1))\ *\ P}}
+\DoxyCodeLine{00085\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ comb(s,\ P)\ =\ (2*s\ -\/\ (2\string^COMB\_BITS\ -\/\ 1))\ *\ P}}
+\DoxyCodeLine{00086\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00087\ \textcolor{comment}{\ \ \ \ \ *\ If\ we\ wanted\ to\ compute\ (gn-\/b)*G\ as\ comb(s,\ G),\ it\ would\ need\ to\ hold\ that}}
+\DoxyCodeLine{00088\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00089\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ (gn\ -\/\ b)\ *\ G\ =\ (2*s\ -\/\ (2\string^COMB\_BITS\ -\/\ 1))\ *\ G}}
+\DoxyCodeLine{00090\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ s\ =\ (gn\ -\/\ b\ +\ (2\string^COMB\_BITS\ -\/\ 1))/2\ (mod\ order)}}
+\DoxyCodeLine{00091\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00092\ \textcolor{comment}{\ \ \ \ \ *\ We\ use\ an\ alternative\ here\ that\ avoids\ the\ modular\ division\ by\ two:\ instead\ we\ compute}}
+\DoxyCodeLine{00093\ \textcolor{comment}{\ \ \ \ \ *\ (gn-\/b)*G\ as\ comb(d,\ G/2).\ For\ that\ to\ hold\ it\ must\ be\ the\ case\ that}}
+\DoxyCodeLine{00094\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00095\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ (gn\ -\/\ b)\ *\ G\ =\ (2*d\ -\/\ (2\string^COMB\_BITS\ -\/\ 1))\ *\ (G/2)}}
+\DoxyCodeLine{00096\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ d\ =\ gn\ -\/\ b\ +\ (2\string^COMB\_BITS\ -\/\ 1)/2\ (mod\ order)}}
+\DoxyCodeLine{00097\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00098\ \textcolor{comment}{\ \ \ \ \ *\ Adding\ precomputation,\ our\ final\ equations\ become:}}
+\DoxyCodeLine{00099\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00100\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ ctx-\/>scalar\_offset\ =\ (2\string^COMB\_BITS\ -\/\ 1)/2\ -\/\ b\ (mod\ order)}}
+\DoxyCodeLine{00101\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ ctx-\/>ge\_offset\ =\ b*G}}
+\DoxyCodeLine{00102\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ d\ =\ gn\ +\ ctx-\/>scalar\_offset\ (mod\ order)}}
+\DoxyCodeLine{00103\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ R\ =\ comb(d,\ G/2)\ +\ ctx-\/>ge\_offset}}
+\DoxyCodeLine{00104\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00105\ \textcolor{comment}{\ \ \ \ \ *\ comb(d,\ G/2)\ function\ is\ then\ computed\ by\ summing\ +\ or\ -\/\ 2\string^(i-\/1)*G,\ for\ i=0..COMB\_BITS-\/1,}}
+\DoxyCodeLine{00106\ \textcolor{comment}{\ \ \ \ \ *\ depending\ on\ the\ value\ of\ the\ bits\ d[i]\ of\ the\ binary\ representation\ of\ scalar\ d.}}
+\DoxyCodeLine{00107\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{comment}{/*\ Compute\ the\ scalar\ d\ =\ (gn\ +\ ctx-\/>scalar\_offset).\ */}}
+\DoxyCodeLine{00110\ \ \ \ \ secp256k1\_scalar\_add(\&d,\ \&ctx-\/>scalar\_offset,\ gn);}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{comment}{/*\ Convert\ to\ recoded\ array.\ */}}
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 8\ \&\&\ i\ <\ ((COMB\_BITS\ +\ 31)\ >>\ 5);\ ++i)\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ recoded[i]\ =\ secp256k1\_scalar\_get\_bits\_limb32(\&d,\ 32\ *\ i,\ 32);}
+\DoxyCodeLine{00114\ \ \ \ \ \}}
+\DoxyCodeLine{00115\ \ \ \ \ secp256k1\_scalar\_clear(\&d);}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{comment}{/*\ In\ secp256k1\_ecmult\_gen\_prec\_table\ we\ have\ precomputed\ sums\ of\ the}}
+\DoxyCodeLine{00118\ \textcolor{comment}{\ \ \ \ \ *\ (2*d[i]-\/1)\ *\ 2\string^(i-\/1)\ *\ G\ points,\ for\ various\ combinations\ of\ i\ positions.}}
+\DoxyCodeLine{00119\ \textcolor{comment}{\ \ \ \ \ *\ We\ rewrite\ our\ equation\ in\ terms\ of\ these\ table\ entries.}}
+\DoxyCodeLine{00120\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00121\ \textcolor{comment}{\ \ \ \ \ *\ Let\ mask(b)\ =\ sum(2\string^((b*COMB\_TEETH\ +\ t)*COMB\_SPACING)\ for\ t=0..COMB\_TEETH-\/1),}}
+\DoxyCodeLine{00122\ \textcolor{comment}{\ \ \ \ \ *\ with\ b\ ranging\ from\ 0\ to\ COMB\_BLOCKS-\/1.\ So\ for\ example\ with\ COMB\_BLOCKS=11,}}
+\DoxyCodeLine{00123\ \textcolor{comment}{\ \ \ \ \ *\ COMB\_TEETH=6,\ COMB\_SPACING=4,\ we\ would\ have:}}
+\DoxyCodeLine{00124\ \textcolor{comment}{\ \ \ \ \ *\ \ \ mask(0)\ \ =\ 2\string^0\ \ \ +\ 2\string^4\ \ \ +\ 2\string^8\ \ \ +\ 2\string^12\ \ +\ 2\string^16\ \ +\ 2\string^20,}}
+\DoxyCodeLine{00125\ \textcolor{comment}{\ \ \ \ \ *\ \ \ mask(1)\ \ =\ 2\string^24\ \ +\ 2\string^28\ \ +\ 2\string^32\ \ +\ 2\string^36\ \ +\ 2\string^40\ \ +\ 2\string^44,}}
+\DoxyCodeLine{00126\ \textcolor{comment}{\ \ \ \ \ *\ \ \ mask(2)\ \ =\ 2\string^48\ \ +\ 2\string^52\ \ +\ 2\string^56\ \ +\ 2\string^60\ \ +\ 2\string^64\ \ +\ 2\string^68,}}
+\DoxyCodeLine{00127\ \textcolor{comment}{\ \ \ \ \ *\ \ \ ...}}
+\DoxyCodeLine{00128\ \textcolor{comment}{\ \ \ \ \ *\ \ \ mask(10)\ =\ 2\string^240\ +\ 2\string^244\ +\ 2\string^248\ +\ 2\string^252\ +\ 2\string^256\ +\ 2\string^260}}
+\DoxyCodeLine{00129\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00130\ \textcolor{comment}{\ \ \ \ \ *\ We\ will\ split\ up\ the\ bits\ d[i]\ using\ these\ masks.\ Specifically,\ each\ mask\ is}}
+\DoxyCodeLine{00131\ \textcolor{comment}{\ \ \ \ \ *\ used\ COMB\_SPACING\ times,\ with\ different\ shifts:}}
+\DoxyCodeLine{00132\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00133\ \textcolor{comment}{\ \ \ \ \ *\ d\ =\ (d\ \&\ mask(0)<<0)\ +\ (d\ \&\ mask(1)<<0)\ +\ ...\ +\ (d\ \&\ mask(COMB\_BLOCKS-\/1)<<0)\ +}}
+\DoxyCodeLine{00134\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ (d\ \&\ mask(0)<<1)\ +\ (d\ \&\ mask(1)<<1)\ +\ ...\ +\ (d\ \&\ mask(COMB\_BLOCKS-\/1)<<1)\ +}}
+\DoxyCodeLine{00135\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ ...}}
+\DoxyCodeLine{00136\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ (d\ \&\ mask(0)<<(COMB\_SPACING-\/1))\ +\ ...}}
+\DoxyCodeLine{00137\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00138\ \textcolor{comment}{\ \ \ \ \ *\ Now\ define\ table(b,\ m)\ =\ (m\ -\/\ mask(b)/2)\ *\ G,\ and\ we\ will\ precompute\ these\ values\ for}}
+\DoxyCodeLine{00139\ \textcolor{comment}{\ \ \ \ \ *\ b=0..COMB\_BLOCKS-\/1,\ and\ for\ all\ values\ m\ which\ (d\ \&\ mask(b))\ can\ take\ (so\ m\ can\ take\ on}}
+\DoxyCodeLine{00140\ \textcolor{comment}{\ \ \ \ \ *\ 2\string^COMB\_TEETH\ distinct\ values).}}
+\DoxyCodeLine{00141\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00142\ \textcolor{comment}{\ \ \ \ \ *\ If\ m=(d\ \&\ mask(b)),\ then\ table(b,\ m)\ is\ the\ sum\ of\ 2\string^i\ *\ (2*d[i]-\/1)\ *\ G/2,\ with\ i}}
+\DoxyCodeLine{00143\ \textcolor{comment}{\ \ \ \ \ *\ iterating\ over\ the\ set\ bits\ in\ mask(b).\ In\ our\ example,\ table(2,\ 2\string^48\ +\ 2\string^56\ +\ 2\string^68)}}
+\DoxyCodeLine{00144\ \textcolor{comment}{\ \ \ \ \ *\ would\ equal\ (2\string^48\ -\/\ 2\string^52\ +\ 2\string^56\ -\/\ 2\string^60\ -\/\ 2\string^64\ +\ 2\string^68)\ *\ G/2.}}
+\DoxyCodeLine{00145\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00146\ \textcolor{comment}{\ \ \ \ \ *\ With\ that,\ we\ can\ rewrite\ comb(d,\ G/2)\ as:}}
+\DoxyCodeLine{00147\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00148\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ 2\string^0\ *\ (table(0,\ d>>0\ \&\ mask(0))\ +\ ...\ +\ table(COMB\_BLOCKS-\/1,\ d>>0\ \&\ mask(COMP\_BLOCKS-\/1)))}}
+\DoxyCodeLine{00149\ \textcolor{comment}{\ \ \ \ \ *\ \ \ +\ 2\string^1\ *\ (table(0,\ d>>1\ \&\ mask(0))\ +\ ...\ +\ table(COMB\_BLOCKS-\/1,\ d>>1\ \&\ mask(COMP\_BLOCKS-\/1)))}}
+\DoxyCodeLine{00150\ \textcolor{comment}{\ \ \ \ \ *\ \ \ +\ 2\string^2\ *\ (table(0,\ d>>2\ \&\ mask(0))\ +\ ...\ +\ table(COMB\_BLOCKS-\/1,\ d>>2\ \&\ mask(COMP\_BLOCKS-\/1)))}}
+\DoxyCodeLine{00151\ \textcolor{comment}{\ \ \ \ \ *\ \ \ +\ ...}}
+\DoxyCodeLine{00152\ \textcolor{comment}{\ \ \ \ \ *\ \ \ +\ 2\string^(COMB\_SPACING-\/1)\ *\ (table(0,\ d>>(COMB\_SPACING-\/1)\ \&\ mask(0))\ +\ ...)}}
+\DoxyCodeLine{00153\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00154\ \textcolor{comment}{\ \ \ \ \ *\ Or\ more\ generically\ as}}
+\DoxyCodeLine{00155\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00156\ \textcolor{comment}{\ \ \ \ \ *\ \ \ sum(2\string^i\ *\ sum(table(b,\ d>>i\ \&\ mask(b)),\ b=0..COMB\_BLOCKS-\/1),\ i=0..COMB\_SPACING-\/1)}}
+\DoxyCodeLine{00157\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00158\ \textcolor{comment}{\ \ \ \ \ *\ This\ is\ implemented\ using\ an\ outer\ loop\ that\ runs\ in\ reverse\ order\ over\ the\ lines\ of\ this}}
+\DoxyCodeLine{00159\ \textcolor{comment}{\ \ \ \ \ *\ equation,\ which\ in\ each\ iteration\ runs\ an\ inner\ loop\ that\ adds\ the\ terms\ of\ that\ line\ and}}
+\DoxyCodeLine{00160\ \textcolor{comment}{\ \ \ \ \ *\ then\ doubles\ the\ result\ before\ proceeding\ to\ the\ next\ line.}}
+\DoxyCodeLine{00161\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00162\ \textcolor{comment}{\ \ \ \ \ *\ In\ pseudocode:}}
+\DoxyCodeLine{00163\ \textcolor{comment}{\ \ \ \ \ *\ \ \ c\ =\ infinity}}
+\DoxyCodeLine{00164\ \textcolor{comment}{\ \ \ \ \ *\ \ \ for\ comb\_off\ in\ range(COMB\_SPACING\ -\/\ 1,\ -\/1,\ -\/1):}}
+\DoxyCodeLine{00165\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ for\ block\ in\ range(COMB\_BLOCKS):}}
+\DoxyCodeLine{00166\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ c\ +=\ table(block,\ (d\ >>\ comb\_off)\ \&\ mask(block))}}
+\DoxyCodeLine{00167\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ if\ comb\_off\ >\ 0:}}
+\DoxyCodeLine{00168\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ c\ =\ 2*c}}
+\DoxyCodeLine{00169\ \textcolor{comment}{\ \ \ \ \ *\ \ \ return\ c}}
+\DoxyCodeLine{00170\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00171\ \textcolor{comment}{\ \ \ \ \ *\ This\ computes\ c\ =\ comb(d,\ G/2),\ and\ thus\ finally\ R\ =\ c\ +\ ctx-\/>ge\_offset.\ Note\ that\ it\ would}}
+\DoxyCodeLine{00172\ \textcolor{comment}{\ \ \ \ \ *\ be\ possible\ to\ apply\ an\ initial\ offset\ instead\ of\ a\ final\ offset\ (moving\ ge\_offset\ to\ take}}
+\DoxyCodeLine{00173\ \textcolor{comment}{\ \ \ \ \ *\ the\ place\ of\ infinity\ above),\ but\ the\ chosen\ approach\ allows\ using\ (in\ a\ future\ improvement)}}
+\DoxyCodeLine{00174\ \textcolor{comment}{\ \ \ \ \ *\ an\ incomplete\ addition\ formula\ for\ most\ of\ the\ multiplication.}}
+\DoxyCodeLine{00175\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00176\ \textcolor{comment}{\ \ \ \ \ *\ The\ last\ question\ is\ how\ to\ implement\ the\ table(b,\ m)\ function.\ For\ any\ value\ of\ b,}}
+\DoxyCodeLine{00177\ \textcolor{comment}{\ \ \ \ \ *\ m=(d\ \&\ mask(b))\ can\ only\ take\ on\ at\ most\ 2\string^COMB\_TEETH\ possible\ values\ (the\ last\ one\ may\ have}}
+\DoxyCodeLine{00178\ \textcolor{comment}{\ \ \ \ \ *\ fewer\ as\ there\ mask(b)\ may\ exceed\ the\ curve\ order).\ So\ we\ could\ create\ COMB\_BLOCK\ tables}}
+\DoxyCodeLine{00179\ \textcolor{comment}{\ \ \ \ \ *\ which\ contain\ a\ value\ for\ each\ such\ m\ value.}}
+\DoxyCodeLine{00180\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00181\ \textcolor{comment}{\ \ \ \ \ *\ Now\ note\ that\ if\ m=(d\ \&\ mask(b)),\ then\ flipping\ the\ relevant\ bits\ of\ m\ results\ in\ negating}}
+\DoxyCodeLine{00182\ \textcolor{comment}{\ \ \ \ \ *\ the\ result\ of\ table(b,\ m).\ This\ is\ because\ table(b,m\ XOR\ mask(b))\ =\ table(b,\ mask(b)\ -\/\ m)\ =}}
+\DoxyCodeLine{00183\ \textcolor{comment}{\ \ \ \ \ *\ (mask(b)\ -\/\ m\ -\/\ mask(b)/2)*G\ =\ (-\/m\ +\ mask(b)/2)*G\ =\ -\/(m\ -\/\ mask(b)/2)*G\ =\ -\/table(b,\ m).}}
+\DoxyCodeLine{00184\ \textcolor{comment}{\ \ \ \ \ *\ Because\ of\ this\ it\ suffices\ to\ only\ store\ the\ first\ half\ of\ the\ m\ values\ for\ every\ b.\ If\ an}}
+\DoxyCodeLine{00185\ \textcolor{comment}{\ \ \ \ \ *\ entry\ from\ the\ second\ half\ is\ needed,\ we\ look\ up\ its\ bit-\/flipped\ version\ instead,\ and\ negate}}
+\DoxyCodeLine{00186\ \textcolor{comment}{\ \ \ \ \ *\ it.}}
+\DoxyCodeLine{00187\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00188\ \textcolor{comment}{\ \ \ \ \ *\ secp256k1\_ecmult\_gen\_prec\_table[b][index]\ stores\ the\ table(b,\ m)\ entries.\ Index}}
+\DoxyCodeLine{00189\ \textcolor{comment}{\ \ \ \ \ *\ is\ the\ relevant\ mask(b)\ bits\ of\ m\ packed\ together\ without\ gaps.\ */}}
+\DoxyCodeLine{00190\ }
+\DoxyCodeLine{00191\ \ \ \ \ \textcolor{comment}{/*\ Outer\ loop:\ iterate\ over\ comb\_off\ from\ COMB\_SPACING\ -\/\ 1\ down\ to\ 0.\ */}}
+\DoxyCodeLine{00192\ \ \ \ \ comb\_off\ =\ COMB\_SPACING\ -\/\ 1;}
+\DoxyCodeLine{00193\ \ \ \ \ \textcolor{keywordflow}{while}\ (1)\ \{}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ uint32\_t\ block;}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ uint32\_t\ bit\_pos\ =\ comb\_off;}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Inner\ loop:\ for\ each\ block,\ add\ table\ entries\ to\ the\ result.\ */}}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (block\ =\ 0;\ block\ <\ COMB\_BLOCKS;\ ++block)\ \{}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Gather\ the\ mask(block)-\/selected\ bits\ of\ d\ into\ bits.\ They're\ packed:}}
+\DoxyCodeLine{00199\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ bits[tooth]\ =\ d[(block*COMB\_TEETH\ +\ tooth)*COMB\_SPACING\ +\ comb\_off].\ */}}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ \ \ \ \ uint32\_t\ bits\ =\ 0,\ sign,\ abs,\ index,\ tooth;}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Instead\ of\ reading\ individual\ bits\ here\ to\ construct\ the\ bits\ variable,}}
+\DoxyCodeLine{00202\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ build\ up\ the\ result\ by\ xoring\ rotated\ reads\ together.\ In\ every\ iteration,}}
+\DoxyCodeLine{00203\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ one\ additional\ bit\ is\ made\ correct,\ starting\ at\ the\ bottom.\ The\ bits}}
+\DoxyCodeLine{00204\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ above\ that\ contain\ junk.\ This\ reduces\ leakage\ by\ avoiding\ computations}}
+\DoxyCodeLine{00205\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ on\ variables\ that\ can\ have\ only\ a\ low\ number\ of\ possible\ values\ (e.g.,}}
+\DoxyCodeLine{00206\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ just\ two\ values\ when\ reading\ a\ single\ bit\ into\ a\ variable.)\ See:}}
+\DoxyCodeLine{00207\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ https://www.usenix.org/system/files/conference/usenixsecurity18/sec18-\/alam.pdf}}
+\DoxyCodeLine{00208\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ */}}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (tooth\ =\ 0;\ tooth\ <\ COMB\_TEETH;\ ++tooth)\ \{}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Construct\ bitdata\ s.t.\ the\ bottom\ bit\ is\ the\ bit\ we'd\ like\ to\ read.}}
+\DoxyCodeLine{00211\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00212\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ We\ could\ just\ set\ bitdata\ =\ recoded[bit\_pos\ >>\ 5]\ >>\ (bit\_pos\ \&\ 0x1f)}}
+\DoxyCodeLine{00213\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ but\ this\ would\ simply\ discard\ the\ bits\ that\ fall\ off\ at\ the\ bottom,}}
+\DoxyCodeLine{00214\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ and\ thus,\ for\ example,\ bitdata\ could\ still\ have\ only\ two\ values\ if\ we}}
+\DoxyCodeLine{00215\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ happen\ to\ shift\ by\ exactly\ 31\ positions.\ We\ use\ a\ rotation\ instead,}}
+\DoxyCodeLine{00216\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ which\ ensures\ that\ bitdata\ doesn't\ lose\ entropy.\ This\ relies\ on\ the}}
+\DoxyCodeLine{00217\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ rotation\ being\ atomic,\ i.e.,\ the\ compiler\ emitting\ an\ actual\ rot}}
+\DoxyCodeLine{00218\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ instruction.\ */}}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint32\_t\ bitdata\ =\ secp256k1\_rotr32(recoded[bit\_pos\ >>\ 5],\ bit\_pos\ \&\ 0x1f);}
+\DoxyCodeLine{00220\ }
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Clear\ the\ bit\ at\ position\ tooth,\ but\ sssh,\ don't\ tell\ clang.\ */}}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint32\_t\ \textcolor{keyword}{volatile}\ vmask\ =\ \string~(1\ <<\ tooth);}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bits\ \&=\ vmask;}
+\DoxyCodeLine{00224\ }
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Write\ the\ bit\ into\ position\ tooth\ (and\ junk\ into\ higher\ bits).\ */}}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bits\ \string^=\ bitdata\ <<\ tooth;}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ bit\_pos\ +=\ COMB\_SPACING;}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ the\ top\ bit\ of\ bits\ is\ 1,\ flip\ them\ all\ (corresponding\ to\ looking\ up}}
+\DoxyCodeLine{00231\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ the\ negated\ table\ value),\ and\ remember\ to\ negate\ the\ result\ in\ sign.\ */}}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ \ \ \ \ sign\ =\ (bits\ >>\ (COMB\_TEETH\ -\/\ 1))\ \&\ 1;}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ \ \ \ \ abs\ =\ (bits\ \string^\ -\/sign)\ \&\ (COMB\_POINTS\ -\/\ 1);}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ \ \ \ \ VERIFY\_CHECK(sign\ ==\ 0\ ||\ sign\ ==\ 1);}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \ \ \ \ VERIFY\_CHECK(abs\ <\ COMB\_POINTS);}
+\DoxyCodeLine{00236\ }
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (index\ =\ 0;\ index\ <\ COMB\_POINTS;\ ++index)\ \{}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ge\_storage\_cmov(\&adds,\ \&secp256k1\_ecmult\_gen\_prec\_table[block][index],\ index\ ==\ abs);}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Set\ add=adds\ or\ add=-\/adds,\ in\ constant\ time,\ based\ on\ sign.\ */}}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ge\_from\_storage(\&add,\ \&adds);}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_fe\_negate(\&neg,\ \&add.y,\ 1);}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_fe\_cmov(\&add.y,\ \&neg,\ sign);}
+\DoxyCodeLine{00255\ }
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Add\ the\ looked\ up\ and\ conditionally\ negated\ value\ to\ r.\ */}}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (EXPECT(first,\ 0))\ \{}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ this\ is\ the\ first\ table\ lookup,\ we\ can\ skip\ addition.\ */}}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_set\_ge(r,\ \&add);}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Give\ the\ entry\ a\ random\ Z\ coordinate\ to\ blind\ intermediary\ results.\ */}}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_rescale(r,\ \&ctx-\/>proj\_blind);}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ first\ =\ 0;}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_ge(r,\ r,\ \&add);}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00267\ }
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Double\ the\ result,\ except\ in\ the\ last\ iteration.\ */}}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (comb\_off-\/-\/\ ==\ 0)\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ secp256k1\_gej\_double(r,\ r);}
+\DoxyCodeLine{00271\ \ \ \ \ \}}
+\DoxyCodeLine{00272\ }
+\DoxyCodeLine{00273\ \ \ \ \ \textcolor{comment}{/*\ Correct\ for\ the\ scalar\_offset\ added\ at\ the\ start\ (ge\_offset\ =\ b*G,\ while\ b\ was}}
+\DoxyCodeLine{00274\ \textcolor{comment}{\ \ \ \ \ *\ subtracted\ from\ the\ input\ scalar\ gn).\ */}}
+\DoxyCodeLine{00275\ \ \ \ \ secp256k1\_gej\_add\_ge(r,\ r,\ \&ctx-\/>ge\_offset);}
+\DoxyCodeLine{00276\ }
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{comment}{/*\ Cleanup.\ */}}
+\DoxyCodeLine{00278\ \ \ \ \ secp256k1\_fe\_clear(\&neg);}
+\DoxyCodeLine{00279\ \ \ \ \ secp256k1\_ge\_clear(\&add);}
+\DoxyCodeLine{00280\ \ \ \ \ secp256k1\_memclear\_explicit(\&adds,\ \textcolor{keyword}{sizeof}(adds));}
+\DoxyCodeLine{00281\ \ \ \ \ secp256k1\_memclear\_explicit(\&recoded,\ \textcolor{keyword}{sizeof}(recoded));}
+\DoxyCodeLine{00282\ \}}
+\DoxyCodeLine{00283\ }
+\DoxyCodeLine{00284\ \textcolor{comment}{/*\ Setup\ blinding\ values\ for\ secp256k1\_ecmult\_gen.\ */}}
+\DoxyCodeLine{00285\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_gen\_blind(secp256k1\_ecmult\_gen\_context\ *ctx,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *seed32)\ \{}
+\DoxyCodeLine{00286\ \ \ \ \ secp256k1\_scalar\ b;}
+\DoxyCodeLine{00287\ \ \ \ \ secp256k1\_scalar\ diff;}
+\DoxyCodeLine{00288\ \ \ \ \ secp256k1\_gej\ gb;}
+\DoxyCodeLine{00289\ \ \ \ \ secp256k1\_fe\ f;}
+\DoxyCodeLine{00290\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ nonce32[32];}
+\DoxyCodeLine{00291\ \ \ \ \ secp256k1\_rfc6979\_hmac\_sha256\ rng;}
+\DoxyCodeLine{00292\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ keydata[64];}
+\DoxyCodeLine{00293\ }
+\DoxyCodeLine{00294\ \ \ \ \ \textcolor{comment}{/*\ Compute\ the\ (2\string^COMB\_BITS\ -\/\ 1)/2\ term\ once.\ */}}
+\DoxyCodeLine{00295\ \ \ \ \ secp256k1\_ecmult\_gen\_scalar\_diff(\&diff);}
+\DoxyCodeLine{00296\ }
+\DoxyCodeLine{00297\ \ \ \ \ \textcolor{keywordflow}{if}\ (seed32\ ==\ NULL)\ \{}
+\DoxyCodeLine{00298\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ When\ seed\ is\ NULL,\ reset\ the\ final\ point\ and\ blinding\ value.\ */}}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ secp256k1\_ge\_neg(\&ctx-\/>ge\_offset,\ \&secp256k1\_ge\_const\_g);}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_add(\&ctx-\/>scalar\_offset,\ \&secp256k1\_scalar\_one,\ \&diff);}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ ctx-\/>proj\_blind\ =\ secp256k1\_fe\_one;}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00303\ \ \ \ \ \}}
+\DoxyCodeLine{00304\ \ \ \ \ \textcolor{comment}{/*\ The\ prior\ blinding\ value\ (if\ not\ reset)\ is\ chained\ forward\ by\ including\ it\ in\ the\ hash.\ */}}
+\DoxyCodeLine{00305\ \ \ \ \ secp256k1\_scalar\_get\_b32(keydata,\ \&ctx-\/>scalar\_offset);}
+\DoxyCodeLine{00310\ \ \ \ \ VERIFY\_CHECK(seed32\ !=\ NULL);}
+\DoxyCodeLine{00311\ \ \ \ \ memcpy(keydata\ +\ 32,\ seed32,\ 32);}
+\DoxyCodeLine{00312\ \ \ \ \ secp256k1\_rfc6979\_hmac\_sha256\_initialize(\&rng,\ keydata,\ 64);}
+\DoxyCodeLine{00313\ \ \ \ \ secp256k1\_memclear\_explicit(keydata,\ \textcolor{keyword}{sizeof}(keydata));}
+\DoxyCodeLine{00314\ }
+\DoxyCodeLine{00315\ \ \ \ \ \textcolor{comment}{/*\ Compute\ projective\ blinding\ factor\ (cannot\ be\ 0).\ */}}
+\DoxyCodeLine{00316\ \ \ \ \ secp256k1\_rfc6979\_hmac\_sha256\_generate(\&rng,\ nonce32,\ 32);}
+\DoxyCodeLine{00317\ \ \ \ \ secp256k1\_fe\_set\_b32\_mod(\&f,\ nonce32);}
+\DoxyCodeLine{00318\ \ \ \ \ secp256k1\_fe\_cmov(\&f,\ \&secp256k1\_fe\_one,\ secp256k1\_fe\_normalizes\_to\_zero(\&f));}
+\DoxyCodeLine{00319\ \ \ \ \ ctx-\/>proj\_blind\ =\ f;}
+\DoxyCodeLine{00320\ }
+\DoxyCodeLine{00321\ \ \ \ \ \textcolor{comment}{/*\ For\ a\ random\ blinding\ value\ b,\ set\ scalar\_offset=diff-\/b,\ ge\_offset=bG\ */}}
+\DoxyCodeLine{00322\ \ \ \ \ secp256k1\_rfc6979\_hmac\_sha256\_generate(\&rng,\ nonce32,\ 32);}
+\DoxyCodeLine{00323\ \ \ \ \ secp256k1\_scalar\_set\_b32(\&b,\ nonce32,\ NULL);}
+\DoxyCodeLine{00324\ \ \ \ \ \textcolor{comment}{/*\ The\ blinding\ value\ cannot\ be\ zero,\ as\ that\ would\ mean\ ge\_offset\ =\ infinity,}}
+\DoxyCodeLine{00325\ \textcolor{comment}{\ \ \ \ \ *\ which\ secp256k1\_gej\_add\_ge\ cannot\ handle.\ */}}
+\DoxyCodeLine{00326\ \ \ \ \ secp256k1\_scalar\_cmov(\&b,\ \&secp256k1\_scalar\_one,\ secp256k1\_scalar\_is\_zero(\&b));}
+\DoxyCodeLine{00327\ \ \ \ \ secp256k1\_rfc6979\_hmac\_sha256\_finalize(\&rng);}
+\DoxyCodeLine{00328\ \ \ \ \ secp256k1\_ecmult\_gen(ctx,\ \&gb,\ \&b);}
+\DoxyCodeLine{00329\ \ \ \ \ secp256k1\_scalar\_negate(\&b,\ \&b);}
+\DoxyCodeLine{00330\ \ \ \ \ secp256k1\_scalar\_add(\&ctx-\/>scalar\_offset,\ \&b,\ \&diff);}
+\DoxyCodeLine{00331\ \ \ \ \ secp256k1\_ge\_set\_gej(\&ctx-\/>ge\_offset,\ \&gb);}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00333\ \ \ \ \ \textcolor{comment}{/*\ Clean\ up.\ */}}
+\DoxyCodeLine{00334\ \ \ \ \ secp256k1\_memclear\_explicit(nonce32,\ \textcolor{keyword}{sizeof}(nonce32));}
+\DoxyCodeLine{00335\ \ \ \ \ secp256k1\_scalar\_clear(\&b);}
+\DoxyCodeLine{00336\ \ \ \ \ secp256k1\_gej\_clear(\&gb);}
+\DoxyCodeLine{00337\ \ \ \ \ secp256k1\_fe\_clear(\&f);}
+\DoxyCodeLine{00338\ \ \ \ \ secp256k1\_rfc6979\_hmac\_sha256\_clear(\&rng);}
+\DoxyCodeLine{00339\ \}}
+\DoxyCodeLine{00340\ }
+\DoxyCodeLine{00341\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_ECMULT\_GEN\_IMPL\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

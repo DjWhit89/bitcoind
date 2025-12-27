@@ -1,0 +1,91 @@
+\doxysection{expected.\+h}
+\label{expected_8h_source}\index{src/util/expected.h@{src/util/expected.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ https://opensource.org/license/mit.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_EXPECTED\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_EXPECTED\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <variant>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{keyword}{namespace\ }util\ \{}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ E>}
+\DoxyCodeLine{00020\ \textcolor{keyword}{class\ }Unexpected}
+\DoxyCodeLine{00021\ \{}
+\DoxyCodeLine{00022\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{explicit}\ Unexpected(E\ e)\ :\ err(std::move(e))\ \{\}}
+\DoxyCodeLine{00024\ \ \ \ \ E\ err;}
+\DoxyCodeLine{00025\ \};}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T,\ \textcolor{keyword}{class}\ E>}
+\DoxyCodeLine{00033\ \textcolor{keyword}{class\ }Expected}
+\DoxyCodeLine{00034\ \{}
+\DoxyCodeLine{00035\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keyword}{using\ }ValueType\ =\ std::conditional\_t<std::is\_same\_v<T,\ void>,\ std::monostate,\ T>;}
+\DoxyCodeLine{00037\ \ \ \ \ std::variant<ValueType,\ E>\ m\_data;}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{constexpr}\ Expected()\ :\ m\_data\{std::in\_place\_index\_t<0>\{\},\ ValueType\{\}\}\ \{\}}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keyword}{constexpr}\ Expected(ValueType\ v)\ :\ m\_data\{std::in\_place\_index\_t<0>\{\},\ std::move(v)\}\ \{\}}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ Err>}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keyword}{constexpr}\ Expected(Unexpected<Err>\ u)\ :\ m\_data\{std::in\_place\_index\_t<1>\{\},\ std::move(u.err)\}}
+\DoxyCodeLine{00044\ \ \ \ \ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \}}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ has\_value()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_data.index()\ ==\ 0;\ \}}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{explicit}\ \textcolor{keyword}{operator}\ bool()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ has\_value();\ \}}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ ValueType\&\ value()\ const\ LIFETIMEBOUND}
+\DoxyCodeLine{00051\ \ \ \ \ \{}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ assert(has\_value());}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::get<0>(m\_data);}
+\DoxyCodeLine{00054\ \ \ \ \ \}}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keyword}{constexpr}\ ValueType\&\ value()\ LIFETIMEBOUND}
+\DoxyCodeLine{00056\ \ \ \ \ \{}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ assert(has\_value());}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::get<0>(m\_data);}
+\DoxyCodeLine{00059\ \ \ \ \ \}}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ U>}
+\DoxyCodeLine{00062\ \ \ \ \ ValueType\ value\_or(U\&\&\ default\_value)\ \textcolor{keyword}{const}\&}
+\DoxyCodeLine{00063\ \ \ \ \ \{}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ has\_value()\ ?\ value()\ :\ std::forward<U>(default\_value);}
+\DoxyCodeLine{00065\ \ \ \ \ \}}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ U>}
+\DoxyCodeLine{00067\ \ \ \ \ ValueType\ value\_or(U\&\&\ default\_value)\ \&\&}
+\DoxyCodeLine{00068\ \ \ \ \ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ has\_value()\ ?\ std::move(value())\ :\ std::forward<U>(default\_value);}
+\DoxyCodeLine{00070\ \ \ \ \ \}}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ E\&\ error()\ const\ LIFETIMEBOUND}
+\DoxyCodeLine{00073\ \ \ \ \ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ assert(!has\_value());}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::get<1>(m\_data);}
+\DoxyCodeLine{00076\ \ \ \ \ \}}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keyword}{constexpr}\ E\&\ error()\ LIFETIMEBOUND}
+\DoxyCodeLine{00078\ \ \ \ \ \{}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ assert(!has\_value());}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::get<1>(m\_data);}
+\DoxyCodeLine{00081\ \ \ \ \ \}}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keyword}{constexpr}\ ValueType\&\ operator*()\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ value();\ \}}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ ValueType\&\ operator*()\ const\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ value();\ \}}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keyword}{constexpr}\ ValueType*\ operator-\/>()\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ \&value();\ \}}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{const}\ ValueType*\ operator-\/>()\ const\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ \&value();\ \}}
+\DoxyCodeLine{00088\ \};}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00090\ \}\ \textcolor{comment}{//\ namespace\ util}}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_EXPECTED\_H}}
+
+\end{DoxyCode}

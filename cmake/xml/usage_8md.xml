@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="usage_8md" kind="file" language="Markdown">
+    <compoundname>usage.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">#<sp/>libmultiprocess<sp/>Usage</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Overview</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">_libmultiprocess_<sp/>is<sp/>a<sp/>library<sp/>and<sp/>code<sp/>generator<sp/>that<sp/>allows<sp/>calling<sp/>C++<sp/>class<sp/>interfaces<sp/>across<sp/>different<sp/>processes.<sp/>For<sp/>an<sp/>interface<sp/>to<sp/>be<sp/>available<sp/>from<sp/>other<sp/>processes,<sp/>it<sp/>needs<sp/>two<sp/>definitions:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>An<sp/>**API<sp/>definition**<sp/>declaring<sp/>how<sp/>the<sp/>interface<sp/>is<sp/>called.<sp/>Included<sp/>examples:<sp/>[calculator.h](../example/calculator.h),<sp/>[printer.h](../example/printer.h),<sp/>[init.h](../example/init.h).<sp/>Bitcoin<sp/>examples:<sp/>[node.h](https://github.com/bitcoin/bitcoin/blob/master/src/interfaces/node.h),<sp/>[wallet.h](https://github.com/bitcoin/bitcoin/blob/master/src/interfaces/wallet.h),<sp/>[echo.h](https://github.com/bitcoin/bitcoin/blob/master/src/interfaces/echo.h),<sp/>[init.h](https://github.com/bitcoin/bitcoin/blob/master/src/interfaces/init.h).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>A<sp/>**data<sp/>definition**<sp/>declaring<sp/>how<sp/>interface<sp/>calls<sp/>get<sp/>sent<sp/>across<sp/>the<sp/>wire.<sp/>Included<sp/>examples:<sp/>[calculator.capnp](../example/calculator.capnp),<sp/>[printer.capnp](../example/printer.capnp),<sp/>[init.capnp](../example/init.capnp).<sp/>Bitcoin<sp/>examples:<sp/>[node.capnp](https://github.com/ryanofsky/bitcoin/blob/ipc-export/src/ipc/capnp/node.capnp),<sp/>[wallet.capnp](https://github.com/ryanofsky/bitcoin/blob/ipc-export/src/ipc/capnp/wallet.capnp),<sp/>[echo.capnp](https://github.com/bitcoin/bitcoin/blob/master/src/ipc/capnp/echo.capnp),<sp/>[init.capnp](https://github.com/bitcoin/bitcoin/blob/master/src/ipc/capnp/init.capnp).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>`*.capnp`<sp/>data<sp/>definition<sp/>files<sp/>are<sp/>consumed<sp/>by<sp/>the<sp/>_libmultiprocess_<sp/>code<sp/>generator<sp/>and<sp/>each<sp/>`X.capnp`<sp/>file<sp/>generates<sp/>`X.capnp.c++`,<sp/>`X.capnp.h`,<sp/>`X.capnp.proxy-client.c++`,<sp/>`X.capnp.proxy-server.c++`,<sp/>`X.capnp.proxy-types.c++`,<sp/>`X.capnp.proxy-types.h`,<sp/>and<sp/>`X.capnp.proxy.h`<sp/>output<sp/>files.<sp/>The<sp/>generated<sp/>files<sp/>include<sp/>`mp::ProxyClient&lt;Interface&gt;`<sp/>and<sp/>`mp::ProxyServer&lt;Interface&gt;`<sp/>class<sp/>specializations<sp/>for<sp/>all<sp/>the<sp/>interfaces<sp/>in<sp/>the<sp/>`.capnp`<sp/>files.<sp/>These<sp/>allow<sp/>methods<sp/>on<sp/>C++<sp/>objects<sp/>in<sp/>one<sp/>process<sp/>to<sp/>be<sp/>called<sp/>from<sp/>other<sp/>processes<sp/>over<sp/>IPC<sp/>sockets.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>`ProxyServer`<sp/>objects<sp/>help<sp/>translate<sp/>IPC<sp/>requests<sp/>from<sp/>a<sp/>socket<sp/>to<sp/>method<sp/>calls<sp/>on<sp/>a<sp/>local<sp/>object.<sp/>The<sp/>`ProxyServer`<sp/>objects<sp/>are<sp/>just<sp/>used<sp/>internally<sp/>by<sp/>the<sp/>`mp::ServeStream(loop,<sp/>socket,<sp/>wrapped_object)`<sp/>and<sp/>`mp::ListenConnections(loop,<sp/>socket,<sp/>wrapped_object)`<sp/>functions,<sp/>and<sp/>aren&apos;t<sp/>exposed<sp/>externally.<sp/>The<sp/>`ProxyClient`<sp/>classes<sp/>are<sp/>exposed,<sp/>and<sp/>returned<sp/>from<sp/>the<sp/>`mp::ConnectStream(loop,<sp/>socket)`<sp/>function<sp/>and<sp/>meant<sp/>to<sp/>be<sp/>used<sp/>directly.<sp/>The<sp/>classes<sp/>implement<sp/>methods<sp/>described<sp/>in<sp/>`.capnp`<sp/>definitions,<sp/>and<sp/>whenever<sp/>any<sp/>method<sp/>is<sp/>called,<sp/>a<sp/>request<sp/>with<sp/>the<sp/>method<sp/>arguments<sp/>is<sp/>sent<sp/>over<sp/>the<sp/>associated<sp/>IPC<sp/>connection,<sp/>and<sp/>the<sp/>corresponding<sp/>`wrapped_object`<sp/>method<sp/>on<sp/>the<sp/>other<sp/>end<sp/>of<sp/>the<sp/>connection<sp/>is<sp/>called,<sp/>with<sp/>the<sp/>`ProxyClient`<sp/>method<sp/>blocking<sp/>until<sp/>it<sp/>returns<sp/>and<sp/>forwarding<sp/>back<sp/>any<sp/>return<sp/>value<sp/>to<sp/>the<sp/>`ProxyClient`<sp/>method<sp/>caller.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Example</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>simple<sp/>interface<sp/>description<sp/>can<sp/>be<sp/>found<sp/>at<sp/>[test/mp/test/foo.capnp](../test/mp/test/foo.capnp),<sp/>implementation<sp/>in<sp/>[test/mp/test/foo.h](../test/mp/test/foo.h),<sp/>and<sp/>usage<sp/>in<sp/>[test/mp/test/test.cpp](../test/mp/test/test.cpp).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>more<sp/>complete<sp/>example<sp/>can<sp/>be<sp/>found<sp/>in<sp/>[example](../example/)<sp/>and<sp/>run<sp/>with:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```sh</highlight></codeline>
+<codeline><highlight class="normal">mkdir<sp/>build</highlight></codeline>
+<codeline><highlight class="normal">cd<sp/>build</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>..</highlight></codeline>
+<codeline><highlight class="normal">make<sp/>mpexamples</highlight></codeline>
+<codeline><highlight class="normal">example/mpexample</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+    </programlisting>
+    <location file="src/ipc/libmultiprocess/doc/usage.md"/>
+  </compounddef>
+</doxygen>

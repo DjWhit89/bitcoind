@@ -1,0 +1,99 @@
+\doxysection{crypter.\+h}
+\label{crypter_8h_source}\index{src/wallet/crypter.h@{src/wallet/crypter.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_WALLET\_CRYPTER\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_WALLET\_CRYPTER\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <support/allocators/secure.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <script/signingprovider.h>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00014\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ WALLET\_CRYPTO\_KEY\_SIZE\ =\ 32;}
+\DoxyCodeLine{00015\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ WALLET\_CRYPTO\_SALT\_SIZE\ =\ 8;}
+\DoxyCodeLine{00016\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ WALLET\_CRYPTO\_IV\_SIZE\ =\ 16;}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00034\ \textcolor{keyword}{class\ }CMasterKey}
+\DoxyCodeLine{00035\ \{}
+\DoxyCodeLine{00036\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00037\ \ \ \ \ std::vector<unsigned\ char>\ vchCryptedKey;}
+\DoxyCodeLine{00038\ \ \ \ \ std::vector<unsigned\ char>\ vchSalt;}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nDerivationMethod;}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nDeriveIterations;}
+\DoxyCodeLine{00043\ \ \ \ \ std::vector<unsigned\ char>\ vchOtherDerivationParameters;}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{comment}{//\ 25000\ rounds\ is\ just\ under\ 0.1\ seconds\ on\ a\ 1.86\ GHz\ Pentium\ M}}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{comment}{//\ ie\ slightly\ lower\ than\ the\ lowest\ hardware\ we\ need\ bother\ supporting}}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ DEFAULT\_DERIVE\_ITERATIONS\ =\ 25000;}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \ \ \ \ SERIALIZE\_METHODS(CMasterKey,\ obj)}
+\DoxyCodeLine{00051\ \ \ \ \ \{}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ READWRITE(obj.vchCryptedKey,\ obj.vchSalt,\ obj.nDerivationMethod,\ obj.nDeriveIterations,\ obj.vchOtherDerivationParameters);}
+\DoxyCodeLine{00053\ \ \ \ \ \}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \ \ CMasterKey()}
+\DoxyCodeLine{00056\ \ \ \ \ \{}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ nDeriveIterations\ =\ DEFAULT\_DERIVE\_ITERATIONS;}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ nDerivationMethod\ =\ 0;}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ vchOtherDerivationParameters\ =\ std::vector<unsigned\ char>(0);}
+\DoxyCodeLine{00060\ \ \ \ \ \}}
+\DoxyCodeLine{00061\ \};}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \textcolor{keyword}{typedef}\ std::vector<unsigned\ char,\ secure\_allocator<unsigned\ char>\ >\ CKeyingMaterial;}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \textcolor{keyword}{namespace\ }wallet\_crypto\_tests}
+\DoxyCodeLine{00066\ \{}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keyword}{class\ }TestCrypter;}
+\DoxyCodeLine{00068\ \}}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00071\ \textcolor{keyword}{class\ }CCrypter}
+\DoxyCodeLine{00072\ \{}
+\DoxyCodeLine{00073\ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }wallet\_crypto\_tests::TestCrypter;\ \textcolor{comment}{//\ for\ test\ access\ to\ chKey/chIV}}
+\DoxyCodeLine{00074\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00075\ \ \ \ \ std::vector<unsigned\ char,\ secure\_allocator<unsigned\ char>>\ vchKey;}
+\DoxyCodeLine{00076\ \ \ \ \ std::vector<unsigned\ char,\ secure\_allocator<unsigned\ char>>\ vchIV;}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keywordtype}{bool}\ fKeySet;}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keywordtype}{int}\ BytesToKeySHA512AES(std::span<const\ unsigned\ char>\ salt,\ \textcolor{keyword}{const}\ SecureString\&\ key\_data,\ \textcolor{keywordtype}{int}\ count,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ iv)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetKeyFromPassphrase(\textcolor{keyword}{const}\ SecureString\&\ key\_data,\ std::span<const\ unsigned\ char>\ salt,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ rounds,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ derivation\_method);}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordtype}{bool}\ Encrypt(\textcolor{keyword}{const}\ CKeyingMaterial\&\ vchPlaintext,\ std::vector<unsigned\ char>\ \&vchCiphertext)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keywordtype}{bool}\ Decrypt(std::span<const\ unsigned\ char>\ ciphertext,\ CKeyingMaterial\&\ plaintext)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetKey(\textcolor{keyword}{const}\ CKeyingMaterial\&\ new\_key,\ std::span<const\ unsigned\ char>\ new\_iv);}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{keywordtype}{void}\ CleanKey()}
+\DoxyCodeLine{00088\ \ \ \ \ \{}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ memory\_cleanse(vchKey.data(),\ vchKey.size());}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ memory\_cleanse(vchIV.data(),\ vchIV.size());}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ fKeySet\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00092\ \ \ \ \ \}}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00094\ \ \ \ \ CCrypter()}
+\DoxyCodeLine{00095\ \ \ \ \ \{}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ fKeySet\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ vchKey.resize(WALLET\_CRYPTO\_KEY\_SIZE);}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ vchIV.resize(WALLET\_CRYPTO\_IV\_SIZE);}
+\DoxyCodeLine{00099\ \ \ \ \ \}}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \ \ \ \ \string~CCrypter()}
+\DoxyCodeLine{00102\ \ \ \ \ \{}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ CleanKey();}
+\DoxyCodeLine{00104\ \ \ \ \ \}}
+\DoxyCodeLine{00105\ \};}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \textcolor{keywordtype}{bool}\ EncryptSecret(\textcolor{keyword}{const}\ CKeyingMaterial\&\ vMasterKey,\ \textcolor{keyword}{const}\ CKeyingMaterial\ \&vchPlaintext,\ \textcolor{keyword}{const}\ uint256\&\ nIV,\ std::vector<unsigned\ char>\ \&vchCiphertext);}
+\DoxyCodeLine{00108\ \textcolor{keywordtype}{bool}\ DecryptSecret(\textcolor{keyword}{const}\ CKeyingMaterial\&\ master\_key,\ std::span<const\ unsigned\ char>\ ciphertext,\ \textcolor{keyword}{const}\ uint256\&\ iv,\ CKeyingMaterial\&\ plaintext);}
+\DoxyCodeLine{00109\ \textcolor{keywordtype}{bool}\ DecryptKey(\textcolor{keyword}{const}\ CKeyingMaterial\&\ master\_key,\ std::span<const\ unsigned\ char>\ crypted\_secret,\ \textcolor{keyword}{const}\ CPubKey\&\ pub\_key,\ CKey\&\ key);}
+\DoxyCodeLine{00110\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_WALLET\_CRYPTER\_H}}
+
+\end{DoxyCode}

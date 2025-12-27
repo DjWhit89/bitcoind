@@ -1,0 +1,217 @@
+.TH "src/util/strencodings.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/util/strencodings.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <util/strencodings\&.h>\fP
+.br
+\fR#include <crypto/hex_base\&.h>\fP
+.br
+\fR#include <span\&.h>\fP
+.br
+\fR#include <array>\fP
+.br
+\fR#include <cassert>\fP
+.br
+\fR#include <cstring>\fP
+.br
+\fR#include <limits>\fP
+.br
+\fR#include <optional>\fP
+.br
+\fR#include <ostream>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "std::string \fBSanitizeString\fP (std::string_view str, int rule)"
+.br
+.ti -1c
+.RI "bool \fBIsHex\fP (std::string_view str)"
+.br
+.ti -1c
+.RI "template<typename Byte> std::optional< std::vector< Byte > > \fBTryParseHex\fP (std::string_view str)"
+.br
+.ti -1c
+.RI "template std::optional< std::vector< std::byte > > \fBTryParseHex\fP (std::string_view)"
+.br
+.ti -1c
+.RI "bool \fBSplitHostPort\fP (std::string_view in, uint16_t &portOut, std::string &hostOut)"
+.br
+.ti -1c
+.RI "std::string \fBEncodeBase64\fP (std::span< const unsigned char > input)"
+.br
+.ti -1c
+.RI "std::optional< std::vector< unsigned char > > \fBDecodeBase64\fP (std::string_view str)"
+.br
+.ti -1c
+.RI "std::string \fBEncodeBase32\fP (std::span< const unsigned char > input, bool pad)"
+.br
+.ti -1c
+.RI "std::string \fBEncodeBase32\fP (std::string_view str, bool pad)"
+.br
+.ti -1c
+.RI "std::optional< std::vector< unsigned char > > \fBDecodeBase32\fP (std::string_view str)"
+.br
+.ti -1c
+.RI "std::string \fBFormatParagraph\fP (std::string_view in, size_t width, size_t indent)"
+.br
+.ti -1c
+.RI "bool \fBParseFixedPoint\fP (std::string_view val, int decimals, int64_t *amount_out)"
+.br
+.ti -1c
+.RI "std::string \fBToLower\fP (std::string_view str)"
+.br
+.ti -1c
+.RI "std::string \fBToUpper\fP (std::string_view str)"
+.br
+.ti -1c
+.RI "std::string \fBCapitalize\fP (std::string str)"
+.br
+.ti -1c
+.RI "std::optional< uint64_t > \fBParseByteUnits\fP (std::string_view str, \fBByteUnit\fP default_multiplier)"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "std::string Capitalize (std::string str)"
+Capitalizes the first character of the given string\&. This function is locale independent\&. It only converts lowercase characters in the standard 7-bit ASCII range\&. This is a feature, not a limitation\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIstr\fP the string to capitalize\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+string with the first letter capitalized\&. 
+.RE
+.PP
+
+.SS "std::optional< std::vector< unsigned char > > DecodeBase32 (std::string_view str)"
+
+.SS "std::optional< std::vector< unsigned char > > DecodeBase64 (std::string_view str)"
+
+.SS "std::string EncodeBase32 (std::span< const unsigned char > input, bool pad = \fRtrue\fP)"
+Base32 encode\&. If \fRpad\fP is true, then the output will be padded with '=' so that its length is a multiple of 8\&. 
+.SS "std::string EncodeBase32 (std::string_view str, bool pad = \fRtrue\fP)"
+Base32 encode\&. If \fRpad\fP is true, then the output will be padded with '=' so that its length is a multiple of 8\&. 
+.SS "std::string EncodeBase64 (std::span< const unsigned char > input)"
+
+.SS "std::string FormatParagraph (std::string_view in, size_t width = \fR79\fP, size_t indent = \fR0\fP)"
+\fBFormat\fP a paragraph of text to a fixed width, adding spaces for indentation to any added line\&. 
+.SS "bool IsHex (std::string_view str)"
+
+.SS "std::optional< uint64_t > ParseByteUnits (std::string_view str, \fBByteUnit\fP default_multiplier)"
+Parse a string with suffix unit [k|K|m|M|g|G|t|T]\&. Must be a whole integer, fractions not allowed (0\&.5t), no whitespace or +- Lowercase units are 1000 base\&. Uppercase units are 1024 base\&. Examples: 2m,27M,19g,41T
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIstr\fP the string to convert into bytes 
+.br
+\fIdefault_multiplier\fP if no unit is found in str use this unit 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+optional uint64_t bytes from str or nullopt if ToIntegral is false, str is empty, trailing whitespace or overflow 
+.RE
+.PP
+
+.SS "bool ParseFixedPoint (std::string_view val, int decimals, int64_t * amount_out)\fR [nodiscard]\fP"
+Parse number as fixed point according to JSON number syntax\&. 
+.PP
+\fBReturns\fP
+.RS 4
+true on success, false on error\&. 
+.RE
+.PP
+\fBNote\fP
+.RS 4
+The result must be in the range (-10^18,10^18), otherwise an overflow error will trigger\&. 
+.RE
+.PP
+
+.SS "std::string SanitizeString (std::string_view str, int rule = \fR\fBSAFE_CHARS_DEFAULT\fP\fP)"
+Remove unsafe chars\&. Safe chars chosen to allow simple messages/URLs/email addresses, but avoid anything even possibly remotely dangerous like & or > 
+.PP
+\fBParameters\fP
+.RS 4
+\fIstr\fP The string to sanitize 
+.br
+\fIrule\fP The set of safe chars to choose (default: least restrictive) 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A new string without unsafe chars 
+.RE
+.PP
+
+.SS "bool SplitHostPort (std::string_view in, uint16_t & portOut, std::string & hostOut)"
+Splits socket address string into host string and port value\&. Validates port value\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIin\fP The socket address string to split\&. 
+.br
+\fIportOut\fP Port-portion of the input, if found and parsable\&. 
+.br
+\fIhostOut\fP Host-portion of the input, if found\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+true if port-portion is absent or within its allowed range, otherwise false 
+.RE
+.PP
+
+.SS "std::string ToLower (std::string_view str)"
+Returns the lowercase equivalent of the given string\&. This function is locale independent\&. It only converts uppercase characters in the standard 7-bit ASCII range\&. This is a feature, not a limitation\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIstr\fP the string to convert to lowercase\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+lowercased equivalent of str 
+.RE
+.PP
+
+.SS "std::string ToUpper (std::string_view str)"
+Returns the uppercase equivalent of the given string\&. This function is locale independent\&. It only converts lowercase characters in the standard 7-bit ASCII range\&. This is a feature, not a limitation\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIstr\fP the string to convert to uppercase\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+UPPERCASED EQUIVALENT OF str 
+.RE
+.PP
+
+.SS "template<typename Byte> template std::optional< std::vector< uint8_t > > TryParseHex (std::string_view str)"
+Parse the hex string into bytes (uint8_t or std::byte)\&. Ignores whitespace\&. Returns nullopt on invalid input\&. 
+.SS "template std::optional< std::vector< std::byte > > TryParseHex (std::string_view )"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

@@ -1,0 +1,74 @@
+\doxysection{bip324.\+h}
+\label{bip324_8h_source}\index{src/bip324.h@{src/bip324.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2023-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_BIP324\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_BIP324\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <crypto/chacha20.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <crypto/chacha20poly1305.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <key.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <pubkey.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }BIP324Cipher}
+\DoxyCodeLine{00020\ \{}
+\DoxyCodeLine{00021\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ SESSION\_ID\_LEN\{32\};}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ GARBAGE\_TERMINATOR\_LEN\{16\};}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ REKEY\_INTERVAL\{224\};}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ LENGTH\_LEN\{3\};}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ HEADER\_LEN\{1\};}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ EXPANSION\ =\ LENGTH\_LEN\ +\ HEADER\_LEN\ +\ FSChaCha20Poly1305::EXPANSION;}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ std::byte\ IGNORE\_BIT\{0x80\};}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00031\ \ \ \ \ std::optional<FSChaCha20>\ m\_send\_l\_cipher;}
+\DoxyCodeLine{00032\ \ \ \ \ std::optional<FSChaCha20>\ m\_recv\_l\_cipher;}
+\DoxyCodeLine{00033\ \ \ \ \ std::optional<FSChaCha20Poly1305>\ m\_send\_p\_cipher;}
+\DoxyCodeLine{00034\ \ \ \ \ std::optional<FSChaCha20Poly1305>\ m\_recv\_p\_cipher;}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \ \ CKey\ m\_key;}
+\DoxyCodeLine{00037\ \ \ \ \ EllSwiftPubKey\ m\_our\_pubkey;}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ std::array<std::byte,\ SESSION\_ID\_LEN>\ m\_session\_id;}
+\DoxyCodeLine{00040\ \ \ \ \ std::array<std::byte,\ GARBAGE\_TERMINATOR\_LEN>\ m\_send\_garbage\_terminator;}
+\DoxyCodeLine{00041\ \ \ \ \ std::array<std::byte,\ GARBAGE\_TERMINATOR\_LEN>\ m\_recv\_garbage\_terminator;}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00045\ \ \ \ \ BIP324Cipher()\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00048\ \ \ \ \ BIP324Cipher(\textcolor{keyword}{const}\ CKey\&\ key,\ std::span<const\ std::byte>\ ent32)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00051\ \ \ \ \ BIP324Cipher(\textcolor{keyword}{const}\ CKey\&\ key,\ \textcolor{keyword}{const}\ EllSwiftPubKey\&\ pubkey)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keyword}{const}\ EllSwiftPubKey\&\ GetOurPubKey()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_our\_pubkey;\ \}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordtype}{void}\ Initialize(\textcolor{keyword}{const}\ EllSwiftPubKey\&\ their\_pubkey,\ \textcolor{keywordtype}{bool}\ initiator,\ \textcolor{keywordtype}{bool}\ self\_decrypt\ =\ \textcolor{keyword}{false})\ noexcept;}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00065\ \ \ \ \ explicit\ operator\ \textcolor{keywordtype}{bool}()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_send\_l\_cipher.has\_value();\ \}}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordtype}{void}\ Encrypt(std::span<const\ std::byte>\ contents,\ std::span<const\ std::byte>\ aad,\ \textcolor{keywordtype}{bool}\ ignore,\ std::span<std::byte>\ output)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ DecryptLength(std::span<const\ std::byte>\ input)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keywordtype}{bool}\ Decrypt(std::span<const\ std::byte>\ input,\ std::span<const\ std::byte>\ aad,\ \textcolor{keywordtype}{bool}\&\ ignore,\ std::span<std::byte>\ contents)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00087\ \ \ \ \ std::span<const\ std::byte>\ GetSessionID()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_session\_id;\ \}}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00090\ \ \ \ \ std::span<const\ std::byte>\ GetSendGarbageTerminator()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_send\_garbage\_terminator;\ \}}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00093\ \ \ \ \ std::span<const\ std::byte>\ GetReceiveGarbageTerminator()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_recv\_garbage\_terminator;\ \}}
+\DoxyCodeLine{00094\ \};}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_BIP324\_H}}
+
+\end{DoxyCode}

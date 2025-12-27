@@ -1,0 +1,99 @@
+\doxysection{type-\/number.h}
+\label{type-number_8h_source}\index{src/ipc/libmultiprocess/include/mp/type-\/number.h@{src/ipc/libmultiprocess/include/mp/type-\/number.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ MP\_PROXY\_TYPE\_NUMBER\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ MP\_PROXY\_TYPE\_NUMBER\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <mp/util.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{keyword}{namespace\ }mp\ \{}
+\DoxyCodeLine{00011\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Value>}
+\DoxyCodeLine{00012\ LocalType\ BuildPrimitive(InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00013\ \ \ \ \ \textcolor{keyword}{const}\ Value\&\ value,}
+\DoxyCodeLine{00014\ \ \ \ \ TypeList<LocalType>,}
+\DoxyCodeLine{00015\ \ \ \ \ \textcolor{keyword}{typename}\ std::enable\_if<std::is\_enum<Value>::value>::type*\ enable\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00016\ \{}
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{keyword}{using\ }E\ =\ std::make\_unsigned\_t<std::underlying\_type\_t<Value>>;}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keyword}{using\ }T\ =\ std::make\_unsigned\_t<LocalType>;}
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::numeric\_limits<T>::max()\ >=\ std::numeric\_limits<E>::max(),\ \textcolor{stringliteral}{"{}mismatched\ integral/enum\ types"{}});}
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}LocalType\textcolor{keyword}{>}(value);}
+\DoxyCodeLine{00021\ \}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Value>}
+\DoxyCodeLine{00024\ LocalType\ BuildPrimitive(InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keyword}{const}\ Value\&\ value,}
+\DoxyCodeLine{00026\ \ \ \ \ TypeList<LocalType>,}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keyword}{typename}\ std::enable\_if<std::is\_integral<Value>::value,\ \textcolor{keywordtype}{int}>::type*\ enable\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00028\ \{}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keyword}{static\_assert}(}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ std::numeric\_limits<LocalType>::lowest()\ <=\ std::numeric\_limits<Value>::lowest(),\ \textcolor{stringliteral}{"{}mismatched\ integral\ types"{}});}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keyword}{static\_assert}(}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ std::numeric\_limits<LocalType>::max()\ >=\ std::numeric\_limits<Value>::max(),\ \textcolor{stringliteral}{"{}mismatched\ integral\ types"{}});}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keywordflow}{return}\ value;}
+\DoxyCodeLine{00034\ \}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Value>}
+\DoxyCodeLine{00037\ LocalType\ BuildPrimitive(InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keyword}{const}\ Value\&\ value,}
+\DoxyCodeLine{00039\ \ \ \ \ TypeList<LocalType>,}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{typename}\ std::enable\_if<std::is\_floating\_point<Value>::value>::type*\ enable\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00041\ \{}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_same<Value,\ LocalType>::value,}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}mismatched\ floating\ point\ types.\ please\ fix\ message.capnp\ type\ declaration\ to\ match\ wrapped\ interface"{}});}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordflow}{return}\ value;}
+\DoxyCodeLine{00045\ \}}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00048\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<LocalType>,}
+\DoxyCodeLine{00049\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00050\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00051\ \ \ \ \ Input\&\&\ input,}
+\DoxyCodeLine{00052\ \ \ \ \ ReadDest\&\&\ read\_dest,}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{typename}\ std::enable\_if<std::is\_enum<LocalType>::value>::type*\ enable\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00054\ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{comment}{//\ Disable\ clang-\/tidy\ out-\/of-\/range\ enum\ value\ check\ which\ triggers\ when}}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{comment}{//\ using\ an\ enum\ type\ that\ does\ not\ have\ a\ 0\ value.\ The\ check\ correctly}}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{comment}{//\ triggers\ when\ it\ detects\ that\ Cap'n\ Proto\ returns\ 0\ when\ reading\ an}}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{comment}{//\ integer\ field\ that\ is\ unset.\ But\ the\ warning\ is\ spurious\ because\ the}}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{comment}{//\ corresponding\ BuildField\ call\ should\ never\ leave\ the\ field\ unset.}}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{comment}{//\ NOLINTNEXTLINE(clang-\/analyzer-\/optin.core.EnumCastOutOfRange)}}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.construct(\textcolor{keyword}{static\_cast<}LocalType\textcolor{keyword}{>}(input.get()));}
+\DoxyCodeLine{00062\ \}}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00065\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<LocalType>,}
+\DoxyCodeLine{00066\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00067\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00068\ \ \ \ \ Input\&\&\ input,}
+\DoxyCodeLine{00069\ \ \ \ \ ReadDest\&\&\ read\_dest,}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keyword}{typename}\ std::enable\_if<std::is\_integral<LocalType>::value>::type*\ enable\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00071\ \{}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keyword}{auto}\ value\ =\ input.get();}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keywordflow}{if}\ (value\ <\ std::numeric\_limits<LocalType>::min()\ ||\ value\ >\ std::numeric\_limits<LocalType>::max())\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::range\_error(\textcolor{stringliteral}{"{}out\ of\ bound\ int\ received"{}});}
+\DoxyCodeLine{00075\ \ \ \ \ \}}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.construct(\textcolor{keyword}{static\_cast<}LocalType\textcolor{keyword}{>}(value));}
+\DoxyCodeLine{00077\ \}}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00080\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<LocalType>,}
+\DoxyCodeLine{00081\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00082\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00083\ \ \ \ \ Input\&\&\ input,}
+\DoxyCodeLine{00084\ \ \ \ \ ReadDest\&\&\ read\_dest,}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keyword}{typename}\ std::enable\_if<std::is\_floating\_point<LocalType>::value>::type*\ enable\ =\ 0)}
+\DoxyCodeLine{00086\ \{}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{keyword}{auto}\ value\ =\ input.get();}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_same<LocalType,\ \textcolor{keyword}{decltype}(value)>::value,\ \textcolor{stringliteral}{"{}floating\ point\ type\ mismatch"{}});}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.construct(value);}
+\DoxyCodeLine{00090\ \}}
+\DoxyCodeLine{00091\ \}\ \textcolor{comment}{//\ namespace\ mp}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ MP\_PROXY\_TYPE\_NUMBER\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,148 @@
+\doxysection{ecmult\+\_\+gen.\+h}
+\label{ecmult__gen_8h_source}\index{src/secp256k1/src/ecmult\_gen.h@{src/secp256k1/src/ecmult\_gen.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ Pieter\ Wuille,\ Peter\ Dettman\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_ECMULT\_GEN\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_ECMULT\_GEN\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}scalar.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}group.h"{}}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{comment}{/*\ Configuration\ parameters\ for\ the\ signed-\/digit\ multi-\/comb\ algorithm:}}
+\DoxyCodeLine{00015\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00016\ \textcolor{comment}{\ *\ -\/\ COMB\_BLOCKS\ is\ the\ number\ of\ blocks\ the\ input\ is\ split\ into.\ Each}}
+\DoxyCodeLine{00017\ \textcolor{comment}{\ *\ \ \ has\ a\ corresponding\ table.}}
+\DoxyCodeLine{00018\ \textcolor{comment}{\ *\ -\/\ COMB\_TEETH\ is\ the\ number\ of\ bits\ simultaneously\ covered\ by\ one\ table.}}
+\DoxyCodeLine{00019\ \textcolor{comment}{\ *\ -\/\ COMB\_RANGE\ is\ the\ number\ of\ bits\ in\ supported\ scalars.\ For\ production}}
+\DoxyCodeLine{00020\ \textcolor{comment}{\ *\ \ \ purposes,\ only\ 256\ is\ reasonable,\ but\ smaller\ numbers\ are\ supported\ for}}
+\DoxyCodeLine{00021\ \textcolor{comment}{\ *\ \ \ exhaustive\ test\ mode.}}
+\DoxyCodeLine{00022\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00023\ \textcolor{comment}{\ *\ The\ comb's\ spacing\ (COMB\_SPACING),\ or\ the\ distance\ between\ the\ teeth,}}
+\DoxyCodeLine{00024\ \textcolor{comment}{\ *\ is\ defined\ as\ ceil(COMB\_RANGE\ /\ (COMB\_BLOCKS\ *\ COMB\_TEETH)).\ Each\ block\ covers}}
+\DoxyCodeLine{00025\ \textcolor{comment}{\ *\ COMB\_SPACING\ *\ COMB\_TEETH\ consecutive\ bits\ in\ the\ input.}}
+\DoxyCodeLine{00026\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00027\ \textcolor{comment}{\ *\ The\ size\ of\ the\ precomputed\ table\ is\ COMB\_BLOCKS\ *\ (1\ <<\ (COMB\_TEETH\ -\/\ 1))}}
+\DoxyCodeLine{00028\ \textcolor{comment}{\ *\ secp256k1\_ge\_storages.}}
+\DoxyCodeLine{00029\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00030\ \textcolor{comment}{\ *\ The\ number\ of\ point\ additions\ equals\ COMB\_BLOCKS\ *\ COMB\_SPACING.\ Each\ point}}
+\DoxyCodeLine{00031\ \textcolor{comment}{\ *\ addition\ involves\ a\ cmov\ from\ (1\ <<\ (COMB\_TEETH\ -\/\ 1))\ table\ entries\ and\ a}}
+\DoxyCodeLine{00032\ \textcolor{comment}{\ *\ conditional\ negation.}}
+\DoxyCodeLine{00033\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00034\ \textcolor{comment}{\ *\ The\ number\ of\ point\ doublings\ is\ COMB\_SPACING\ -\/\ 1.\ */}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#if\ defined(EXHAUSTIVE\_TEST\_ORDER)}}
+\DoxyCodeLine{00037\ \textcolor{comment}{/*\ We\ need\ to\ control\ these\ values\ for\ exhaustive\ tests\ because}}
+\DoxyCodeLine{00038\ \textcolor{comment}{\ *\ the\ table\ cannot\ have\ infinities\ in\ them\ (secp256k1\_ge\_storage}}
+\DoxyCodeLine{00039\ \textcolor{comment}{\ *\ doesn't\ support\ infinities)\ */}}
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#\ \ undef\ COMB\_BLOCKS}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#\ \ undef\ COMB\_TEETH}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#\ \ if\ EXHAUSTIVE\_TEST\_ORDER\ ==\ 7}}
+\DoxyCodeLine{00043\ \textcolor{preprocessor}{\#\ \ \ \ define\ COMB\_RANGE\ 3}}
+\DoxyCodeLine{00044\ \textcolor{preprocessor}{\#\ \ \ \ define\ COMB\_BLOCKS\ 1}}
+\DoxyCodeLine{00045\ \textcolor{preprocessor}{\#\ \ \ \ define\ COMB\_TEETH\ 2}}
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\#\ \ elif\ EXHAUSTIVE\_TEST\_ORDER\ ==\ 13}}
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\#\ \ \ \ define\ COMB\_RANGE\ 4}}
+\DoxyCodeLine{00048\ \textcolor{preprocessor}{\#\ \ \ \ define\ COMB\_BLOCKS\ 1}}
+\DoxyCodeLine{00049\ \textcolor{preprocessor}{\#\ \ \ \ define\ COMB\_TEETH\ 2}}
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\#\ \ elif\ EXHAUSTIVE\_TEST\_ORDER\ ==\ 199}}
+\DoxyCodeLine{00051\ \textcolor{preprocessor}{\#\ \ \ \ define\ COMB\_RANGE\ 8}}
+\DoxyCodeLine{00052\ \textcolor{preprocessor}{\#\ \ \ \ define\ COMB\_BLOCKS\ 2}}
+\DoxyCodeLine{00053\ \textcolor{preprocessor}{\#\ \ \ \ define\ COMB\_TEETH\ 3}}
+\DoxyCodeLine{00054\ \textcolor{preprocessor}{\#\ \ else}}
+\DoxyCodeLine{00055\ \textcolor{preprocessor}{\#\ \ \ \ error\ "{}Unknown\ exhaustive\ test\ order"{}}}
+\DoxyCodeLine{00056\ \textcolor{preprocessor}{\#\ \ endif}}
+\DoxyCodeLine{00057\ \textcolor{preprocessor}{\#\ \ if\ (COMB\_RANGE\ >=\ 32)\ ||\ ((EXHAUSTIVE\_TEST\_ORDER\ >>\ (COMB\_RANGE\ -\/\ 1))\ !=\ 1)}}
+\DoxyCodeLine{00058\ \textcolor{preprocessor}{\#\ \ \ \ error\ "{}COMB\_RANGE\ !=\ ceil(log2(EXHAUSTIVE\_TEST\_ORDER+1))"{}}}
+\DoxyCodeLine{00059\ \textcolor{preprocessor}{\#\ \ endif}}
+\DoxyCodeLine{00060\ \textcolor{preprocessor}{\#else\ }\textcolor{comment}{/*\ !defined(EXHAUSTIVE\_TEST\_ORDER)\ */}\textcolor{preprocessor}{}}
+\DoxyCodeLine{00061\ \textcolor{preprocessor}{\#\ \ define\ COMB\_RANGE\ 256}}
+\DoxyCodeLine{00062\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ defined(EXHAUSTIVE\_TEST\_ORDER)\ */}\textcolor{preprocessor}{}}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \textcolor{comment}{/*\ Use\ (11,\ 6)\ as\ default\ configuration,\ which\ results\ in\ a\ 22\ kB\ table.\ */}}
+\DoxyCodeLine{00065\ \textcolor{preprocessor}{\#ifndef\ COMB\_BLOCKS}}
+\DoxyCodeLine{00066\ \textcolor{preprocessor}{\#\ \ define\ COMB\_BLOCKS\ 11}}
+\DoxyCodeLine{00067\ \textcolor{preprocessor}{\#\ \ ifdef\ DEBUG\_CONFIG}}
+\DoxyCodeLine{00068\ \textcolor{preprocessor}{\#\ \ \ \ pragma\ message\ DEBUG\_CONFIG\_MSG("{}COMB\_BLOCKS\ undefined,\ assuming\ default\ value"{})}}
+\DoxyCodeLine{00069\ \textcolor{preprocessor}{\#\ \ endif}}
+\DoxyCodeLine{00070\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00071\ \textcolor{preprocessor}{\#ifndef\ COMB\_TEETH}}
+\DoxyCodeLine{00072\ \textcolor{preprocessor}{\#\ \ define\ COMB\_TEETH\ 6}}
+\DoxyCodeLine{00073\ \textcolor{preprocessor}{\#\ \ ifdef\ DEBUG\_CONFIG}}
+\DoxyCodeLine{00074\ \textcolor{preprocessor}{\#\ \ \ \ pragma\ message\ DEBUG\_CONFIG\_MSG("{}COMB\_TEETH\ undefined,\ assuming\ default\ value"{})}}
+\DoxyCodeLine{00075\ \textcolor{preprocessor}{\#\ \ endif}}
+\DoxyCodeLine{00076\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00077\ \textcolor{comment}{/*\ Use\ ceil(COMB\_RANGE\ /\ (COMB\_BLOCKS\ *\ COMB\_TEETH))\ as\ COMB\_SPACING.\ */}}
+\DoxyCodeLine{00078\ \textcolor{preprocessor}{\#define\ COMB\_SPACING\ CEIL\_DIV(COMB\_RANGE,\ COMB\_BLOCKS\ *\ COMB\_TEETH)}}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \textcolor{comment}{/*\ Range\ checks\ on\ the\ parameters.\ */}}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \textcolor{comment}{/*\ The\ remaining\ COMB\_*\ parameters\ are\ derived\ values,\ don't\ modify\ these.\ */}}
+\DoxyCodeLine{00083\ \textcolor{comment}{/*\ -\/\ The\ number\ of\ bits\ covered\ by\ all\ the\ blocks;\ must\ be\ at\ least\ COMB\_RANGE.\ */}}
+\DoxyCodeLine{00084\ \textcolor{preprocessor}{\#define\ COMB\_BITS\ (COMB\_BLOCKS\ *\ COMB\_TEETH\ *\ COMB\_SPACING)}}
+\DoxyCodeLine{00085\ \textcolor{comment}{/*\ -\/\ The\ number\ of\ entries\ per\ table.\ */}}
+\DoxyCodeLine{00086\ \textcolor{preprocessor}{\#define\ COMB\_POINTS\ (1\ <<\ (COMB\_TEETH\ -\/\ 1))}}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \textcolor{comment}{/*\ Sanity\ checks.\ */}}
+\DoxyCodeLine{00089\ \textcolor{preprocessor}{\#if\ !(1\ <=\ COMB\_BLOCKS\ \&\&\ COMB\_BLOCKS\ <=\ 256)}}
+\DoxyCodeLine{00090\ \textcolor{preprocessor}{\#\ \ error\ "{}COMB\_BLOCKS\ must\ be\ in\ the\ range\ [1,\ 256]"{}}}
+\DoxyCodeLine{00091\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00092\ \textcolor{preprocessor}{\#if\ !(1\ <=\ COMB\_TEETH\ \&\&\ COMB\_TEETH\ <=\ 8)}}
+\DoxyCodeLine{00093\ \textcolor{preprocessor}{\#\ \ error\ "{}COMB\_TEETH\ must\ be\ in\ the\ range\ [1,\ 8]"{}}}
+\DoxyCodeLine{00094\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00095\ \textcolor{preprocessor}{\#if\ COMB\_BITS\ <\ COMB\_RANGE}}
+\DoxyCodeLine{00096\ \textcolor{preprocessor}{\#\ \ error\ "{}COMB\_BLOCKS\ *\ COMB\_TEETH\ *\ COMB\_SPACING\ is\ too\ low"{}}}
+\DoxyCodeLine{00097\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \textcolor{comment}{/*\ These\ last\ 2\ checks\ are\ not\ strictly\ required,\ but\ prevent\ gratuitously\ inefficient}}
+\DoxyCodeLine{00100\ \textcolor{comment}{\ *\ configurations.\ Note\ that\ they\ compare\ with\ 256\ rather\ than\ COMB\_RANGE,\ so\ they\ do}}
+\DoxyCodeLine{00101\ \textcolor{comment}{\ *\ permit\ somewhat\ excessive\ values\ for\ the\ exhaustive\ test\ case,\ where\ testing\ with}}
+\DoxyCodeLine{00102\ \textcolor{comment}{\ *\ suboptimal\ parameters\ may\ be\ desirable.\ */}}
+\DoxyCodeLine{00103\ \textcolor{preprocessor}{\#if\ (COMB\_BLOCKS\ -\/\ 1)\ *\ COMB\_TEETH\ *\ COMB\_SPACING\ >=\ 256}}
+\DoxyCodeLine{00104\ \textcolor{preprocessor}{\#\ \ error\ "{}COMB\_BLOCKS\ can\ be\ reduced"{}}}
+\DoxyCodeLine{00105\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00106\ \textcolor{preprocessor}{\#if\ COMB\_BLOCKS\ *\ (COMB\_TEETH\ -\/\ 1)\ *\ COMB\_SPACING\ >=\ 256}}
+\DoxyCodeLine{00107\ \textcolor{preprocessor}{\#\ \ error\ "{}COMB\_TEETH\ can\ be\ reduced"{}}}
+\DoxyCodeLine{00108\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \textcolor{preprocessor}{\#ifdef\ DEBUG\_CONFIG}}
+\DoxyCodeLine{00111\ \textcolor{preprocessor}{\#\ \ pragma\ message\ DEBUG\_CONFIG\_DEF(COMB\_RANGE)}}
+\DoxyCodeLine{00112\ \textcolor{preprocessor}{\#\ \ pragma\ message\ DEBUG\_CONFIG\_DEF(COMB\_BLOCKS)}}
+\DoxyCodeLine{00113\ \textcolor{preprocessor}{\#\ \ pragma\ message\ DEBUG\_CONFIG\_DEF(COMB\_TEETH)}}
+\DoxyCodeLine{00114\ \textcolor{preprocessor}{\#\ \ pragma\ message\ DEBUG\_CONFIG\_DEF(COMB\_SPACING)}}
+\DoxyCodeLine{00115\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }\{}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{comment}{/*\ Whether\ the\ context\ has\ been\ built.\ */}}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keywordtype}{int}\ built;}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{comment}{/*\ Values\ chosen\ such\ that}}
+\DoxyCodeLine{00122\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00123\ \textcolor{comment}{\ \ \ \ \ *\ \ \ n*G\ ==\ comb(n\ +\ scalar\_offset,\ G/2)\ +\ ge\_offset.}}
+\DoxyCodeLine{00124\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00125\ \textcolor{comment}{\ \ \ \ \ *\ This\ expression\ lets\ us\ use\ scalar\ blinding\ and\ optimize\ the\ comb\ precomputation.\ See}}
+\DoxyCodeLine{00126\ \textcolor{comment}{\ \ \ \ \ *\ ecmult\_gen\_impl.h\ for\ more\ details.\ */}}
+\DoxyCodeLine{00127\ \ \ \ \ secp256k1\_scalar\ scalar\_offset;}
+\DoxyCodeLine{00128\ \ \ \ \ secp256k1\_ge\ ge\_offset;}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{comment}{/*\ Factor\ used\ for\ projective\ blinding.\ This\ value\ is\ used\ to\ rescale\ the\ Z}}
+\DoxyCodeLine{00131\ \textcolor{comment}{\ \ \ \ \ *\ coordinate\ of\ the\ first\ table\ lookup.\ */}}
+\DoxyCodeLine{00132\ \ \ \ \ secp256k1\_fe\ proj\_blind;}
+\DoxyCodeLine{00133\ \}\ secp256k1\_ecmult\_gen\_context;}
+\DoxyCodeLine{00134\ }
+\DoxyCodeLine{00135\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_gen\_context\_build(secp256k1\_ecmult\_gen\_context*\ ctx);}
+\DoxyCodeLine{00136\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_gen\_context\_clear(secp256k1\_ecmult\_gen\_context*\ ctx);}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00139\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_gen(\textcolor{keyword}{const}\ secp256k1\_ecmult\_gen\_context*\ ctx,\ secp256k1\_gej\ *r,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *a);}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00141\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_gen\_blind(secp256k1\_ecmult\_gen\_context\ *ctx,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *seed32);}
+\DoxyCodeLine{00142\ }
+\DoxyCodeLine{00143\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_ECMULT\_GEN\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

@@ -1,0 +1,54 @@
+.TH "CoinsViews" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+CoinsViews
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <validation\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBCCoinsViewDB\fP m_dbview \fBGUARDED_BY\fP (\fBcs_main\fP)"
+.br
+.ti -1c
+.RI "\fBCCoinsViewErrorCatcher\fP m_catcherview \fBGUARDED_BY\fP (\fBcs_main\fP)"
+.br
+.RI "This view wraps access to the leveldb instance and handles read errors gracefully\&. "
+.ti -1c
+.RI "std::unique_ptr< \fBCCoinsViewCache\fP > m_cacheview \fBGUARDED_BY\fP (\fBcs_main\fP)"
+.br
+.ti -1c
+.RI "\fBCoinsViews\fP (\fBDBParams\fP db_params, \fBCoinsViewOptions\fP options)"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+A convenience class for constructing the CCoinsView* hierarchy used to facilitate access to the UTXO set\&.
+
+.PP
+This class consists of an arrangement of layered \fBCCoinsView\fP objects, preferring to store and retrieve coins in memory via \fRm_cacheview\fP but ultimately falling back on cache misses to the canonical store of UTXOs on disk, \fRm_dbview\fP\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBCoinsViews\fP (\fBDBParams\fP db_params, \fBCoinsViewOptions\fP options)"
+This constructor initializes \fBCCoinsViewDB\fP and \fBCCoinsViewErrorCatcher\fP instances, but it \fIdoes not\fP create a \fBCCoinsViewCache\fP instance by default\&. This is done separately because the presence of the cache has implications on whether or not we're allowed to flush the cache's state to disk, which should not be done until the health of the database is verified\&.
+
+.PP
+All arguments forwarded onto \fBCCoinsViewDB\fP\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "std::unique_ptr< \fBCCoinsViewCache\fP > m_cacheview GUARDED_BY (\fBcs_main\fP )"
+This is the top layer of the cache hierarchy - it keeps as many coins in memory as can fit per the dbcache setting\&. 
+.SS "\fBCCoinsViewErrorCatcher\fP m_catcherview GUARDED_BY (\fBcs_main\fP )"
+
+.PP
+This view wraps access to the leveldb instance and handles read errors gracefully\&. 
+.SS "\fBCCoinsViewDB\fP m_dbview GUARDED_BY (\fBcs_main\fP )"
+The lowest level of the \fBCoinsViews\fP cache hierarchy sits in a leveldb database on disk\&. All unspent coins reside in this store\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

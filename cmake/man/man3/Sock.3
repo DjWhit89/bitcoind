@@ -1,0 +1,336 @@
+.TH "Sock" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+Sock
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <sock\&.h>\fP
+.PP
+Inherited by \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBEvents\fP"
+.br
+.ti -1c
+.RI "struct \fBHashSharedPtrSock\fP"
+.br
+.ti -1c
+.RI "struct \fBEqualSharedPtrSock\fP"
+.br
+.in -1c
+.SS "Public Types"
+
+.in +1c
+.ti -1c
+.RI "using \fBEvent\fP = uint8_t"
+.br
+.ti -1c
+.RI "using \fBEventsPerSock\fP = std::unordered_map<std::shared_ptr<const \fBSock\fP>, \fBEvents\fP, \fBHashSharedPtrSock\fP, \fBEqualSharedPtrSock\fP>"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBSock\fP ()=delete"
+.br
+.ti -1c
+.RI "\fBSock\fP (\fBSOCKET\fP s)"
+.br
+.ti -1c
+.RI "\fBSock\fP (const \fBSock\fP &)=delete"
+.br
+.ti -1c
+.RI "\fBSock\fP (\fBSock\fP &&other)"
+.br
+.ti -1c
+.RI "virtual \fB~Sock\fP ()"
+.br
+.ti -1c
+.RI "\fBSock\fP & \fBoperator=\fP (const \fBSock\fP &)=delete"
+.br
+.ti -1c
+.RI "virtual \fBSock\fP & \fBoperator=\fP (\fBSock\fP &&other)"
+.br
+.ti -1c
+.RI "virtual ssize_t \fBSend\fP (const void *data, size_t len, int \fBflags\fP) const"
+.br
+.ti -1c
+.RI "virtual ssize_t \fBRecv\fP (void *buf, size_t len, int \fBflags\fP) const"
+.br
+.ti -1c
+.RI "virtual int \fBConnect\fP (const sockaddr *addr, socklen_t addr_len) const"
+.br
+.ti -1c
+.RI "virtual int \fBBind\fP (const sockaddr *addr, socklen_t addr_len) const"
+.br
+.ti -1c
+.RI "virtual int \fBListen\fP (int backlog) const"
+.br
+.ti -1c
+.RI "virtual std::unique_ptr< \fBSock\fP > \fBAccept\fP (sockaddr *addr, socklen_t *addr_len) const"
+.br
+.ti -1c
+.RI "virtual int \fBGetSockOpt\fP (int level, int opt_name, void *opt_val, socklen_t *opt_len) const"
+.br
+.ti -1c
+.RI "virtual int \fBSetSockOpt\fP (int level, int opt_name, const void *opt_val, socklen_t opt_len) const"
+.br
+.ti -1c
+.RI "virtual int \fBGetSockName\fP (sockaddr *\fBname\fP, socklen_t *name_len) const"
+.br
+.ti -1c
+.RI "virtual bool \fBSetNonBlocking\fP () const"
+.br
+.ti -1c
+.RI "virtual bool \fBIsSelectable\fP () const"
+.br
+.ti -1c
+.RI "virtual bool \fBWait\fP (std::chrono::milliseconds timeout, \fBEvent\fP requested, \fBEvent\fP *occurred=nullptr) const"
+.br
+.ti -1c
+.RI "virtual bool \fBWaitMany\fP (std::chrono::milliseconds timeout, \fBEventsPerSock\fP &events_per_sock) const"
+.br
+.ti -1c
+.RI "virtual void \fBSendComplete\fP (std::span< const unsigned char > data, std::chrono::milliseconds timeout, \fBCThreadInterrupt\fP &interrupt) const"
+.br
+.ti -1c
+.RI "virtual void \fBSendComplete\fP (std::span< const char > data, std::chrono::milliseconds timeout, \fBCThreadInterrupt\fP &interrupt) const"
+.br
+.ti -1c
+.RI "virtual std::string \fBRecvUntilTerminator\fP (uint8_t terminator, std::chrono::milliseconds timeout, \fBCThreadInterrupt\fP &interrupt, size_t max_data) const"
+.br
+.ti -1c
+.RI "virtual bool \fBIsConnected\fP (std::string &errmsg) const"
+.br
+.ti -1c
+.RI "bool \fBoperator==\fP (\fBSOCKET\fP s) const"
+.br
+.in -1c
+.SS "Static Public Attributes"
+
+.in +1c
+.ti -1c
+.RI "static constexpr \fBEvent\fP \fBRECV\fP = 0b001"
+.br
+.ti -1c
+.RI "static constexpr \fBEvent\fP \fBSEND\fP = 0b010"
+.br
+.ti -1c
+.RI "static constexpr \fBEvent\fP \fBERR\fP = 0b100"
+.br
+.in -1c
+.SS "Protected Attributes"
+
+.in +1c
+.ti -1c
+.RI "\fBSOCKET\fP \fBm_socket\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+RAII helper class that manages a socket and closes it automatically when it goes out of scope\&. 
+.SH "Member Typedef Documentation"
+.PP 
+.SS "using \fBEvent\fP = uint8_t"
+
+.SS "using \fBEventsPerSock\fP = std::unordered_map<std::shared_ptr<const \fBSock\fP>, \fBEvents\fP, \fBHashSharedPtrSock\fP, \fBEqualSharedPtrSock\fP>"
+On which socket to wait for what events in \fR\fBWaitMany()\fP\fP\&. The \fRshared_ptr\fP is copied into the map to ensure that the \fR\fBSock\fP\fP object is not destroyed (its destructor would close the underlying socket)\&. If this happens shortly before or after we call \fRpoll(2)\fP and a new socket gets created under the same file descriptor number then the report from \fR\fBWaitMany()\fP\fP will be bogus\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBSock\fP ()\fR [delete]\fP"
+
+.SS "\fBSock\fP (\fBSOCKET\fP s)\fR [explicit]\fP"
+Take ownership of an existent socket\&. 
+.SS "\fBSock\fP (const \fBSock\fP & )\fR [delete]\fP"
+Copy constructor, disabled because closing the same socket twice is undesirable\&. 
+.SS "\fBSock\fP (\fBSock\fP && other)"
+Move constructor, grab the socket from another object and close ours (if set)\&. 
+.SS "~\fBSock\fP ()\fR [virtual]\fP"
+Destructor, close the socket or do nothing if empty\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "std::unique_ptr< \fBSock\fP > Accept (sockaddr * addr, socklen_t * addr_len) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+accept(2) wrapper\&. Equivalent to \fRstd::make_unique<\fBSock\fP>(accept(m_socket, addr, addr_len))\fP\&. Code that uses this wrapper can be unit tested if this method is overridden by a mock \fBSock\fP implementation\&. The returned unique_ptr is empty if \fRaccept()\fP failed in which case errno will be set\&. 
+.PP
+Reimplemented in \fBDynSock\fP, \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "int Bind (const sockaddr * addr, socklen_t addr_len) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+bind(2) wrapper\&. Equivalent to \fRbind(m_socket, addr, addr_len)\fP\&. Code that uses this wrapper can be unit tested if this method is overridden by a mock \fBSock\fP implementation\&. 
+.PP
+Reimplemented in \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "int Connect (const sockaddr * addr, socklen_t addr_len) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+connect(2) wrapper\&. Equivalent to \fRconnect(m_socket, addr, addrlen)\fP\&. Code that uses this wrapper can be unit tested if this method is overridden by a mock \fBSock\fP implementation\&. 
+.PP
+Reimplemented in \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "int GetSockName (sockaddr * name, socklen_t * name_len) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+getsockname(2) wrapper\&. Equivalent to \fRgetsockname(m_socket, name, name_len)\fP\&. Code that uses this wrapper can be unit tested if this method is overridden by a mock \fBSock\fP implementation\&. 
+.PP
+Reimplemented in \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "int GetSockOpt (int level, int opt_name, void * opt_val, socklen_t * opt_len) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+getsockopt(2) wrapper\&. Equivalent to \fRgetsockopt(m_socket, level, opt_name, opt_val, opt_len)\fP\&. Code that uses this wrapper can be unit tested if this method is overridden by a mock \fBSock\fP implementation\&. 
+.PP
+Reimplemented in \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "bool IsConnected (std::string & errmsg) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+Check if still connected\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIerrmsg\fP The error string, if the socket has been disconnected\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+true if connected 
+.RE
+.PP
+
+.PP
+Reimplemented in \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBStaticContentsSock\fP\&.
+.SS "bool IsSelectable () const\fR [nodiscard]\fP, \fR [virtual]\fP"
+Check if the underlying socket can be used for \fRselect(2)\fP (or the \fR\fBWait()\fP\fP method)\&. 
+.PP
+\fBReturns\fP
+.RS 4
+true if selectable 
+.RE
+.PP
+
+.PP
+Reimplemented in \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "int Listen (int backlog) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+listen(2) wrapper\&. Equivalent to \fRlisten(m_socket, backlog)\fP\&. Code that uses this wrapper can be unit tested if this method is overridden by a mock \fBSock\fP implementation\&. 
+.PP
+Reimplemented in \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "\fBSock\fP & operator= (const \fBSock\fP & )\fR [delete]\fP"
+Copy assignment operator, disabled because closing the same socket twice is undesirable\&. 
+.SS "\fBSock\fP & operator= (\fBSock\fP && other)\fR [virtual]\fP"
+Move assignment operator, grab the socket from another object and close ours (if set)\&. 
+.PP
+Reimplemented in \fBFuzzedSock\fP, and \fBPCPTestSock\fP\&.
+.SS "bool operator== (\fBSOCKET\fP s) const"
+Check if the internal socket is equal to \fRs\fP\&. Use only in tests\&. 
+.SS "ssize_t Recv (void * buf, size_t len, int flags) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+recv(2) wrapper\&. Equivalent to \fRrecv(m_socket, buf, len, flags);\fP\&. Code that uses this wrapper can be unit tested if this method is overridden by a mock \fBSock\fP implementation\&. 
+.PP
+Reimplemented in \fBDynSock\fP, \fBFuzzedSock\fP, \fBPCPTestSock\fP, \fBStaticContentsSock\fP, and \fBZeroSock\fP\&.
+.SS "std::string RecvUntilTerminator (uint8_t terminator, std::chrono::milliseconds timeout, \fBCThreadInterrupt\fP & interrupt, size_t max_data) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+Read from socket until a terminator character is encountered\&. Will never consume bytes past the terminator from the socket\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIterminator\fP Character up to which to read from the socket\&. 
+.br
+\fItimeout\fP Timeout for the entire operation\&. 
+.br
+\fIinterrupt\fP If this is signaled then the operation is canceled\&. 
+.br
+\fImax_data\fP The maximum amount of data (in bytes) to receive\&. If this many bytes are received and there is still no terminator, then this method will throw an exception\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The data that has been read, without the terminating character\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fIstd::runtime_error\fP if the operation cannot be completed\&. In this case some bytes may have been consumed from the socket\&. 
+.RE
+.PP
+
+.SS "ssize_t Send (const void * data, size_t len, int flags) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+send(2) wrapper\&. Equivalent to \fRsend(m_socket, data, len, flags);\fP\&. Code that uses this wrapper can be unit tested if this method is overridden by a mock \fBSock\fP implementation\&. 
+.PP
+Reimplemented in \fBDynSock\fP, \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "void SendComplete (std::span< const char > data, std::chrono::milliseconds timeout, \fBCThreadInterrupt\fP & interrupt) const\fR [virtual]\fP"
+Convenience method, equivalent to \fRSendComplete(MakeUCharSpan(data), timeout, interrupt)\fP\&. 
+.SS "void SendComplete (std::span< const unsigned char > data, std::chrono::milliseconds timeout, \fBCThreadInterrupt\fP & interrupt) const\fR [virtual]\fP"
+Send the given data, retrying on transient errors\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIdata\fP Data to send\&. 
+.br
+\fItimeout\fP Timeout for the entire operation\&. 
+.br
+\fIinterrupt\fP If this is signaled then the operation is canceled\&. 
+.RE
+.PP
+\fBExceptions\fP
+.RS 4
+\fIstd::runtime_error\fP if the operation cannot be completed\&. In this case only some of the data will be written to the socket\&. 
+.RE
+.PP
+
+.SS "bool SetNonBlocking () const\fR [nodiscard]\fP, \fR [virtual]\fP"
+Set the non-blocking option on the socket\&. 
+.PP
+\fBReturns\fP
+.RS 4
+true if set successfully 
+.RE
+.PP
+
+.PP
+Reimplemented in \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "int SetSockOpt (int level, int opt_name, const void * opt_val, socklen_t opt_len) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+setsockopt(2) wrapper\&. Equivalent to \fRsetsockopt(m_socket, level, opt_name, opt_val, opt_len)\fP\&. Code that uses this wrapper can be unit tested if this method is overridden by a mock \fBSock\fP implementation\&. 
+.PP
+Reimplemented in \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "bool Wait (std::chrono::milliseconds timeout, \fBEvent\fP requested, \fBEvent\fP * occurred = \fRnullptr\fP) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+Wait for readiness for input (recv) or output (send)\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItimeout\fP Wait this much for at least one of the requested events to occur\&. 
+.br
+\fIrequested\fP Wait for those events, bitwise-or of \fR\fBRECV\fP\fP and \fR\fBSEND\fP\fP\&. 
+.br
+\fIoccurred\fP If not nullptr and the function returns \fRtrue\fP, then this indicates which of the requested events occurred (\fR\fBERR\fP\fP will be added, even if not requested, if an exceptional event occurs on the socket)\&. A timeout is indicated by return value of \fRtrue\fP and \fRoccurred\fP being set to 0\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+true on success (or timeout, if \fRoccurred\fP of 0 is returned), false otherwise 
+.RE
+.PP
+
+.PP
+Reimplemented in \fBDynSock\fP, \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SS "bool WaitMany (std::chrono::milliseconds timeout, \fBEventsPerSock\fP & events_per_sock) const\fR [nodiscard]\fP, \fR [virtual]\fP"
+Same as \fR\fBWait()\fP\fP, but wait on many sockets within the same timeout\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItimeout\fP Wait this long for at least one of the requested events to occur\&. 
+.br
+\fIevents_per_sock\fP Wait for the requested events on these sockets and set \fRoccurred\fP for the events that actually occurred\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+true on success (or timeout, if all \fRwhat[]\&.occurred\fP are returned as 0), false otherwise 
+.RE
+.PP
+
+.PP
+Reimplemented in \fBDynSock\fP, \fBFuzzedSock\fP, \fBPCPTestSock\fP, and \fBZeroSock\fP\&.
+.SH "Field Documentation"
+.PP 
+.SS "\fBEvent\fP ERR = 0b100\fR [static]\fP, \fR [constexpr]\fP"
+Ignored if passed to \fR\fBWait()\fP\fP, but could be set in the occurred events if an exceptional condition has occurred on the socket or if it has been disconnected\&. 
+.SS "\fBSOCKET\fP m_socket\fR [protected]\fP"
+Contained socket\&. \fR\fBINVALID_SOCKET\fP\fP designates the object is empty\&. 
+.SS "\fBEvent\fP RECV = 0b001\fR [static]\fP, \fR [constexpr]\fP"
+If passed to \fR\fBWait()\fP\fP, then it will wait for readiness to read from the socket\&. 
+.SS "\fBEvent\fP SEND = 0b010\fR [static]\fP, \fR [constexpr]\fP"
+If passed to \fR\fBWait()\fP\fP, then it will wait for readiness to send to the socket\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

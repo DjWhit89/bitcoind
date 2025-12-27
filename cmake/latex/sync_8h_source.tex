@@ -1,0 +1,241 @@
+\doxysection{sync.\+h}
+\label{sync_8h_source}\index{src/sync.h@{src/sync.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_SYNC\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_SYNC\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#ifdef\ DEBUG\_LOCKCONTENTION}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <logging.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <logging/timer.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <threadsafety.h>}\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <util/macros.h>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <condition\_variable>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <mutex>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <thread>}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00024\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //}}
+\DoxyCodeLine{00025\ \textcolor{comment}{//\ THE\ SIMPLE\ DEFINITION,\ EXCLUDING\ DEBUG\ CODE\ //}}
+\DoxyCodeLine{00026\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //}}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{comment}{/*}}
+\DoxyCodeLine{00030\ \textcolor{comment}{RecursiveMutex\ mutex;}}
+\DoxyCodeLine{00031\ \textcolor{comment}{\ \ \ \ std::recursive\_mutex\ mutex;}}
+\DoxyCodeLine{00032\ \textcolor{comment}{}}
+\DoxyCodeLine{00033\ \textcolor{comment}{LOCK(mutex);}}
+\DoxyCodeLine{00034\ \textcolor{comment}{\ \ \ \ std::unique\_lock<std::recursive\_mutex>\ criticalblock(mutex);}}
+\DoxyCodeLine{00035\ \textcolor{comment}{}}
+\DoxyCodeLine{00036\ \textcolor{comment}{LOCK2(mutex1,\ mutex2);}}
+\DoxyCodeLine{00037\ \textcolor{comment}{\ \ \ \ std::unique\_lock<std::recursive\_mutex>\ criticalblock1(mutex1);}}
+\DoxyCodeLine{00038\ \textcolor{comment}{\ \ \ \ std::unique\_lock<std::recursive\_mutex>\ criticalblock2(mutex2);}}
+\DoxyCodeLine{00039\ \textcolor{comment}{}}
+\DoxyCodeLine{00040\ \textcolor{comment}{TRY\_LOCK(mutex,\ name);}}
+\DoxyCodeLine{00041\ \textcolor{comment}{\ \ \ \ std::unique\_lock<std::recursive\_mutex>\ name(mutex,\ std::try\_to\_lock\_t);}}
+\DoxyCodeLine{00042\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00045\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //}}
+\DoxyCodeLine{00046\ \textcolor{comment}{//\ THE\ ACTUAL\ IMPLEMENTATION\ //}}
+\DoxyCodeLine{00047\ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ //}}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\#ifdef\ DEBUG\_LOCKORDER}}
+\DoxyCodeLine{00051\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MutexType>}
+\DoxyCodeLine{00052\ \textcolor{keywordtype}{void}\ EnterCritical(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszName,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszFile,\ \textcolor{keywordtype}{int}\ nLine,\ MutexType*\ cs,\ \textcolor{keywordtype}{bool}\ fTry\ =\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00053\ \textcolor{keywordtype}{void}\ LeaveCritical();}
+\DoxyCodeLine{00054\ \textcolor{keywordtype}{void}\ CheckLastCritical(\textcolor{keywordtype}{void}*\ cs,\ std::string\&\ lockname,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ guardname,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ file,\ \textcolor{keywordtype}{int}\ line);}
+\DoxyCodeLine{00055\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MutexType>}
+\DoxyCodeLine{00056\ \textcolor{keywordtype}{void}\ AssertLockHeldInternal(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszName,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszFile,\ \textcolor{keywordtype}{int}\ nLine,\ MutexType*\ cs)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00057\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MutexType>}
+\DoxyCodeLine{00058\ \textcolor{keywordtype}{void}\ AssertLockNotHeldInternal(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszName,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszFile,\ \textcolor{keywordtype}{int}\ nLine,\ MutexType*\ cs)\ LOCKS\_EXCLUDED(cs);}
+\DoxyCodeLine{00059\ \textcolor{keywordtype}{void}\ DeleteLock(\textcolor{keywordtype}{void}*\ cs);}
+\DoxyCodeLine{00060\ \textcolor{keywordtype}{bool}\ LockStackEmpty();}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00067\ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{bool}\ g\_debug\_lockorder\_abort;}
+\DoxyCodeLine{00068\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00069\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MutexType>}
+\DoxyCodeLine{00070\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ EnterCritical(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszName,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszFile,\ \textcolor{keywordtype}{int}\ nLine,\ MutexType*\ cs,\ \textcolor{keywordtype}{bool}\ fTry\ =\ \textcolor{keyword}{false})\ \{\}}
+\DoxyCodeLine{00071\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ LeaveCritical()\ \{\}}
+\DoxyCodeLine{00072\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ CheckLastCritical(\textcolor{keywordtype}{void}*\ cs,\ std::string\&\ lockname,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ guardname,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ file,\ \textcolor{keywordtype}{int}\ line)\ \{\}}
+\DoxyCodeLine{00073\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MutexType>}
+\DoxyCodeLine{00074\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ AssertLockHeldInternal(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszName,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszFile,\ \textcolor{keywordtype}{int}\ nLine,\ MutexType*\ cs)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs)\ \{\}}
+\DoxyCodeLine{00075\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MutexType>}
+\DoxyCodeLine{00076\ \textcolor{keywordtype}{void}\ AssertLockNotHeldInternal(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszName,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszFile,\ \textcolor{keywordtype}{int}\ nLine,\ MutexType*\ cs)\ LOCKS\_EXCLUDED(cs)\ \{\}}
+\DoxyCodeLine{00077\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ DeleteLock(\textcolor{keywordtype}{void}*\ cs)\ \{\}}
+\DoxyCodeLine{00078\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ LockStackEmpty()\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};\ \}}
+\DoxyCodeLine{00079\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00085\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ PARENT>}
+\DoxyCodeLine{00086\ \textcolor{keyword}{class\ }LOCKABLE\ AnnotatedMixin\ :\ \textcolor{keyword}{public}\ PARENT}
+\DoxyCodeLine{00087\ \{}
+\DoxyCodeLine{00088\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00089\ \ \ \ \ \string~AnnotatedMixin()\ \{}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ DeleteLock((\textcolor{keywordtype}{void}*)\textcolor{keyword}{this});}
+\DoxyCodeLine{00091\ \ \ \ \ \}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keywordtype}{void}\ lock()\ EXCLUSIVE\_LOCK\_FUNCTION()}
+\DoxyCodeLine{00094\ \ \ \ \ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ PARENT::lock();}
+\DoxyCodeLine{00096\ \ \ \ \ \}}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keywordtype}{void}\ unlock()\ UNLOCK\_FUNCTION()}
+\DoxyCodeLine{00099\ \ \ \ \ \{}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ PARENT::unlock();}
+\DoxyCodeLine{00101\ \ \ \ \ \}}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keywordtype}{bool}\ try\_lock()\ EXCLUSIVE\_TRYLOCK\_FUNCTION(true)}
+\DoxyCodeLine{00104\ \ \ \ \ \{}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ PARENT::try\_lock();}
+\DoxyCodeLine{00106\ \ \ \ \ \}}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keyword}{using\ }unique\_lock\ =\ std::unique\_lock<PARENT>;}
+\DoxyCodeLine{00109\ \textcolor{preprocessor}{\#ifdef\ \_\_clang\_\_}}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{keyword}{const}\ AnnotatedMixin\&\ operator!()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00114\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ \_\_clang\_\_}}
+\DoxyCodeLine{00115\ \};}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00121\ \textcolor{keyword}{using\ }RecursiveMutex\ =\ AnnotatedMixin<std::recursive\_mutex>;}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00124\ \textcolor{keyword}{using\ }Mutex\ =\ AnnotatedMixin<std::mutex>;}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00135\ \textcolor{keyword}{class\ }GlobalMutex\ :\ \textcolor{keyword}{public}\ Mutex\ \{\ \};}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \textcolor{preprocessor}{\#define\ AssertLockHeld(cs)\ AssertLockHeldInternal(\#cs,\ \_\_FILE\_\_,\ \_\_LINE\_\_,\ \&cs)}}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00139\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ AssertLockNotHeldInline(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ name,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ file,\ \textcolor{keywordtype}{int}\ line,\ Mutex*\ cs)\ EXCLUSIVE\_LOCKS\_REQUIRED(!cs)\ \{\ AssertLockNotHeldInternal(name,\ file,\ line,\ cs);\ \}}
+\DoxyCodeLine{00140\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ AssertLockNotHeldInline(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ name,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ file,\ \textcolor{keywordtype}{int}\ line,\ RecursiveMutex*\ cs)\ LOCKS\_EXCLUDED(cs)\ \{\ AssertLockNotHeldInternal(name,\ file,\ line,\ cs);\ \}}
+\DoxyCodeLine{00141\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ AssertLockNotHeldInline(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ name,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ file,\ \textcolor{keywordtype}{int}\ line,\ GlobalMutex*\ cs)\ LOCKS\_EXCLUDED(cs)\ \{\ AssertLockNotHeldInternal(name,\ file,\ line,\ cs);\ \}}
+\DoxyCodeLine{00142\ \textcolor{preprocessor}{\#define\ AssertLockNotHeld(cs)\ AssertLockNotHeldInline(\#cs,\ \_\_FILE\_\_,\ \_\_LINE\_\_,\ \&cs)}}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00145\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MutexType>}
+\DoxyCodeLine{00146\ \textcolor{keyword}{class\ }SCOPED\_LOCKABLE\ UniqueLock\ :\ \textcolor{keyword}{public}\ MutexType::unique\_lock}
+\DoxyCodeLine{00147\ \{}
+\DoxyCodeLine{00148\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keyword}{using\ }Base\ =\ \textcolor{keyword}{typename}\ MutexType::unique\_lock;}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{keywordtype}{void}\ Enter(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszName,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszFile,\ \textcolor{keywordtype}{int}\ nLine)}
+\DoxyCodeLine{00152\ \ \ \ \ \{}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ EnterCritical(pszName,\ pszFile,\ nLine,\ Base::mutex());}
+\DoxyCodeLine{00154\ \textcolor{preprocessor}{\#ifdef\ DEBUG\_LOCKCONTENTION}}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (Base::try\_lock())\ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ LOG\_TIME\_MICROS\_WITH\_CATEGORY(strprintf(\textcolor{stringliteral}{"{}lock\ contention\ \%s,\ \%s:\%d"{}},\ pszName,\ pszFile,\ nLine),\ BCLog::LOCK);}
+\DoxyCodeLine{00157\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ Base::lock();}
+\DoxyCodeLine{00159\ \ \ \ \ \}}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordtype}{bool}\ TryEnter(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszName,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszFile,\ \textcolor{keywordtype}{int}\ nLine)}
+\DoxyCodeLine{00162\ \ \ \ \ \{}
+\DoxyCodeLine{00163\ \ \ \ \ \ \ \ \ EnterCritical(pszName,\ pszFile,\ nLine,\ Base::mutex(),\ \textcolor{keyword}{true});}
+\DoxyCodeLine{00164\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (Base::try\_lock())\ \{}
+\DoxyCodeLine{00165\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ LeaveCritical();}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00169\ \ \ \ \ \}}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00171\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00172\ \ \ \ \ UniqueLock(MutexType\&\ mutexIn,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszName,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszFile,\ \textcolor{keywordtype}{int}\ nLine,\ \textcolor{keywordtype}{bool}\ fTry\ =\ \textcolor{keyword}{false})\ EXCLUSIVE\_LOCK\_FUNCTION(mutexIn)\ :\ Base(mutexIn,\ std::defer\_lock)}
+\DoxyCodeLine{00173\ \ \ \ \ \{}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fTry)}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ \ \ \ \ TryEnter(pszName,\ pszFile,\ nLine);}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ \ \ \ \ Enter(pszName,\ pszFile,\ nLine);}
+\DoxyCodeLine{00178\ \ \ \ \ \}}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00180\ \ \ \ \ UniqueLock(MutexType*\ pmutexIn,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszName,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ pszFile,\ \textcolor{keywordtype}{int}\ nLine,\ \textcolor{keywordtype}{bool}\ fTry\ =\ \textcolor{keyword}{false})\ EXCLUSIVE\_LOCK\_FUNCTION(pmutexIn)}
+\DoxyCodeLine{00181\ \ \ \ \ \{}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!pmutexIn)\ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ *\textcolor{keyword}{static\_cast<}Base*\textcolor{keyword}{>}(\textcolor{keyword}{this})\ =\ Base(*pmutexIn,\ std::defer\_lock);}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fTry)}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \ \ \ \ TryEnter(pszName,\ pszFile,\ nLine);}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \ \ \ \ Enter(pszName,\ pszFile,\ nLine);}
+\DoxyCodeLine{00189\ \ \ \ \ \}}
+\DoxyCodeLine{00190\ }
+\DoxyCodeLine{00191\ \ \ \ \ \string~UniqueLock()\ UNLOCK\_FUNCTION()}
+\DoxyCodeLine{00192\ \ \ \ \ \{}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (Base::owns\_lock())}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ \ \ \ \ LeaveCritical();}
+\DoxyCodeLine{00195\ \ \ \ \ \}}
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keyword}{operator}\ bool()}
+\DoxyCodeLine{00198\ \ \ \ \ \{}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Base::owns\_lock();}
+\DoxyCodeLine{00200\ \ \ \ \ \}}
+\DoxyCodeLine{00201\ }
+\DoxyCodeLine{00202\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00203\ \ \ \ \ \textcolor{comment}{//\ needed\ for\ reverse\_lock}}
+\DoxyCodeLine{00204\ \ \ \ \ UniqueLock()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00210\ \ \ \ \ \textcolor{keyword}{class\ }SCOPED\_LOCKABLE\ reverse\_lock\ \{}
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \textcolor{keyword}{explicit}\ reverse\_lock(UniqueLock\&\ \_lock,\ \textcolor{keyword}{const}\ MutexType\&\ mutex,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ \_guardname,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ \_file,\ \textcolor{keywordtype}{int}\ \_line)\ UNLOCK\_FUNCTION(mutex)\ :\ lock(\_lock),\ file(\_file),\ line(\_line)\ \{}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Ensure\ that\ mutex\ passed\ back\ for\ thread-\/safety\ analysis\ is\ indeed\ the\ original}}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \ \ \ \ assert(std::addressof(mutex)\ ==\ lock.mutex());}
+\DoxyCodeLine{00215\ }
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \ \ \ \ CheckLastCritical((\textcolor{keywordtype}{void}*)lock.mutex(),\ lockname,\ \_guardname,\ \_file,\ \_line);}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \ \ \ \ lock.unlock();}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \ \ \ \ LeaveCritical();}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \ \ \ \ lock.swap(templock);}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \string~reverse\_lock()\ UNLOCK\_FUNCTION()\ \{}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \ \ \ \ templock.swap(lock);}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \ \ \ \ EnterCritical(lockname.c\_str(),\ file.c\_str(),\ line,\ lock.mutex());}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \ \ \ \ lock.lock();}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00228\ \ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ reverse\_lock(reverse\_lock\ \textcolor{keyword}{const}\&);}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ reverse\_lock\&\ operator=(reverse\_lock\ \textcolor{keyword}{const}\&);}
+\DoxyCodeLine{00231\ }
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ UniqueLock\&\ lock;}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ UniqueLock\ templock;}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ std::string\ lockname;}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\ file;}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ line;}
+\DoxyCodeLine{00237\ \ \ \ \ \ \};}
+\DoxyCodeLine{00238\ \ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }reverse\_lock;}
+\DoxyCodeLine{00239\ \};}
+\DoxyCodeLine{00240\ }
+\DoxyCodeLine{00241\ \textcolor{comment}{//\ clang's\ thread-\/safety\ analyzer\ is\ unable\ to\ deal\ with\ aliases\ of\ mutexes,\ so}}
+\DoxyCodeLine{00242\ \textcolor{comment}{//\ it\ is\ not\ possible\ to\ use\ the\ lock's\ copy\ of\ the\ mutex\ for\ that\ purpose.}}
+\DoxyCodeLine{00243\ \textcolor{comment}{//\ Instead,\ the\ original\ mutex\ needs\ to\ be\ passed\ back\ to\ the\ reverse\_lock\ for}}
+\DoxyCodeLine{00244\ \textcolor{comment}{//\ the\ sake\ of\ thread-\/safety\ analysis,\ but\ it\ is\ not\ actually\ used\ otherwise.}}
+\DoxyCodeLine{00245\ \textcolor{preprocessor}{\#define\ REVERSE\_LOCK(g,\ cs)\ typename\ std::decay<decltype(g)>::type::reverse\_lock\ UNIQUE\_NAME(revlock)(g,\ cs,\ \#cs,\ \_\_FILE\_\_,\ \_\_LINE\_\_)}}
+\DoxyCodeLine{00246\ }
+\DoxyCodeLine{00247\ \textcolor{comment}{//\ When\ locking\ a\ Mutex,\ require\ negative\ capability\ to\ ensure\ the\ lock}}
+\DoxyCodeLine{00248\ \textcolor{comment}{//\ is\ not\ already\ held}}
+\DoxyCodeLine{00249\ \textcolor{keyword}{inline}\ Mutex\&\ MaybeCheckNotHeld(Mutex\&\ cs)\ EXCLUSIVE\_LOCKS\_REQUIRED(!cs)\ LOCK\_RETURNED(cs)\ \{\ \textcolor{keywordflow}{return}\ cs;\ \}}
+\DoxyCodeLine{00250\ \textcolor{keyword}{inline}\ Mutex*\ MaybeCheckNotHeld(Mutex*\ cs)\ EXCLUSIVE\_LOCKS\_REQUIRED(!cs)\ LOCK\_RETURNED(cs)\ \{\ \textcolor{keywordflow}{return}\ cs;\ \}}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00252\ \textcolor{comment}{//\ When\ locking\ a\ GlobalMutex\ or\ RecursiveMutex,\ just\ check\ it\ is\ not}}
+\DoxyCodeLine{00253\ \textcolor{comment}{//\ locked\ in\ the\ surrounding\ scope.}}
+\DoxyCodeLine{00254\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MutexType>}
+\DoxyCodeLine{00255\ \textcolor{keyword}{inline}\ MutexType\&\ MaybeCheckNotHeld(MutexType\&\ m)\ LOCKS\_EXCLUDED(m)\ LOCK\_RETURNED(m)\ \{\ \textcolor{keywordflow}{return}\ m;\ \}}
+\DoxyCodeLine{00256\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ MutexType>}
+\DoxyCodeLine{00257\ \textcolor{keyword}{inline}\ MutexType*\ MaybeCheckNotHeld(MutexType*\ m)\ LOCKS\_EXCLUDED(m)\ LOCK\_RETURNED(m)\ \{\ \textcolor{keywordflow}{return}\ m;\ \}}
+\DoxyCodeLine{00258\ }
+\DoxyCodeLine{00259\ \textcolor{preprocessor}{\#define\ LOCK(cs)\ UniqueLock\ UNIQUE\_NAME(criticalblock)(MaybeCheckNotHeld(cs),\ \#cs,\ \_\_FILE\_\_,\ \_\_LINE\_\_)}}
+\DoxyCodeLine{00260\ \textcolor{preprocessor}{\#define\ LOCK2(cs1,\ cs2)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00261\ \textcolor{preprocessor}{\ \ \ \ UniqueLock\ criticalblock1(MaybeCheckNotHeld(cs1),\ \#cs1,\ \_\_FILE\_\_,\ \_\_LINE\_\_);\ \(\backslash\)}}
+\DoxyCodeLine{00262\ \textcolor{preprocessor}{\ \ \ \ UniqueLock\ criticalblock2(MaybeCheckNotHeld(cs2),\ \#cs2,\ \_\_FILE\_\_,\ \_\_LINE\_\_)}}
+\DoxyCodeLine{00263\ \textcolor{preprocessor}{\#define\ LOCK\_ARGS(cs)\ MaybeCheckNotHeld(cs),\ \#cs,\ \_\_FILE\_\_,\ \_\_LINE\_\_}}
+\DoxyCodeLine{00264\ \textcolor{preprocessor}{\#define\ TRY\_LOCK(cs,\ name)\ UniqueLock\ name(LOCK\_ARGS(cs),\ true)}}
+\DoxyCodeLine{00265\ \textcolor{preprocessor}{\#define\ WAIT\_LOCK(cs,\ name)\ UniqueLock\ name(LOCK\_ARGS(cs))}}
+\DoxyCodeLine{00266\ }
+\DoxyCodeLine{00290\ \textcolor{preprocessor}{\#define\ WITH\_LOCK(cs,\ code)\ (MaybeCheckNotHeld(cs),\ [\&]()\ -\/>\ decltype(auto)\ \{\ LOCK(cs);\ code;\ \}())}}
+\DoxyCodeLine{00291\ }
+\DoxyCodeLine{00292\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_SYNC\_H}}
+
+\end{DoxyCode}

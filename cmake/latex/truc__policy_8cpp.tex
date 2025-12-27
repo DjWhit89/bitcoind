@@ -1,0 +1,96 @@
+\doxysection{src/policy/truc\+\_\+policy.cpp File Reference}
+\label{truc__policy_8cpp}\index{src/policy/truc\_policy.cpp@{src/policy/truc\_policy.cpp}}
+{\ttfamily \#include $<$policy/truc\+\_\+policy.\+h$>$}\newline
+{\ttfamily \#include $<$coins.\+h$>$}\newline
+{\ttfamily \#include $<$consensus/amount.\+h$>$}\newline
+{\ttfamily \#include $<$logging.\+h$>$}\newline
+{\ttfamily \#include $<$tinyformat.\+h$>$}\newline
+{\ttfamily \#include $<$util/check.\+h$>$}\newline
+{\ttfamily \#include $<$algorithm$>$}\newline
+{\ttfamily \#include $<$numeric$>$}\newline
+{\ttfamily \#include $<$vector$>$}\newline
+\doxysubsubsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+struct \textbf{ Parent\+Info}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+std\+::vector$<$ size\+\_\+t $>$ \textbf{ Find\+In\+Package\+Parents} (const \textbf{ Package} \&package, const \textbf{ CTransaction\+Ref} \&ptx)
+\item 
+std\+::optional$<$ std\+::string $>$ \textbf{ Package\+TRUCChecks} (const \textbf{ CTx\+Mem\+Pool} \&pool, const \textbf{ CTransaction\+Ref} \&ptx, int64\+\_\+t vsize, const \textbf{ Package} \&package, const std\+::vector$<$ \textbf{ CTx\+Mem\+Pool\+Entry\+::\+CTx\+Mem\+Pool\+Entry\+Ref} $>$ \&mempool\+\_\+parents)
+\item 
+std\+::optional$<$ std\+::pair$<$ std\+::string, \textbf{ CTransaction\+Ref} $>$ $>$ \textbf{ Single\+TRUCChecks} (const \textbf{ CTx\+Mem\+Pool} \&pool, const \textbf{ CTransaction\+Ref} \&ptx, const std\+::vector$<$ \textbf{ CTx\+Mem\+Pool\+Entry\+::\+CTx\+Mem\+Pool\+Entry\+Ref} $>$ \&mempool\+\_\+parents, const std\+::set$<$ \textbf{ Txid} $>$ \&direct\+\_\+conflicts, int64\+\_\+t vsize)
+\end{DoxyCompactItemize}
+
+
+\label{doc-func-members}
+\doxysubsection{Function Documentation}
+\index{truc\_policy.cpp@{truc\_policy.cpp}!FindInPackageParents@{FindInPackageParents}}
+\index{FindInPackageParents@{FindInPackageParents}!truc\_policy.cpp@{truc\_policy.cpp}}
+\doxysubsubsection{FindInPackageParents()}
+{\footnotesize\ttfamily \label{truc__policy_8cpp_a7d78351367fb7c849a2be067b070cb89} 
+std\+::vector$<$ size\+\_\+t $>$ Find\+In\+Package\+Parents (\begin{DoxyParamCaption}\item[{const \textbf{ Package} \&}]{package}{, }\item[{const \textbf{ CTransaction\+Ref} \&}]{ptx}{}\end{DoxyParamCaption})}
+
+Helper for Package\+TRUCChecks\+: Returns a vector containing the indices of transactions (within package) that are direct parents of ptx. \index{truc\_policy.cpp@{truc\_policy.cpp}!PackageTRUCChecks@{PackageTRUCChecks}}
+\index{PackageTRUCChecks@{PackageTRUCChecks}!truc\_policy.cpp@{truc\_policy.cpp}}
+\doxysubsubsection{PackageTRUCChecks()}
+{\footnotesize\ttfamily \label{truc__policy_8cpp_afe77a5703a3621b3c82c2a1490fbe305} 
+std\+::optional$<$ std\+::string $>$ Package\+TRUCChecks (\begin{DoxyParamCaption}\item[{const \textbf{ CTx\+Mem\+Pool} \&}]{pool}{, }\item[{const \textbf{ CTransaction\+Ref} \&}]{ptx}{, }\item[{int64\+\_\+t}]{vsize}{, }\item[{const \textbf{ Package} \&}]{package}{, }\item[{const std\+::vector$<$ \textbf{ CTx\+Mem\+Pool\+Entry\+::\+CTx\+Mem\+Pool\+Entry\+Ref} $>$ \&}]{mempool\+\_\+parents}{}\end{DoxyParamCaption})}
+
+Must be called for every transaction that is submitted within a package, even if not TRUC.
+
+For each transaction in a package\+: If it\textquotesingle{}s not a TRUC transaction, verify it has no direct TRUC parents in the mempool or the package.
+
+If it is a TRUC transaction, verify that any direct parents in the mempool or the package are TRUC. If such a parent exists, verify that parent has no other children in the package or the mempool, and that the transaction itself has no children in the package.
+
+If any TRUC violations in the package exist, this test will fail for one of them\+:
+\begin{DoxyItemize}
+\item if a TRUC transaction T has a parent in the mempool and a child in the package, then PTRUCC(\+T) will fail
+\item if a TRUC transaction T has a parent in the package and a child in the package, then PTRUCC(\+T) will fail
+\item if a TRUC transaction T and a TRUC (sibling) transaction U have some parent in the mempool, then PTRUCC(\+T) and PTRUCC(\+U) will fail
+\item if a TRUC transaction T and a TRUC (sibling) transaction U have some parent in the package, then PTRUCC(\+T) and PTRUCC(\+U) will fail
+\item if a TRUC transaction T has a parent P and a grandparent G in the package, then PTRUCC(\+P) will fail (though PTRUCC(\+G) and PTRUCC(\+T) might succeed).
+\end{DoxyItemize}
+
+\begin{DoxyReturn}{Returns}
+debug string if an error occurs, std\+::nullopt otherwise. 
+\end{DoxyReturn}
+\index{truc\_policy.cpp@{truc\_policy.cpp}!SingleTRUCChecks@{SingleTRUCChecks}}
+\index{SingleTRUCChecks@{SingleTRUCChecks}!truc\_policy.cpp@{truc\_policy.cpp}}
+\doxysubsubsection{SingleTRUCChecks()}
+{\footnotesize\ttfamily \label{truc__policy_8cpp_a58ab48db1646c729c1e075417a3d0efd} 
+std\+::optional$<$ std\+::pair$<$ std\+::string, \textbf{ CTransaction\+Ref} $>$ $>$ Single\+TRUCChecks (\begin{DoxyParamCaption}\item[{const \textbf{ CTx\+Mem\+Pool} \&}]{pool}{, }\item[{const \textbf{ CTransaction\+Ref} \&}]{ptx}{, }\item[{const std\+::vector$<$ \textbf{ CTx\+Mem\+Pool\+Entry\+::\+CTx\+Mem\+Pool\+Entry\+Ref} $>$ \&}]{mempool\+\_\+parents}{, }\item[{const std\+::set$<$ \textbf{ Txid} $>$ \&}]{direct\+\_\+conflicts}{, }\item[{int64\+\_\+t}]{vsize}{}\end{DoxyParamCaption})}
+
+Must be called for every transaction, even if not TRUC. Not strictly necessary for transactions accepted through Accept\+Multiple\+Transactions.
+
+Checks the following rules\+:
+\begin{DoxyEnumerate}
+\item A TRUC tx must only have TRUC unconfirmed ancestors.
+\item A non-\/\+TRUC tx must only have non-\/\+TRUC unconfirmed ancestors.
+\item A TRUC\textquotesingle{}s ancestor set, including itself, must be within TRUC\+\_\+\+ANCESTOR\+\_\+\+LIMIT.
+\item A TRUC\textquotesingle{}s descendant set, including itself, must be within TRUC\+\_\+\+DESCENDANT\+\_\+\+LIMIT.
+\item If a TRUC tx has any unconfirmed ancestors, the tx\textquotesingle{}s sigop-\/adjusted vsize must be within TRUC\+\_\+\+CHILD\+\_\+\+MAX\+\_\+\+VSIZE.
+\item A TRUC tx must be within TRUC\+\_\+\+MAX\+\_\+\+VSIZE.
+\end{DoxyEnumerate}
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em pool} & A reference to the mempool. \\
+\hline
+\mbox{\texttt{in}}  & {\em mempool\+\_\+parents} & The in-\/mempool ancestors of ptx. \\
+\hline
+\mbox{\texttt{in}}  & {\em direct\+\_\+conflicts} & In-\/mempool transactions this tx conflicts with. These conflicts are used to more accurately calculate the resulting descendant count of in-\/mempool ancestors. \\
+\hline
+\mbox{\texttt{in}}  & {\em vsize} & The sigop-\/adjusted virtual size of ptx.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+3 possibilities\+:
+\begin{DoxyItemize}
+\item std\+::nullopt if all TRUC checks were applied successfully
+\item debug string + pointer to a mempool sibling if this transaction would be the second child in a 1-\/parent-\/1-\/child cluster; the caller may consider evicting the specified sibling or return an error with the debug string.
+\item debug string + nullptr if this transaction violates some TRUC rule and sibling eviction is not applicable. 
+\end{DoxyItemize}
+\end{DoxyReturn}

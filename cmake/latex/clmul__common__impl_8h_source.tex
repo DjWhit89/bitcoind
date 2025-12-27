@@ -1,0 +1,171 @@
+\doxysection{clmul\+\_\+common\+\_\+impl.\+h}
+\label{clmul__common__impl_8h_source}\index{src/minisketch/src/fields/clmul\_common\_impl.h@{src/minisketch/src/fields/clmul\_common\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/**********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2018\ Pieter\ Wuille,\ Greg\ Maxwell,\ Gleb\ Naumenko\ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ LICENSE\ or\ http://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ **********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ \_MINISKETCH\_FIELDS\_CLMUL\_COMMON\_IMPL\_H\_}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ \_MINISKETCH\_FIELDS\_CLMUL\_COMMON\_IMPL\_H\_\ 1}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <immintrin.h>}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}../int\_utils.h"{}}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}../lintrans.h"{}}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{keyword}{namespace\ }\{}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{comment}{//\ The\ memory\ sanitizer\ in\ clang\ <\ 11\ cannot\ reason\ through\ \_mm\_clmulepi64\_si128\ calls.}}
+\DoxyCodeLine{00019\ \textcolor{comment}{//\ Disable\ memory\ sanitization\ in\ the\ functions\ using\ them\ for\ those\ compilers.}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#if\ defined(\_\_clang\_\_)\ \&\&\ (\_\_clang\_major\_\_\ <\ 11)}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#\ \ if\ defined(\_\_has\_feature)}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#\ \ \ \ if\ \_\_has\_feature(memory\_sanitizer)}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#\ \ \ \ \ \ define\ NO\_SANITIZE\_MEMORY\ \_\_attribute\_\_((no\_sanitize("{}memory"{})))}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#\ \ \ \ endif}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#\ \ endif}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#ifndef\ NO\_SANITIZE\_MEMORY}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#\ \ define\ NO\_SANITIZE\_MEMORY}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keywordtype}{int}\ BITS,\ I\ MOD>\ NO\_SANITIZE\_MEMORY\ I\ MulWithClMulReduce(I\ a,\ I\ b)}
+\DoxyCodeLine{00032\ \{}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ I\ MASK\ =\ Mask<BITS,\ I>();}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keyword}{const}\ \_\_m128i\ MOD128\ =\ \_mm\_cvtsi64\_si128(MOD);}
+\DoxyCodeLine{00036\ \ \ \ \ \_\_m128i\ product\ =\ \_mm\_clmulepi64\_si128(\_mm\_cvtsi64\_si128((uint64\_t)a),\ \_mm\_cvtsi64\_si128((uint64\_t)b),\ 0x00);}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordflow}{if}\ (BITS\ <=\ 32)\ \{}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \_\_m128i\ high1\ =\ \_mm\_srli\_epi64(product,\ BITS);}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \_\_m128i\ red1\ =\ \_mm\_clmulepi64\_si128(high1,\ MOD128,\ 0x00);}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \_\_m128i\ high2\ =\ \_mm\_srli\_epi64(red1,\ BITS);}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \_\_m128i\ red2\ =\ \_mm\_clmulepi64\_si128(high2,\ MOD128,\ 0x00);}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_mm\_cvtsi128\_si64(\_mm\_xor\_si128(\_mm\_xor\_si128(product,\ red1),\ red2))\ \&\ MASK;}
+\DoxyCodeLine{00043\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (BITS\ ==\ 64)\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \_\_m128i\ red1\ =\ \_mm\_clmulepi64\_si128(product,\ MOD128,\ 0x01);}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \_\_m128i\ red2\ =\ \_mm\_clmulepi64\_si128(red1,\ MOD128,\ 0x01);}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_mm\_cvtsi128\_si64(\_mm\_xor\_si128(\_mm\_xor\_si128(product,\ red1),\ red2));}
+\DoxyCodeLine{00047\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ ((BITS\ \%\ 8)\ ==\ 0)\ \{}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \_\_m128i\ high1\ =\ \_mm\_srli\_si128(product,\ BITS\ /\ 8);}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \_\_m128i\ red1\ =\ \_mm\_clmulepi64\_si128(high1,\ MOD128,\ 0x00);}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \_\_m128i\ high2\ =\ \_mm\_srli\_si128(red1,\ BITS\ /\ 8);}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \_\_m128i\ red2\ =\ \_mm\_clmulepi64\_si128(high2,\ MOD128,\ 0x00);}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_mm\_cvtsi128\_si64(\_mm\_xor\_si128(\_mm\_xor\_si128(product,\ red1),\ red2))\ \&\ MASK;}
+\DoxyCodeLine{00053\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \_\_m128i\ high1\ =\ \_mm\_or\_si128(\_mm\_srli\_epi64(product,\ BITS),\ \_mm\_srli\_si128(\_mm\_slli\_epi64(product,\ 64\ -\/\ BITS),\ 8));}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \_\_m128i\ red1\ =\ \_mm\_clmulepi64\_si128(high1,\ MOD128,\ 0x00);}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((uint64\_t(MOD)\ >>\ (66\ -\/\ BITS))\ ==\ 0)\ \{}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ high2\ =\ \_mm\_srli\_epi64(red1,\ BITS);}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ red2\ =\ \_mm\_clmulepi64\_si128(high2,\ MOD128,\ 0x00);}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_mm\_cvtsi128\_si64(\_mm\_xor\_si128(\_mm\_xor\_si128(product,\ red1),\ red2))\ \&\ MASK;}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ high2\ =\ \_mm\_or\_si128(\_mm\_srli\_epi64(red1,\ BITS),\ \_mm\_srli\_si128(\_mm\_slli\_epi64(red1,\ 64\ -\/\ BITS),\ 8));}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ red2\ =\ \_mm\_clmulepi64\_si128(high2,\ MOD128,\ 0x00);}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_mm\_cvtsi128\_si64(\_mm\_xor\_si128(\_mm\_xor\_si128(product,\ red1),\ red2))\ \&\ MASK;}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00065\ \ \ \ \ \}}
+\DoxyCodeLine{00066\ \}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keywordtype}{int}\ BITS,\ \textcolor{keywordtype}{int}\ POS>\ NO\_SANITIZE\_MEMORY\ I\ MulTrinomial(I\ a,\ I\ b)}
+\DoxyCodeLine{00069\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ I\ MASK\ =\ Mask<BITS,\ I>();}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \_\_m128i\ product\ =\ \_mm\_clmulepi64\_si128(\_mm\_cvtsi64\_si128((uint64\_t)a),\ \_mm\_cvtsi64\_si128((uint64\_t)b),\ 0x00);}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keywordflow}{if}\ (BITS\ <=\ 32)\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \_\_m128i\ high1\ =\ \_mm\_srli\_epi64(product,\ BITS);}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \_\_m128i\ red1\ =\ \_mm\_xor\_si128(high1,\ \_mm\_slli\_epi64(high1,\ POS));}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (POS\ ==\ 1)\ \{}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_mm\_cvtsi128\_si64(\_mm\_xor\_si128(product,\ red1))\ \&\ MASK;}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ high2\ =\ \_mm\_srli\_epi64(red1,\ BITS);}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ red2\ =\ \_mm\_xor\_si128(high2,\ \_mm\_slli\_epi64(high2,\ POS));}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_mm\_cvtsi128\_si64(\_mm\_xor\_si128(\_mm\_xor\_si128(product,\ red1),\ red2))\ \&\ MASK;}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00083\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \_\_m128i\ high1\ =\ \_mm\_or\_si128(\_mm\_srli\_epi64(product,\ BITS),\ \_mm\_srli\_si128(\_mm\_slli\_epi64(product,\ 64\ -\/\ BITS),\ 8));}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (BITS\ +\ POS\ <=\ 66)\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ red1\ =\ \_mm\_xor\_si128(high1,\ \_mm\_slli\_epi64(high1,\ POS));}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (POS\ ==\ 1)\ \{}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_mm\_cvtsi128\_si64(\_mm\_xor\_si128(product,\ red1))\ \&\ MASK;}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (BITS\ +\ POS\ <=\ 66)\ \{}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ high2\ =\ \_mm\_srli\_epi64(red1,\ BITS);}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ red2\ =\ \_mm\_xor\_si128(high2,\ \_mm\_slli\_epi64(high2,\ POS));}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_mm\_cvtsi128\_si64(\_mm\_xor\_si128(\_mm\_xor\_si128(product,\ red1),\ red2))\ \&\ MASK;}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \_\_m128i\ MOD128\ =\ \_mm\_cvtsi64\_si128(1\ +\ (((uint64\_t)1)\ <<\ POS));}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ red1\ =\ \_mm\_clmulepi64\_si128(high1,\ MOD128,\ 0x00);}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ high2\ =\ \_mm\_or\_si128(\_mm\_srli\_epi64(red1,\ BITS),\ \_mm\_srli\_si128(\_mm\_slli\_epi64(red1,\ 64\ -\/\ BITS),\ 8));}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ \_\_m128i\ red2\ =\ \_mm\_xor\_si128(high2,\ \_mm\_slli\_epi64(high2,\ POS));}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \_mm\_cvtsi128\_si64(\_mm\_xor\_si128(\_mm\_xor\_si128(product,\ red1),\ red2))\ \&\ MASK;}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00101\ \ \ \ \ \}}
+\DoxyCodeLine{00102\ \}}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00105\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keywordtype}{int}\ B,\ I\ MOD,\ I\ (*MUL)(I,\ I),\ \textcolor{keyword}{typename}\ F,\ const\ F*\ SQR,\ const\ F*\ SQR2,\ const\ F*\ SQR4,\ const\ F*\ SQR8,\ const\ F*\ SQR16,\ const\ F*\ QRT,\ \textcolor{keyword}{typename}\ T,\ const\ T*\ LOAD,\ const\ T*\ SAVE>\ \textcolor{keyword}{struct\ }GenField}
+\DoxyCodeLine{00106\ \{}
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keyword}{typedef}\ BitsInt<I,\ B>\ O;}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keyword}{typedef}\ LFSR<O,\ MOD>\ L;}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ I\ Sqr1(I\ a)\ \{\ \textcolor{keywordflow}{return}\ SQR-\/>template\ Map<O>(a);\ \}}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ I\ Sqr2(I\ a)\ \{\ \textcolor{keywordflow}{return}\ SQR2-\/>template\ Map<O>(a);\ \}}
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ I\ Sqr4(I\ a)\ \{\ \textcolor{keywordflow}{return}\ SQR4-\/>template\ Map<O>(a);\ \}}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ I\ Sqr8(I\ a)\ \{\ \textcolor{keywordflow}{return}\ SQR8-\/>template\ Map<O>(a);\ \}}
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ I\ Sqr16(I\ a)\ \{\ \textcolor{keywordflow}{return}\ SQR16-\/>template\ Map<O>(a);\ \}}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{keyword}{typedef}\ I\ Elem;}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ Bits()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ B;\ \}}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ Elem\ Mul2(Elem\ val)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ L::Call(val);\ \}}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{keyword}{inline}\ Elem\ Mul(Elem\ a,\ Elem\ b)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ MUL(a,\ b);\ \}}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keyword}{class\ }Multiplier}
+\DoxyCodeLine{00126\ \ \ \ \ \{}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ Elem\ m\_val;}
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{explicit}\ Multiplier(\textcolor{keyword}{const}\ GenField\&,\ Elem\ a)\ :\ m\_val(a)\ \{\}}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \textcolor{keyword}{constexpr}\ Elem\ operator()(Elem\ a)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ MUL(m\_val,\ a);\ \}}
+\DoxyCodeLine{00131\ \ \ \ \ \};}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ Elem\ Sqr(Elem\ val)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ SQR-\/>template\ Map<O>(val);\ \}}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ Elem\ Qrt(Elem\ val)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ QRT-\/>template\ Map<O>(val);\ \}}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00140\ \ \ \ \ \textcolor{keyword}{inline}\ Elem\ Inv(Elem\ val)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ InvLadder<I,\ O,\ B,\ MUL,\ Sqr1,\ Sqr2,\ Sqr4,\ Sqr8,\ Sqr16>(val);\ \}}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00143\ \ \ \ \ Elem\ FromSeed(uint64\_t\ seed)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ uint64\_t\ k0\ =\ 0x434c4d554c466c64ull;\ \textcolor{comment}{//\ "{}CLMULFld"{}}}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ uint64\_t\ k1\ =\ seed;}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ uint64\_t\ count\ =\ ((uint64\_t)B)\ <<\ 32;}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ I\ ret;}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{00149\ \ \ \ \ \ \ \ \ \ \ \ \ ret\ =\ O::Mask(I(SipHash(k0,\ k1,\ count++)));}
+\DoxyCodeLine{00150\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{while}(ret\ ==\ 0);}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ LOAD-\/>template\ Map<O>(ret);}
+\DoxyCodeLine{00152\ \ \ \ \ \}}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \ \ \ \ Elem\ Deserialize(BitReader\&\ in)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ LOAD-\/>template\ Map<O>(in.Read<B,\ I>());\ \}}
+\DoxyCodeLine{00155\ }
+\DoxyCodeLine{00156\ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(BitWriter\&\ out,\ Elem\ val)\textcolor{keyword}{\ const\ }\{\ out.Write<B,\ I>(SAVE-\/>template\ Map<O>(val));\ \}}
+\DoxyCodeLine{00157\ }
+\DoxyCodeLine{00158\ \ \ \ \ \textcolor{keyword}{constexpr}\ Elem\ FromUint64(uint64\_t\ x)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ LOAD-\/>template\ Map<O>(O::Mask(I(x)));\ \}}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{keyword}{constexpr}\ uint64\_t\ ToUint64(Elem\ val)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ uint64\_t(SAVE-\/>template\ Map<O>(val));\ \}}
+\DoxyCodeLine{00160\ \};}
+\DoxyCodeLine{00161\ }
+\DoxyCodeLine{00162\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keywordtype}{int}\ B,\ I\ MOD,\ \textcolor{keyword}{typename}\ F,\ const\ F*\ SQR,\ const\ F*\ SQR2,\ const\ F*\ SQR4,\ const\ F*\ SQR8,\ const\ F*\ SQR16,\ const\ F*\ QRT,\ \textcolor{keyword}{typename}\ T,\ const\ T*\ LOAD,\ const\ T*\ SAVE>}
+\DoxyCodeLine{00163\ \textcolor{keyword}{using\ }Field\ =\ GenField<I,\ B,\ MOD,\ MulWithClMulReduce<I,\ B,\ MOD>,\ F,\ SQR,\ SQR2,\ SQR4,\ SQR8,\ SQR16,\ QRT,\ T,\ LOAD,\ SAVE>;}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I,\ \textcolor{keywordtype}{int}\ B,\ \textcolor{keywordtype}{int}\ POS,\ \textcolor{keyword}{typename}\ F,\ const\ F*\ SQR,\ const\ F*\ SQR2,\ const\ F*\ SQR4,\ const\ F*\ SQR8,\ const\ F*\ SQR16,\ const\ F*\ QRT,\ \textcolor{keyword}{typename}\ T,\ const\ T*\ LOAD,\ const\ T*\ SAVE>}
+\DoxyCodeLine{00166\ \textcolor{keyword}{using\ }FieldTri\ =\ GenField<I,\ B,\ I(1)\ +\ (I(1)\ <<\ POS),\ MulTrinomial<I,\ B,\ POS>,\ F,\ SQR,\ SQR2,\ SQR4,\ SQR8,\ SQR16,\ QRT,\ T,\ LOAD,\ SAVE>;}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ \}}
+\DoxyCodeLine{00169\ }
+\DoxyCodeLine{00170\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

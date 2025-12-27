@@ -1,0 +1,488 @@
+\doxysection{tests\+\_\+impl.\+h}
+\label{extrakeys_2tests__impl_8h_source}\index{src/secp256k1/src/modules/extrakeys/tests\_impl.h@{src/secp256k1/src/modules/extrakeys/tests\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2020\ Jonas\ Nick\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_MODULE\_EXTRAKEYS\_TESTS\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_MODULE\_EXTRAKEYS\_TESTS\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1\_extrakeys.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}../../unit\_test.h"{}}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_xonly\_pubkey(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00014\ \ \ \ \ secp256k1\_pubkey\ pk;}
+\DoxyCodeLine{00015\ \ \ \ \ secp256k1\_xonly\_pubkey\ xonly\_pk,\ xonly\_pk\_tmp;}
+\DoxyCodeLine{00016\ \ \ \ \ secp256k1\_ge\ pk1;}
+\DoxyCodeLine{00017\ \ \ \ \ secp256k1\_ge\ pk2;}
+\DoxyCodeLine{00018\ \ \ \ \ secp256k1\_fe\ y;}
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32];}
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ xy\_sk[32];}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ buf32[32];}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ ones32[32];}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ zeros64[64]\ =\ \{\ 0\ \};}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keywordtype}{int}\ pk\_parity;}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00028\ \ \ \ \ memset(ones32,\ 0xFF,\ 32);}
+\DoxyCodeLine{00029\ \ \ \ \ testrand256(xy\_sk);}
+\DoxyCodeLine{00030\ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_create(CTX,\ \&pk,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00031\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ \&pk)\ ==\ 1);}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{comment}{/*\ Test\ xonly\_pubkey\_from\_pubkey\ */}}
+\DoxyCodeLine{00034\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ \&pk)\ ==\ 1);}
+\DoxyCodeLine{00035\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ NULL,\ \&pk\_parity,\ \&pk));}
+\DoxyCodeLine{00036\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ NULL,\ \&pk)\ ==\ 1);}
+\DoxyCodeLine{00037\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ NULL));}
+\DoxyCodeLine{00038\ \ \ \ \ memset(\&pk,\ 0,\ \textcolor{keyword}{sizeof}(pk));}
+\DoxyCodeLine{00039\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ \&pk));}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{comment}{/*\ Choose\ a\ secret\ key\ such\ that\ the\ resulting\ pubkey\ and\ xonly\_pubkey\ match.\ */}}
+\DoxyCodeLine{00042\ \ \ \ \ memset(sk,\ 0,\ \textcolor{keyword}{sizeof}(sk));}
+\DoxyCodeLine{00043\ \ \ \ \ sk[0]\ =\ 1;}
+\DoxyCodeLine{00044\ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_create(CTX,\ \&pk,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00045\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ \&pk)\ ==\ 1);}
+\DoxyCodeLine{00046\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&pk,\ \&xonly\_pk,\ \textcolor{keyword}{sizeof}(pk))\ ==\ 0);}
+\DoxyCodeLine{00047\ \ \ \ \ CHECK(pk\_parity\ ==\ 0);}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{comment}{/*\ Choose\ a\ secret\ key\ such\ that\ pubkey\ and\ xonly\_pubkey\ are\ each\ others}}
+\DoxyCodeLine{00050\ \textcolor{comment}{\ \ \ \ \ *\ negation.\ */}}
+\DoxyCodeLine{00051\ \ \ \ \ sk[0]\ =\ 2;}
+\DoxyCodeLine{00052\ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_create(CTX,\ \&pk,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00053\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ \&pk)\ ==\ 1);}
+\DoxyCodeLine{00054\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&xonly\_pk,\ \&pk,\ \textcolor{keyword}{sizeof}(xonly\_pk))\ !=\ 0);}
+\DoxyCodeLine{00055\ \ \ \ \ CHECK(pk\_parity\ ==\ 1);}
+\DoxyCodeLine{00056\ \ \ \ \ secp256k1\_pubkey\_load(CTX,\ \&pk1,\ \&pk);}
+\DoxyCodeLine{00057\ \ \ \ \ secp256k1\_pubkey\_load(CTX,\ \&pk2,\ (secp256k1\_pubkey\ *)\ \&xonly\_pk);}
+\DoxyCodeLine{00058\ \ \ \ \ CHECK(secp256k1\_fe\_equal(\&pk1.x,\ \&pk2.x)\ ==\ 1);}
+\DoxyCodeLine{00059\ \ \ \ \ secp256k1\_fe\_negate(\&y,\ \&pk2.y,\ 1);}
+\DoxyCodeLine{00060\ \ \ \ \ CHECK(secp256k1\_fe\_equal(\&pk1.y,\ \&y)\ ==\ 1);}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{comment}{/*\ Test\ xonly\_pubkey\_serialize\ and\ xonly\_pubkey\_parse\ */}}
+\DoxyCodeLine{00063\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_serialize(CTX,\ NULL,\ \&xonly\_pk));}
+\DoxyCodeLine{00064\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_serialize(CTX,\ buf32,\ NULL));}
+\DoxyCodeLine{00065\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(buf32,\ zeros64,\ 32)\ ==\ 0);}
+\DoxyCodeLine{00066\ \ \ \ \ \{}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ A\ pubkey\ filled\ with\ 0s\ will\ fail\ to\ serialize\ due\ to\ pubkey\_load}}
+\DoxyCodeLine{00068\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ special\ casing.\ */}}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ secp256k1\_xonly\_pubkey\ pk\_tmp;}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ memset(\&pk\_tmp,\ 0,\ \textcolor{keyword}{sizeof}(pk\_tmp));}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ pubkey\_load\ calls\ illegal\ callback\ */}}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_serialize(CTX,\ buf32,\ \&pk\_tmp));}
+\DoxyCodeLine{00073\ \ \ \ \ \}}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(CTX,\ buf32,\ \&xonly\_pk)\ ==\ 1);}
+\DoxyCodeLine{00076\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_parse(CTX,\ NULL,\ buf32));}
+\DoxyCodeLine{00077\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_parse(CTX,\ \&xonly\_pk,\ NULL));}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{comment}{/*\ Serialization\ and\ parse\ roundtrip\ */}}
+\DoxyCodeLine{00080\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ NULL,\ \&pk)\ ==\ 1);}
+\DoxyCodeLine{00081\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(CTX,\ buf32,\ \&xonly\_pk)\ ==\ 1);}
+\DoxyCodeLine{00082\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&xonly\_pk\_tmp,\ buf32)\ ==\ 1);}
+\DoxyCodeLine{00083\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&xonly\_pk,\ \&xonly\_pk\_tmp,\ \textcolor{keyword}{sizeof}(xonly\_pk))\ ==\ 0);}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{comment}{/*\ Test\ parsing\ invalid\ field\ elements\ */}}
+\DoxyCodeLine{00086\ \ \ \ \ memset(\&xonly\_pk,\ 1,\ \textcolor{keyword}{sizeof}(xonly\_pk));}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{comment}{/*\ Overflowing\ field\ element\ */}}
+\DoxyCodeLine{00088\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&xonly\_pk,\ ones32)\ ==\ 0);}
+\DoxyCodeLine{00089\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&xonly\_pk,\ zeros64,\ \textcolor{keyword}{sizeof}(xonly\_pk))\ ==\ 0);}
+\DoxyCodeLine{00090\ \ \ \ \ memset(\&xonly\_pk,\ 1,\ \textcolor{keyword}{sizeof}(xonly\_pk));}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{comment}{/*\ There's\ no\ point\ with\ x-\/coordinate\ 0\ on\ secp256k1\ */}}
+\DoxyCodeLine{00092\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&xonly\_pk,\ zeros64)\ ==\ 0);}
+\DoxyCodeLine{00093\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&xonly\_pk,\ zeros64,\ \textcolor{keyword}{sizeof}(xonly\_pk))\ ==\ 0);}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{comment}{/*\ If\ a\ random\ 32-\/byte\ string\ can\ not\ be\ parsed\ with\ ec\_pubkey\_parse}}
+\DoxyCodeLine{00095\ \textcolor{comment}{\ \ \ \ \ *\ (because\ interpreted\ as\ X\ coordinate\ it\ does\ not\ correspond\ to\ a\ point\ on}}
+\DoxyCodeLine{00096\ \textcolor{comment}{\ \ \ \ \ *\ the\ curve)\ then\ xonly\_pubkey\_parse\ should\ fail\ as\ well.\ */}}
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ COUNT;\ i++)\ \{}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ rand33[33];}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ testrand256(\&rand33[1]);}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ rand33[0]\ =\ SECP256K1\_TAG\_PUBKEY\_EVEN;}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_ec\_pubkey\_parse(CTX,\ \&pk,\ rand33,\ 33))\ \{}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \ \ \ \ memset(\&xonly\_pk,\ 1,\ \textcolor{keyword}{sizeof}(xonly\_pk));}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&xonly\_pk,\ \&rand33[1])\ ==\ 0);}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&xonly\_pk,\ zeros64,\ \textcolor{keyword}{sizeof}(xonly\_pk))\ ==\ 0);}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&xonly\_pk,\ \&rand33[1])\ ==\ 1);}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00108\ \ \ \ \ \}}
+\DoxyCodeLine{00109\ \}}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00111\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_xonly\_pubkey\_comparison(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk1\_ser[32]\ =\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ 0x58,\ 0x84,\ 0xb3,\ 0xa2,\ 0x4b,\ 0x97,\ 0x37,\ 0x88,\ 0x92,\ 0x38,\ 0xa6,\ 0x26,\ 0x62,\ 0x52,\ 0x35,\ 0x11,}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ 0xd0,\ 0x9a,\ 0xa1,\ 0x1b,\ 0x80,\ 0x0b,\ 0x5e,\ 0x93,\ 0x80,\ 0x26,\ 0x11,\ 0xef,\ 0x67,\ 0x4b,\ 0xd9,\ 0x23}
+\DoxyCodeLine{00115\ \ \ \ \ \};}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk2\_ser[32]\ =\ \{}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ 0xde,\ 0x36,\ 0x0e,\ 0x87,\ 0x59,\ 0x8f,\ 0x3c,\ 0x01,\ 0x36,\ 0x2a,\ 0x2a,\ 0xb8,\ 0xc6,\ 0xf4,\ 0x5e,\ 0x4d,}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ 0xb2,\ 0xc2,\ 0xd5,\ 0x03,\ 0xa7,\ 0xf9,\ 0xf1,\ 0x4f,\ 0xa8,\ 0xfa,\ 0x95,\ 0xa8,\ 0xe9,\ 0x69,\ 0x76,\ 0x1c}
+\DoxyCodeLine{00119\ \ \ \ \ \};}
+\DoxyCodeLine{00120\ \ \ \ \ secp256k1\_xonly\_pubkey\ pk1;}
+\DoxyCodeLine{00121\ \ \ \ \ secp256k1\_xonly\_pubkey\ pk2;}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&pk1,\ pk1\_ser)\ ==\ 1);}
+\DoxyCodeLine{00124\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&pk2,\ pk2\_ser)\ ==\ 1);}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \ \ \ \ CHECK\_ILLEGAL\_VOID(CTX,\ CHECK(secp256k1\_xonly\_pubkey\_cmp(CTX,\ NULL,\ \&pk2)\ <\ 0));}
+\DoxyCodeLine{00127\ \ \ \ \ CHECK\_ILLEGAL\_VOID(CTX,\ CHECK(secp256k1\_xonly\_pubkey\_cmp(CTX,\ \&pk1,\ NULL)\ >\ 0));}
+\DoxyCodeLine{00128\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_cmp(CTX,\ \&pk1,\ \&pk2)\ <\ 0);}
+\DoxyCodeLine{00129\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_cmp(CTX,\ \&pk2,\ \&pk1)\ >\ 0);}
+\DoxyCodeLine{00130\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_cmp(CTX,\ \&pk1,\ \&pk1)\ ==\ 0);}
+\DoxyCodeLine{00131\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_cmp(CTX,\ \&pk2,\ \&pk2)\ ==\ 0);}
+\DoxyCodeLine{00132\ \ \ \ \ memset(\&pk1,\ 0,\ \textcolor{keyword}{sizeof}(pk1));\ \textcolor{comment}{/*\ illegal\ pubkey\ */}}
+\DoxyCodeLine{00133\ \ \ \ \ CHECK\_ILLEGAL\_VOID(CTX,\ CHECK(secp256k1\_xonly\_pubkey\_cmp(CTX,\ \&pk1,\ \&pk2)\ <\ 0));}
+\DoxyCodeLine{00134\ \ \ \ \ \{}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ int32\_t\ ecount\ =\ 0;}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ secp256k1\_context\_set\_illegal\_callback(CTX,\ counting\_callback\_fn,\ \&ecount);}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_cmp(CTX,\ \&pk1,\ \&pk1)\ ==\ 0);}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ CHECK(ecount\ ==\ 2);}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ secp256k1\_context\_set\_illegal\_callback(CTX,\ NULL,\ NULL);}
+\DoxyCodeLine{00140\ \ \ \ \ \}}
+\DoxyCodeLine{00141\ \ \ \ \ CHECK\_ILLEGAL\_VOID(CTX,\ CHECK(secp256k1\_xonly\_pubkey\_cmp(CTX,\ \&pk2,\ \&pk1)\ >\ 0));}
+\DoxyCodeLine{00142\ \}}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00144\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_xonly\_pubkey\_tweak(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ zeros64[64]\ =\ \{\ 0\ \};}
+\DoxyCodeLine{00146\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ overflows[32];}
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32];}
+\DoxyCodeLine{00148\ \ \ \ \ secp256k1\_pubkey\ internal\_pk;}
+\DoxyCodeLine{00149\ \ \ \ \ secp256k1\_xonly\_pubkey\ internal\_xonly\_pk;}
+\DoxyCodeLine{00150\ \ \ \ \ secp256k1\_pubkey\ output\_pk;}
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{keywordtype}{int}\ pk\_parity;}
+\DoxyCodeLine{00152\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tweak[32];}
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00154\ }
+\DoxyCodeLine{00155\ \ \ \ \ memset(overflows,\ 0xff,\ \textcolor{keyword}{sizeof}(overflows));}
+\DoxyCodeLine{00156\ \ \ \ \ testrand256(tweak);}
+\DoxyCodeLine{00157\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00158\ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_create(CTX,\ \&internal\_pk,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00159\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&internal\_xonly\_pk,\ \&pk\_parity,\ \&internal\_pk)\ ==\ 1);}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00161\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00162\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00163\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00164\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ NULL,\ \&internal\_xonly\_pk,\ tweak));}
+\DoxyCodeLine{00165\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ NULL,\ tweak));}
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{comment}{/*\ NULL\ internal\_xonly\_pk\ zeroes\ the\ output\_pk\ */}}
+\DoxyCodeLine{00167\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&output\_pk,\ zeros64,\ \textcolor{keyword}{sizeof}(output\_pk))\ ==\ 0);}
+\DoxyCodeLine{00168\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ NULL));}
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{comment}{/*\ NULL\ tweak\ zeroes\ the\ output\_pk\ */}}
+\DoxyCodeLine{00170\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&output\_pk,\ zeros64,\ \textcolor{keyword}{sizeof}(output\_pk))\ ==\ 0);}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{comment}{/*\ Invalid\ tweak\ zeroes\ the\ output\_pk\ */}}
+\DoxyCodeLine{00173\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ overflows)\ ==\ 0);}
+\DoxyCodeLine{00174\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&output\_pk,\ zeros64,\ \textcolor{keyword}{sizeof}(output\_pk))\ \ ==\ 0);}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ \ \ \ \ \textcolor{comment}{/*\ A\ zero\ tweak\ is\ fine\ */}}
+\DoxyCodeLine{00177\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ zeros64)\ ==\ 1);}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{comment}{/*\ Fails\ if\ the\ resulting\ key\ was\ infinity\ */}}
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ COUNT;\ i++)\ \{}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ secp256k1\_scalar\ scalar\_tweak;}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Because\ sk\ may\ be\ negated\ before\ adding,\ we\ need\ to\ try\ with\ tweak\ =}}
+\DoxyCodeLine{00183\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ sk\ as\ well\ as\ tweak\ =\ -\/sk.\ */}}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_b32(\&scalar\_tweak,\ sk,\ NULL);}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_negate(\&scalar\_tweak,\ \&scalar\_tweak);}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_get\_b32(tweak,\ \&scalar\_tweak);}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ CHECK((secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ sk)\ ==\ 0)}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ||\ (secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 0));}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&output\_pk,\ zeros64,\ \textcolor{keyword}{sizeof}(output\_pk))\ ==\ 0);}
+\DoxyCodeLine{00190\ \ \ \ \ \}}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{comment}{/*\ Invalid\ pk\ with\ a\ valid\ tweak\ */}}
+\DoxyCodeLine{00193\ \ \ \ \ memset(\&internal\_xonly\_pk,\ 0,\ \textcolor{keyword}{sizeof}(internal\_xonly\_pk));}
+\DoxyCodeLine{00194\ \ \ \ \ testrand256(tweak);}
+\DoxyCodeLine{00195\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ tweak));}
+\DoxyCodeLine{00196\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&output\_pk,\ zeros64,\ \textcolor{keyword}{sizeof}(output\_pk))\ \ ==\ 0);}
+\DoxyCodeLine{00197\ \}}
+\DoxyCodeLine{00198\ }
+\DoxyCodeLine{00199\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_xonly\_pubkey\_tweak\_check(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00200\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ zeros64[64]\ =\ \{\ 0\ \};}
+\DoxyCodeLine{00201\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ overflows[32];}
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32];}
+\DoxyCodeLine{00203\ \ \ \ \ secp256k1\_pubkey\ internal\_pk;}
+\DoxyCodeLine{00204\ \ \ \ \ secp256k1\_xonly\_pubkey\ internal\_xonly\_pk;}
+\DoxyCodeLine{00205\ \ \ \ \ secp256k1\_pubkey\ output\_pk;}
+\DoxyCodeLine{00206\ \ \ \ \ secp256k1\_xonly\_pubkey\ output\_xonly\_pk;}
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ output\_pk32[32];}
+\DoxyCodeLine{00208\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ buf32[32];}
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{keywordtype}{int}\ pk\_parity;}
+\DoxyCodeLine{00210\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tweak[32];}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \ \ \ \ memset(overflows,\ 0xff,\ \textcolor{keyword}{sizeof}(overflows));}
+\DoxyCodeLine{00213\ \ \ \ \ testrand256(tweak);}
+\DoxyCodeLine{00214\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00215\ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_create(CTX,\ \&internal\_pk,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00216\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&internal\_xonly\_pk,\ \&pk\_parity,\ \&internal\_pk)\ ==\ 1);}
+\DoxyCodeLine{00217\ }
+\DoxyCodeLine{00218\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00219\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&output\_xonly\_pk,\ \&pk\_parity,\ \&output\_pk)\ ==\ 1);}
+\DoxyCodeLine{00220\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(CTX,\ buf32,\ \&output\_xonly\_pk)\ ==\ 1);}
+\DoxyCodeLine{00221\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ buf32,\ pk\_parity,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00222\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ buf32,\ pk\_parity,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00223\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ buf32,\ pk\_parity,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00224\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ NULL,\ pk\_parity,\ \&internal\_xonly\_pk,\ tweak));}
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{comment}{/*\ invalid\ pk\_parity\ value\ */}}
+\DoxyCodeLine{00226\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ buf32,\ 2,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 0);}
+\DoxyCodeLine{00227\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ buf32,\ pk\_parity,\ NULL,\ tweak));}
+\DoxyCodeLine{00228\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ buf32,\ pk\_parity,\ \&internal\_xonly\_pk,\ NULL));}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00230\ \ \ \ \ memset(tweak,\ 1,\ \textcolor{keyword}{sizeof}(tweak));}
+\DoxyCodeLine{00231\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&internal\_xonly\_pk,\ NULL,\ \&internal\_pk)\ ==\ 1);}
+\DoxyCodeLine{00232\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00233\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&output\_xonly\_pk,\ \&pk\_parity,\ \&output\_pk)\ ==\ 1);}
+\DoxyCodeLine{00234\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(CTX,\ output\_pk32,\ \&output\_xonly\_pk)\ ==\ 1);}
+\DoxyCodeLine{00235\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ output\_pk32,\ pk\_parity,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00236\ }
+\DoxyCodeLine{00237\ \ \ \ \ \textcolor{comment}{/*\ Wrong\ pk\_parity\ */}}
+\DoxyCodeLine{00238\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ output\_pk32,\ !pk\_parity,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 0);}
+\DoxyCodeLine{00239\ \ \ \ \ \textcolor{comment}{/*\ Wrong\ public\ key\ */}}
+\DoxyCodeLine{00240\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(CTX,\ buf32,\ \&internal\_xonly\_pk)\ ==\ 1);}
+\DoxyCodeLine{00241\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ buf32,\ pk\_parity,\ \&internal\_xonly\_pk,\ tweak)\ ==\ 0);}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{comment}{/*\ Overflowing\ tweak\ not\ allowed\ */}}
+\DoxyCodeLine{00244\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ output\_pk32,\ pk\_parity,\ \&internal\_xonly\_pk,\ overflows)\ ==\ 0);}
+\DoxyCodeLine{00245\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk,\ \&internal\_xonly\_pk,\ overflows)\ ==\ 0);}
+\DoxyCodeLine{00246\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&output\_pk,\ zeros64,\ \textcolor{keyword}{sizeof}(output\_pk))\ ==\ 0);}
+\DoxyCodeLine{00247\ \}}
+\DoxyCodeLine{00248\ }
+\DoxyCodeLine{00249\ \textcolor{comment}{/*\ Starts\ with\ an\ initial\ pubkey\ and\ recursively\ creates\ N\_PUBKEYS\ -\/\ 1}}
+\DoxyCodeLine{00250\ \textcolor{comment}{\ *\ additional\ pubkeys\ by\ calling\ tweak\_add.\ Then\ verifies\ every\ tweak\ starting}}
+\DoxyCodeLine{00251\ \textcolor{comment}{\ *\ from\ the\ last\ pubkey.\ */}}
+\DoxyCodeLine{00252\ \textcolor{preprocessor}{\#define\ N\_PUBKEYS\ 32}}
+\DoxyCodeLine{00253\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_xonly\_pubkey\_tweak\_recursive(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00254\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32];}
+\DoxyCodeLine{00255\ \ \ \ \ secp256k1\_pubkey\ pk[N\_PUBKEYS];}
+\DoxyCodeLine{00256\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk\_serialized[32];}
+\DoxyCodeLine{00257\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tweak[N\_PUBKEYS\ -\/\ 1][32];}
+\DoxyCodeLine{00258\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00260\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00261\ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_create(CTX,\ \&pk[0],\ sk)\ ==\ 1);}
+\DoxyCodeLine{00262\ \ \ \ \ \textcolor{comment}{/*\ Add\ tweaks\ */}}
+\DoxyCodeLine{00263\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ N\_PUBKEYS\ -\/\ 1;\ i++)\ \{}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ secp256k1\_xonly\_pubkey\ xonly\_pk;}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ memset(tweak[i],\ i\ +\ 1,\ \textcolor{keyword}{sizeof}(tweak[i]));}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ NULL,\ \&pk[i])\ ==\ 1);}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&pk[i\ +\ 1],\ \&xonly\_pk,\ tweak[i])\ ==\ 1);}
+\DoxyCodeLine{00268\ \ \ \ \ \}}
+\DoxyCodeLine{00269\ }
+\DoxyCodeLine{00270\ \ \ \ \ \textcolor{comment}{/*\ Verify\ tweaks\ */}}
+\DoxyCodeLine{00271\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ N\_PUBKEYS\ -\/\ 1;\ i\ >\ 0;\ i-\/-\/)\ \{}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ secp256k1\_xonly\_pubkey\ xonly\_pk;}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ pk\_parity;}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ \&pk[i])\ ==\ 1);}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(CTX,\ pk\_serialized,\ \&xonly\_pk)\ ==\ 1);}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ NULL,\ \&pk[i\ -\/\ 1])\ ==\ 1);}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ pk\_serialized,\ pk\_parity,\ \&xonly\_pk,\ tweak[i\ -\/\ 1])\ ==\ 1);}
+\DoxyCodeLine{00278\ \ \ \ \ \}}
+\DoxyCodeLine{00279\ \}}
+\DoxyCodeLine{00280\ \textcolor{preprocessor}{\#undef\ N\_PUBKEYS}}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00282\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_keypair(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00283\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32];}
+\DoxyCodeLine{00284\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk\_tmp[32];}
+\DoxyCodeLine{00285\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ zeros96[96]\ =\ \{\ 0\ \};}
+\DoxyCodeLine{00286\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ overflows[32];}
+\DoxyCodeLine{00287\ \ \ \ \ secp256k1\_keypair\ keypair;}
+\DoxyCodeLine{00288\ \ \ \ \ secp256k1\_pubkey\ pk,\ pk\_tmp;}
+\DoxyCodeLine{00289\ \ \ \ \ secp256k1\_xonly\_pubkey\ xonly\_pk,\ xonly\_pk\_tmp;}
+\DoxyCodeLine{00290\ \ \ \ \ \textcolor{keywordtype}{int}\ pk\_parity,\ pk\_parity\_tmp;}
+\DoxyCodeLine{00291\ }
+\DoxyCodeLine{00292\ \ \ \ \ CHECK(\textcolor{keyword}{sizeof}(zeros96)\ ==\ \textcolor{keyword}{sizeof}(keypair));}
+\DoxyCodeLine{00293\ \ \ \ \ memset(overflows,\ 0xFF,\ \textcolor{keyword}{sizeof}(overflows));}
+\DoxyCodeLine{00294\ }
+\DoxyCodeLine{00295\ \ \ \ \ \textcolor{comment}{/*\ Test\ keypair\_create\ */}}
+\DoxyCodeLine{00296\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00297\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00298\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ \&keypair,\ \textcolor{keyword}{sizeof}(keypair))\ !=\ 0);}
+\DoxyCodeLine{00299\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00300\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ \&keypair,\ \textcolor{keyword}{sizeof}(keypair))\ !=\ 0);}
+\DoxyCodeLine{00301\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_create(CTX,\ NULL,\ sk));}
+\DoxyCodeLine{00302\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_create(CTX,\ \&keypair,\ NULL));}
+\DoxyCodeLine{00303\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ \&keypair,\ \textcolor{keyword}{sizeof}(keypair))\ ==\ 0);}
+\DoxyCodeLine{00304\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00305\ \ \ \ \ CHECK\_ILLEGAL(STATIC\_CTX,\ secp256k1\_keypair\_create(STATIC\_CTX,\ \&keypair,\ sk));}
+\DoxyCodeLine{00306\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ \&keypair,\ \textcolor{keyword}{sizeof}(keypair))\ ==\ 0);}
+\DoxyCodeLine{00307\ }
+\DoxyCodeLine{00308\ \ \ \ \ \textcolor{comment}{/*\ Invalid\ secret\ key\ */}}
+\DoxyCodeLine{00309\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ zeros96)\ ==\ 0);}
+\DoxyCodeLine{00310\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ \&keypair,\ \textcolor{keyword}{sizeof}(keypair))\ ==\ 0);}
+\DoxyCodeLine{00311\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ overflows)\ ==\ 0);}
+\DoxyCodeLine{00312\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ \&keypair,\ \textcolor{keyword}{sizeof}(keypair))\ ==\ 0);}
+\DoxyCodeLine{00313\ }
+\DoxyCodeLine{00314\ \ \ \ \ \textcolor{comment}{/*\ Test\ keypair\_pub\ */}}
+\DoxyCodeLine{00315\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00316\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00317\ \ \ \ \ CHECK(secp256k1\_keypair\_pub(CTX,\ \&pk,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00318\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_pub(CTX,\ NULL,\ \&keypair));}
+\DoxyCodeLine{00319\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_pub(CTX,\ \&pk,\ NULL));}
+\DoxyCodeLine{00320\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ \&pk,\ \textcolor{keyword}{sizeof}(pk))\ ==\ 0);}
+\DoxyCodeLine{00321\ }
+\DoxyCodeLine{00322\ \ \ \ \ \textcolor{comment}{/*\ Using\ an\ invalid\ keypair\ is\ fine\ for\ keypair\_pub\ */}}
+\DoxyCodeLine{00323\ \ \ \ \ memset(\&keypair,\ 0,\ \textcolor{keyword}{sizeof}(keypair));}
+\DoxyCodeLine{00324\ \ \ \ \ CHECK(secp256k1\_keypair\_pub(CTX,\ \&pk,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00325\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ \&pk,\ \textcolor{keyword}{sizeof}(pk))\ ==\ 0);}
+\DoxyCodeLine{00326\ }
+\DoxyCodeLine{00327\ \ \ \ \ \textcolor{comment}{/*\ keypair\ holds\ the\ same\ pubkey\ as\ pubkey\_create\ */}}
+\DoxyCodeLine{00328\ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_create(CTX,\ \&pk,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00329\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00330\ \ \ \ \ CHECK(secp256k1\_keypair\_pub(CTX,\ \&pk\_tmp,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00331\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&pk,\ \&pk\_tmp,\ \textcolor{keyword}{sizeof}(pk))\ ==\ 0);}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00334\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00335\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00336\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00337\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_xonly\_pub(CTX,\ NULL,\ \&pk\_parity,\ \&keypair));}
+\DoxyCodeLine{00338\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&xonly\_pk,\ NULL,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00339\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_xonly\_pub(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ NULL));}
+\DoxyCodeLine{00340\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ \&xonly\_pk,\ \textcolor{keyword}{sizeof}(xonly\_pk))\ ==\ 0);}
+\DoxyCodeLine{00341\ \ \ \ \ \textcolor{comment}{/*\ Using\ an\ invalid\ keypair\ will\ set\ the\ xonly\_pk\ to\ 0\ (first\ reset}}
+\DoxyCodeLine{00342\ \textcolor{comment}{\ \ \ \ \ *\ xonly\_pk).\ */}}
+\DoxyCodeLine{00343\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00344\ \ \ \ \ memset(\&keypair,\ 0,\ \textcolor{keyword}{sizeof}(keypair));}
+\DoxyCodeLine{00345\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_xonly\_pub(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ \&keypair));}
+\DoxyCodeLine{00346\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ \&xonly\_pk,\ \textcolor{keyword}{sizeof}(xonly\_pk))\ ==\ 0);}
+\DoxyCodeLine{00347\ }
+\DoxyCodeLine{00349\ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_create(CTX,\ \&pk,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00350\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&xonly\_pk,\ \&pk\_parity,\ \&pk)\ ==\ 1);}
+\DoxyCodeLine{00351\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00352\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&xonly\_pk\_tmp,\ \&pk\_parity\_tmp,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00353\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&xonly\_pk,\ \&xonly\_pk\_tmp,\ \textcolor{keyword}{sizeof}(pk))\ ==\ 0);}
+\DoxyCodeLine{00354\ \ \ \ \ CHECK(pk\_parity\ ==\ pk\_parity\_tmp);}
+\DoxyCodeLine{00355\ }
+\DoxyCodeLine{00356\ \ \ \ \ \textcolor{comment}{/*\ Test\ keypair\_seckey\ */}}
+\DoxyCodeLine{00357\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00358\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00359\ \ \ \ \ CHECK(secp256k1\_keypair\_sec(CTX,\ sk\_tmp,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00360\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_sec(CTX,\ NULL,\ \&keypair));}
+\DoxyCodeLine{00361\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_sec(CTX,\ sk\_tmp,\ NULL));}
+\DoxyCodeLine{00362\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ sk\_tmp,\ \textcolor{keyword}{sizeof}(sk\_tmp))\ ==\ 0);}
+\DoxyCodeLine{00363\ }
+\DoxyCodeLine{00364\ \ \ \ \ \textcolor{comment}{/*\ keypair\ returns\ the\ same\ seckey\ it\ got\ */}}
+\DoxyCodeLine{00365\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00366\ \ \ \ \ CHECK(secp256k1\_keypair\_sec(CTX,\ sk\_tmp,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00367\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(sk,\ sk\_tmp,\ \textcolor{keyword}{sizeof}(sk\_tmp))\ ==\ 0);}
+\DoxyCodeLine{00368\ }
+\DoxyCodeLine{00369\ }
+\DoxyCodeLine{00370\ \ \ \ \ \textcolor{comment}{/*\ Using\ an\ invalid\ keypair\ is\ fine\ for\ keypair\_seckey\ */}}
+\DoxyCodeLine{00371\ \ \ \ \ memset(\&keypair,\ 0,\ \textcolor{keyword}{sizeof}(keypair));}
+\DoxyCodeLine{00372\ \ \ \ \ CHECK(secp256k1\_keypair\_sec(CTX,\ sk\_tmp,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00373\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(zeros96,\ sk\_tmp,\ \textcolor{keyword}{sizeof}(sk\_tmp))\ ==\ 0);}
+\DoxyCodeLine{00374\ \}}
+\DoxyCodeLine{00375\ }
+\DoxyCodeLine{00376\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_keypair\_add(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00377\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32];}
+\DoxyCodeLine{00378\ \ \ \ \ secp256k1\_keypair\ keypair;}
+\DoxyCodeLine{00379\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ overflows[32];}
+\DoxyCodeLine{00380\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ zeros96[96]\ =\ \{\ 0\ \};}
+\DoxyCodeLine{00381\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tweak[32];}
+\DoxyCodeLine{00382\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00383\ }
+\DoxyCodeLine{00384\ \ \ \ \ CHECK(\textcolor{keyword}{sizeof}(zeros96)\ ==\ \textcolor{keyword}{sizeof}(keypair));}
+\DoxyCodeLine{00385\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00386\ \ \ \ \ testrand256(tweak);}
+\DoxyCodeLine{00387\ \ \ \ \ memset(overflows,\ 0xFF,\ 32);}
+\DoxyCodeLine{00388\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00389\ }
+\DoxyCodeLine{00390\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00391\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00392\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00393\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ NULL,\ tweak));}
+\DoxyCodeLine{00394\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ NULL));}
+\DoxyCodeLine{00395\ \ \ \ \ \textcolor{comment}{/*\ This\ does\ not\ set\ the\ keypair\ to\ zeroes\ */}}
+\DoxyCodeLine{00396\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&keypair,\ zeros96,\ \textcolor{keyword}{sizeof}(keypair))\ !=\ 0);}
+\DoxyCodeLine{00397\ }
+\DoxyCodeLine{00398\ \ \ \ \ \textcolor{comment}{/*\ Invalid\ tweak\ zeroes\ the\ keypair\ */}}
+\DoxyCodeLine{00399\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00400\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ overflows)\ ==\ 0);}
+\DoxyCodeLine{00401\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&keypair,\ zeros96,\ \textcolor{keyword}{sizeof}(keypair))\ \ ==\ 0);}
+\DoxyCodeLine{00402\ }
+\DoxyCodeLine{00403\ \ \ \ \ \textcolor{comment}{/*\ A\ zero\ tweak\ is\ fine\ */}}
+\DoxyCodeLine{00404\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00405\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ zeros96)\ ==\ 1);}
+\DoxyCodeLine{00406\ }
+\DoxyCodeLine{00407\ \ \ \ \ \textcolor{comment}{/*\ Fails\ if\ the\ resulting\ keypair\ was\ (sk=0,\ pk=infinity)\ */}}
+\DoxyCodeLine{00408\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ COUNT;\ i++)\ \{}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ secp256k1\_scalar\ scalar\_tweak;}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ secp256k1\_keypair\ keypair\_tmp;}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ memcpy(\&keypair\_tmp,\ \&keypair,\ \textcolor{keyword}{sizeof}(keypair));}
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Because\ sk\ may\ be\ negated\ before\ adding,\ we\ need\ to\ try\ with\ tweak\ =}}
+\DoxyCodeLine{00415\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ sk\ as\ well\ as\ tweak\ =\ -\/sk.\ */}}
+\DoxyCodeLine{00416\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_b32(\&scalar\_tweak,\ sk,\ NULL);}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_negate(\&scalar\_tweak,\ \&scalar\_tweak);}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_get\_b32(tweak,\ \&scalar\_tweak);}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ CHECK((secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ sk)\ ==\ 0)}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ||\ (secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair\_tmp,\ tweak)\ ==\ 0));}
+\DoxyCodeLine{00421\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&keypair,\ zeros96,\ \textcolor{keyword}{sizeof}(keypair))\ ==\ 0}
+\DoxyCodeLine{00422\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ||\ secp256k1\_memcmp\_var(\&keypair\_tmp,\ zeros96,\ \textcolor{keyword}{sizeof}(keypair\_tmp))\ ==\ 0);}
+\DoxyCodeLine{00423\ \ \ \ \ \}}
+\DoxyCodeLine{00424\ }
+\DoxyCodeLine{00425\ \ \ \ \ \textcolor{comment}{/*\ Invalid\ keypair\ with\ a\ valid\ tweak\ */}}
+\DoxyCodeLine{00426\ \ \ \ \ memset(\&keypair,\ 0,\ \textcolor{keyword}{sizeof}(keypair));}
+\DoxyCodeLine{00427\ \ \ \ \ testrand256(tweak);}
+\DoxyCodeLine{00428\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ tweak));}
+\DoxyCodeLine{00429\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&keypair,\ zeros96,\ \textcolor{keyword}{sizeof}(keypair))\ \ ==\ 0);}
+\DoxyCodeLine{00430\ \ \ \ \ \textcolor{comment}{/*\ Only\ seckey\ part\ of\ keypair\ invalid\ */}}
+\DoxyCodeLine{00431\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00432\ \ \ \ \ memset(\&keypair,\ 0,\ 32);}
+\DoxyCodeLine{00433\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ tweak));}
+\DoxyCodeLine{00434\ \ \ \ \ \textcolor{comment}{/*\ Only\ pubkey\ part\ of\ keypair\ invalid\ */}}
+\DoxyCodeLine{00435\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00436\ \ \ \ \ memset(\&keypair.data[32],\ 0,\ 64);}
+\DoxyCodeLine{00437\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ tweak));}
+\DoxyCodeLine{00438\ }
+\DoxyCodeLine{00439\ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ the\ keypair\_tweak\_add\ implementation\ is\ correct\ */}}
+\DoxyCodeLine{00440\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00441\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ COUNT;\ i++)\ \{}
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ secp256k1\_xonly\_pubkey\ internal\_pk;}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ secp256k1\_xonly\_pubkey\ output\_pk;}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ secp256k1\_pubkey\ output\_pk\_xy;}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ secp256k1\_pubkey\ output\_pk\_expected;}
+\DoxyCodeLine{00446\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk32[32];}
+\DoxyCodeLine{00447\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk32[32];}
+\DoxyCodeLine{00448\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ pk\_parity;}
+\DoxyCodeLine{00449\ }
+\DoxyCodeLine{00450\ \ \ \ \ \ \ \ \ testrand256(tweak);}
+\DoxyCodeLine{00451\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&internal\_pk,\ NULL,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00452\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00453\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&output\_pk,\ \&pk\_parity,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00454\ }
+\DoxyCodeLine{00455\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ it\ passes\ xonly\_pubkey\_tweak\_add\_check\ */}}
+\DoxyCodeLine{00456\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(CTX,\ pk32,\ \&output\_pk)\ ==\ 1);}
+\DoxyCodeLine{00457\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ pk32,\ pk\_parity,\ \&internal\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00458\ }
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ the\ resulting\ pubkey\ matches\ xonly\_pubkey\_tweak\_add\ */}}
+\DoxyCodeLine{00460\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_pub(CTX,\ \&output\_pk\_xy,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00461\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add(CTX,\ \&output\_pk\_expected,\ \&internal\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00462\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&output\_pk\_xy,\ \&output\_pk\_expected,\ \textcolor{keyword}{sizeof}(output\_pk\_xy))\ ==\ 0);}
+\DoxyCodeLine{00463\ }
+\DoxyCodeLine{00464\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ the\ secret\ key\ in\ the\ keypair\ is\ tweaked\ correctly\ */}}
+\DoxyCodeLine{00465\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_sec(CTX,\ sk32,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00466\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_create(CTX,\ \&output\_pk\_expected,\ sk32)\ ==\ 1);}
+\DoxyCodeLine{00467\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&output\_pk\_xy,\ \&output\_pk\_expected,\ \textcolor{keyword}{sizeof}(output\_pk\_xy))\ ==\ 0);}
+\DoxyCodeLine{00468\ \ \ \ \ \}}
+\DoxyCodeLine{00469\ \}}
+\DoxyCodeLine{00470\ }
+\DoxyCodeLine{00471\ \textcolor{comment}{/*\ -\/-\/-\/\ Test\ registry\ -\/-\/-\/\ */}}
+\DoxyCodeLine{00472\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }tf\_test\_entry\ tests\_extrakeys[]\ =\ \{}
+\DoxyCodeLine{00473\ \ \ \ \ \textcolor{comment}{/*\ xonly\ key\ test\ cases\ */}}
+\DoxyCodeLine{00474\ \ \ \ \ CASE1(test\_xonly\_pubkey),}
+\DoxyCodeLine{00475\ \ \ \ \ CASE1(test\_xonly\_pubkey\_tweak),}
+\DoxyCodeLine{00476\ \ \ \ \ CASE1(test\_xonly\_pubkey\_tweak\_check),}
+\DoxyCodeLine{00477\ \ \ \ \ CASE1(test\_xonly\_pubkey\_tweak\_recursive),}
+\DoxyCodeLine{00478\ \ \ \ \ CASE1(test\_xonly\_pubkey\_comparison),}
+\DoxyCodeLine{00479\ \ \ \ \ \textcolor{comment}{/*\ keypair\ tests\ */}}
+\DoxyCodeLine{00480\ \ \ \ \ CASE1(test\_keypair),}
+\DoxyCodeLine{00481\ \ \ \ \ CASE1(test\_keypair\_add),}
+\DoxyCodeLine{00482\ \};}
+\DoxyCodeLine{00483\ }
+\DoxyCodeLine{00484\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

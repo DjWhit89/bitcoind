@@ -1,0 +1,84 @@
+\chapter{Contributing to libsecp256k1 }
+\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g}\index{Contributing to libsecp256k1@{Contributing to libsecp256k1}}
+\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md171}%
+\doxysection{Scope}\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md172}
+libsecp256k1 is a library for elliptic curve cryptography on the curve secp256k1, not a general-\/purpose cryptography library. The library primarily serves the needs of the Bitcoin Core project but provides additional functionality for the benefit of the wider Bitcoin ecosystem.\doxysection{Adding new functionality or modules}\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md173}
+The libsecp256k1 project welcomes contributions in the form of new functionality or modules, provided they are within the project\textquotesingle{}s scope.
+
+It is the responsibility of the contributors to convince the maintainers that the proposed functionality is within the project\textquotesingle{}s scope, high-\/quality and maintainable. Contributors are recommended to provide the following in addition to the new code\+:
+
+
+\begin{DoxyItemize}
+\item {\bfseries{Specification\+:}} A specification can help significantly in reviewing the new code as it provides documentation and context. It may justify various design decisions, give a motivation and outline security goals. If the specification contains pseudocode, a reference implementation or test vectors, these can be used to compare with the proposed libsecp256k1 code.
+\item {\bfseries{Security Arguments\+:}} In addition to a defining the security goals, it should be argued that the new functionality meets these goals. Depending on the nature of the new functionality, a wide range of security arguments are acceptable, ranging from being "{}obviously secure"{} to rigorous proofs of security.
+\item {\bfseries{Relevance Arguments\+:}} The relevance of the new functionality for the Bitcoin ecosystem should be argued by outlining clear use cases.
+\end{DoxyItemize}
+
+These are not the only factors taken into account when considering to add new functionality. The proposed new libsecp256k1 code must be of high quality, including API documentation and tests, as well as featuring a misuse-\/resistant API design.
+
+We recommend reaching out to other contributors (see Communication Channels) and get feedback before implementing new functionality.\doxysection{Communication channels}\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md174}
+Most communication about libsecp256k1 occurs on the Git\+Hub repository\+: in issues, pull request or on the discussion board.
+
+Additionally, there is an IRC channel dedicated to libsecp256k1, with biweekly meetings (see channel topic). The channel is {\ttfamily \#secp256k1} on Libera Chat. The easiest way to participate on IRC is with the web client, {\texttt{web.\+libera.\+chat}}. Chat history logs can be found at {\texttt{https\+://gnusha.\+org/secp256k1/}}.\doxysection{Contributor workflow \& peer review}\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md175}
+The Contributor Workflow \& Peer Review in libsecp256k1 are similar to Bitcoin Core\textquotesingle{}s workflow and review processes described in its {\texttt{CONTRIBUTING.\+md}}.\doxysubsection{Coding conventions}\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md176}
+In addition, libsecp256k1 tries to maintain the following coding conventions\+:
+
+
+\begin{DoxyItemize}
+\item No runtime heap allocation (e.\+g., no {\ttfamily malloc}) unless explicitly requested by the caller (via {\ttfamily \doxyref{secp256k1\+\_\+context\+\_\+create}{p.}{secp256k1_8h_a3aaa9fcc3ab67bc8f841779a049069c5}} or {\ttfamily secp256k1\+\_\+scratch\+\_\+space\+\_\+create}, for example). Moreover, it should be possible to use the library without any heap allocations.
+\item The tests should cover all lines and branches of the library (see Test coverage).
+\item Operations involving secret data should be tested for being constant time with respect to the secrets (see {\texttt{src/ctime\+\_\+tests.\+c}}).
+\item Local variables containing secret data should be cleared explicitly to try to delete secrets from memory.
+\item Use {\ttfamily secp256k1\+\_\+memcmp\+\_\+var} instead of {\ttfamily memcmp} (see {\texttt{\#823}}).
+\item As a rule of thumb, the default values for configuration options should target standard desktop machines and align with Bitcoin Core\textquotesingle{}s defaults, and the tests should mostly exercise the default configuration (see {\texttt{\#1549}}).
+\end{DoxyItemize}\doxysubsubsection{Style conventions}\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md177}
+
+\begin{DoxyItemize}
+\item Commits should be atomic and diffs should be easy to read. For this reason, do not mix any formatting fixes or code moves with actual code changes. Make sure each individual commit is hygienic\+: that it builds successfully on its own without warnings, errors, regressions, or test failures.
+\item New code should adhere to the style of existing, in particular surrounding, code. Other than that, we do not enforce strict rules for code formatting.
+\item The code conforms to C89. Most notably, that means that only {\ttfamily /$\ast$ ... $\ast$/} comments are allowed (no {\ttfamily //} line comments). Moreover, any declarations in a {\ttfamily \{ ... \}} block (e.\+g., a function) must appear at the beginning of the block before any statements. When you would like to declare a variable in the middle of a block, you can open a new block\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{keywordtype}{void}\ secp256k\_foo(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ x;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ declaration\ */}}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordtype}{int}\ y\ =\ 2*x;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ declaration\ */}}
+\DoxyCodeLine{\ \ \ \ x\ =\ 17;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ statement\ */}}
+\DoxyCodeLine{\ \ \ \ \{}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ a,\ b;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ declaration\ */}}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ a\ =\ x\ +\ y;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ statement\ */}}
+\DoxyCodeLine{\ \ \ \ \ \ \ \ secp256k\_bar(x,\ \&b);\ \ \ \ \ \textcolor{comment}{/*\ statement\ */}}
+\DoxyCodeLine{\ \ \ \ \}}
+\DoxyCodeLine{\}}
+
+\end{DoxyCode}
+
+\item Use {\ttfamily unsigned int} instead of just {\ttfamily unsigned}.
+\item Use {\ttfamily void $\ast$ptr} instead of {\ttfamily void$\ast$ ptr}.
+\item Arguments of the publicly-\/facing API must have a specific order defined in {\texttt{include/secp256k1.\+h}}.
+\item User-\/facing comment lines in headers should be limited to 80 chars if possible.
+\item All identifiers in file scope should start with {\ttfamily secp256k1\+\_\+}.
+\item Avoid trailing whitespace.
+\item Use the constants {\ttfamily \doxyref{EXIT\+\_\+\+SUCCESS}{p.}{bitcoin-wallet_8cpp_a1a8bb385160d2854b0c2ebb85db2d212}}/{\ttfamily EXIT\+\_\+\+FAILURE} (defined in {\ttfamily stdlib.\+h}) to indicate program execution status for examples and other binaries.
+\end{DoxyItemize}\doxysubsection{Tests}\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md178}
+\doxysubsubsection{Coverage}\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md179}
+This library aims to have full coverage of reachable lines and branches.
+
+To create a test coverage report, configure with {\ttfamily -\/-\/enable-\/coverage} (use of GCC is necessary)\+: \begin{DoxyVerb}$ ./configure --enable-coverage
+\end{DoxyVerb}
+
+
+Run the tests\+: \begin{DoxyVerb}$ make check
+\end{DoxyVerb}
+
+
+To create a report, {\ttfamily gcovr} is recommended, as it includes branch coverage reporting\+: \begin{DoxyVerb}$ gcovr --gcov-ignore-parse-errors=all --merge-mode-functions=separate --exclude 'src/bench*' --exclude 'src/modules/.*/bench_impl.h' --print-summary
+\end{DoxyVerb}
+
+
+To create a HTML report with coloured and annotated source code\+: \begin{DoxyVerb}$ mkdir -p coverage
+$ gcovr --gcov-ignore-parse-errors=all --merge-mode-functions=separate --exclude 'src/bench*' --exclude 'src/modules/.*/bench_impl.h' --html --html-details -o coverage/coverage.html
+\end{DoxyVerb}
+
+
+On {\ttfamily gcovr} $>$=8.\+3, {\ttfamily -\/-\/gcov-\/ignore-\/parse-\/errors=all} can be replaced with {\ttfamily -\/-\/gcov-\/suspicious-\/hits-\/threshold=140737488355330}.\doxysubsubsection{Exhaustive tests}\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md180}
+There are tests of several functions in which a small group replaces secp256k1. These tests are {\itshape exhaustive} since they provide all elements and scalars of the small group as input arguments (see {\texttt{src/tests\+\_\+exhaustive.\+c}}).\doxysubsection{Benchmarks}\label{md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md181}
+See {\ttfamily src/bench$\ast$.c} for examples of benchmarks. 

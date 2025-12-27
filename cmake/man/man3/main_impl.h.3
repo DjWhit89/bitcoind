@@ -1,0 +1,83 @@
+.TH "src/secp256k1/src/modules/schnorrsig/main_impl.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/secp256k1/src/modules/schnorrsig/main_impl.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include '\&.\&./\&.\&./\&.\&./include/secp256k1\&.h'\fP
+.br
+\fR#include '\&.\&./\&.\&./\&.\&./include/secp256k1_schnorrsig\&.h'\fP
+.br
+\fR#include '\&.\&./\&.\&./hash\&.h'\fP
+.br
+
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "int \fBsecp256k1_schnorrsig_sign32\fP (const \fBsecp256k1_context\fP *ctx, unsigned char *sig64, const unsigned char *msg32, const \fBsecp256k1_keypair\fP *keypair, const unsigned char *aux_rand32)"
+.br
+.ti -1c
+.RI "int \fBsecp256k1_schnorrsig_sign\fP (const \fBsecp256k1_context\fP *ctx, unsigned char *sig64, const unsigned char *msg32, const \fBsecp256k1_keypair\fP *keypair, const unsigned char *aux_rand32)"
+.br
+.ti -1c
+.RI "int \fBsecp256k1_schnorrsig_sign_custom\fP (const \fBsecp256k1_context\fP *ctx, unsigned char *sig64, const unsigned char *msg, size_t msglen, const \fBsecp256k1_keypair\fP *keypair, \fBsecp256k1_schnorrsig_extraparams\fP *extraparams)"
+.br
+.ti -1c
+.RI "int \fBsecp256k1_schnorrsig_verify\fP (const \fBsecp256k1_context\fP *ctx, const unsigned char *sig64, const unsigned char *msg, size_t msglen, const \fBsecp256k1_xonly_pubkey\fP *pubkey)"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "const \fBsecp256k1_nonce_function_hardened\fP \fBsecp256k1_nonce_function_bip340\fP = nonce_function_bip340"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "int secp256k1_schnorrsig_sign (const \fBsecp256k1_context\fP * ctx, unsigned char * sig64, const unsigned char * msg32, const \fBsecp256k1_keypair\fP * keypair, const unsigned char * aux_rand32)"
+Same as secp256k1_schnorrsig_sign32, but DEPRECATED\&. Will be removed in future versions\&. 
+.SS "int secp256k1_schnorrsig_sign32 (const \fBsecp256k1_context\fP * ctx, unsigned char * sig64, const unsigned char * msg32, const \fBsecp256k1_keypair\fP * keypair, const unsigned char * aux_rand32)"
+Create a Schnorr signature\&.
+
+.PP
+Does \fInot\fP strictly follow BIP-340 because it does not verify the resulting signature\&. Instead, you can manually use secp256k1_schnorrsig_verify and abort if it fails\&.
+
+.PP
+This function only signs 32-byte messages\&. If you have messages of a different size (or the same size but without a context-specific tag prefix), it is recommended to create a 32-byte message hash with secp256k1_tagged_sha256 and then sign the hash\&. Tagged hashing allows providing an context-specific tag for domain separation\&. This prevents signatures from being valid in multiple contexts by accident\&.
+
+.PP
+Returns 1 on success, 0 on failure\&. Args: ctx: pointer to a context object (not secp256k1_context_static)\&. Out: sig64: pointer to a 64-byte array to store the serialized signature\&. In: msg32: the 32-byte message being signed\&. keypair: pointer to an initialized keypair\&. aux_rand32: 32 bytes of fresh randomness\&. While recommended to provide this, it is only supplemental to security and can be NULL\&. A NULL argument is treated the same as an all-zero one\&. See BIP-340 "Default Signing" for a full explanation of this argument and for guidance if randomness is expensive\&. 
+.SS "int secp256k1_schnorrsig_sign_custom (const \fBsecp256k1_context\fP * ctx, unsigned char * sig64, const unsigned char * msg, size_t msglen, const \fBsecp256k1_keypair\fP * keypair, \fBsecp256k1_schnorrsig_extraparams\fP * extraparams)"
+Create a Schnorr signature with a more flexible API\&.
+
+.PP
+Same arguments as secp256k1_schnorrsig_sign except that it allows signing variable length messages and accepts a pointer to an extraparams object that allows customizing signing by passing additional arguments\&.
+
+.PP
+Equivalent to secp256k1_schnorrsig_sign32(\&.\&.\&., aux_rand32) if msglen is 32 and extraparams is initialized as follows: 
+.PP
+.nf
+secp256k1_schnorrsig_extraparams extraparams = SECP256K1_SCHNORRSIG_EXTRAPARAMS_INIT;
+extraparams\&.ndata = (unsigned char*)aux_rand32;
+
+.fi
+.PP
+
+.PP
+Returns 1 on success, 0 on failure\&. Args: ctx: pointer to a context object (not secp256k1_context_static)\&. Out: sig64: pointer to a 64-byte array to store the serialized signature\&. In: msg: the message being signed\&. Can only be NULL if msglen is 0\&. msglen: length of the message\&. keypair: pointer to an initialized keypair\&. extraparams: pointer to an extraparams object (can be NULL)\&. 
+.SS "int secp256k1_schnorrsig_verify (const \fBsecp256k1_context\fP * ctx, const unsigned char * sig64, const unsigned char * msg, size_t msglen, const \fBsecp256k1_xonly_pubkey\fP * pubkey)"
+Verify a Schnorr signature\&.
+
+.PP
+Returns: 1: correct signature 0: incorrect signature Args: ctx: pointer to a context object\&. In: sig64: pointer to the 64-byte signature to verify\&. msg: the message being verified\&. Can only be NULL if msglen is 0\&. msglen: length of the message pubkey: pointer to an x-only public key to verify with 
+.SH "Variable Documentation"
+.PP 
+.SS "const \fBsecp256k1_nonce_function_hardened\fP secp256k1_nonce_function_bip340 = nonce_function_bip340"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

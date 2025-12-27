@@ -1,0 +1,135 @@
+.TH "src/addresstype.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/addresstype.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <attributes\&.h>\fP
+.br
+\fR#include <pubkey\&.h>\fP
+.br
+\fR#include <script/script\&.h>\fP
+.br
+\fR#include <uint256\&.h>\fP
+.br
+\fR#include <util/check\&.h>\fP
+.br
+\fR#include <util/hash_type\&.h>\fP
+.br
+\fR#include <algorithm>\fP
+.br
+\fR#include <variant>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBCNoDestination\fP"
+.br
+.ti -1c
+.RI "struct \fBPubKeyDestination\fP"
+.br
+.ti -1c
+.RI "struct \fBPKHash\fP"
+.br
+.ti -1c
+.RI "struct \fBScriptHash\fP"
+.br
+.ti -1c
+.RI "struct \fBWitnessV0ScriptHash\fP"
+.br
+.ti -1c
+.RI "struct \fBWitnessV0KeyHash\fP"
+.br
+.ti -1c
+.RI "struct \fBWitnessV1Taproot\fP"
+.br
+.ti -1c
+.RI "struct \fBWitnessUnknown\fP"
+.br
+.RI "\fBCTxDestination\fP subtype to encode any future Witness version\&. "
+.ti -1c
+.RI "struct \fBPayToAnchor\fP"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "using \fBCTxDestination\fP = std::variant<\fBCNoDestination\fP, \fBPubKeyDestination\fP, \fBPKHash\fP, \fBScriptHash\fP, \fBWitnessV0ScriptHash\fP, \fBWitnessV0KeyHash\fP, \fBWitnessV1Taproot\fP, \fBPayToAnchor\fP, \fBWitnessUnknown\fP>"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBCKeyID\fP \fBToKeyID\fP (const \fBPKHash\fP &key_hash)"
+.br
+.ti -1c
+.RI "\fBCScriptID\fP \fBToScriptID\fP (const \fBScriptHash\fP &script_hash)"
+.br
+.ti -1c
+.RI "\fBCKeyID\fP \fBToKeyID\fP (const \fBWitnessV0KeyHash\fP &key_hash)"
+.br
+.ti -1c
+.RI "bool \fBIsValidDestination\fP (const \fBCTxDestination\fP &dest)"
+.br
+.ti -1c
+.RI "bool \fBExtractDestination\fP (const \fBCScript\fP &scriptPubKey, \fBCTxDestination\fP &addressRet)"
+.br
+.ti -1c
+.RI "\fBCScript\fP \fBGetScriptForDestination\fP (const \fBCTxDestination\fP &dest)"
+.br
+.in -1c
+.SH "Typedef Documentation"
+.PP 
+.SS "using \fBCTxDestination\fP = std::variant<\fBCNoDestination\fP, \fBPubKeyDestination\fP, \fBPKHash\fP, \fBScriptHash\fP, \fBWitnessV0ScriptHash\fP, \fBWitnessV0KeyHash\fP, \fBWitnessV1Taproot\fP, \fBPayToAnchor\fP, \fBWitnessUnknown\fP>"
+A txout script categorized into standard templates\&.
+.IP "\(bu" 2
+\fBCNoDestination\fP: Optionally a script, no corresponding address\&.
+.IP "\(bu" 2
+\fBPubKeyDestination\fP: \fBTxoutType::PUBKEY\fP (P2PK), no corresponding address
+.IP "\(bu" 2
+\fBPKHash\fP: \fBTxoutType::PUBKEYHASH\fP destination (P2PKH address)
+.IP "\(bu" 2
+\fBScriptHash\fP: \fBTxoutType::SCRIPTHASH\fP destination (P2SH address)
+.IP "\(bu" 2
+\fBWitnessV0ScriptHash\fP: \fBTxoutType::WITNESS_V0_SCRIPTHASH\fP destination (P2WSH address)
+.IP "\(bu" 2
+\fBWitnessV0KeyHash\fP: \fBTxoutType::WITNESS_V0_KEYHASH\fP destination (P2WPKH address)
+.IP "\(bu" 2
+\fBWitnessV1Taproot\fP: \fBTxoutType::WITNESS_V1_TAPROOT\fP destination (P2TR address)
+.IP "\(bu" 2
+\fBPayToAnchor\fP: \fBTxoutType::ANCHOR\fP destination (P2A address)
+.IP "\(bu" 2
+\fBWitnessUnknown\fP: \fBTxoutType::WITNESS_UNKNOWN\fP destination (P2W??? address) A \fBCTxDestination\fP is the internal data type encoded in a bitcoin address 
+.PP
+
+.SH "Function Documentation"
+.PP 
+.SS "bool ExtractDestination (const \fBCScript\fP & scriptPubKey, \fBCTxDestination\fP & addressRet)"
+Parse a scriptPubKey for the destination\&.
+
+.PP
+For standard scripts that have addresses (and P2PK as an exception), a corresponding \fBCTxDestination\fP is assigned to addressRet\&. For all other scripts\&. addressRet is assigned as a \fBCNoDestination\fP containing the scriptPubKey\&.
+
+.PP
+Returns true for standard destinations with addresses - P2PKH, P2SH, P2WPKH, P2WSH, P2TR and P2W??? scripts\&. Returns false for non-standard destinations and those without addresses - P2PK, bare multisig, null data, and nonstandard scripts\&. 
+.SS "\fBCScript\fP GetScriptForDestination (const \fBCTxDestination\fP & dest)"
+Generate a Bitcoin scriptPubKey for the given \fBCTxDestination\fP\&. Returns a P2PKH script for a \fBCKeyID\fP destination, a P2SH script for a \fBCScriptID\fP, and an empty script for \fBCNoDestination\fP\&. 
+.SS "bool IsValidDestination (const \fBCTxDestination\fP & dest)"
+Check whether a \fBCTxDestination\fP corresponds to one with an address\&. 
+.SS "\fBCKeyID\fP ToKeyID (const \fBPKHash\fP & key_hash)"
+
+.SS "\fBCKeyID\fP ToKeyID (const \fBWitnessV0KeyHash\fP & key_hash)"
+
+.SS "\fBCScriptID\fP ToScriptID (const \fBScriptHash\fP & script_hash)"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

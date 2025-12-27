@@ -1,0 +1,187 @@
+.TH "src/secp256k1/src/scalar_4x64_impl.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/secp256k1/src/scalar_4x64_impl.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include 'checkmem\&.h'\fP
+.br
+\fR#include 'int128\&.h'\fP
+.br
+\fR#include 'modinv64_impl\&.h'\fP
+.br
+\fR#include 'util\&.h'\fP
+.br
+
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBSECP256K1_N_0\fP   ((uint64_t)0xBFD25E8CD0364141ULL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_1\fP   ((uint64_t)0xBAAEDCE6AF48A03BULL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_2\fP   ((uint64_t)0xFFFFFFFFFFFFFFFEULL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_3\fP   ((uint64_t)0xFFFFFFFFFFFFFFFFULL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_C_0\fP   (~\fBSECP256K1_N_0\fP + 1)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_C_1\fP   (~\fBSECP256K1_N_1\fP)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_C_2\fP   (1)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_0\fP   ((uint64_t)0xDFE92F46681B20A0ULL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_1\fP   ((uint64_t)0x5D576E7357A4501DULL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_2\fP   ((uint64_t)0xFFFFFFFFFFFFFFFFULL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_3\fP   ((uint64_t)0x7FFFFFFFFFFFFFFFULL)"
+.br
+.ti -1c
+.RI "#define \fBmuladd\fP(a,  b)"
+.br
+.ti -1c
+.RI "#define \fBmuladd_fast\fP(a,  b)"
+.br
+.ti -1c
+.RI "#define \fBsumadd\fP(a)"
+.br
+.ti -1c
+.RI "#define \fBsumadd_fast\fP(a)"
+.br
+.ti -1c
+.RI "#define \fBextract\fP(n)"
+.br
+.ti -1c
+.RI "#define \fBextract_fast\fP(n)"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define extract( n)"
+\fBValue:\fP
+.nf
+    { \\
+    (n) = c0; \\
+    c0 = c1; \\
+    c1 = c2; \\
+    c2 = 0; \\
+}
+.PP
+.fi
+Extract the lowest 64 bits of (c0,c1,c2) into n, and left shift the number 64 bits\&. 
+.SS "#define extract_fast( n)"
+\fBValue:\fP
+.nf
+    { \\
+    (n) = c0; \\
+    c0 = c1; \\
+    c1 = 0; \\
+    VERIFY_CHECK(c2 == 0); \\
+}
+.PP
+.fi
+Extract the lowest 64 bits of (c0,c1,c2) into n, and left shift the number 64 bits\&. c2 is required to be zero\&. 
+.SS "#define muladd( a,  b)"
+\fBValue:\fP
+.nf
+    { \\
+    uint64_t tl, th; \\
+    { \\
+        secp256k1_uint128 t; \\
+        secp256k1_u128_mul(&t, a, b); \\
+        th = secp256k1_u128_hi_u64(&t);  /* at most 0xFFFFFFFFFFFFFFFE */ \\
+        tl = secp256k1_u128_to_u64(&t); \\
+    } \\
+    c0 += tl;                 /* overflow is handled on the next line */ \\
+    th += (c0 < tl);          /* at most 0xFFFFFFFFFFFFFFFF */ \\
+    c1 += th;                 /* overflow is handled on the next line */ \\
+    c2 += (c1 < th);          /* never overflows by contract (verified in the next line) */ \\
+    VERIFY_CHECK((c1 >= th) || (c2 != 0)); \\
+}
+.PP
+.fi
+Add a*b to the number defined by (c0,c1,c2)\&. c2 must never overflow\&. 
+.SS "#define muladd_fast( a,  b)"
+\fBValue:\fP
+.nf
+    { \\
+    uint64_t tl, th; \\
+    { \\
+        secp256k1_uint128 t; \\
+        secp256k1_u128_mul(&t, a, b); \\
+        th = secp256k1_u128_hi_u64(&t);  /* at most 0xFFFFFFFFFFFFFFFE */ \\
+        tl = secp256k1_u128_to_u64(&t); \\
+    } \\
+    c0 += tl;                 /* overflow is handled on the next line */ \\
+    th += (c0 < tl);          /* at most 0xFFFFFFFFFFFFFFFF */ \\
+    c1 += th;                 /* never overflows by contract (verified in the next line) */ \\
+    VERIFY_CHECK(c1 >= th); \\
+}
+.PP
+.fi
+Add a*b to the number defined by (c0,c1)\&. c1 must never overflow\&. 
+.SS "#define SECP256K1_N_0   ((uint64_t)0xBFD25E8CD0364141ULL)"
+
+.SS "#define SECP256K1_N_1   ((uint64_t)0xBAAEDCE6AF48A03BULL)"
+
+.SS "#define SECP256K1_N_2   ((uint64_t)0xFFFFFFFFFFFFFFFEULL)"
+
+.SS "#define SECP256K1_N_3   ((uint64_t)0xFFFFFFFFFFFFFFFFULL)"
+
+.SS "#define SECP256K1_N_C_0   (~\fBSECP256K1_N_0\fP + 1)"
+
+.SS "#define SECP256K1_N_C_1   (~\fBSECP256K1_N_1\fP)"
+
+.SS "#define SECP256K1_N_C_2   (1)"
+
+.SS "#define SECP256K1_N_H_0   ((uint64_t)0xDFE92F46681B20A0ULL)"
+
+.SS "#define SECP256K1_N_H_1   ((uint64_t)0x5D576E7357A4501DULL)"
+
+.SS "#define SECP256K1_N_H_2   ((uint64_t)0xFFFFFFFFFFFFFFFFULL)"
+
+.SS "#define SECP256K1_N_H_3   ((uint64_t)0x7FFFFFFFFFFFFFFFULL)"
+
+.SS "#define sumadd( a)"
+\fBValue:\fP
+.nf
+    { \\
+    unsigned int over; \\
+    c0 += (a);                  /* overflow is handled on the next line */ \\
+    over = (c0 < (a));         \\
+    c1 += over;                 /* overflow is handled on the next line */ \\
+    c2 += (c1 < over);          /* never overflows by contract */ \\
+}
+.PP
+.fi
+Add a to the number defined by (c0,c1,c2)\&. c2 must never overflow\&. 
+.SS "#define sumadd_fast( a)"
+\fBValue:\fP
+.nf
+    { \\
+    c0 += (a);                 /* overflow is handled on the next line */ \\
+    c1 += (c0 < (a));          /* never overflows by contract (verified the next line) */ \\
+    VERIFY_CHECK((c1 != 0) | (c0 >= (a))); \\
+    VERIFY_CHECK(c2 == 0); \\
+}
+.PP
+.fi
+Add a to the number defined by (c0,c1)\&. c1 must never overflow, c2 must be zero\&. 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

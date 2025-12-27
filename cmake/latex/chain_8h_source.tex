@@ -1,0 +1,340 @@
+\doxysection{chain.\+h}
+\label{chain_8h_source}\index{src/chain.h@{src/chain.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_CHAIN\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_CHAIN\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <arith\_uint256.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <consensus/params.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <flatfile.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <kernel/cs\_main.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <primitives/block.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <util/time.h>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00029\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int64\_t\ MAX\_FUTURE\_BLOCK\_TIME\ =\ 2\ *\ 60\ *\ 60;}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00037\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int64\_t\ TIMESTAMP\_WINDOW\ =\ MAX\_FUTURE\_BLOCK\_TIME;}
+\DoxyCodeLine{00039\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int32\_t\ SEQ\_ID\_BEST\_CHAIN\_FROM\_DISK\ =\ 0;}
+\DoxyCodeLine{00040\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int32\_t\ SEQ\_ID\_INIT\_FROM\_DISK\ =\ 1;}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \textcolor{keyword}{enum}\ BlockStatus\ :\ uint32\_t\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ BLOCK\_VALID\_UNKNOWN\ \ \ \ \ \ =\ \ \ \ 0,}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00047\ \ \ \ \ BLOCK\_VALID\_RESERVED\ \ \ \ \ =\ \ \ \ 1,}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00051\ \ \ \ \ BLOCK\_VALID\_TREE\ \ \ \ \ \ \ \ \ =\ \ \ \ 2,}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00061\ \ \ \ \ BLOCK\_VALID\_TRANSACTIONS\ =\ \ \ \ 3,}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00065\ \ \ \ \ BLOCK\_VALID\_CHAIN\ \ \ \ \ \ \ \ =\ \ \ \ 4,}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00069\ \ \ \ \ BLOCK\_VALID\_SCRIPTS\ \ \ \ \ \ =\ \ \ \ 5,}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00072\ \ \ \ \ BLOCK\_VALID\_MASK\ \ \ \ \ \ \ \ \ =\ \ \ BLOCK\_VALID\_RESERVED\ |\ BLOCK\_VALID\_TREE\ |\ BLOCK\_VALID\_TRANSACTIONS\ |}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ BLOCK\_VALID\_CHAIN\ |\ BLOCK\_VALID\_SCRIPTS,}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ \ \ BLOCK\_HAVE\_DATA\ \ \ \ \ \ \ \ \ \ =\ \ \ \ 8,\ }
+\DoxyCodeLine{00076\ \ \ \ \ BLOCK\_HAVE\_UNDO\ \ \ \ \ \ \ \ \ \ =\ \ \ 16,\ }
+\DoxyCodeLine{00077\ \ \ \ \ BLOCK\_HAVE\_MASK\ \ \ \ \ \ \ \ \ \ =\ \ \ BLOCK\_HAVE\_DATA\ |\ BLOCK\_HAVE\_UNDO,}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ BLOCK\_FAILED\_VALID\ \ \ \ \ \ \ =\ \ \ 32,\ }
+\DoxyCodeLine{00080\ \ \ \ \ BLOCK\_FAILED\_CHILD\ \ \ \ \ \ \ =\ \ \ 64,\ }
+\DoxyCodeLine{00081\ \ \ \ \ BLOCK\_FAILED\_MASK\ \ \ \ \ \ \ \ =\ \ \ BLOCK\_FAILED\_VALID\ |\ BLOCK\_FAILED\_CHILD,}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \ \ \ BLOCK\_OPT\_WITNESS\ \ \ \ \ \ \ \ =\ \ \ 128,\ }
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \ \ \ \ BLOCK\_STATUS\_RESERVED\ \ \ \ =\ \ \ 256,\ }
+\DoxyCodeLine{00087\ \};}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00094\ \textcolor{keyword}{class\ }CBlockIndex}
+\DoxyCodeLine{00095\ \{}
+\DoxyCodeLine{00096\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keyword}{const}\ uint256*\ phashBlock\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00101\ \ \ \ \ CBlockIndex*\ pprev\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00104\ \ \ \ \ CBlockIndex*\ pskip\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keywordtype}{int}\ nHeight\{0\};}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordtype}{int}\ nFile\ GUARDED\_BY(::cs\_main)\{0\};}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nDataPos\ GUARDED\_BY(::cs\_main)\{0\};}
+\DoxyCodeLine{00114\ }
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nUndoPos\ GUARDED\_BY(::cs\_main)\{0\};}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00119\ \ \ \ \ arith\_uint256\ nChainWork\{\};}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nTx\{0\};}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00130\ \ \ \ \ uint64\_t\ m\_chain\_tx\_count\{0\};}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00138\ \ \ \ \ uint32\_t\ nStatus\ GUARDED\_BY(::cs\_main)\{0\};}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00141\ \ \ \ \ int32\_t\ nVersion\{0\};}
+\DoxyCodeLine{00142\ \ \ \ \ uint256\ hashMerkleRoot\{\};}
+\DoxyCodeLine{00143\ \ \ \ \ uint32\_t\ nTime\{0\};}
+\DoxyCodeLine{00144\ \ \ \ \ uint32\_t\ nBits\{0\};}
+\DoxyCodeLine{00145\ \ \ \ \ uint32\_t\ nNonce\{0\};}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00150\ \ \ \ \ int32\_t\ nSequenceId\{SEQ\_ID\_INIT\_FROM\_DISK\};}
+\DoxyCodeLine{00151\ }
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nTimeMax\{0\};}
+\DoxyCodeLine{00154\ }
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keyword}{explicit}\ CBlockIndex(\textcolor{keyword}{const}\ CBlockHeader\&\ block)}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ :\ nVersion\{block.nVersion\},}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \ \ hashMerkleRoot\{block.hashMerkleRoot\},}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ \ \ nTime\{block.nTime\},}
+\DoxyCodeLine{00159\ \ \ \ \ \ \ \ \ \ \ nBits\{block.nBits\},}
+\DoxyCodeLine{00160\ \ \ \ \ \ \ \ \ \ \ nNonce\{block.nNonce\}}
+\DoxyCodeLine{00161\ \ \ \ \ \{}
+\DoxyCodeLine{00162\ \ \ \ \ \}}
+\DoxyCodeLine{00163\ }
+\DoxyCodeLine{00164\ \ \ \ \ FlatFilePos\ GetBlockPos()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main)}
+\DoxyCodeLine{00165\ \ \ \ \ \{}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ AssertLockHeld(::cs\_main);}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ FlatFilePos\ ret;}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nStatus\ \&\ BLOCK\_HAVE\_DATA)\ \{}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ \ \ \ \ ret.nFile\ =\ nFile;}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \ \ \ \ ret.nPos\ =\ nDataPos;}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00173\ \ \ \ \ \}}
+\DoxyCodeLine{00174\ }
+\DoxyCodeLine{00175\ \ \ \ \ FlatFilePos\ GetUndoPos()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main)}
+\DoxyCodeLine{00176\ \ \ \ \ \{}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ AssertLockHeld(::cs\_main);}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ FlatFilePos\ ret;}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nStatus\ \&\ BLOCK\_HAVE\_UNDO)\ \{}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \ \ \ \ ret.nFile\ =\ nFile;}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ \ \ \ \ ret.nPos\ =\ nUndoPos;}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00184\ \ \ \ \ \}}
+\DoxyCodeLine{00185\ }
+\DoxyCodeLine{00186\ \ \ \ \ CBlockHeader\ GetBlockHeader()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00187\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ CBlockHeader\ block;}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ block.nVersion\ =\ nVersion;}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pprev)}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ \ \ \ \ block.hashPrevBlock\ =\ pprev-\/>GetBlockHash();}
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ block.hashMerkleRoot\ =\ hashMerkleRoot;}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ block.nTime\ =\ nTime;}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ block.nBits\ =\ nBits;}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ block.nNonce\ =\ nNonce;}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ block;}
+\DoxyCodeLine{00197\ \ \ \ \ \}}
+\DoxyCodeLine{00198\ }
+\DoxyCodeLine{00199\ \ \ \ \ uint256\ GetBlockHash()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00200\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ assert(phashBlock\ !=\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *phashBlock;}
+\DoxyCodeLine{00203\ \ \ \ \ \}}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00215\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveNumChainTxs()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_chain\_tx\_count\ !=\ 0;\ \}}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00217\ \ \ \ \ NodeSeconds\ Time()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00218\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ NodeSeconds\{std::chrono::seconds\{nTime\}\};}
+\DoxyCodeLine{00220\ \ \ \ \ \}}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00222\ \ \ \ \ int64\_t\ GetBlockTime()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00223\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (int64\_t)nTime;}
+\DoxyCodeLine{00225\ \ \ \ \ \}}
+\DoxyCodeLine{00226\ }
+\DoxyCodeLine{00227\ \ \ \ \ int64\_t\ GetBlockTimeMax()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00228\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (int64\_t)nTimeMax;}
+\DoxyCodeLine{00230\ \ \ \ \ \}}
+\DoxyCodeLine{00231\ }
+\DoxyCodeLine{00232\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ nMedianTimeSpan\ =\ 11;}
+\DoxyCodeLine{00233\ }
+\DoxyCodeLine{00234\ \ \ \ \ int64\_t\ GetMedianTimePast()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00235\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ int64\_t\ pmedian[nMedianTimeSpan];}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ int64\_t*\ pbegin\ =\ \&pmedian[nMedianTimeSpan];}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ int64\_t*\ pend\ =\ \&pmedian[nMedianTimeSpan];}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CBlockIndex*\ pindex\ =\ \textcolor{keyword}{this};}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ nMedianTimeSpan\ \&\&\ pindex;\ i++,\ pindex\ =\ pindex-\/>pprev)}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \ \ \ \ *(-\/-\/pbegin)\ =\ pindex-\/>GetBlockTime();}
+\DoxyCodeLine{00243\ }
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ std::sort(pbegin,\ pend);}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ pbegin[(pend\ -\/\ pbegin)\ /\ 2];}
+\DoxyCodeLine{00246\ \ \ \ \ \}}
+\DoxyCodeLine{00247\ }
+\DoxyCodeLine{00248\ \ \ \ \ std::string\ ToString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00249\ }
+\DoxyCodeLine{00251\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsValid(\textcolor{keyword}{enum}\ BlockStatus\ nUpTo)\ \textcolor{keyword}{const}}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main)}
+\DoxyCodeLine{00253\ \ \ \ \ \{}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ AssertLockHeld(::cs\_main);}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ assert(!(nUpTo\ \&\ \string~BLOCK\_VALID\_MASK));\ \textcolor{comment}{//\ Only\ validity\ flags\ allowed.}}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nStatus\ \&\ BLOCK\_FAILED\_MASK)}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ((nStatus\ \&\ BLOCK\_VALID\_MASK)\ >=\ nUpTo);}
+\DoxyCodeLine{00259\ \ \ \ \ \}}
+\DoxyCodeLine{00260\ }
+\DoxyCodeLine{00263\ \ \ \ \ \textcolor{keywordtype}{bool}\ RaiseValidity(\textcolor{keyword}{enum}\ BlockStatus\ nUpTo)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main)}
+\DoxyCodeLine{00264\ \ \ \ \ \{}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ AssertLockHeld(::cs\_main);}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ assert(!(nUpTo\ \&\ \string~BLOCK\_VALID\_MASK));\ \textcolor{comment}{//\ Only\ validity\ flags\ allowed.}}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nStatus\ \&\ BLOCK\_FAILED\_MASK)\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00268\ }
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((nStatus\ \&\ BLOCK\_VALID\_MASK)\ <\ nUpTo)\ \{}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \ \ \ \ nStatus\ =\ (nStatus\ \&\ \string~BLOCK\_VALID\_MASK)\ |\ nUpTo;}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00274\ \ \ \ \ \}}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{keywordtype}{void}\ BuildSkip();}
+\DoxyCodeLine{00278\ }
+\DoxyCodeLine{00280\ \ \ \ \ CBlockIndex*\ GetAncestor(\textcolor{keywordtype}{int}\ height);}
+\DoxyCodeLine{00281\ \ \ \ \ \textcolor{keyword}{const}\ CBlockIndex*\ GetAncestor(\textcolor{keywordtype}{int}\ height)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00282\ }
+\DoxyCodeLine{00283\ \ \ \ \ CBlockIndex()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00284\ \ \ \ \ \string~CBlockIndex()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00285\ }
+\DoxyCodeLine{00286\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00296\ \ \ \ \ CBlockIndex(\textcolor{keyword}{const}\ CBlockIndex\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00297\ \ \ \ \ CBlockIndex\&\ operator=(\textcolor{keyword}{const}\ CBlockIndex\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00298\ \ \ \ \ CBlockIndex(CBlockIndex\&\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00299\ \ \ \ \ CBlockIndex\&\ operator=(CBlockIndex\&\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00300\ \};}
+\DoxyCodeLine{00301\ }
+\DoxyCodeLine{00302\ arith\_uint256\ GetBlockProof(\textcolor{keyword}{const}\ CBlockIndex\&\ block);}
+\DoxyCodeLine{00304\ int64\_t\ GetBlockProofEquivalentTime(\textcolor{keyword}{const}\ CBlockIndex\&\ to,\ \textcolor{keyword}{const}\ CBlockIndex\&\ from,\ \textcolor{keyword}{const}\ CBlockIndex\&\ tip,\ \textcolor{keyword}{const}\ Consensus::Params\&);}
+\DoxyCodeLine{00306\ \textcolor{keyword}{const}\ CBlockIndex*\ LastCommonAncestor(\textcolor{keyword}{const}\ CBlockIndex*\ pa,\ \textcolor{keyword}{const}\ CBlockIndex*\ pb);}
+\DoxyCodeLine{00307\ }
+\DoxyCodeLine{00308\ }
+\DoxyCodeLine{00310\ \textcolor{keyword}{class\ }CDiskBlockIndex\ :\ \textcolor{keyword}{public}\ CBlockIndex}
+\DoxyCodeLine{00311\ \{}
+\DoxyCodeLine{00318\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ DUMMY\_VERSION\ =\ 259900;}
+\DoxyCodeLine{00319\ }
+\DoxyCodeLine{00320\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00321\ \ \ \ \ uint256\ hashPrev;}
+\DoxyCodeLine{00322\ }
+\DoxyCodeLine{00323\ \ \ \ \ CDiskBlockIndex()}
+\DoxyCodeLine{00324\ \ \ \ \ \{}
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \ \ hashPrev\ =\ uint256();}
+\DoxyCodeLine{00326\ \ \ \ \ \}}
+\DoxyCodeLine{00327\ }
+\DoxyCodeLine{00328\ \ \ \ \ \textcolor{keyword}{explicit}\ CDiskBlockIndex(\textcolor{keyword}{const}\ CBlockIndex*\ pindex)\ :\ CBlockIndex(*pindex)}
+\DoxyCodeLine{00329\ \ \ \ \ \{}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ hashPrev\ =\ (pprev\ ?\ pprev-\/>GetBlockHash()\ :\ uint256());}
+\DoxyCodeLine{00331\ \ \ \ \ \}}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00333\ \ \ \ \ SERIALIZE\_METHODS(CDiskBlockIndex,\ obj)}
+\DoxyCodeLine{00334\ \ \ \ \ \{}
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ LOCK(::cs\_main);}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ \_nVersion\ =\ DUMMY\_VERSION;}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ READWRITE(VARINT\_MODE(\_nVersion,\ VarIntMode::NONNEGATIVE\_SIGNED));}
+\DoxyCodeLine{00338\ }
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ READWRITE(VARINT\_MODE(obj.nHeight,\ VarIntMode::NONNEGATIVE\_SIGNED));}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ READWRITE(VARINT(obj.nStatus));}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ READWRITE(VARINT(obj.nTx));}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (obj.nStatus\ \&\ (BLOCK\_HAVE\_DATA\ |\ BLOCK\_HAVE\_UNDO))\ READWRITE(VARINT\_MODE(obj.nFile,\ VarIntMode::NONNEGATIVE\_SIGNED));}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (obj.nStatus\ \&\ BLOCK\_HAVE\_DATA)\ READWRITE(VARINT(obj.nDataPos));}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (obj.nStatus\ \&\ BLOCK\_HAVE\_UNDO)\ READWRITE(VARINT(obj.nUndoPos));}
+\DoxyCodeLine{00345\ }
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ block\ header}}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ READWRITE(obj.nVersion);}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ READWRITE(obj.hashPrev);}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ READWRITE(obj.hashMerkleRoot);}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ READWRITE(obj.nTime);}
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ READWRITE(obj.nBits);}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ READWRITE(obj.nNonce);}
+\DoxyCodeLine{00353\ \ \ \ \ \}}
+\DoxyCodeLine{00354\ }
+\DoxyCodeLine{00355\ \ \ \ \ uint256\ ConstructBlockHash()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00356\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ CBlockHeader\ block;}
+\DoxyCodeLine{00358\ \ \ \ \ \ \ \ \ block.nVersion\ =\ nVersion;}
+\DoxyCodeLine{00359\ \ \ \ \ \ \ \ \ block.hashPrevBlock\ =\ hashPrev;}
+\DoxyCodeLine{00360\ \ \ \ \ \ \ \ \ block.hashMerkleRoot\ =\ hashMerkleRoot;}
+\DoxyCodeLine{00361\ \ \ \ \ \ \ \ \ block.nTime\ =\ nTime;}
+\DoxyCodeLine{00362\ \ \ \ \ \ \ \ \ block.nBits\ =\ nBits;}
+\DoxyCodeLine{00363\ \ \ \ \ \ \ \ \ block.nNonce\ =\ nNonce;}
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ block.GetHash();}
+\DoxyCodeLine{00365\ \ \ \ \ \}}
+\DoxyCodeLine{00366\ }
+\DoxyCodeLine{00367\ \ \ \ \ uint256\ GetBlockHash()\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00368\ \ \ \ \ std::string\ ToString()\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00369\ \};}
+\DoxyCodeLine{00370\ }
+\DoxyCodeLine{00372\ \textcolor{keyword}{class\ }CChain}
+\DoxyCodeLine{00373\ \{}
+\DoxyCodeLine{00374\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00375\ \ \ \ \ std::vector<CBlockIndex*>\ vChain;}
+\DoxyCodeLine{00376\ }
+\DoxyCodeLine{00377\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00378\ \ \ \ \ CChain()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00379\ \ \ \ \ CChain(\textcolor{keyword}{const}\ CChain\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00380\ \ \ \ \ CChain\&\ operator=(\textcolor{keyword}{const}\ CChain\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00381\ }
+\DoxyCodeLine{00383\ \ \ \ \ CBlockIndex*\ Genesis()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00384\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00385\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ vChain.size()\ >\ 0\ ?\ vChain[0]\ :\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00386\ \ \ \ \ \}}
+\DoxyCodeLine{00387\ }
+\DoxyCodeLine{00389\ \ \ \ \ CBlockIndex*\ Tip()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00390\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00391\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ vChain.size()\ >\ 0\ ?\ vChain[vChain.size()\ -\/\ 1]\ :\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00392\ \ \ \ \ \}}
+\DoxyCodeLine{00393\ }
+\DoxyCodeLine{00395\ \ \ \ \ CBlockIndex*\ operator[](\textcolor{keywordtype}{int}\ nHeight)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00396\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00397\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nHeight\ <\ 0\ ||\ nHeight\ >=\ (\textcolor{keywordtype}{int})vChain.size())}
+\DoxyCodeLine{00398\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ vChain[nHeight];}
+\DoxyCodeLine{00400\ \ \ \ \ \}}
+\DoxyCodeLine{00401\ }
+\DoxyCodeLine{00403\ \ \ \ \ \textcolor{keywordtype}{bool}\ Contains(\textcolor{keyword}{const}\ CBlockIndex*\ pindex)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00404\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00405\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (*\textcolor{keyword}{this})[pindex-\/>nHeight]\ ==\ pindex;}
+\DoxyCodeLine{00406\ \ \ \ \ \}}
+\DoxyCodeLine{00407\ }
+\DoxyCodeLine{00409\ \ \ \ \ CBlockIndex*\ Next(\textcolor{keyword}{const}\ CBlockIndex*\ pindex)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00410\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (Contains(pindex))}
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (*\textcolor{keyword}{this})[pindex-\/>nHeight\ +\ 1];}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00415\ \ \ \ \ \}}
+\DoxyCodeLine{00416\ }
+\DoxyCodeLine{00418\ \ \ \ \ \textcolor{keywordtype}{int}\ Height()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00419\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ int(vChain.size())\ -\/\ 1;}
+\DoxyCodeLine{00421\ \ \ \ \ \}}
+\DoxyCodeLine{00422\ }
+\DoxyCodeLine{00424\ \ \ \ \ \textcolor{keywordtype}{void}\ SetTip(CBlockIndex\&\ block);}
+\DoxyCodeLine{00425\ }
+\DoxyCodeLine{00427\ \ \ \ \ \textcolor{keyword}{const}\ CBlockIndex*\ FindFork(\textcolor{keyword}{const}\ CBlockIndex*\ pindex)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00428\ }
+\DoxyCodeLine{00430\ \ \ \ \ CBlockIndex*\ FindEarliestAtLeast(int64\_t\ nTime,\ \textcolor{keywordtype}{int}\ height)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00431\ \};}
+\DoxyCodeLine{00432\ }
+\DoxyCodeLine{00434\ CBlockLocator\ GetLocator(\textcolor{keyword}{const}\ CBlockIndex*\ index);}
+\DoxyCodeLine{00435\ }
+\DoxyCodeLine{00437\ std::vector<uint256>\ LocatorEntries(\textcolor{keyword}{const}\ CBlockIndex*\ index);}
+\DoxyCodeLine{00438\ }
+\DoxyCodeLine{00439\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_CHAIN\_H}}
+
+\end{DoxyCode}

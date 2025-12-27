@@ -1,0 +1,261 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="dir_70099abe5db258d8b2b1561b8813f7f0" kind="dir">
+    <compoundname>src/minisketch</compoundname>
+    <innerdir refid="dir_c5d288e05915cf360f186dc892f5e38c">src/minisketch/doc</innerdir>
+    <innerdir refid="dir_e4bd1dc231b7eb1532b49bf0356c9b1e">src/minisketch/include</innerdir>
+    <innerdir refid="dir_47112eaf970aa5ce4ab22e9c5a8c5f8b">src/minisketch/src</innerdir>
+    <innerdir refid="dir_00a07ad4f96b9c9944bada2a6872ec71">src/minisketch/tests</innerdir>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<sect1 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md88">
+<title>Minisketch: a library for [BCH](<ulink url="https://en.wikipedia.org/wiki/BCH_code">https://en.wikipedia.org/wiki/BCH_code</ulink>)-based set reconciliation</title><para><image type="html" name="doc/minisketch-vs.png" inline="yes"></image>
+</para>
+<para><computeroutput>libminisketch</computeroutput> is an optimized standalone MIT-licensed library with C API for constructing and decoding <emphasis>set sketches</emphasis>, which can be used for compact set reconciliation and other applications. It is an implementation of the PinSketch<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote1" kindref="member">[1]</ref></superscript> algorithm. An explanation of the algorithm can be found <ref refid="md_src_2minisketch_2doc_2math" kindref="compound">here</ref>.</para>
+</sect1>
+<sect1 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md89">
+<title>Sketches for set reconciliation</title><para>Sketches, as produced by this library, can be seen as &quot;set checksums&quot; with two peculiar properties:<itemizedlist>
+<listitem><para>Sketches have a predetermined capacity, and when the number of elements in the set is not higher than the capacity, <computeroutput>libminisketch</computeroutput> will always recover the entire set from the sketch. A sketch of <emphasis>b</emphasis>-bit elements with capacity <emphasis>c</emphasis> can be stored in <emphasis>bc</emphasis> bits.</para>
+</listitem><listitem><para>The sketches of two sets can be combined by adding them (XOR) to obtain a sketch of the <ulink url="https://en.wikipedia.org/wiki/Symmetric_difference">symmetric difference</ulink> between the two sets (<emphasis>i.e.</emphasis>, all elements that occur in one but not both input sets).</para>
+</listitem></itemizedlist>
+</para>
+<para>This makes them appropriate for a very bandwidth-efficient set reconciliation protocol. If Alice and Bob each have a set of elements, and they suspect that the sets largely but not entirely overlap, they can use the following protocol to let both parties learn all the elements:<itemizedlist>
+<listitem><para>Alice and Bob both compute a sketch of their set elements.</para>
+</listitem><listitem><para>Alice sends her sketch to Bob.</para>
+</listitem><listitem><para>Bob combines the two sketches, and obtains a sketch of the symmetric difference.</para>
+</listitem><listitem><para>Bob tries to recover the elements from the difference sketch.</para>
+</listitem><listitem><para>Bob sends every element in the difference that he has to Alice.</para>
+</listitem></itemizedlist>
+</para>
+<para>This will always succeed when the size of the difference (elements that Alice has but Bob doesn&apos;t plus elements that Bob has but Alice doesn&apos;t) does not exceed the capacity of the sketch that Alice sent. The interesting part is that this works regardless of the actual set sizes—only the difference matters.</para>
+<para>If the elements are large, it may be preferable to compute the sketches over <emphasis>hashes</emphasis> of the set elements. In that case an additional step is added to the protocol, where Bob also sends the hash of every element he does not have to Alice, who responds with the requested elements.</para>
+<para>The doc/ directory has additional <ref refid="md_src_2minisketch_2doc_2protocoltips" kindref="compound">tips for designing reconciliation protocols using libminisketch</ref>.</para>
+</sect1>
+<sect1 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md90">
+<title>Evaluation</title><para><image type="html" name="doc/plot_capacity.png" inline="yes"></image>
+ <image type="html" name="doc/plot_diff.png" inline="yes"></image>
+</para>
+<para><image type="html" name="doc/plot_size.png" inline="yes"></image>
+ <image type="html" name="doc/plot_bits.png" inline="yes"></image>
+</para>
+<para><bold>The first graph</bold> above shows a benchmark of <computeroutput>libminisketch</computeroutput> against three other set reconciliation algorithms/implementations. The benchmarks were performed using a single core on a system with an Intel Core i7-7820HQ CPU with clock speed locked at 2.4 GHz. The diagram shows the time needed for merging of two sketches and decoding the result. The creation of a sketch on the same machine takes around 5 ns per capacity and per set element. The other implementations are:<itemizedlist>
+<listitem><para><ulink url="https://www.cs.bu.edu/~reyzin/code/fuzzy.html"><computeroutput>pinsketch</computeroutput></ulink>, the original PinSketch implementation.</para>
+</listitem><listitem><para><ulink url="https://github.com/trachten/cpisync"><computeroutput>cpisync</computeroutput></ulink>, a software project which implements a number of set reconciliation algorithms and protocols. The included benchmark analyzes the non-probabilistic version of the original CPISync algorithm<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote5" kindref="member">[5]</ref></superscript> only.</para>
+</listitem><listitem><para>A high-performance custom IBLT implementation using 4 hash functions and 32-bit checksums.</para>
+</listitem></itemizedlist>
+</para>
+<para>For the largest sizes currently of interest to the authors, such as a set of capacity 4096 with 1024 differences, <computeroutput>libminisketch</computeroutput> is forty-nine times faster than <computeroutput>pinsketch</computeroutput> and over eight thousand times faster than <computeroutput>cpisync</computeroutput>. <computeroutput>libminisketch</computeroutput> is fast enough on realistic set sizes for use on high-traffic network servers where computational resources are limited.</para>
+<para>Even where performance is latency-limited, small minisketches can be fast enough to improve performance. On the above i7-7820HQ, a set of 2500 30-bit entries with a difference of 20 elements can be communicated in less time with a minisketch than sending the raw set so long as the communications bandwidth is 1 gigabit per second or less; an eight-element difference can be communicated in better than one-fifth the time on a gigabit link.</para>
+<para><bold>The second graph</bold> above shows the performance of the same algorithms on the same system, but this time keeping the capacity constant at 128, while varying the number of differences to reconcile between 1 and 128. It shows how <computeroutput>cpisync</computeroutput>&apos;s reconciliation speed is mostly dependent on capacity, while <computeroutput>pinsketch</computeroutput>/<computeroutput>libminisketch</computeroutput> are more dependent on number of differences.</para>
+<para><bold>The third graph</bold> above shows the size overhead of a typical IBLT scheme over the other algorithms (which are near-optimal bandwidth), for various levels of failure probability. IBLT takes tens of times the bandwidth of <computeroutput>libminisketch</computeroutput> sketches when the set difference size is small and the required failure rate is low.</para>
+<para><bold>The fourth graph</bold> above shows the effect of the field size on speed in <computeroutput>libminisketch</computeroutput>. The three lines correspond to:<itemizedlist>
+<listitem><para>CLMUL 64-bit: Intel Core i7-7820HQ system at 2.4 GHz</para>
+</listitem><listitem><para>Generic 64-bit: POWER9 CP9M06 system at 2.8 GHz (Talos II)</para>
+</listitem><listitem><para>Generic 32-bit: Cortex-A53 at 1.2 GHz (Raspberry Pi 3B)</para>
+</listitem></itemizedlist>
+</para>
+<para>It shows how CLMUL implementations are faster for certain fields (specifically, field sizes for which an irreducible polynomial of the form *x<superscript>b</superscript> + x + 1* over <emphasis>GF(2)</emphasis> exists, and to a lesser extent, fields which are a multiple of 8 bits). It also shows how (for now) a significant performance drop exists for fields larger than 32 bits on 32-bit platforms. Note that the three lines are not at the same scale (the Raspberry Pi 3B is around 10x slower for 32-bit fields than the Core i7; the POWER9 is around 1.3x slower).</para>
+<para>Below we compare the PinSketch algorithm (which <computeroutput>libminisketch</computeroutput> is an implementation of) with other set reconciliation algorithms:</para>
+<para><table rows="4" cols="6"><row>
+<entry thead="yes"><para>Algorithm  </para>
+</entry><entry thead="yes"><para><ref refid="class_sketch" kindref="compound">Sketch</ref> size  </para>
+</entry><entry thead="yes"><para>Decode success  </para>
+</entry><entry thead="yes"><para>Decoding complexity  </para>
+</entry><entry thead="yes"><para>Difference type  </para>
+</entry><entry thead="yes"><para>Secure sketch  </para>
+</entry></row>
+<row>
+<entry thead="no"><para>CPISync<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote2" kindref="member">[2]</ref></superscript>  </para>
+</entry><entry thead="no"><para><emphasis>(b+1)c</emphasis>  </para>
+</entry><entry thead="no"><para>Always  </para>
+</entry><entry thead="no"><para>*O(n<superscript>3</superscript>)*  </para>
+</entry><entry thead="no"><para>Both  </para>
+</entry><entry thead="no"><para>Yes  </para>
+</entry></row>
+<row>
+<entry thead="no"><para>PinSketch<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote1" kindref="member">[1]</ref></superscript>  </para>
+</entry><entry thead="no"><para><emphasis>bc</emphasis>  </para>
+</entry><entry thead="no"><para>Always  </para>
+</entry><entry thead="no"><para>*O(n<superscript>2</superscript>)*  </para>
+</entry><entry thead="no"><para>Symmetric only  </para>
+</entry><entry thead="no"><para>Yes  </para>
+</entry></row>
+<row>
+<entry thead="no"><para>IBLT<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote1" kindref="member">[6]</ref><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote1" kindref="member">[7]</ref></superscript>  </para>
+</entry><entry thead="no"><para><emphasis><alpha/>bc</emphasis> (see graph 3)  </para>
+</entry><entry thead="no"><para>Probabilistic  </para>
+</entry><entry thead="no"><para><emphasis>O(n)</emphasis>  </para>
+</entry><entry thead="no"><para>Depends  </para>
+</entry><entry thead="no"><para>No  </para>
+</entry></row>
+</table>
+</para>
+<para><itemizedlist>
+<listitem><para><bold><ref refid="class_sketch" kindref="compound">Sketch</ref> size:</bold> This column shows the size in bits of a sketch designed for reconciling <emphasis>c</emphasis> different <emphasis>b</emphasis>-bit elements. PinSketch and CPISync have a near-optimal<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote11" kindref="member">[11]</ref></superscript> communication overhead, which in practice means the sketch size is very close (or equal to) <emphasis>bc</emphasis> bits. That is the same size as would be needed to transfer the elements of the difference naively (which is remarkable, as the difference isn&apos;t even known by the sender). For IBLT there is an overhead factor <emphasis><alpha/></emphasis>, which depends on various design parameters, but is often between <emphasis>2</emphasis> and <emphasis>10</emphasis>.</para>
+</listitem><listitem><para><bold>Decode success:</bold> Whenever a sketch is designed with a capacity not lower than the actual difference size, CPISync and PinSketch guarantee that decoding of the difference will always succeed. IBLT always has a chance of failure, though that chance can be made arbitrarily small by increasing the communication overhead.</para>
+</listitem><listitem><para><bold>Decoding complexity:</bold> The space savings achieved by near-optimal algorithms come at a cost in performance, as their asymptotic decode complexity is quadratic or cubic, while IBLT is linear. This means that using near-optimal algorithms can be too expensive for applications where the difference is sufficiently large.</para>
+</listitem><listitem><para><bold>Difference type:</bold> PinSketch can only compute the symmetric difference from a merged sketch, while CPISync and IBLT can distinguish which side certain elements were missing on. When the decoder has access to one of the sets, this generally doesn&apos;t matter, as he can look up each of the elements in the symmetric difference with one of the sets.</para>
+</listitem><listitem><para><bold>Secure sketch:</bold> Whether the sketch satisfies the definition of a secure sketch<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote1" kindref="member">[1]</ref></superscript>, which implies a minimal amount about a set can be extracted from a sketch by anyone who does not know most of the elements already. This makes the algorithm appropriate for applications like fingerprint authentication.</para>
+</listitem></itemizedlist>
+</para>
+</sect1>
+<sect1 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md91">
+<title>Building with Autotools</title><para>The build system is very rudimentary for now, and <ulink url="https://github.com/bitcoin-core/minisketch/pulls">improvements</ulink> are welcome.</para>
+<para>The following may work and produce a <computeroutput>libminisketch.a</computeroutput> file you can link against:</para>
+<para><programlisting filename=".bash"><codeline><highlight class="normal">git<sp/>clone<sp/>https://github.com/bitcoin-core/minisketch</highlight></codeline>
+<codeline><highlight class="normal">cd<sp/>minisketch</highlight></codeline>
+<codeline><highlight class="normal">./autogen.sh<sp/>&amp;&amp;<sp/>./configure<sp/>&amp;&amp;<sp/>make</highlight></codeline>
+</programlisting></para>
+</sect1>
+<sect1 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md92">
+<title>Building with CMake</title><para>To maintain a pristine source tree, CMake encourages performing an out-of-source build by using a separate dedicated build directory.</para>
+<sect2 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md93">
+<title>Building on POSIX systems</title><para>The following commands will produce the same <computeroutput>libminisketch.a</computeroutput> file as in the example above:</para>
+<para><programlisting filename=".bash"><codeline><highlight class="normal">cmake<sp/>-B<sp/>build<sp/>-DCMAKE_CXX_FLAGS=&quot;-g<sp/>-O2&quot;<sp/><sp/>#<sp/>Generate<sp/>a<sp/>build<sp/>system<sp/>in<sp/>subdirectory<sp/>&quot;build&quot;</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>--build<sp/>build<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Run<sp/>the<sp/>actual<sp/>build<sp/>process</highlight></codeline>
+<codeline><highlight class="normal">ctest<sp/>--test-dir<sp/>build<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Run<sp/>the<sp/>test<sp/>suite</highlight></codeline>
+<codeline><highlight class="normal">sudo<sp/>cmake<sp/>--install<sp/>build<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Install<sp/>the<sp/>library<sp/>into<sp/>the<sp/>system<sp/>(optional)</highlight></codeline>
+</programlisting></para>
+<para>Run <computeroutput>cmake -<ref refid="util__tests_8cpp_1a111da81ae5883147168bbb8366377b10" kindref="member">B</ref> build -LH</computeroutput> or <computeroutput>ccmake -<ref refid="util__tests_8cpp_1a111da81ae5883147168bbb8366377b10" kindref="member">B</ref> build</computeroutput> to see the full list of configurable build options.</para>
+</sect2>
+<sect2 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md94">
+<title>Cross compiling</title><para>The following example works on modern Ubuntu/Debian systems:</para>
+<para><programlisting filename=".bash"><codeline><highlight class="normal">sudo<sp/>apt<sp/>install<sp/>g++-mingw-w64-x86-64-posix</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>-B<sp/>build<sp/>-DCMAKE_SYSTEM_NAME=Windows<sp/>-DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++-posix</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>--build<sp/>build</highlight></codeline>
+</programlisting></para>
+</sect2>
+<sect2 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md95">
+<title>Building on Windows</title><para>The following example assumes the use of Visual Studio 2022 and CMake v3.21 or newer.</para>
+<para>In &quot;Developer Command Prompt for VS 2022&quot;:</para>
+<para><programlisting filename=".cmd"><codeline><highlight class="normal">cmake<sp/>-B<sp/>build</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>--build<sp/>build<sp/>--config<sp/>Release</highlight></codeline>
+</programlisting></para>
+</sect2>
+</sect1>
+<sect1 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md96">
+<title>Usage</title><para>In this section Alice and Bob are trying to find the difference between their sets. Alice has the set <emphasis>[3000 ... 3009]</emphasis>, while Bob has <emphasis>[3002 ... 3011]</emphasis>.</para>
+<para>First, Alice creates a sketch:</para>
+<para><programlisting filename=".c"><codeline><highlight class="preprocessor">#include<sp/>&lt;stdio.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;assert.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../include/minisketch.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="crc32c__capi__unittest_8c_1ae66f6b31b5ad750f1fe042a706a4e3d4" kindref="member">main</ref>(</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><ref refid="minisketch_8h_1adffb4f5b48fcdd25b57ae22f5b2147f4" kindref="member">minisketch</ref><sp/>*sketch_a<sp/>=<sp/><ref refid="minisketch_8h_1a4d39dce1593d829c3fde622807fda244" kindref="member">minisketch_create</ref>(12,<sp/>0,<sp/>4);</highlight></codeline>
+</programlisting></para>
+<para>The arguments are:<itemizedlist>
+<listitem><para>The field size <emphasis>b</emphasis>, which specifies the size of the elements being reconciled. With a field size <emphasis>b</emphasis>, the supported range of set elements is the integers from <emphasis>1</emphasis> to *2<superscript>b* <emphasis>- 1</emphasis>, inclusive. Note that elements cannot be zero.</superscript></para>
+</listitem><listitem><para><superscript>The implementation number. Implementation <emphasis>0</emphasis> is always supported, but more efficient algorithms may be available on some hardware. The serialized form of a sketch is independent of the implementation, so different implementations can interoperate.</superscript></para>
+</listitem><listitem><para><superscript>The capacity <emphasis>c</emphasis>, which specifies how many differences the resulting sketch can reconcile.</superscript></para>
+</listitem></itemizedlist>
+</para>
+<para><superscript>Then Alice adds her elements to her sketch. Note that adding the same element a second time removes it again, as sketches have set semantics, not multiset semantics.</superscript></para>
+<para><superscript><programlisting filename=".c"><codeline><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>3000;<sp/>i<sp/>&lt;<sp/>3010;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><ref refid="minisketch_8h_1a6e0d272f72df96765d9041f859324880" kindref="member">minisketch_add_uint64</ref>(sketch_a,<sp/>i);</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting></superscript></para>
+<para><superscript>The next step is serializing the sketch into a byte array:</superscript></para>
+<para><superscript><programlisting filename=".c"><codeline><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>sersize<sp/>=<sp/><ref refid="minisketch_8h_1a3ab706ecc86c75ca06651ecc62024a23" kindref="member">minisketch_serialized_size</ref>(sketch_a);</highlight></codeline>
+<codeline><highlight class="normal"><ref refid="validation_8cpp_1afb7ea74ba028421697aa7f364741ee6c" kindref="member">assert</ref>(sersize<sp/>==<sp/>12<sp/>*<sp/>4<sp/>/<sp/>8);<sp/></highlight><highlight class="comment">//<sp/>4<sp/>12-bit<sp/>values<sp/>is<sp/>6<sp/>bytes.</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>*buffer_a<sp/>=<sp/>malloc(sersize);</highlight></codeline>
+<codeline><highlight class="normal"><ref refid="minisketch_8h_1a03a014a1f2885b473c14f6aa24de24f4" kindref="member">minisketch_serialize</ref>(sketch_a,<sp/>buffer_a);</highlight></codeline>
+<codeline><highlight class="normal"><ref refid="minisketch_8h_1ad603da5dcb6bfe0dd3bbe4b03895c73b" kindref="member">minisketch_destroy</ref>(sketch_a);</highlight></codeline>
+</programlisting></superscript></para>
+<para><superscript>The contents of the buffer can then be submitted to Bob, who can create his own sketch:</superscript></para>
+<para><superscript><programlisting filename=".c"><codeline><highlight class="normal"><ref refid="minisketch_8h_1adffb4f5b48fcdd25b57ae22f5b2147f4" kindref="member">minisketch</ref><sp/>*sketch_b<sp/>=<sp/><ref refid="minisketch_8h_1a4d39dce1593d829c3fde622807fda244" kindref="member">minisketch_create</ref>(12,<sp/>0,<sp/>4);<sp/></highlight><highlight class="comment">//<sp/>Bob&apos;s<sp/>own<sp/>sketch</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>3002;<sp/>i<sp/>&lt;<sp/>3012;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><ref refid="minisketch_8h_1a6e0d272f72df96765d9041f859324880" kindref="member">minisketch_add_uint64</ref>(sketch_b,<sp/>i);</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting></superscript></para>
+<para><superscript>After Bob receives Alice&apos;s serialized sketch, he can reconcile:</superscript></para>
+<para><superscript><programlisting filename=".c"><codeline><highlight class="normal"><sp/><sp/>sketch_a<sp/>=<sp/><ref refid="minisketch_8h_1a4d39dce1593d829c3fde622807fda244" kindref="member">minisketch_create</ref>(12,<sp/>0,<sp/>4);<sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Alice&apos;s<sp/>sketch</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><ref refid="minisketch_8h_1ad283ad30bb9ac697a42d81ca2796414b" kindref="member">minisketch_deserialize</ref>(sketch_a,<sp/>buffer_a);<sp/></highlight><highlight class="comment">//<sp/>Load<sp/>Alice&apos;s<sp/>sketch</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>free(buffer_a);</highlight></codeline>
+<codeline><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>Merge<sp/>the<sp/>elements<sp/>from<sp/>sketch_a<sp/>into<sp/>sketch_b.<sp/>The<sp/>result<sp/>is<sp/>a<sp/>sketch_b</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>which<sp/>contains<sp/>all<sp/>elements<sp/>that<sp/>occurred<sp/>in<sp/>Alice&apos;s<sp/>or<sp/>Bob&apos;s<sp/>sets,<sp/>but<sp/>not</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>in<sp/>both.</highlight><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><ref refid="minisketch_8h_1a33e9c31b9b1ec357f85ba05c4d6724a2" kindref="member">minisketch_merge</ref>(sketch_b,<sp/>sketch_a);</highlight></codeline>
+<codeline><highlight class="normal"></highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>uint64_t<sp/>differences[4];</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>ssize_t<sp/>num_differences<sp/>=<sp/><ref refid="minisketch_8h_1a20adb9ea07329cdceb1f7254aee870b0" kindref="member">minisketch_decode</ref>(sketch_b,<sp/>4,<sp/>differences);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><ref refid="minisketch_8h_1ad603da5dcb6bfe0dd3bbe4b03895c73b" kindref="member">minisketch_destroy</ref>(sketch_a);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><ref refid="minisketch_8h_1ad603da5dcb6bfe0dd3bbe4b03895c73b" kindref="member">minisketch_destroy</ref>(sketch_b);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(num_differences<sp/>&lt;<sp/>0)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacetinyformat_1a02dd7d03dfe12e3aadeceae93e6565e7" kindref="member">printf</ref>(</highlight><highlight class="stringliteral">&quot;More<sp/>than<sp/>4<sp/>differences!\n&quot;</highlight><highlight class="normal">);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>ssize_t<sp/>i;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>num_differences;<sp/>++i)<sp/>{</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="namespacetinyformat_1a02dd7d03dfe12e3aadeceae93e6565e7" kindref="member">printf</ref>(</highlight><highlight class="stringliteral">&quot;%u<sp/>is<sp/>in<sp/>only<sp/>one<sp/>of<sp/>the<sp/>two<sp/>sets\n&quot;</highlight><highlight class="normal">,<sp/>(</highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal">)differences[i]);</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline><highlight class="normal">}</highlight></codeline>
+</programlisting></superscript></para>
+<para><superscript>In this example Bob would see output such as:</superscript></para>
+<para><superscript><programlisting><codeline><highlight class="normal">$<sp/>gcc<sp/>-std=c99<sp/>-Wall<sp/>-Wextra<sp/>-o<sp/>example<sp/>./doc/example.c<sp/>-Lsrc/<sp/>-lminisketch<sp/>-lstdc++<sp/>&amp;&amp;<sp/>./example</highlight></codeline>
+<codeline><highlight class="normal">3000<sp/>is<sp/>in<sp/>only<sp/>one<sp/>of<sp/>the<sp/>two<sp/>sets</highlight></codeline>
+<codeline><highlight class="normal">3011<sp/>is<sp/>in<sp/>only<sp/>one<sp/>of<sp/>the<sp/>two<sp/>sets</highlight></codeline>
+<codeline><highlight class="normal">3001<sp/>is<sp/>in<sp/>only<sp/>one<sp/>of<sp/>the<sp/>two<sp/>sets</highlight></codeline>
+<codeline><highlight class="normal">3010<sp/>is<sp/>in<sp/>only<sp/>one<sp/>of<sp/>the<sp/>two<sp/>sets</highlight></codeline>
+</programlisting></superscript></para>
+<para><superscript>The order of the output is arbitrary and will differ on different runs of <ref refid="minisketch_8h_1a20adb9ea07329cdceb1f7254aee870b0" kindref="member">minisketch_decode()</ref>.</superscript></para>
+<para><superscript></superscript></para>
+</sect1>
+<sect1 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md97">
+<title><superscript>Applications</superscript></title><para><superscript></superscript></para>
+<para><superscript>Communications efficient set reconciliation has been proposed to optimize Bitcoin transaction distribution<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote8" kindref="member">[8]</ref></superscript>, which would allow Bitcoin nodes to have many more peers while reducing bandwidth usage. It could also be used for Bitcoin block distribution<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote9" kindref="member">[9]</ref></superscript>, particularly for very low bandwidth links such as satellite. A similar approach (CPISync) is used by PGP SKS keyservers to synchronize their databases efficiently. Secure sketches can also be used as helper data to reliably extract a consistent cryptographic key from fuzzy biometric data while leaking minimal information<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote1" kindref="member">[1]</ref></superscript>. They can be combined with <ulink url="https://en.wikipedia.org/wiki/Dining_cryptographers_problem">dcnets</ulink> to create cryptographic multiparty anonymous communication<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote10" kindref="member">[10]</ref></superscript>.</superscript></para>
+<para><superscript></superscript></para>
+</sect1>
+<sect1 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md98">
+<title><superscript>Implementation notes</superscript></title><para><superscript></superscript></para>
+<para><superscript><computeroutput>libminisketch</computeroutput> is written in C++11, but has a <ulink url="include/minisketch.h">C API</ulink> for compatibility reasons.</superscript></para>
+<para><superscript>Specific algorithms and optimizations used:<itemizedlist>
+<listitem><para>Finite field implementations:<itemizedlist>
+<listitem><para>A generic implementation using C unsigned integer bit operations, and one using the <ulink url="https://en.wikipedia.org/wiki/CLMUL_instruction_set">CLMUL instruction</ulink> where available. The latter has specializations for different classes of fields that permit optimizations (those with trinomial irreducible polynomials, and those whose size is a multiple of 8 bits).</para>
+</listitem><listitem><para>Precomputed tables for (repeated) squaring, and for solving equations of the form *x<superscript>2</superscript> + x = a*<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote2" kindref="member">[2]</ref></superscript>.</para>
+</listitem><listitem><para>Inverses are computed using an <ulink url="https://en.wikipedia.org/w/index.php?title=Exponentiation_by_squaring&amp;oldid=868883860">exponentiation ladder</ulink><superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote12" kindref="member">[12]</ref></superscript> on systems where multiplications are relatively fast, and using an <ulink url="https://en.wikipedia.org/w/index.php?title=Extended_Euclidean_algorithm&amp;oldid=865802511#Computing_multiplicative_inverses_in_modular_structures">extended GCD algorithm</ulink> otherwise.</para>
+</listitem><listitem><para>Repeated multiplications are accelerated using runtime precomputations on systems where multiplications are relatively slow.</para>
+</listitem><listitem><para>The serialization of field elements always represents them as bits that are coefficients of the lowest-weight (using lexicographic order as tie breaker) irreducible polynomials over <emphasis>GF(2)</emphasis> (see <ref refid="md_src_2minisketch_2doc_2moduli" kindref="compound">this list</ref>), but for some implementations they are converted to a different representation internally.</para>
+</listitem></itemizedlist>
+</para>
+</listitem><listitem><para>The sketch algorithms are specialized for each separate field implementation, permitting inlining and specific optimizations while avoiding dynamic allocations and branching costs.</para>
+</listitem><listitem><para>Decoding of sketches uses the <ulink url="https://en.wikipedia.org/w/index.php?title=Berlekamp%E2%80%93Massey_algorithm&amp;oldid=870768940">Berlekamp-Massey algorithm</ulink><superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote3" kindref="member">[3]</ref></superscript> to compute the characteristic polynomial.</para>
+</listitem><listitem><para>Finding the roots of polynomials is done using the Berlekamp trace algorithm with explicit formula for quadratic polynomials<superscript><ref refid="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote4" kindref="member">[4]</ref></superscript>. The root finding is randomized to prevent adversarial inputs that intentionally trigger worst-case decode time.</para>
+</listitem><listitem><para>A (possibly) novel optimization combines a test for unique roots with the Berlekamp trace algorithm.</para>
+</listitem></itemizedlist>
+</superscript></para>
+<para><superscript>Some improvements that are still TODO:<itemizedlist>
+<listitem><para>Explicit formulas for the roots of polynomials of higher degree than 2</para>
+</listitem><listitem><para>Subquadratic multiplication and modulus algorithms</para>
+</listitem><listitem><para>The <ulink url="http://mathworld.wolfram.com/Half-GCD.html">Half-GCD algorithm</ulink> for faster GCDs</para>
+</listitem><listitem><para>An interface for incremental decoding: most of the computation in most failed decodes can be reused when attempting to decode a longer sketch of the same set</para>
+</listitem><listitem><para>Platform specific optimizations for platforms other than x86</para>
+</listitem><listitem><para>Avoid using slow uint64_t for calculations on 32-bit hosts</para>
+</listitem><listitem><para>Optional IBLT / Hybrid and set entropy coder under the same interface</para>
+</listitem></itemizedlist>
+</superscript></para>
+<para><superscript></superscript></para>
+</sect1>
+<sect1 id="dir_70099abe5db258d8b2b1561b8813f7f0_1autotoc_md99">
+<title><superscript>References</superscript></title><para><superscript></superscript></para>
+<para><superscript><itemizedlist>
+<listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote1"/>[1] Dodis, Ostrovsky, Reyzin and Smith. <emphasis>Fuzzy Extractors: How to Generate Strong Keys from Biometrics and Other Noisy Data.</emphasis> SIAM Journal on Computing, volume 38, number 1, pages 97-139, 2008). <ulink url="http://eprint.iacr.org/2003/235">[URL]</ulink> <ulink url="https://eprint.iacr.org/2003/235.pdf">[PDF]</ulink></para>
+</listitem><listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote5"/>[5] A. Trachtenberg, D. Starobinski and S. Agarwal. <emphasis>Fast PDA synchronization using characteristic polynomial interpolation.</emphasis> Proceedings, Twenty-First Annual Joint Conference of the IEEE Computer and Communications Societies, New York, NY, USA, 2002, pp. 1510-1519 vol.3. <ulink url="https://pdfs.semanticscholar.org/43da/2070b6b7b2320a1fed2fd5e70e87332c9c5e.pdf">[PDF]</ulink></para>
+</listitem><listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote2"/>[2] Cherly, Jørgen, Luis Gallardo, Leonid Vaserstein, and Ethel Wheland. <emphasis>Solving quadratic equations over polynomial rings of characteristic two.</emphasis> Publicacions Matemàtiques (1998): 131-142. <ulink url="https://www.raco.cat/index.php/PublicacionsMatematiques/article/viewFile/37927/40412">[PDF]</ulink></para>
+</listitem><listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote3"/>[3] J. Massey. <emphasis>Shift-register synthesis and BCH decoding.</emphasis> IEEE Transactions on Information Theory, vol. 15, no. 1, pp. 122-127, January 1969. <ulink url="http://crypto.stanford.edu/~mironov/cs359/massey.pdf">[PDF]</ulink></para>
+</listitem><listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote4"/>[4] Bhaskar Biswas, Vincent Herbert. <emphasis>Efficient Root Finding of Polynomials over Fields of Characteristic 2.</emphasis> 2009. hal-00626997. <ulink url="https://hal.archives-ouvertes.fr/hal-00626997">[URL]</ulink> <ulink url="https://hal.archives-ouvertes.fr/hal-00626997/document">[PDF]</ulink></para>
+</listitem><listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote6"/>[6] Eppstein, David, Michael T. Goodrich, Frank Uyeda, and George Varghese. <emphasis>What&apos;s the difference?: efficient set reconciliation without prior context.</emphasis> ACM SIGCOMM Computer Communication Review, vol. 41, no. 4, pp. 218-229. ACM, 2011. <ulink url="https://www.ics.uci.edu/~eppstein/pubs/EppGooUye-SIGCOMM-11.pdf">[PDF]</ulink></para>
+</listitem><listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote7"/>[7] Goodrich, Michael T. and Michael Mitzenmacher. <emphasis>Invertible bloom lookup tables.</emphasis> 2011 49th Annual Allerton Conference on Communication, Control, and Computing (Allerton) (2011): 792-799. <ulink url="https://arxiv.org/pdf/1101.2245.pdf">[PDF]</ulink></para>
+</listitem><listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote8"/>[8] Maxwell, Gregory F. <emphasis><ulink url="https://bitcointalk.org/index.php?topic=1377345.0">Blocksonly mode BW savings, the limits of efficient block xfer, and better relay</ulink></emphasis> Bitcointalk 2016, <emphasis><ulink url="https://nt4tn.net/tech-notes/2016.mempool_sync_relay.txt">Technical notes on mempool synchronizing relay</ulink></emphasis> #bitcoin-wizards 2016.</para>
+</listitem><listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote9"/>[9] Maxwell, Gregory F. <emphasis><ulink url="https://en.bitcoin.it/wiki/User:Gmaxwell/block_network_coding">Block network coding</ulink></emphasis> Bitcoin Wiki 2014, <emphasis><ulink url="https://nt4tn.net/tech-notes/201512.efficient.block.xfer.txt">Technical notes on efficient block xfer</ulink></emphasis> #bitcoin-wizards 2015.</para>
+</listitem><listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote10"/>[10] Ruffing, Tim, Moreno-Sanchez, Pedro, Aniket, Kate, <emphasis>P2P Mixing and Unlinkable Bitcoin Transactions</emphasis> NDSS Symposium 2017 <ulink url="https://eprint.iacr.org/2016/824">[URL]</ulink> <ulink url="https://eprint.iacr.org/2016/824.pdf">[PDF]</ulink></para>
+</listitem><listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote11"/>[11] Y. Misky, A. Trachtenberg, R. Zippel. <emphasis>Set Reconciliation with Nearly Optimal Communication Complexity.</emphasis> Cornell University, 2000. <ulink url="https://ecommons.cornell.edu/handle/1813/5803">[URL]</ulink> <ulink url="https://ecommons.cornell.edu/bitstream/handle/1813/5803/2000-1813.pdf">[PDF]</ulink></para>
+</listitem><listitem><para><anchor id="dir_70099abe5db258d8b2b1561b8813f7f0_1myfootnote12"/>[12] Itoh, Toshiya, and Shigeo Tsujii. &quot;A fast algorithm for computing multiplicative inverses in GF (2m) using normal bases.&quot; Information and computation 78, no. 3 (1988): 171-177. <ulink url="https://www.sciencedirect.com/science/article/pii/0890540188900247">[URL]</ulink> </para>
+</listitem></itemizedlist>
+</superscript></para>
+</sect1>
+    </detaileddescription>
+    <location file="src/minisketch/"/>
+  </compounddef>
+</doxygen>

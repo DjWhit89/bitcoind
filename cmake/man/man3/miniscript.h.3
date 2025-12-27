@@ -1,0 +1,221 @@
+.TH "src/script/miniscript.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/script/miniscript.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <algorithm>\fP
+.br
+\fR#include <compare>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include <cstdlib>\fP
+.br
+\fR#include <iterator>\fP
+.br
+\fR#include <memory>\fP
+.br
+\fR#include <optional>\fP
+.br
+\fR#include <set>\fP
+.br
+\fR#include <stdexcept>\fP
+.br
+\fR#include <tuple>\fP
+.br
+\fR#include <utility>\fP
+.br
+\fR#include <vector>\fP
+.br
+\fR#include <consensus/consensus\&.h>\fP
+.br
+\fR#include <policy/policy\&.h>\fP
+.br
+\fR#include <script/interpreter\&.h>\fP
+.br
+\fR#include <script/parsing\&.h>\fP
+.br
+\fR#include <script/script\&.h>\fP
+.br
+\fR#include <serialize\&.h>\fP
+.br
+\fR#include <span\&.h>\fP
+.br
+\fR#include <util/check\&.h>\fP
+.br
+\fR#include <util/strencodings\&.h>\fP
+.br
+\fR#include <util/string\&.h>\fP
+.br
+\fR#include <util/vector\&.h>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBType\fP"
+.br
+.ti -1c
+.RI "struct \fBInputStack\fP"
+.br
+.RI "An object representing a sequence of witness stack elements\&. "
+.ti -1c
+.RI "struct \fBInputResult\fP"
+.br
+.RI "A pair of a satisfaction and a dissatisfaction \fBInputStack\fP\&. "
+.ti -1c
+.RI "struct \fBMaxInt< I >\fP"
+.br
+.RI "Class whose objects represent the maximum of a list of integers\&. "
+.ti -1c
+.RI "struct \fBOps\fP"
+.br
+.ti -1c
+.RI "struct \fBSatInfo\fP"
+.br
+.ti -1c
+.RI "struct \fBStackSize\fP"
+.br
+.ti -1c
+.RI "struct \fBWitnessSize\fP"
+.br
+.ti -1c
+.RI "struct \fBNoDupCheck\fP"
+.br
+.ti -1c
+.RI "struct \fBNode< Key >\fP"
+.br
+.RI "A node in a miniscript expression\&. "
+.in -1c
+.SS "Namespaces"
+
+.in +1c
+.ti -1c
+.RI "namespace \fBminiscript\fP"
+.br
+.ti -1c
+.RI "namespace \fBminiscript::internal\fP"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "using \fBOpcode\fP = std::pair<\fBopcodetype\fP, std::vector<unsigned char>>"
+.br
+.ti -1c
+.RI "template<typename Key> using \fBNodeRef\fP = std::unique_ptr<const \fBNode\fP<Key>>"
+.br
+.in -1c
+.SS "Enumerations"
+
+.in +1c
+.ti -1c
+.RI "enum class \fBFragment\fP { \fBJUST_0\fP, \fBJUST_1\fP, \fBPK_K\fP, \fBPK_H\fP, \fBOLDER\fP, \fBAFTER\fP, \fBSHA256\fP, \fBHASH256\fP, \fBRIPEMD160\fP, \fBHASH160\fP, \fBWRAP_A\fP, \fBWRAP_S\fP, \fBWRAP_C\fP, \fBWRAP_D\fP, \fBWRAP_V\fP, \fBWRAP_J\fP, \fBWRAP_N\fP, \fBAND_V\fP, \fBAND_B\fP, \fBOR_B\fP, \fBOR_C\fP, \fBOR_D\fP, \fBOR_I\fP, \fBANDOR\fP, \fBTHRESH\fP, \fBMULTI\fP, \fBMULTI_A\fP }"
+.br
+.RI "The different node types in miniscript\&. "
+.ti -1c
+.RI "enum class \fBAvailability\fP { \fBNO\fP, \fBYES\fP, \fBMAYBE\fP }"
+.br
+.ti -1c
+.RI "enum class \fBMiniscriptContext\fP { \fBP2WSH\fP, \fBTAPSCRIPT\fP }"
+.br
+.ti -1c
+.RI "enum class \fBParseContext\fP { \fBWRAPPED_EXPR\fP, \fBEXPR\fP, \fBSWAP\fP, \fBALT\fP, \fBCHECK\fP, \fBDUP_IF\fP, \fBVERIFY\fP, \fBNON_ZERO\fP, \fBZERO_NOTEQUAL\fP, \fBWRAP_U\fP, \fBWRAP_T\fP, \fBAND_N\fP, \fBAND_V\fP, \fBAND_B\fP, \fBANDOR\fP, \fBOR_B\fP, \fBOR_C\fP, \fBOR_D\fP, \fBOR_I\fP, \fBTHRESH\fP, \fBCOMMA\fP, \fBCLOSE_BRACKET\fP }"
+.br
+.ti -1c
+.RI "enum class \fBDecodeContext\fP { \fBSINGLE_BKV_EXPR\fP, \fBBKV_EXPR\fP, \fBW_EXPR\fP, \fBSWAP\fP, \fBALT\fP, \fBCHECK\fP, \fBDUP_IF\fP, \fBVERIFY\fP, \fBNON_ZERO\fP, \fBZERO_NOTEQUAL\fP, \fBMAYBE_AND_V\fP, \fBAND_V\fP, \fBAND_B\fP, \fBANDOR\fP, \fBOR_B\fP, \fBOR_C\fP, \fBOR_D\fP, \fBTHRESH_W\fP, \fBTHRESH_E\fP, \fBENDIF\fP, \fBENDIF_NOTIF\fP, \fBENDIF_ELSE\fP }"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "consteval \fBType\fP \fBoperator''_mst\fP (const char *c, size_t l)"
+.br
+.RI "Literal operator to construct \fBType\fP objects\&. "
+.ti -1c
+.RI "template<typename Key, typename\&.\&.\&. Args> \fBNodeRef\fP< Key > \fBMakeNodeRef\fP (Args &&\&.\&.\&. \fBargs\fP)"
+.br
+.RI "Construct a miniscript node as a unique_ptr\&. "
+.ti -1c
+.RI "constexpr bool \fBIsTapscript\fP (\fBMiniscriptContext\fP ms_ctx)"
+.br
+.ti -1c
+.RI "constexpr uint32_t \fBMaxScriptSize\fP (\fBMiniscriptContext\fP ms_ctx)"
+.br
+.ti -1c
+.RI "\fBType\fP \fBComputeType\fP (\fBFragment\fP fragment, \fBType\fP x, \fBType\fP y, \fBType\fP z, const std::vector< \fBType\fP > &sub_types, uint32_t k, size_t data_size, size_t n_subs, size_t n_keys, \fBMiniscriptContext\fP ms_ctx)"
+.br
+.RI "Helper function for Node::CalcType\&. "
+.ti -1c
+.RI "size_t \fBComputeScriptLen\fP (\fBFragment\fP fragment, \fBType\fP sub0typ, size_t subsize, uint32_t k, size_t n_subs, size_t n_keys, \fBMiniscriptContext\fP ms_ctx)"
+.br
+.RI "Helper function for Node::CalcScriptLen\&. "
+.ti -1c
+.RI "\fBType\fP \fBSanitizeType\fP (\fBType\fP x)"
+.br
+.RI "A helper sanitizer/checker for the output of CalcType\&. "
+.ti -1c
+.RI "int \fBFindNextChar\fP (std::span< const char > sp, const char m)"
+.br
+.ti -1c
+.RI "template<typename Key, typename Ctx> std::optional< std::pair< Key, int > > \fBParseKeyEnd\fP (std::span< const char > in, const Ctx &ctx)"
+.br
+.ti -1c
+.RI "template<typename Ctx> std::optional< std::pair< std::vector< unsigned char >, int > > \fBParseHexStrEnd\fP (std::span< const char > in, const size_t expected_size, const Ctx &ctx)"
+.br
+.ti -1c
+.RI "template<typename Key> void \fBBuildBack\fP (const \fBMiniscriptContext\fP script_ctx, \fBFragment\fP nt, std::vector< \fBNodeRef\fP< Key > > &constructed, const bool reverse=false)"
+.br
+.ti -1c
+.RI "template<typename Key, typename Ctx> \fBNodeRef\fP< Key > \fBParse\fP (std::span< const char > in, const Ctx &ctx)"
+.br
+.ti -1c
+.RI "std::optional< std::vector< \fBOpcode\fP > > \fBDecomposeScript\fP (const \fBCScript\fP &\fBscript\fP)"
+.br
+.ti -1c
+.RI "std::optional< int64_t > \fBParseScriptNumber\fP (const \fBOpcode\fP &in)"
+.br
+.ti -1c
+.RI "template<typename Key, typename Ctx, typename I> \fBNodeRef\fP< Key > \fBDecodeScript\fP (I &in, I last, const Ctx &ctx)"
+.br
+.RI "Parse a miniscript from a bitcoin script\&. "
+.ti -1c
+.RI "template<typename Ctx> \fBNodeRef\fP< typename Ctx::Key > \fBFromString\fP (const std::string &str, const Ctx &ctx)"
+.br
+.ti -1c
+.RI "template<typename Ctx> \fBNodeRef\fP< typename Ctx::Key > \fBFromScript\fP (const \fBCScript\fP &\fBscript\fP, const Ctx &ctx)"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "constexpr uint32_t \fBTX_OVERHEAD\fP {4 + 4}"
+.br
+.RI "version + nLockTime "
+.ti -1c
+.RI "constexpr uint32_t \fBTXIN_BYTES_NO_WITNESS\fP {36 + 4 + 1}"
+.br
+.RI "prevout + nSequence + scriptSig "
+.ti -1c
+.RI "constexpr uint32_t \fBP2WSH_TXOUT_BYTES\fP {8 + 1 + 1 + 33}"
+.br
+.RI "nValue + script len + OP_0 + pushdata 32\&. "
+.ti -1c
+.RI "constexpr uint32_t \fBTX_BODY_LEEWAY_WEIGHT\fP {(\fBTX_OVERHEAD\fP + \fBGetSizeOfCompactSize\fP(1) + \fBTXIN_BYTES_NO_WITNESS\fP + \fBGetSizeOfCompactSize\fP(1) + \fBP2WSH_TXOUT_BYTES\fP) * WITNESS_SCALE_FACTOR + 2}"
+.br
+.RI "Data other than the witness in a transaction\&. Overhead + vin count + one vin + vout count + one vout + segwit marker\&. "
+.ti -1c
+.RI "constexpr uint32_t \fBMAX_TAPSCRIPT_SAT_SIZE\fP {\fBGetSizeOfCompactSize\fP(MAX_STACK_SIZE) + (\fBGetSizeOfCompactSize\fP(MAX_TAPMINISCRIPT_STACK_ELEM_SIZE) + MAX_TAPMINISCRIPT_STACK_ELEM_SIZE) * MAX_STACK_SIZE + \fBGetSizeOfCompactSize\fP(TAPROOT_CONTROL_MAX_SIZE) + TAPROOT_CONTROL_MAX_SIZE}"
+.br
+.RI "Maximum possible stack size to spend a Taproot output (excluding the script itself)\&. "
+.in -1c
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

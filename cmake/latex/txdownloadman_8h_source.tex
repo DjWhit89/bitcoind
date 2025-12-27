@@ -1,0 +1,128 @@
+\doxysection{txdownloadman.\+h}
+\label{txdownloadman_8h_source}\index{src/node/txdownloadman.h@{src/node/txdownloadman.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2024-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_NODE\_TXDOWNLOADMAN\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_NODE\_TXDOWNLOADMAN\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <net.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <node/txorphanage.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <policy/packages.h>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{keyword}{class\ }CBlock;}
+\DoxyCodeLine{00016\ \textcolor{keyword}{class\ }CRollingBloomFilter;}
+\DoxyCodeLine{00017\ \textcolor{keyword}{class\ }CTxMemPool;}
+\DoxyCodeLine{00018\ \textcolor{keyword}{class\ }GenTxid;}
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }TxRequestTracker;}
+\DoxyCodeLine{00020\ \textcolor{keyword}{namespace\ }node\ \{}
+\DoxyCodeLine{00021\ \textcolor{keyword}{class\ }TxDownloadManagerImpl;}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int32\_t\ MAX\_PEER\_TX\_REQUEST\_IN\_FLIGHT\ =\ 100;}
+\DoxyCodeLine{00030\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int32\_t\ MAX\_PEER\_TX\_ANNOUNCEMENTS\ =\ 5000;}
+\DoxyCodeLine{00032\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ TXID\_RELAY\_DELAY\{2s\};}
+\DoxyCodeLine{00034\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ NONPREF\_PEER\_TX\_DELAY\{2s\};}
+\DoxyCodeLine{00036\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ OVERLOADED\_PEER\_TX\_DELAY\{2s\};}
+\DoxyCodeLine{00038\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ GETDATA\_TX\_INTERVAL\{60s\};}
+\DoxyCodeLine{00039\ \textcolor{keyword}{struct\ }TxDownloadOptions\ \{}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keyword}{const}\ CTxMemPool\&\ m\_mempool;}
+\DoxyCodeLine{00043\ \ \ \ \ FastRandomContext\&\ m\_rng;}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_deterministic\_txrequest\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00046\ \};}
+\DoxyCodeLine{00047\ \textcolor{keyword}{struct\ }TxDownloadConnectionInfo\ \{}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ m\_preferred;}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ m\_relay\_permissions;}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ m\_wtxid\_relay;}
+\DoxyCodeLine{00054\ \};}
+\DoxyCodeLine{00055\ \textcolor{keyword}{struct\ }PackageToValidate\ \{}
+\DoxyCodeLine{00056\ \ \ \ \ Package\ m\_txns;}
+\DoxyCodeLine{00057\ \ \ \ \ std::vector<NodeId>\ m\_senders;}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keyword}{explicit}\ PackageToValidate(\textcolor{keyword}{const}\ CTransactionRef\&\ parent,}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CTransactionRef\&\ child,}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ NodeId\ parent\_sender,}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ NodeId\ child\_sender)\ :}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ m\_txns\{parent,\ child\},}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ m\_senders\{parent\_sender,\ child\_sender\}}
+\DoxyCodeLine{00065\ \ \ \ \ \{\}}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{comment}{//\ Move\ ctor}}
+\DoxyCodeLine{00068\ \ \ \ \ PackageToValidate(PackageToValidate\&\&\ other)\ :\ m\_txns\{std::move(other.m\_txns)\},\ m\_senders\{std::move(other.m\_senders)\}\ \{\}}
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{comment}{//\ Copy\ ctor}}
+\DoxyCodeLine{00070\ \ \ \ \ PackageToValidate(\textcolor{keyword}{const}\ PackageToValidate\&\ other)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{comment}{//\ Move\ assignment}}
+\DoxyCodeLine{00073\ \ \ \ \ PackageToValidate\&\ operator=(PackageToValidate\&\&\ other)\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ this-\/>m\_txns\ =\ std::move(other.m\_txns);}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ this-\/>m\_senders\ =\ std::move(other.m\_senders);}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00077\ \ \ \ \ \}}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ std::string\ ToString()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ Assume(m\_txns.size()\ ==\ 2);}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ strprintf(\textcolor{stringliteral}{"{}parent\ \%s\ (wtxid=\%s,\ sender=\%d)\ +\ child\ \%s\ (wtxid=\%s,\ sender=\%d)"{}},}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_txns.front()-\/>GetHash().ToString(),}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_txns.front()-\/>GetWitnessHash().ToString(),}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_senders.front(),}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_txns.back()-\/>GetHash().ToString(),}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_txns.back()-\/>GetWitnessHash().ToString(),}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_senders.back());}
+\DoxyCodeLine{00088\ \ \ \ \ \}}
+\DoxyCodeLine{00089\ \};}
+\DoxyCodeLine{00090\ \textcolor{keyword}{struct\ }RejectedTxTodo}
+\DoxyCodeLine{00091\ \{}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_should\_add\_extra\_compact\_tx;}
+\DoxyCodeLine{00093\ \ \ \ \ std::vector<Txid>\ m\_unique\_parents;}
+\DoxyCodeLine{00094\ \ \ \ \ std::optional<PackageToValidate>\ m\_package\_to\_validate;}
+\DoxyCodeLine{00095\ \};}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00117\ \textcolor{keyword}{class\ }TxDownloadManager\ \{}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keyword}{const}\ std::unique\_ptr<TxDownloadManagerImpl>\ m\_impl;}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00120\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keyword}{explicit}\ TxDownloadManager(\textcolor{keyword}{const}\ TxDownloadOptions\&\ options);}
+\DoxyCodeLine{00122\ \ \ \ \ \string~TxDownloadManager();}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{comment}{//\ Responses\ to\ chain\ events.\ TxDownloadManager\ is\ not\ an\ actual\ client\ of\ ValidationInterface,\ these\ are\ called\ through\ PeerManager.}}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keywordtype}{void}\ ActiveTipChange();}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keywordtype}{void}\ BlockConnected(\textcolor{keyword}{const}\ std::shared\_ptr<const\ CBlock>\&\ pblock);}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keywordtype}{void}\ BlockDisconnected();}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keywordtype}{void}\ ConnectedPeer(NodeId\ nodeid,\ \textcolor{keyword}{const}\ TxDownloadConnectionInfo\&\ info);}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00133\ \ \ \ \ \textcolor{keywordtype}{void}\ DisconnectedPeer(NodeId\ nodeid);}
+\DoxyCodeLine{00134\ }
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{keywordtype}{bool}\ AddTxAnnouncement(NodeId\ peer,\ \textcolor{keyword}{const}\ GenTxid\&\ gtxid,\ std::chrono::microseconds\ now);}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00141\ \ \ \ \ std::vector<GenTxid>\ GetRequestsToSend(NodeId\ nodeid,\ std::chrono::microseconds\ current\_time);}
+\DoxyCodeLine{00142\ }
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keywordtype}{void}\ ReceivedNotFound(NodeId\ nodeid,\ \textcolor{keyword}{const}\ std::vector<GenTxid>\&\ gtxids);}
+\DoxyCodeLine{00145\ }
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordtype}{void}\ MempoolAcceptedTx(\textcolor{keyword}{const}\ CTransactionRef\&\ tx);}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00150\ \ \ \ \ RejectedTxTodo\ MempoolRejectedTx(\textcolor{keyword}{const}\ CTransactionRef\&\ ptx,\ \textcolor{keyword}{const}\ TxValidationState\&\ state,\ NodeId\ nodeid,\ \textcolor{keywordtype}{bool}\ first\_time\_failure);}
+\DoxyCodeLine{00151\ }
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keywordtype}{void}\ MempoolRejectedPackage(\textcolor{keyword}{const}\ Package\&\ package);}
+\DoxyCodeLine{00154\ }
+\DoxyCodeLine{00158\ \ \ \ \ std::pair<bool,\ std::optional<PackageToValidate>>\ ReceivedTx(NodeId\ nodeid,\ \textcolor{keyword}{const}\ CTransactionRef\&\ ptx);}
+\DoxyCodeLine{00159\ }
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveMoreWork(NodeId\ nodeid)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00162\ }
+\DoxyCodeLine{00164\ \ \ \ \ CTransactionRef\ GetTxToReconsider(NodeId\ nodeid);}
+\DoxyCodeLine{00165\ }
+\DoxyCodeLine{00167\ \ \ \ \ \textcolor{keywordtype}{void}\ CheckIsEmpty()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{keywordtype}{void}\ CheckIsEmpty(NodeId\ nodeid)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00173\ \ \ \ \ std::vector<TxOrphanage::OrphanInfo>\ GetOrphanTransactions()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00174\ \};}
+\DoxyCodeLine{00175\ \}\ \textcolor{comment}{//\ namespace\ node}}
+\DoxyCodeLine{00176\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_NODE\_TXDOWNLOADMAN\_H}}
+
+\end{DoxyCode}

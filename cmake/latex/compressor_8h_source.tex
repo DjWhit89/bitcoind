@@ -1,0 +1,89 @@
+\doxysection{compressor.\+h}
+\label{compressor_8h_source}\index{src/compressor.h@{src/compressor.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_COMPRESSOR\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_COMPRESSOR\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <prevector.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <script/script.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{using\ }CompressedScript\ =\ prevector<33,\ unsigned\ char>;}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{keywordtype}{bool}\ CompressScript(\textcolor{keyword}{const}\ CScript\&\ script,\ CompressedScript\&\ out);}
+\DoxyCodeLine{00027\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ GetSpecialScriptSize(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nSize);}
+\DoxyCodeLine{00028\ \textcolor{keywordtype}{bool}\ DecompressScript(CScript\&\ script,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nSize,\ \textcolor{keyword}{const}\ CompressedScript\&\ in);}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00039\ uint64\_t\ CompressAmount(uint64\_t\ nAmount);}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ uint64\_t\ DecompressAmount(uint64\_t\ nAmount);}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00054\ \textcolor{keyword}{struct\ }ScriptCompression}
+\DoxyCodeLine{00055\ \{}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nSpecialScripts\ =\ 6;}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordtype}{void}\ Ser(Stream\ \&s,\ \textcolor{keyword}{const}\ CScript\&\ script)\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ CompressedScript\ compr;}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (CompressScript(script,\ compr))\ \{}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ std::span\{compr\};}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nSize\ =\ script.size()\ +\ nSpecialScripts;}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ s\ <<\ VARINT(nSize);}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ s\ <<\ std::span\{script\};}
+\DoxyCodeLine{00074\ \ \ \ \ \}}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keywordtype}{void}\ Unser(Stream\ \&s,\ CScript\&\ script)\ \{}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nSize\ =\ 0;}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ s\ >>\ VARINT(nSize);}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nSize\ <\ nSpecialScripts)\ \{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ CompressedScript\ vch(GetSpecialScriptSize(nSize),\ 0x00);}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ std::span\{vch\};}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ DecompressScript(script,\ nSize,\ vch);}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ nSize\ -\/=\ nSpecialScripts;}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nSize\ >\ MAX\_SCRIPT\_SIZE)\ \{}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Overly\ long\ script,\ replace\ with\ a\ short\ invalid\ one}}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \ \ \ \ script\ <<\ OP\_RETURN;}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ s.ignore(nSize);}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ script.resize(nSize);}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ std::span\{script\};}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00095\ \ \ \ \ \}}
+\DoxyCodeLine{00096\ \};}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \textcolor{keyword}{struct\ }AmountCompression}
+\DoxyCodeLine{00099\ \{}
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ I>\ \textcolor{keywordtype}{void}\ Ser(Stream\&\ s,\ I\ val)}
+\DoxyCodeLine{00101\ \ \ \ \ \{}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ s\ <<\ VARINT(CompressAmount(val));}
+\DoxyCodeLine{00103\ \ \ \ \ \}}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ I>\ \textcolor{keywordtype}{void}\ Unser(Stream\&\ s,\ I\&\ val)}
+\DoxyCodeLine{00105\ \ \ \ \ \{}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ uint64\_t\ v;}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ s\ >>\ VARINT(v);}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ val\ =\ DecompressAmount(v);}
+\DoxyCodeLine{00109\ \ \ \ \ \}}
+\DoxyCodeLine{00110\ \};}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00113\ \textcolor{keyword}{struct\ }TxOutCompression}
+\DoxyCodeLine{00114\ \{}
+\DoxyCodeLine{00115\ \ \ \ \ FORMATTER\_METHODS(CTxOut,\ obj)\ \{\ READWRITE(Using<AmountCompression>(obj.nValue),\ Using<ScriptCompression>(obj.scriptPubKey));\ \}}
+\DoxyCodeLine{00116\ \};}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_COMPRESSOR\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,130 @@
+.TH "ValidationSignals" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+ValidationSignals
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <validationinterface\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBValidationSignals\fP (std::unique_ptr< \fButil::TaskRunnerInterface\fP > task_runner)"
+.br
+.ti -1c
+.RI "\fB~ValidationSignals\fP ()"
+.br
+.ti -1c
+.RI "void \fBFlushBackgroundCallbacks\fP ()"
+.br
+.ti -1c
+.RI "size_t \fBCallbacksPending\fP ()"
+.br
+.ti -1c
+.RI "void \fBRegisterValidationInterface\fP (\fBCValidationInterface\fP *callbacks)"
+.br
+.ti -1c
+.RI "void \fBUnregisterValidationInterface\fP (\fBCValidationInterface\fP *callbacks)"
+.br
+.ti -1c
+.RI "void \fBUnregisterAllValidationInterfaces\fP ()"
+.br
+.ti -1c
+.RI "void \fBRegisterSharedValidationInterface\fP (std::shared_ptr< \fBCValidationInterface\fP > callbacks)"
+.br
+.ti -1c
+.RI "void \fBUnregisterSharedValidationInterface\fP (std::shared_ptr< \fBCValidationInterface\fP > callbacks)"
+.br
+.ti -1c
+.RI "void \fBCallFunctionInValidationInterfaceQueue\fP (std::function< void()> func)"
+.br
+.ti -1c
+.RI "void \fBSyncWithValidationInterfaceQueue\fP () \fBLOCKS_EXCLUDED\fP(\fBcs_main\fP)"
+.br
+.ti -1c
+.RI "void \fBUpdatedBlockTip\fP (const \fBCBlockIndex\fP *, const \fBCBlockIndex\fP *, bool fInitialDownload)"
+.br
+.ti -1c
+.RI "void \fBActiveTipChange\fP (const \fBCBlockIndex\fP &, bool)"
+.br
+.ti -1c
+.RI "void \fBTransactionAddedToMempool\fP (const \fBNewMempoolTransactionInfo\fP &, uint64_t mempool_sequence)"
+.br
+.ti -1c
+.RI "void \fBTransactionRemovedFromMempool\fP (const \fBCTransactionRef\fP &, \fBMemPoolRemovalReason\fP, uint64_t mempool_sequence)"
+.br
+.ti -1c
+.RI "void \fBMempoolTransactionsRemovedForBlock\fP (const std::vector< \fBRemovedMempoolTransactionInfo\fP > &, unsigned int nBlockHeight)"
+.br
+.ti -1c
+.RI "void \fBBlockConnected\fP (const \fBkernel::ChainstateRole\fP &, const std::shared_ptr< const \fBCBlock\fP > &, const \fBCBlockIndex\fP *pindex)"
+.br
+.ti -1c
+.RI "void \fBBlockDisconnected\fP (const std::shared_ptr< const \fBCBlock\fP > &, const \fBCBlockIndex\fP *pindex)"
+.br
+.ti -1c
+.RI "void \fBChainStateFlushed\fP (const \fBkernel::ChainstateRole\fP &, const \fBCBlockLocator\fP &)"
+.br
+.ti -1c
+.RI "void \fBBlockChecked\fP (const std::shared_ptr< const \fBCBlock\fP > &, const \fBBlockValidationState\fP &)"
+.br
+.ti -1c
+.RI "void \fBNewPoWValidBlock\fP (const \fBCBlockIndex\fP *, const std::shared_ptr< const \fBCBlock\fP > &)"
+.br
+.in -1c
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBValidationSignals\fP (std::unique_ptr< \fButil::TaskRunnerInterface\fP > task_runner)\fR [explicit]\fP"
+
+.SS "~\fBValidationSignals\fP ()\fR [default]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "void ActiveTipChange (const \fBCBlockIndex\fP & new_tip, bool is_ibd)"
+
+.SS "void BlockChecked (const std::shared_ptr< const \fBCBlock\fP > & block, const \fBBlockValidationState\fP & state)"
+
+.SS "void BlockConnected (const \fBkernel::ChainstateRole\fP & role, const std::shared_ptr< const \fBCBlock\fP > & pblock, const \fBCBlockIndex\fP * pindex)"
+
+.SS "void BlockDisconnected (const std::shared_ptr< const \fBCBlock\fP > & pblock, const \fBCBlockIndex\fP * pindex)"
+
+.SS "size_t CallbacksPending ()"
+
+.SS "void CallFunctionInValidationInterfaceQueue (std::function< void()> func)"
+Pushes a function to callback onto the notification queue, guaranteeing any callbacks generated prior to now are finished when the function is called\&.
+
+.PP
+Be very careful blocking on func to be called if any locks are held - validation interface clients may not be able to make progress as they often wait for things like cs_main, so blocking until func is called with cs_main will result in a deadlock (that DEBUG_LOCKORDER will miss)\&. 
+.SS "void ChainStateFlushed (const \fBkernel::ChainstateRole\fP & role, const \fBCBlockLocator\fP & locator)"
+
+.SS "void FlushBackgroundCallbacks ()"
+Call any remaining callbacks on the calling thread 
+.SS "void MempoolTransactionsRemovedForBlock (const std::vector< \fBRemovedMempoolTransactionInfo\fP > & txs_removed_for_block, unsigned int nBlockHeight)"
+
+.SS "void NewPoWValidBlock (const \fBCBlockIndex\fP * pindex, const std::shared_ptr< const \fBCBlock\fP > & block)"
+
+.SS "void RegisterSharedValidationInterface (std::shared_ptr< \fBCValidationInterface\fP > callbacks)"
+Register subscriber 
+.SS "void RegisterValidationInterface (\fBCValidationInterface\fP * callbacks)"
+Register subscriber 
+.SS "void SyncWithValidationInterfaceQueue ()"
+This is a synonym for the following, which asserts certain locks are not held: std::promise<void> promise; CallFunctionInValidationInterfaceQueue([&promise] { promise\&.set_value(); }); promise\&.get_future()\&.wait(); 
+.SS "void TransactionAddedToMempool (const \fBNewMempoolTransactionInfo\fP & tx, uint64_t mempool_sequence)"
+
+.SS "void TransactionRemovedFromMempool (const \fBCTransactionRef\fP & tx, \fBMemPoolRemovalReason\fP reason, uint64_t mempool_sequence)"
+
+.SS "void UnregisterAllValidationInterfaces ()"
+Unregister all subscribers 
+.SS "void UnregisterSharedValidationInterface (std::shared_ptr< \fBCValidationInterface\fP > callbacks)"
+Unregister subscriber 
+.SS "void UnregisterValidationInterface (\fBCValidationInterface\fP * callbacks)"
+Unregister subscriber\&. DEPRECATED\&. This is not safe to use when the RPC server or main message handler thread is running\&. 
+.SS "void UpdatedBlockTip (const \fBCBlockIndex\fP * pindexNew, const \fBCBlockIndex\fP * pindexFork, bool fInitialDownload)"
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

@@ -1,0 +1,147 @@
+\doxysection{headerssync.\+h}
+\label{headerssync_8h_source}\index{src/headerssync.h@{src/headerssync.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2022-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_HEADERSSYNC\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_HEADERSSYNC\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <arith\_uint256.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <chain.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <consensus/params.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <net.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <primitives/block.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/bitdeque.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <util/hasher.h>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <deque>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{comment}{//\ A\ compressed\ CBlockHeader,\ which\ leaves\ out\ the\ prevhash}}
+\DoxyCodeLine{00021\ \textcolor{keyword}{struct\ }CompressedHeader\ \{}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{comment}{//\ header}}
+\DoxyCodeLine{00023\ \ \ \ \ int32\_t\ nVersion\{0\};}
+\DoxyCodeLine{00024\ \ \ \ \ uint256\ hashMerkleRoot;}
+\DoxyCodeLine{00025\ \ \ \ \ uint32\_t\ nTime\{0\};}
+\DoxyCodeLine{00026\ \ \ \ \ uint32\_t\ nBits\{0\};}
+\DoxyCodeLine{00027\ \ \ \ \ uint32\_t\ nNonce\{0\};}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \ \ \ \ CompressedHeader()}
+\DoxyCodeLine{00030\ \ \ \ \ \{}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ hashMerkleRoot.SetNull();}
+\DoxyCodeLine{00032\ \ \ \ \ \}}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \ \ \ \ CompressedHeader(\textcolor{keyword}{const}\ CBlockHeader\&\ header)}
+\DoxyCodeLine{00035\ \ \ \ \ \{}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ nVersion\ =\ header.nVersion;}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ hashMerkleRoot\ =\ header.hashMerkleRoot;}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ nTime\ =\ header.nTime;}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ nBits\ =\ header.nBits;}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ nNonce\ =\ header.nNonce;}
+\DoxyCodeLine{00041\ \ \ \ \ \}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \ \ CBlockHeader\ GetFullHeader(\textcolor{keyword}{const}\ uint256\&\ hash\_prev\_block)\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ CBlockHeader\ ret;}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ ret.nVersion\ =\ nVersion;}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ ret.hashPrevBlock\ =\ hash\_prev\_block;}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ ret.hashMerkleRoot\ =\ hashMerkleRoot;}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ ret.nTime\ =\ nTime;}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ ret.nBits\ =\ nBits;}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ ret.nNonce\ =\ nNonce;}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00052\ \ \ \ \ \};}
+\DoxyCodeLine{00053\ \};}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \textcolor{keyword}{class\ }HeadersSyncState\ \{}
+\DoxyCodeLine{00102\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00103\ \ \ \ \ \string~HeadersSyncState()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{keyword}{enum\ class}\ State\ \{}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ PRESYNC,}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ REDOWNLOAD,}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ FINAL}
+\DoxyCodeLine{00116\ \ \ \ \ \};}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00119\ \ \ \ \ State\ GetState()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_download\_state;\ \}}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00122\ \ \ \ \ int64\_t\ GetPresyncHeight()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_current\_height;\ \}}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00125\ \ \ \ \ uint32\_t\ GetPresyncTime()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_last\_header\_received.nTime;\ \}}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00128\ \ \ \ \ arith\_uint256\ GetPresyncWork()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_current\_chain\_work;\ \}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00138\ \ \ \ \ HeadersSyncState(NodeId\ \textcolor{keywordtype}{id},\ \textcolor{keyword}{const}\ Consensus::Params\&\ consensus\_params,}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ HeadersSyncParams\&\ params,\ \textcolor{keyword}{const}\ CBlockIndex*\ chain\_start,}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ arith\_uint256\&\ minimum\_required\_work);}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00143\ \ \ \ \ \textcolor{keyword}{struct\ }ProcessingResult\ \{}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ std::vector<CBlockHeader>\ pow\_validated\_headers;}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ success\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ request\_more\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00147\ \ \ \ \ \};}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00169\ \ \ \ \ ProcessingResult\ ProcessNextHeaders(std::span<const\ CBlockHeader>}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \ \ \ \ received\_headers,\ \textcolor{keywordtype}{bool}\ full\_headers\_message);}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00177\ \ \ \ \ CBlockLocator\ NextHeadersRequestLocator()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00179\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00184\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ m\_commit\_offset;}
+\DoxyCodeLine{00185\ }
+\DoxyCodeLine{00186\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00190\ \ \ \ \ \textcolor{keywordtype}{void}\ Finalize();}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{keywordtype}{bool}\ ValidateAndStoreHeadersCommitments(std::span<const\ CBlockHeader>\ headers);}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keywordtype}{bool}\ ValidateAndProcessSingleHeader(\textcolor{keyword}{const}\ CBlockHeader\&\ current);}
+\DoxyCodeLine{00203\ }
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keywordtype}{bool}\ ValidateAndStoreRedownloadedHeader(\textcolor{keyword}{const}\ CBlockHeader\&\ header);}
+\DoxyCodeLine{00207\ }
+\DoxyCodeLine{00209\ \ \ \ \ std::vector<CBlockHeader>\ PopHeadersReadyForAcceptance();}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00211\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00213\ \ \ \ \ \textcolor{keyword}{const}\ NodeId\ m\_id;}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00216\ \ \ \ \ \textcolor{keyword}{const}\ Consensus::Params\&\ m\_consensus\_params;}
+\DoxyCodeLine{00217\ }
+\DoxyCodeLine{00219\ \ \ \ \ \textcolor{keyword}{const}\ HeadersSyncParams\ m\_params;}
+\DoxyCodeLine{00220\ }
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{keyword}{const}\ CBlockIndex*\ m\_chain\_start\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00223\ }
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{keyword}{const}\ arith\_uint256\ m\_minimum\_required\_work;}
+\DoxyCodeLine{00226\ }
+\DoxyCodeLine{00228\ \ \ \ \ arith\_uint256\ m\_current\_chain\_work;}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00231\ \ \ \ \ \textcolor{keyword}{const}\ SaltedUint256Hasher\ m\_hasher;}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00234\ \ \ \ \ bitdeque<>\ m\_header\_commitments;}
+\DoxyCodeLine{00235\ }
+\DoxyCodeLine{00241\ \ \ \ \ uint64\_t\ m\_max\_commitments\{0\};}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00244\ \ \ \ \ CBlockHeader\ m\_last\_header\_received;}
+\DoxyCodeLine{00245\ }
+\DoxyCodeLine{00247\ \ \ \ \ int64\_t\ m\_current\_height\{0\};}
+\DoxyCodeLine{00248\ }
+\DoxyCodeLine{00252\ \ \ \ \ std::deque<CompressedHeader>\ m\_redownloaded\_headers;}
+\DoxyCodeLine{00253\ }
+\DoxyCodeLine{00255\ \ \ \ \ int64\_t\ m\_redownload\_buffer\_last\_height\{0\};}
+\DoxyCodeLine{00256\ }
+\DoxyCodeLine{00261\ \ \ \ \ uint256\ m\_redownload\_buffer\_last\_hash;}
+\DoxyCodeLine{00262\ }
+\DoxyCodeLine{00267\ \ \ \ \ uint256\ m\_redownload\_buffer\_first\_prev\_hash;}
+\DoxyCodeLine{00268\ }
+\DoxyCodeLine{00270\ \ \ \ \ arith\_uint256\ m\_redownload\_chain\_work;}
+\DoxyCodeLine{00271\ }
+\DoxyCodeLine{00276\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_process\_all\_remaining\_headers\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00277\ }
+\DoxyCodeLine{00279\ \ \ \ \ State\ m\_download\_state\{State::PRESYNC\};}
+\DoxyCodeLine{00280\ \};}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00282\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_HEADERSSYNC\_H}}
+
+\end{DoxyCode}

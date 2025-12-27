@@ -1,0 +1,79 @@
+\doxysection{overflow.\+h}
+\label{overflow_8h_source}\index{src/util/overflow.h@{src/util/overflow.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2021-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_OVERFLOW\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_OVERFLOW\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <climits>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <concepts>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T>}
+\DoxyCodeLine{00015\ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ AdditionOverflow(\textcolor{keyword}{const}\ T\ i,\ \textcolor{keyword}{const}\ T\ j)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00016\ \{}
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_integral\_v<T>,\ \textcolor{stringliteral}{"{}Integral\ required."{}});}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::numeric\_limits<T>::is\_signed)\ \{}
+\DoxyCodeLine{00019\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (i\ >\ 0\ \&\&\ j\ >\ std::numeric\_limits<T>::max()\ -\/\ i)\ ||}
+\DoxyCodeLine{00020\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (i\ <\ 0\ \&\&\ j\ <\ std::numeric\_limits<T>::min()\ -\/\ i);}
+\DoxyCodeLine{00021\ \ \ \ \ \}}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keywordflow}{return}\ std::numeric\_limits<T>::max()\ -\/\ i\ <\ j;}
+\DoxyCodeLine{00023\ \}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T>}
+\DoxyCodeLine{00026\ [[nodiscard]]\ std::optional<T>\ CheckedAdd(\textcolor{keyword}{const}\ T\ i,\ \textcolor{keyword}{const}\ T\ j)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00027\ \{}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keywordflow}{if}\ (AdditionOverflow(i,\ j))\ \{}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00030\ \ \ \ \ \}}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keywordflow}{return}\ i\ +\ j;}
+\DoxyCodeLine{00032\ \}}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T>}
+\DoxyCodeLine{00035\ [[nodiscard]]\ T\ SaturatingAdd(\textcolor{keyword}{const}\ T\ i,\ \textcolor{keyword}{const}\ T\ j)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00036\ \{}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::numeric\_limits<T>::is\_signed)\ \{}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ >\ 0\ \&\&\ j\ >\ std::numeric\_limits<T>::max()\ -\/\ i)\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::numeric\_limits<T>::max();}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ <\ 0\ \&\&\ j\ <\ std::numeric\_limits<T>::min()\ -\/\ i)\ \{}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::numeric\_limits<T>::min();}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00044\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (std::numeric\_limits<T>::max()\ -\/\ i\ <\ j)\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::numeric\_limits<T>::max();}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00048\ \ \ \ \ \}}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordflow}{return}\ i\ +\ j;}
+\DoxyCodeLine{00050\ \}}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00058\ \textcolor{keyword}{template}\ <std::\textcolor{keywordtype}{int}egral\ T>}
+\DoxyCodeLine{00059\ \textcolor{keyword}{constexpr}\ std::optional<T>\ CheckedLeftShift(T\ input,\ \textcolor{keywordtype}{unsigned}\ shift)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00060\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordflow}{if}\ (shift\ ==\ 0\ ||\ input\ ==\ 0)\ \textcolor{keywordflow}{return}\ input;}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{comment}{//\ Avoid\ undefined\ c++\ behaviour\ if\ shift\ is\ >=\ number\ of\ bits\ in\ T.}}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keywordflow}{if}\ (shift\ >=\ \textcolor{keyword}{sizeof}(T)\ *\ CHAR\_BIT)\ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{comment}{//\ If\ input\ <<\ shift\ is\ too\ big\ to\ fit\ in\ T,\ return\ nullopt.}}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordflow}{if}\ (input\ >\ (std::numeric\_limits<T>::max()\ >>\ shift))\ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keywordflow}{if}\ (input\ <\ (std::numeric\_limits<T>::min()\ >>\ shift))\ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keywordflow}{return}\ input\ <<\ shift;}
+\DoxyCodeLine{00068\ \}}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00077\ \textcolor{keyword}{template}\ <std::\textcolor{keywordtype}{int}egral\ T>}
+\DoxyCodeLine{00078\ \textcolor{keyword}{constexpr}\ T\ SaturatingLeftShift(T\ input,\ \textcolor{keywordtype}{unsigned}\ shift)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00079\ \{}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{auto}\ result\{CheckedLeftShift(input,\ shift)\})\ \textcolor{keywordflow}{return}\ *result;}
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{comment}{//\ If\ input\ <<\ shift\ is\ too\ big\ to\ fit\ in\ T,\ return\ biggest\ positive\ or\ negative}}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{comment}{//\ number\ that\ fits.}}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordflow}{return}\ input\ <\ 0\ ?\ std::numeric\_limits<T>::min()\ :\ std::numeric\_limits<T>::max();}
+\DoxyCodeLine{00084\ \}}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_OVERFLOW\_H}}
+
+\end{DoxyCode}

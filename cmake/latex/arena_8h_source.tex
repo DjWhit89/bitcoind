@@ -1,0 +1,77 @@
+\doxysection{arena.\+h}
+\label{arena_8h_source}\index{src/leveldb/util/arena.h@{src/leveldb/util/arena.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_UTIL\_ARENA\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_UTIL\_ARENA\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{keyword}{class\ }Arena\ \{}
+\DoxyCodeLine{00017\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00018\ \ \ Arena();}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \ \ Arena(\textcolor{keyword}{const}\ Arena\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00021\ \ \ Arena\&\ operator=(\textcolor{keyword}{const}\ Arena\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \ \ \string~Arena();}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \ \ \textcolor{comment}{//\ Return\ a\ pointer\ to\ a\ newly\ allocated\ memory\ block\ of\ "{}bytes"{}\ bytes.}}
+\DoxyCodeLine{00026\ \ \ \textcolor{keywordtype}{char}*\ Allocate(\textcolor{keywordtype}{size\_t}\ bytes);}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \ \ \textcolor{comment}{//\ Allocate\ memory\ with\ the\ normal\ alignment\ guarantees\ provided\ by\ malloc.}}
+\DoxyCodeLine{00029\ \ \ \textcolor{keywordtype}{char}*\ AllocateAligned(\textcolor{keywordtype}{size\_t}\ bytes);}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \ \ \textcolor{comment}{//\ Returns\ an\ estimate\ of\ the\ total\ memory\ usage\ of\ data\ allocated}}
+\DoxyCodeLine{00032\ \ \ \textcolor{comment}{//\ by\ the\ arena.}}
+\DoxyCodeLine{00033\ \ \ \textcolor{keywordtype}{size\_t}\ MemoryUsage()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keywordflow}{return}\ memory\_usage\_.load(std::memory\_order\_relaxed);}
+\DoxyCodeLine{00035\ \ \ \}}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00038\ \ \ \textcolor{keywordtype}{char}*\ AllocateFallback(\textcolor{keywordtype}{size\_t}\ bytes);}
+\DoxyCodeLine{00039\ \ \ \textcolor{keywordtype}{char}*\ AllocateNewBlock(\textcolor{keywordtype}{size\_t}\ block\_bytes);}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \textcolor{comment}{//\ Allocation\ state}}
+\DoxyCodeLine{00042\ \ \ \textcolor{keywordtype}{char}*\ alloc\_ptr\_;}
+\DoxyCodeLine{00043\ \ \ \textcolor{keywordtype}{size\_t}\ alloc\_bytes\_remaining\_;}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \ \ \textcolor{comment}{//\ Array\ of\ new[]\ allocated\ memory\ blocks}}
+\DoxyCodeLine{00046\ \ \ std::vector<char*>\ blocks\_;}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \textcolor{comment}{//\ Total\ memory\ usage\ of\ the\ arena.}}
+\DoxyCodeLine{00049\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00050\ \ \ \textcolor{comment}{//\ TODO(costan):\ This\ member\ is\ accessed\ via\ atomics,\ but\ the\ others\ are}}
+\DoxyCodeLine{00051\ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ accessed\ without\ any\ locking.\ Is\ this\ OK?}}
+\DoxyCodeLine{00052\ \ \ std::atomic<size\_t>\ memory\_usage\_;}
+\DoxyCodeLine{00053\ \};}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{char}*\ Arena::Allocate(\textcolor{keywordtype}{size\_t}\ bytes)\ \{}
+\DoxyCodeLine{00056\ \ \ \textcolor{comment}{//\ The\ semantics\ of\ what\ to\ return\ are\ a\ bit\ messy\ if\ we\ allow}}
+\DoxyCodeLine{00057\ \ \ \textcolor{comment}{//\ 0-\/byte\ allocations,\ so\ we\ disallow\ them\ here\ (we\ don't\ need}}
+\DoxyCodeLine{00058\ \ \ \textcolor{comment}{//\ them\ for\ our\ internal\ use).}}
+\DoxyCodeLine{00059\ \ \ assert(bytes\ >\ 0);}
+\DoxyCodeLine{00060\ \ \ \textcolor{keywordflow}{if}\ (bytes\ <=\ alloc\_bytes\_remaining\_)\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordtype}{char}*\ result\ =\ alloc\_ptr\_;}
+\DoxyCodeLine{00062\ \ \ \ \ alloc\_ptr\_\ +=\ bytes;}
+\DoxyCodeLine{00063\ \ \ \ \ alloc\_bytes\_remaining\_\ -\/=\ bytes;}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00065\ \ \ \}}
+\DoxyCodeLine{00066\ \ \ \textcolor{keywordflow}{return}\ AllocateFallback(bytes);}
+\DoxyCodeLine{00067\ \}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_UTIL\_ARENA\_H\_}}
+
+\end{DoxyCode}

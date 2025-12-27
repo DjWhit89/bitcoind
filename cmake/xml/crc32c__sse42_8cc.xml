@@ -1,0 +1,347 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="crc32c__sse42_8cc" kind="file" language="C++">
+    <compoundname>crc32c_sse42.cc</compoundname>
+    <includes refid="crc32c__sse42_8h" local="yes">./crc32c_sse42.h</includes>
+    <includes local="no">cstddef</includes>
+    <includes local="no">cstdint</includes>
+    <includes refid="crc32c__internal_8h" local="yes">./crc32c_internal.h</includes>
+    <includes refid="crc32c__prefetch_8h" local="yes">./crc32c_prefetch.h</includes>
+    <includes refid="crc32c__read__le_8h" local="yes">./crc32c_read_le.h</includes>
+    <includes refid="crc32c__round__up_8h" local="yes">./crc32c_round_up.h</includes>
+    <incdepgraph>
+      <node id="5">
+        <label>./crc32c_internal.h</label>
+        <link refid="crc32c__internal_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>./crc32c_prefetch.h</label>
+        <link refid="crc32c__prefetch_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>./crc32c_read_le.h</label>
+        <link refid="crc32c__read__le_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>./crc32c_round_up.h</label>
+        <link refid="crc32c__round__up_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>src/crc32c/src/crc32c_sse42.cc</label>
+        <link refid="crc32c__sse42_8cc"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>./crc32c_sse42.h</label>
+        <link refid="crc32c__sse42_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>cstddef</label>
+      </node>
+      <node id="4">
+        <label>cstdint</label>
+      </node>
+      <node id="8">
+        <label>cstring</label>
+      </node>
+    </incdepgraph>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="comment">//<sp/>Copyright<sp/>2008<sp/>The<sp/>CRC32C<sp/>Authors.<sp/>All<sp/>rights<sp/>reserved.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Use<sp/>of<sp/>this<sp/>source<sp/>code<sp/>is<sp/>governed<sp/>by<sp/>a<sp/>BSD-style<sp/>license<sp/>that<sp/>can<sp/>be</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight><highlight class="comment">//<sp/>found<sp/>in<sp/>the<sp/>LICENSE<sp/>file.<sp/>See<sp/>the<sp/>AUTHORS<sp/>file<sp/>for<sp/>names<sp/>of<sp/>contributors.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="4"><highlight class="normal"></highlight></codeline>
+<codeline lineno="5"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="crc32c__sse42_8h" kindref="compound">./crc32c_sse42.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="6"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7"><highlight class="normal"></highlight><highlight class="comment">//<sp/>In<sp/>a<sp/>separate<sp/>source<sp/>file<sp/>to<sp/>allow<sp/>this<sp/>accelerated<sp/>CRC32C<sp/>function<sp/>to<sp/>be</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight><highlight class="comment">//<sp/>compiled<sp/>with<sp/>the<sp/>appropriate<sp/>compiler<sp/>flags<sp/>to<sp/>enable<sp/>SSE4.2<sp/>instructions.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="9"><highlight class="normal"></highlight></codeline>
+<codeline lineno="10"><highlight class="normal"></highlight><highlight class="comment">//<sp/>This<sp/>implementation<sp/>is<sp/>loosely<sp/>based<sp/>on<sp/>Intel<sp/>Pub<sp/>323405<sp/>from<sp/>April<sp/>2011,</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="11"><highlight class="normal"></highlight><highlight class="comment">//<sp/>&quot;Fast<sp/>CRC<sp/>Computation<sp/>for<sp/>iSCSI<sp/>Polynomial<sp/>Using<sp/>CRC32<sp/>Instruction&quot;.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="12"><highlight class="normal"></highlight></codeline>
+<codeline lineno="13"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstddef&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="14"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="15"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="crc32c__internal_8h" kindref="compound">./crc32c_internal.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="crc32c__prefetch_8h" kindref="compound">./crc32c_prefetch.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="crc32c__read__le_8h" kindref="compound">./crc32c_read_le.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="crc32c__round__up_8h" kindref="compound">./crc32c_round_up.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>CRC32C_HAVE_CONFIG_H</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;crc32c/crc32c_config.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>HAVE_SSE42<sp/>&amp;&amp;<sp/>(defined(_M_X64)<sp/>||<sp/>defined(__x86_64__))</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(_MSC_VER)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;intrin.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="preprocessor">#else<sp/><sp/></highlight><highlight class="comment">//<sp/>!defined(_MSC_VER)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;nmmintrin.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>defined(_MSC_VER)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="namespacecrc32c" kindref="compound">crc32c</ref><sp/>{</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>ptrdiff_t<sp/>kGroups<sp/>=<sp/>3;</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>ptrdiff_t<sp/>kBlock0Size<sp/>=<sp/>16<sp/>*<sp/>1024<sp/>/<sp/>kGroups<sp/>/<sp/>64<sp/>*<sp/>64;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>ptrdiff_t<sp/>kBlock1Size<sp/>=<sp/>4<sp/>*<sp/>1024<sp/>/<sp/>kGroups<sp/>/<sp/>8<sp/>*<sp/>8;</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>ptrdiff_t<sp/>kBlock2Size<sp/>=<sp/>1024<sp/>/<sp/>kGroups<sp/>/<sp/>8<sp/>*<sp/>8;</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint32_t<sp/>kBlock0SkipTable[8][16]<sp/>=<sp/>{</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0xff770459,<sp/>0xfb027e43,<sp/>0x04757a1a,<sp/>0xf3e88a77,<sp/>0x0c9f8e2e,</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x08eaf434,<sp/>0xf79df06d,<sp/>0xe23d621f,<sp/>0x1d4a6646,<sp/>0x193f1c5c,<sp/>0xe6481805,</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x11d5e868,<sp/>0xeea2ec31,<sp/>0xead7962b,<sp/>0x15a09272},</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0xc196b2cf,<sp/>0x86c1136f,<sp/>0x4757a1a0,<sp/>0x086e502f,<sp/>0xc9f8e2e0,</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x8eaf4340,<sp/>0x4f39f18f,<sp/>0x10dca05e,<sp/>0xd14a1291,<sp/>0x961db331,<sp/>0x578b01fe,</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x18b2f071,<sp/>0xd92442be,<sp/>0x9e73e31e,<sp/>0x5fe551d1},</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x21b940bc,<sp/>0x43728178,<sp/>0x62cbc1c4,<sp/>0x86e502f0,<sp/>0xa75c424c,</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xc5978388,<sp/>0xe42ec334,<sp/>0x08267311,<sp/>0x299f33ad,<sp/>0x4b54f269,<sp/>0x6aedb2d5,</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x8ec371e1,<sp/>0xaf7a315d,<sp/>0xcdb1f099,<sp/>0xec08b025},</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x104ce622,<sp/>0x2099cc44,<sp/>0x30d52a66,<sp/>0x41339888,<sp/>0x517f7eaa,</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x61aa54cc,<sp/>0x71e6b2ee,<sp/>0x82673110,<sp/>0x922bd732,<sp/>0xa2fefd54,<sp/>0xb2b21b76,</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xc354a998,<sp/>0xd3184fba,<sp/>0xe3cd65dc,<sp/>0xf38183fe},</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x012214d1,<sp/>0x024429a2,<sp/>0x03663d73,<sp/>0x04885344,<sp/>0x05aa4795,</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x06cc7ae6,<sp/>0x07ee6e37,<sp/>0x0910a688,<sp/>0x0832b259,<sp/>0x0b548f2a,<sp/>0x0a769bfb,</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x0d98f5cc,<sp/>0x0cbae11d,<sp/>0x0fdcdc6e,<sp/>0x0efec8bf},</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x12214d10,<sp/>0x24429a20,<sp/>0x3663d730,<sp/>0x48853440,<sp/>0x5aa47950,</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x6cc7ae60,<sp/>0x7ee6e370,<sp/>0x910a6880,<sp/>0x832b2590,<sp/>0xb548f2a0,<sp/>0xa769bfb0,</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xd98f5cc0,<sp/>0xcbae11d0,<sp/>0xfdcdc6e0,<sp/>0xefec8bf0},</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x27f8a7f1,<sp/>0x4ff14fe2,<sp/>0x6809e813,<sp/>0x9fe29fc4,<sp/>0xb81a3835,</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xd013d026,<sp/>0xf7eb77d7,<sp/>0x3a294979,<sp/>0x1dd1ee88,<sp/>0x75d8069b,<sp/>0x5220a16a,</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xa5cbd6bd,<sp/>0x8233714c,<sp/>0xea3a995f,<sp/>0xcdc23eae},</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x745292f2,<sp/>0xe8a525e4,<sp/>0x9cf7b716,<sp/>0xd4a63d39,<sp/>0xa0f4afcb,</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x3c0318dd,<sp/>0x48518a2f,<sp/>0xaca00c83,<sp/>0xd8f29e71,<sp/>0x44052967,<sp/>0x3057bb95,</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x780631ba,<sp/>0x0c54a348,<sp/>0x90a3145e,<sp/>0xe4f186ac},</highlight></codeline>
+<codeline lineno="66"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint32_t<sp/>kBlock1SkipTable[8][16]<sp/>=<sp/>{</highlight></codeline>
+<codeline lineno="68"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x79113270,<sp/>0xf22264e0,<sp/>0x8b335690,<sp/>0xe1a8bf31,<sp/>0x98b98d41,</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x138adbd1,<sp/>0x6a9be9a1,<sp/>0xc6bd0893,<sp/>0xbfac3ae3,<sp/>0x349f6c73,<sp/>0x4d8e5e03,</highlight></codeline>
+<codeline lineno="70"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x2715b7a2,<sp/>0x5e0485d2,<sp/>0xd537d342,<sp/>0xac26e132},</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x889667d7,<sp/>0x14c0b95f,<sp/>0x9c56de88,<sp/>0x298172be,<sp/>0xa1171569,</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x3d41cbe1,<sp/>0xb5d7ac36,<sp/>0x5302e57c,<sp/>0xdb9482ab,<sp/>0x47c25c23,<sp/>0xcf543bf4,</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x7a8397c2,<sp/>0xf215f015,<sp/>0x6e432e9d,<sp/>0xe6d5494a},</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0xa605caf8,<sp/>0x49e7e301,<sp/>0xefe229f9,<sp/>0x93cfc602,<sp/>0x35ca0cfa,</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xda282503,<sp/>0x7c2deffb,<sp/>0x2273faf5,<sp/>0x8476300d,<sp/>0x6b9419f4,<sp/>0xcd91d30c,</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xb1bc3cf7,<sp/>0x17b9f60f,<sp/>0xf85bdff6,<sp/>0x5e5e150e},</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x44e7f5ea,<sp/>0x89cfebd4,<sp/>0xcd281e3e,<sp/>0x1673a159,<sp/>0x529454b3,</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x9fbc4a8d,<sp/>0xdb5bbf67,<sp/>0x2ce742b2,<sp/>0x6800b758,<sp/>0xa528a966,<sp/>0xe1cf5c8c,</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x3a94e3eb,<sp/>0x7e731601,<sp/>0xb35b083f,<sp/>0xf7bcfdd5},</highlight></codeline>
+<codeline lineno="80"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x59ce8564,<sp/>0xb39d0ac8,<sp/>0xea538fac,<sp/>0x62d66361,<sp/>0x3b18e605,</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xd14b69a9,<sp/>0x8885eccd,<sp/>0xc5acc6c2,<sp/>0x9c6243a6,<sp/>0x7631cc0a,<sp/>0x2fff496e,</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xa77aa5a3,<sp/>0xfeb420c7,<sp/>0x14e7af6b,<sp/>0x4d292a0f},</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x8eb5fb75,<sp/>0x1887801b,<sp/>0x96327b6e,<sp/>0x310f0036,<sp/>0xbfbafb43,</highlight></codeline>
+<codeline lineno="84"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x2988802d,<sp/>0xa73d7b58,<sp/>0x621e006c,<sp/>0xecabfb19,<sp/>0x7a998077,<sp/>0xf42c7b02,</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x5311005a,<sp/>0xdda4fb2f,<sp/>0x4b968041,<sp/>0xc5237b34},</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0xc43c00d8,<sp/>0x8d947741,<sp/>0x49a87799,<sp/>0x1ec49873,<sp/>0xdaf898ab,</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x9350ef32,<sp/>0x576cefea,<sp/>0x3d8930e6,<sp/>0xf9b5303e,<sp/>0xb01d47a7,<sp/>0x7421477f,</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x234da895,<sp/>0xe771a84d,<sp/>0xaed9dfd4,<sp/>0x6ae5df0c},</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x7b1261cc,<sp/>0xf624c398,<sp/>0x8d36a254,<sp/>0xe9a5f1c1,<sp/>0x92b7900d,</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x1f813259,<sp/>0x64935395,<sp/>0xd6a79573,<sp/>0xadb5f4bf,<sp/>0x208356eb,<sp/>0x5b913727,</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x3f0264b2,<sp/>0x4410057e,<sp/>0xc926a72a,<sp/>0xb234c6e6},</highlight></codeline>
+<codeline lineno="92"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint32_t<sp/>kBlock2SkipTable[8][16]<sp/>=<sp/>{</highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x8f158014,<sp/>0x1bc776d9,<sp/>0x94d2f6cd,<sp/>0x378eedb2,<sp/>0xb89b6da6,</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x2c499b6b,<sp/>0xa35c1b7f,<sp/>0x6f1ddb64,<sp/>0xe0085b70,<sp/>0x74daadbd,<sp/>0xfbcf2da9,</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x589336d6,<sp/>0xd786b6c2,<sp/>0x4354400f,<sp/>0xcc41c01b},</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0xde3bb6c8,<sp/>0xb99b1b61,<sp/>0x67a0ada9,<sp/>0x76da4033,<sp/>0xa8e1f6fb,</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xcf415b52,<sp/>0x117aed9a,<sp/>0xedb48066,<sp/>0x338f36ae,<sp/>0x542f9b07,<sp/>0x8a142dcf,</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x9b6ec055,<sp/>0x4555769d,<sp/>0x22f5db34,<sp/>0xfcce6dfc},</highlight></codeline>
+<codeline lineno="100"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0xde85763d,<sp/>0xb8e69a8b,<sp/>0x6663ecb6,<sp/>0x742143e7,<sp/>0xaaa435da,</highlight></codeline>
+<codeline lineno="101"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xccc7d96c,<sp/>0x1242af51,<sp/>0xe84287ce,<sp/>0x36c7f1f3,<sp/>0x50a41d45,<sp/>0x8e216b78,</highlight></codeline>
+<codeline lineno="102"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x9c63c429,<sp/>0x42e6b214,<sp/>0x24855ea2,<sp/>0xfa00289f},</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0xd569796d,<sp/>0xaf3e842b,<sp/>0x7a57fd46,<sp/>0x5b917ea7,<sp/>0x8ef807ca,</highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xf4affa8c,<sp/>0x21c683e1,<sp/>0xb722fd4e,<sp/>0x624b8423,<sp/>0x181c7965,<sp/>0xcd750008,</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xecb383e9,<sp/>0x39dafa84,<sp/>0x438d07c2,<sp/>0x96e47eaf},</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x6ba98c6d,<sp/>0xd75318da,<sp/>0xbcfa94b7,<sp/>0xab4a4745,<sp/>0xc0e3cb28,</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x7c195f9f,<sp/>0x17b0d3f2,<sp/>0x5378f87b,<sp/>0x38d17416,<sp/>0x842be0a1,<sp/>0xef826ccc,</highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xf832bf3e,<sp/>0x939b3353,<sp/>0x2f61a7e4,<sp/>0x44c82b89},</highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0xa6f1f0f6,<sp/>0x480f971d,<sp/>0xeefe67eb,<sp/>0x901f2e3a,<sp/>0x36eedecc,</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xd810b927,<sp/>0x7ee149d1,<sp/>0x25d22a85,<sp/>0x8323da73,<sp/>0x6dddbd98,<sp/>0xcb2c4d6e,</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xb5cd04bf,<sp/>0x133cf449,<sp/>0xfdc293a2,<sp/>0x5b336354},</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0x4ba4550a,<sp/>0x9748aa14,<sp/>0xdcecff1e,<sp/>0x2b7d22d9,<sp/>0x60d977d3,</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xbc3588cd,<sp/>0xf791ddc7,<sp/>0x56fa45b2,<sp/>0x1d5e10b8,<sp/>0xc1b2efa6,<sp/>0x8a16baac,</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0x7d87676b,<sp/>0x36233261,<sp/>0xeacfcd7f,<sp/>0xa16b9875},</highlight></codeline>
+<codeline lineno="115"><highlight class="normal"><sp/><sp/><sp/><sp/>{0x00000000,<sp/>0xadf48b64,<sp/>0x5e056039,<sp/>0xf3f1eb5d,<sp/>0xbc0ac072,<sp/>0x11fe4b16,</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xe20fa04b,<sp/>0x4ffb2b2f,<sp/>0x7df9f615,<sp/>0xd00d7d71,<sp/>0x23fc962c,<sp/>0x8e081d48,</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/>0xc1f33667,<sp/>0x6c07bd03,<sp/>0x9ff6565e,<sp/>0x3202dd3a},</highlight></codeline>
+<codeline lineno="118"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"></highlight></codeline>
+<codeline lineno="120"><highlight class="normal"></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>ptrdiff_t<sp/>kPrefetchHorizon<sp/>=<sp/>256;</highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight></codeline>
+<codeline lineno="122"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal"></highlight></codeline>
+<codeline lineno="124"><highlight class="normal">uint32_t<sp/>ExtendSse42(uint32_t<sp/>crc,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t*<sp/>data,<sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>size)<sp/>{</highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t*<sp/>p<sp/>=<sp/><ref refid="namespacetest__vectors__musig2__generate_1a511ae0b1c13f95e5f08f1a0dd3da3d93" kindref="member">data</ref>;</highlight></codeline>
+<codeline lineno="126"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t*<sp/>e<sp/>=<sp/><ref refid="namespacetest__vectors__musig2__generate_1a511ae0b1c13f95e5f08f1a0dd3da3d93" kindref="member">data</ref><sp/>+<sp/>size;</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/>uint32_t<sp/>l<sp/>=<sp/>crc<sp/>^<sp/>kCRC32Xor;</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"></highlight></codeline>
+<codeline lineno="129"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>STEP1<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="130"><highlight class="preprocessor"><sp/><sp/>do<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="131"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>l<sp/>=<sp/>_mm_crc32_u8(l,<sp/>*p++);<sp/>\</highlight></codeline>
+<codeline lineno="132"><highlight class="preprocessor"><sp/><sp/>}<sp/>while<sp/>(0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="133"><highlight class="normal"></highlight></codeline>
+<codeline lineno="134"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>STEP4(crc)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="135"><highlight class="preprocessor"><sp/><sp/>do<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="136"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>crc<sp/>=<sp/>_mm_crc32_u32(crc,<sp/>ReadUint32LE(p));<sp/>\</highlight></codeline>
+<codeline lineno="137"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>p<sp/>+=<sp/>4;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="138"><highlight class="preprocessor"><sp/><sp/>}<sp/>while<sp/>(0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="139"><highlight class="normal"></highlight></codeline>
+<codeline lineno="140"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>STEP8(crc,<sp/>data)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="141"><highlight class="preprocessor"><sp/><sp/>do<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="142"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>crc<sp/>=<sp/>_mm_crc32_u64(crc,<sp/>ReadUint64LE(data));<sp/>\</highlight></codeline>
+<codeline lineno="143"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>data<sp/>+=<sp/>8;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="144"><highlight class="preprocessor"><sp/><sp/>}<sp/>while<sp/>(0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="145"><highlight class="normal"></highlight></codeline>
+<codeline lineno="146"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>STEP8BY3(crc0,<sp/>crc1,<sp/>crc2,<sp/>p0,<sp/>p1,<sp/>p2)<sp/>\</highlight></codeline>
+<codeline lineno="147"><highlight class="preprocessor"><sp/><sp/>do<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="148"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>STEP8(crc0,<sp/>p0);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="149"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>STEP8(crc1,<sp/>p1);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="150"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>STEP8(crc2,<sp/>p2);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="151"><highlight class="preprocessor"><sp/><sp/>}<sp/>while<sp/>(0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="152"><highlight class="normal"></highlight></codeline>
+<codeline lineno="153"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>STEP8X3(crc0,<sp/>crc1,<sp/>crc2,<sp/>bs)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="154"><highlight class="preprocessor"><sp/><sp/>do<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="155"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>crc0<sp/>=<sp/>_mm_crc32_u64(crc0,<sp/>ReadUint64LE(p));<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="156"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>crc1<sp/>=<sp/>_mm_crc32_u64(crc1,<sp/>ReadUint64LE(p<sp/>+<sp/>bs));<sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="157"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>crc2<sp/>=<sp/>_mm_crc32_u64(crc2,<sp/>ReadUint64LE(p<sp/>+<sp/>2<sp/>*<sp/>bs));<sp/>\</highlight></codeline>
+<codeline lineno="158"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>p<sp/>+=<sp/>8;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="159"><highlight class="preprocessor"><sp/><sp/>}<sp/>while<sp/>(0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="160"><highlight class="normal"></highlight></codeline>
+<codeline lineno="161"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>SKIP_BLOCK(crc,<sp/>tab)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="162"><highlight class="preprocessor"><sp/><sp/>do<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="163"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>crc<sp/>=<sp/>tab[0][crc<sp/>&amp;<sp/>0xf]<sp/>^<sp/>tab[1][(crc<sp/>&gt;&gt;<sp/>4)<sp/>&amp;<sp/>0xf]<sp/>^<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="164"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>tab[2][(crc<sp/>&gt;&gt;<sp/>8)<sp/>&amp;<sp/>0xf]<sp/>^<sp/>tab[3][(crc<sp/>&gt;&gt;<sp/>12)<sp/>&amp;<sp/>0xf]<sp/>^<sp/><sp/>\</highlight></codeline>
+<codeline lineno="165"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>tab[4][(crc<sp/>&gt;&gt;<sp/>16)<sp/>&amp;<sp/>0xf]<sp/>^<sp/>tab[5][(crc<sp/>&gt;&gt;<sp/>20)<sp/>&amp;<sp/>0xf]<sp/>^<sp/>\</highlight></codeline>
+<codeline lineno="166"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>tab[6][(crc<sp/>&gt;&gt;<sp/>24)<sp/>&amp;<sp/>0xf]<sp/>^<sp/>tab[7][(crc<sp/>&gt;&gt;<sp/>28)<sp/>&amp;<sp/>0xf];<sp/><sp/>\</highlight></codeline>
+<codeline lineno="167"><highlight class="preprocessor"><sp/><sp/>}<sp/>while<sp/>(0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="168"><highlight class="normal"></highlight></codeline>
+<codeline lineno="169"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>Point<sp/>x<sp/>at<sp/>first<sp/>8-byte<sp/>aligned<sp/>byte<sp/>in<sp/>the<sp/>buffer.<sp/>This<sp/>might<sp/>be<sp/>past<sp/>the</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>end<sp/>of<sp/>the<sp/>buffer.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>uint8_t*<sp/>x<sp/>=<sp/><ref refid="namespacecrc32c_1af9139f4da8e1629ddb2adf4c2dc79a1c" kindref="member">RoundUp&lt;8&gt;</ref>(p);</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(x<sp/>&lt;=<sp/>e)<sp/>{</highlight></codeline>
+<codeline lineno="173"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Process<sp/>bytes<sp/>p<sp/>is<sp/>8-byte<sp/>aligned.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(p<sp/>!=<sp/>x)<sp/>{</highlight></codeline>
+<codeline lineno="175"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="crc32c__portable_8cc_1aa0e8b80aa29135a83d096ec150fb9a2d" kindref="member">STEP1</ref>;</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"></highlight></codeline>
+<codeline lineno="179"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>Process<sp/>the<sp/>data<sp/>in<sp/>predetermined<sp/>block<sp/>sizes<sp/>with<sp/>tables<sp/>for<sp/>quickly</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="180"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>combining<sp/>the<sp/>checksum.<sp/>Experimentally<sp/>it&apos;s<sp/>better<sp/>to<sp/>use<sp/>larger<sp/>block</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="181"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>sizes<sp/>where<sp/>possible<sp/>so<sp/>use<sp/>a<sp/>hierarchy<sp/>of<sp/>decreasing<sp/>block<sp/>sizes.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/>uint64_t<sp/>l64<sp/>=<sp/>l;</highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>((e<sp/>-<sp/>p)<sp/>&gt;=<sp/>kGroups<sp/>*<sp/>kBlock0Size)<sp/>{</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/>l641<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="185"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/>l642<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>kBlock0Size;<sp/>i<sp/>+=<sp/>8<sp/>*<sp/>8)<sp/>{</highlight></codeline>
+<codeline lineno="187"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Prefetch<sp/>ahead<sp/>to<sp/>hide<sp/>latency.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="namespacecrc32c_1accd41e1a1e7b4bd902940b13f1af538c" kindref="member">RequestPrefetch</ref>(p<sp/>+<sp/>kPrefetchHorizon);</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="namespacecrc32c_1accd41e1a1e7b4bd902940b13f1af538c" kindref="member">RequestPrefetch</ref>(p<sp/>+<sp/>kBlock0Size<sp/>+<sp/>kPrefetchHorizon);</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="namespacecrc32c_1accd41e1a1e7b4bd902940b13f1af538c" kindref="member">RequestPrefetch</ref>(p<sp/>+<sp/>2<sp/>*<sp/>kBlock0Size<sp/>+<sp/>kPrefetchHorizon);</highlight></codeline>
+<codeline lineno="191"><highlight class="normal"></highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Process<sp/>64<sp/>bytes<sp/>at<sp/>a<sp/>time.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="193"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>STEP8X3(l64,<sp/>l641,<sp/>l642,<sp/>kBlock0Size);</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>STEP8X3(l64,<sp/>l641,<sp/>l642,<sp/>kBlock0Size);</highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>STEP8X3(l64,<sp/>l641,<sp/>l642,<sp/>kBlock0Size);</highlight></codeline>
+<codeline lineno="196"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>STEP8X3(l64,<sp/>l641,<sp/>l642,<sp/>kBlock0Size);</highlight></codeline>
+<codeline lineno="197"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>STEP8X3(l64,<sp/>l641,<sp/>l642,<sp/>kBlock0Size);</highlight></codeline>
+<codeline lineno="198"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>STEP8X3(l64,<sp/>l641,<sp/>l642,<sp/>kBlock0Size);</highlight></codeline>
+<codeline lineno="199"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>STEP8X3(l64,<sp/>l641,<sp/>l642,<sp/>kBlock0Size);</highlight></codeline>
+<codeline lineno="200"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>STEP8X3(l64,<sp/>l641,<sp/>l642,<sp/>kBlock0Size);</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="202"><highlight class="normal"></highlight></codeline>
+<codeline lineno="203"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Combine<sp/>results.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="204"><highlight class="normal"><sp/><sp/><sp/><sp/>SKIP_BLOCK(l64,<sp/>kBlock0SkipTable);</highlight></codeline>
+<codeline lineno="205"><highlight class="normal"><sp/><sp/><sp/><sp/>l64<sp/>^=<sp/>l641;</highlight></codeline>
+<codeline lineno="206"><highlight class="normal"><sp/><sp/><sp/><sp/>SKIP_BLOCK(l64,<sp/>kBlock0SkipTable);</highlight></codeline>
+<codeline lineno="207"><highlight class="normal"><sp/><sp/><sp/><sp/>l64<sp/>^=<sp/>l642;</highlight></codeline>
+<codeline lineno="208"><highlight class="normal"><sp/><sp/><sp/><sp/>p<sp/>+=<sp/>(kGroups<sp/>-<sp/>1)<sp/>*<sp/>kBlock0Size;</highlight></codeline>
+<codeline lineno="209"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="210"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>((e<sp/>-<sp/>p)<sp/>&gt;=<sp/>kGroups<sp/>*<sp/>kBlock1Size)<sp/>{</highlight></codeline>
+<codeline lineno="211"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/>l641<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="212"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/>l642<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>kBlock1Size;<sp/>i<sp/>+=<sp/>8)<sp/>{</highlight></codeline>
+<codeline lineno="214"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>STEP8X3(l64,<sp/>l641,<sp/>l642,<sp/>kBlock1Size);</highlight></codeline>
+<codeline lineno="215"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="216"><highlight class="normal"><sp/><sp/><sp/><sp/>SKIP_BLOCK(l64,<sp/>kBlock1SkipTable);</highlight></codeline>
+<codeline lineno="217"><highlight class="normal"><sp/><sp/><sp/><sp/>l64<sp/>^=<sp/>l641;</highlight></codeline>
+<codeline lineno="218"><highlight class="normal"><sp/><sp/><sp/><sp/>SKIP_BLOCK(l64,<sp/>kBlock1SkipTable);</highlight></codeline>
+<codeline lineno="219"><highlight class="normal"><sp/><sp/><sp/><sp/>l64<sp/>^=<sp/>l642;</highlight></codeline>
+<codeline lineno="220"><highlight class="normal"><sp/><sp/><sp/><sp/>p<sp/>+=<sp/>(kGroups<sp/>-<sp/>1)<sp/>*<sp/>kBlock1Size;</highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="222"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>((e<sp/>-<sp/>p)<sp/>&gt;=<sp/>kGroups<sp/>*<sp/>kBlock2Size)<sp/>{</highlight></codeline>
+<codeline lineno="223"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/>l641<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="224"><highlight class="normal"><sp/><sp/><sp/><sp/>uint64_t<sp/>l642<sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="225"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">for</highlight><highlight class="normal"><sp/>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>i<sp/>=<sp/>0;<sp/>i<sp/>&lt;<sp/>kBlock2Size;<sp/>i<sp/>+=<sp/>8)<sp/>{</highlight></codeline>
+<codeline lineno="226"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>STEP8X3(l64,<sp/>l641,<sp/>l642,<sp/>kBlock2Size);</highlight></codeline>
+<codeline lineno="227"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="228"><highlight class="normal"><sp/><sp/><sp/><sp/>SKIP_BLOCK(l64,<sp/>kBlock2SkipTable);</highlight></codeline>
+<codeline lineno="229"><highlight class="normal"><sp/><sp/><sp/><sp/>l64<sp/>^=<sp/>l641;</highlight></codeline>
+<codeline lineno="230"><highlight class="normal"><sp/><sp/><sp/><sp/>SKIP_BLOCK(l64,<sp/>kBlock2SkipTable);</highlight></codeline>
+<codeline lineno="231"><highlight class="normal"><sp/><sp/><sp/><sp/>l64<sp/>^=<sp/>l642;</highlight></codeline>
+<codeline lineno="232"><highlight class="normal"><sp/><sp/><sp/><sp/>p<sp/>+=<sp/>(kGroups<sp/>-<sp/>1)<sp/>*<sp/>kBlock2Size;</highlight></codeline>
+<codeline lineno="233"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="234"><highlight class="normal"></highlight></codeline>
+<codeline lineno="235"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>Process<sp/>bytes<sp/>16<sp/>at<sp/>a<sp/>time</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="236"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>((e<sp/>-<sp/>p)<sp/>&gt;=<sp/>16)<sp/>{</highlight></codeline>
+<codeline lineno="237"><highlight class="normal"><sp/><sp/><sp/><sp/>STEP8(l64,<sp/>p);</highlight></codeline>
+<codeline lineno="238"><highlight class="normal"><sp/><sp/><sp/><sp/>STEP8(l64,<sp/>p);</highlight></codeline>
+<codeline lineno="239"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="240"><highlight class="normal"></highlight></codeline>
+<codeline lineno="241"><highlight class="normal"><sp/><sp/>l<sp/>=<sp/></highlight><highlight class="keyword">static_cast&lt;</highlight><highlight class="normal">uint32_t</highlight><highlight class="keyword">&gt;</highlight><highlight class="normal">(l64);</highlight></codeline>
+<codeline lineno="242"><highlight class="normal"><sp/><sp/></highlight><highlight class="comment">//<sp/>Process<sp/>the<sp/>last<sp/>few<sp/>bytes.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="243"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">while</highlight><highlight class="normal"><sp/>(p<sp/>!=<sp/>e)<sp/>{</highlight></codeline>
+<codeline lineno="244"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="crc32c__portable_8cc_1aa0e8b80aa29135a83d096ec150fb9a2d" kindref="member">STEP1</ref>;</highlight></codeline>
+<codeline lineno="245"><highlight class="normal"><sp/><sp/>}</highlight></codeline>
+<codeline lineno="246"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>SKIP_BLOCK</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="247"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>STEP8X3</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="248"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>STEP8BY3</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="249"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>STEP8</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="250"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>STEP4</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="251"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>STEP1</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="252"><highlight class="normal"></highlight></codeline>
+<codeline lineno="253"><highlight class="normal"><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>l<sp/>^<sp/>kCRC32Xor;</highlight></codeline>
+<codeline lineno="254"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="255"><highlight class="normal"></highlight></codeline>
+<codeline lineno="256"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>crc32c</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="257"><highlight class="normal"></highlight></codeline>
+<codeline lineno="258"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>HAVE_SSE42<sp/>&amp;&amp;<sp/>(defined(_M_X64)<sp/>||<sp/>defined(__x86_64__))</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="src/crc32c/src/crc32c_sse42.cc"/>
+  </compounddef>
+</doxygen>

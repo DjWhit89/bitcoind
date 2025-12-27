@@ -1,0 +1,190 @@
+.TH "md_src_2minisketch_2doc_2math" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+md_src_2minisketch_2doc_2math \- The mathematics of Minisketch sketches 
+.PP
+
+
+.PP
+This is an unconventional mathematical overview of the PinSketch algorithm without references to coding theory\*{\fB[1]\fP\*} \&.
+.SH "Set sketches"
+.PP
+A sketch, for the purpose of this description, can be seen as a "set checksum" with two peculiar properties:
+
+.PP
+.IP "\(bu" 2
+Sketches have a predetermined capacity, and when the number of elements in the set is not higher than the capacity, minisketch will always recover the entire set from the sketch\&. A sketch of \fIb\fP-bit elements with capacity \fIc\fP can be stored in \fIbc\fP bits\&.
+.IP "\(bu" 2
+The sketches of two sets can be combined by adding them (XOR) to obtain a sketch of the \fRsymmetric difference\fP between the two sets (\fIi\&.e\&.\fP, all elements that occur in one but not both input sets)\&.
+.PP
+
+.PP
+This overview explains how sets can be converted into a sketch and how a set can be recovered from a sketch\&.
+.SH "From field elements to sketches"
+.PP
+\fBData entries as field elements\fP
+
+.PP
+Every integer in the range *[1\&.\&.\&.2\*{b\*} -1]* (the acceptable data elements for a Minisketch sketch with field size \fIb\fP) can be mapped to a nonzero field element of *GF(2\*{b\*} )*\&. In this \fRfinite field\fP, we can add and multiply elements together, with many of the expected properties for those operations\&. Addition (and subtraction!) of field elements corresponds to bitwise XOR of the integers they correspond to, though multiplication is more involved\&.
+
+.PP
+\fBSets as power series\fP
+
+.PP
+We define a function \fIS\fP which maps field elements \fIm\fP to the following \fRformal power series\fP (similar to a polynomial, except there can be an infinite number of terms, and we don't care about concepts like convergence as we're never going to actually evaluate it for a specific value of \fIx\fP):
+
+.PP
+.IP "\(bu" 2
+*S(m) = 1 + mx + m\*{2\*} x\*{2\*}  + m\*{3\*} x\*{3\*}  + \&.\&.\&.*\&.
+.PP
+
+.PP
+We then extend this function to operate on sets of field elements, by adding together the images of every set element\&. If *M = {m\*<1\*> , m\*<2\*> , \&.\&.\&. }*:
+
+.PP
+.IP "\(bu" 2
+*S(M) = S({m\*<1\*> ,m\*<2\*> ,\&.\&.\&.}) = S(m\*<1\*> ) + S(m\*<2\*> ) + \&.\&.\&. = (1 + 1 + \&.\&.\&.) + (m\*<1\*>  + m\*<2\*>  + \&.\&.\&.)x + (m\*<1\*> \*{2\*}  + m\*<2\*> \*{2\*}  + \&.\&.\&.)x\*{2\*}  + (m\*<1\*> \*{3\*}  + \&.\&.\&.*
+.PP
+
+.PP
+Because in our field addition corresponds to XOR of integers, it holds for every \fIa\fP that \fIa + a = 0\fP\&. This carries over to the \fIS\fP function, meaning that \fI\fBS(a)\fP + \fBS(a)\fP = 0\fP for every \fIa\fP\&. This means that the coefficients of these power series have the second of the properties we desire from a sketch, namely that an efficient operation exists to combine two sketches such that the result is a sketch of the symmetric difference of the sets\&. It holds that *S({m\*<1\*> ,m\*<2\*> }) + S({m\*<2\*> ,m\*<3\*> }) = S(m\*<1\*> ) + (S(m\*<2\*> ) + S(m\*<2\*> )) + S(m\*<3\*> ) = S(m\*<1\*> ) + S(m\*<3\*> ) = S({m\*<1\*> ,m\*<3\*> })*\&. The question is whether we can also efficiently recover the elements from their power series' coefficients\&.
+
+.PP
+\fBAn infinity of coefficients is hard\fP
+
+.PP
+To make reasoning about these power series easier, notice that the series for a single element is in fact a \fRgeometric series\fP\&. If we were working over real numbers rather than a finite field and *|mx| < 1*, it would converge to *(1 - mx)\*{-1\*} *\&. Convergence has no meaning in formal power series, however it is still the case that:
+
+.PP
+.IP "\(bu" 2
+\fI(1 - mx) \fBS(m)\fP = 1\fP
+.PP
+
+.PP
+You can verify this by seeing that every coefficient except the constant one gets cancelled out by the multiplication\&. This can be generalized to the series for multiple set elements\&. For two elements we have:
+
+.PP
+.IP "\(bu" 2
+*(1 - m\*<1\*> x) (1 - m\*<2\*> x) S({m\*<1\*> ,m\*<2\*> }) = (1 - m\*<1\*> x) (1 - m\*<2\*> x) (S(m\*<1\*> ) + S(m\*<2\*> )) = (1 - m\*<2\*> x) + (1 - m\*<1\*> x)*
+.PP
+
+.PP
+And for three:
+
+.PP
+.IP "\(bu" 2
+*(1 - m\*<1\*> x) (1 - m\*<2\*> x) (1 - m\*<3\*> x) S({m\*<1\*> ,m\*<2\*> ,m\*<3\*> }) = (1 - m\*<1\*> x) (1 - m\*<2\*> x) (1 - m\*<3\*> x) (S(m\*<1\*> ) + S(m\*<2\*> ) + S(m\*<3\*> )) = (1 - m\*<2\*> x)(1 - m\*<3\*> x) + (1 - m\*<1\*> x)(1 - m\*<3\*> x) + (1 - m\*<1\*> x)(1 - m\*<2\*> x)*
+.PP
+
+.PP
+In each case, we notice that multiplying \fI\fBS(M)\fP\fP with *(1 - m\*<i\*> x)* for each element *m\*<i\*>   M* results in a polynomial of degree \fIn-1\fP\&.
+
+.PP
+\fBSolving for the set elements\fP
+
+.PP
+The above insight lets us build a solver that extracts the set elements from the coefficients of a power series\&. If we can find a polynomial \fIL\fP that is the product of \fIn\fP different *(1 - m\*<i\*> x)* factors for various values of *m\*<i\*> \fI, such that *P = \fBS(M)\fPL\fP is an \fIn-1\fP degree polynomial, then those values *m\*<i\*> * are the elements of \fIM\fP\&.
+
+.PP
+The coefficients of \fIP\fP are nontrivial expressions of the set elements themselves\&. However, we can just focus on the coefficients of degree \fIn\fP and higher in \fIP\fP, as those are all 0\&. Let *s\*<i\*> * be the coefficients of \fI\fBS(M)\fP\fP, and *l\*<i\*> * the coefficients of L\&. In other words, *S(M) = s\*<0\*>  + s\*<1\*> x + s\*<2\*> x\*{2\*}  + s\*<3\*> x\*{3\*}  + \&.\&.\&.* and *L = l\*<0\*>  + l\*<1\*> x + l\*<2\*> x\*{2\*}  + l\*<3\*> x\*{3\*}  + \&.\&.\&. + l\*<n\*> x\*{n\*} *\&. Note that *l\*<0\*>  = 1*, as it is the product of all the \fI1\fP terms in the *(1 - m\*<i\*> x)* factors\&.
+
+.PP
+Here are the equations for the coefficients of \fI\fBS(M)\fPL\fP of degree \fIn+1\fP through \fI2n\fP:
+.IP "\(bu" 2
+*s\*<n+1\*>  + s\*<n+0\*> l\*<1\*>  + s\*<n-1\*> l\*<2\*>  + s\*<n-2\*> l\*<3\*>  + \&.\&.\&. + s\*<1\*> l\*<n\*>  = 0*
+.IP "\(bu" 2
+*s\*<n+2\*>  + s\*<n+1\*> l\*<1\*>  + s\*<n+0\*> l\*<2\*>  + s\*<n-1\*> l\*<3\*>  + \&.\&.\&. + s\*<2\*> l\*<n\*>  = 0*
+.IP "\(bu" 2
+*s\*<n+3\*>  + s\*<n+2\*> l\*<1\*>  + s\*<n+1\*> l\*<2\*>  + s\*<n+0\*> l\*<3\*>  + \&.\&.\&. + s\*<3\*> l\*<n\*>  = 0*
+.IP "\(bu" 2
+\&.\&.\&.
+.IP "\(bu" 2
+*s\*<2n\*>  + s\*<2n-1\*> l\*<1\*>  + s\*<2n-2\*> l\*<2\*>  + s\*<2n-3\*> l\*<3\*>  + \&.\&.\&. + s\*<n\*> l\*<n\*>  = 0*
+.PP
+
+.PP
+These are \fIn\fP linear equations with \fIn\fP unknowns (the \fIl\*<i\*< values, for \fIi=1\&.\&.n\fP), which can be solved using \fRGaussian elimination\fP\&. After doing so, we have the coefficients of \fIL\fP, which can then be \fRfactored\fP into first degree factors of the form *(1 - m\*<i\*> x)*\&. The resulting \fIm\fP values are our set elements\&.\*> \*> \fP
+
+.PP
+\fI\*<\*<\fBPutting it all together\fP\*> \*> \fP
+
+.PP
+\fI\*<\*<Interestingly, only \fI2n\fP coefficients of \fI\fBS(M)\fP\fP were needed for solving the set of equations above\&. This means we have our answer: the coefficients \fI1\fP through \fI2n\fP of \fI\fBS(M)\fP\fP, or the list *[m\*<1\*>  + m\*<2\*>  + \&.\&.\&., m\*<1\*> \*{2\*}  + m\*<2\*> \*{2\*}  + \&.\&.\&., \&.\&.\&., m\*<1\*> \*{2n\*}  + m\*<2\*> \*{2n\*}  + \&.\&.\&.]* functions as a sketch, satisfying the two properties we want:\*> \*> \fP
+
+.PP
+\fI\*<\*<
+.IP "\(bu" 2
+Sketches can be combined to form the sketch of their symmetric difference, by simply pairwise adding the list elements together\&.
+.IP "\(bu" 2
+With \fI2n\fP list elements we can efficiently recover \fIn\fP elements from a sketch\&.
+.PP
+\*> \*> \fP
+
+.PP
+\fI\*<\*<\fBCapacity and difference\fP\*> \*> \fP
+
+.PP
+\fI\*<\*<The approach above only works when the number of elements \fIn\fP in the sketch is known\&. Of course we want to support cases where only an upper bound on the number of elements in the sketch is known, the capacity \fIc\fP\&. Given that we can reconstruct a set of size \fIc\fP from a sketch with \fI2c\fP terms, we should be able to reconstruct a set of size \fIn\fP too as long as \fIn  c\fP\&. This is simply a matter of trying to solve the above set of equations assuming values of \fIn\fP that count down from \fIc\fP until a solution is found for one\&. This is known as the \fRPeterson-Gorenstein-Zierler algorithm\fP\&.\*> \*> \fP
+
+.PP
+\fI\*<\*<\*> \*> \fP
+.SH "\fI\*<\*<Optimizations\*> \*> \fP"
+.PP
+\fI\*<\*<\*> \*> \fP
+
+.PP
+\fI\*<\*<\fBHalving the sketch size\fP\*> \*> \fP
+
+.PP
+\fI\*<\*<We can in fact only include the odd terms in the sketch, and reconstruct the even ones before solving the equation to find \fIL\fP\&. This means the size of a sketch becomes just \fIc\fP field elements, the same size as would be needed to send its contents naively\&.\*> \*> \fP
+
+.PP
+\fI\*<\*<To see how this is possible, we need the \fRFrobenius endomorphism\fP, which in short states that in fields where \fIx + x = 0\fP it holds that *(x + y)\*{2\*}  = x\*{2\*}  + y\*{2\*} * for every \fIx\fP and \fIy\fP (the dream of every high school math student!)\&. This means that:\*> \*> \fP
+
+.PP
+\fI\*<\*<
+.IP "\(bu" 2
+*s\*<2\*>  = m\*<1\*> \*{2\*}  + m\*<2\*> \*{2\*}  + \&.\&.\&. = (m\*<1\*>  + m\*<2\*>  + \&.\&.\&.)\*{2\*}  = s\*<1\*> \*{2\*} *\&.
+.IP "\(bu" 2
+*s\*<4\*>  = m\*<1\*> \*{4\*}  + m\*<2\*> \*{4\*}  + \&.\&.\&. = (m\*<1\*> \*{2\*}  + m\*<2\*> \*{2\*}  + \&.\&.\&.)\*{2\*}  = s\*<2\*> \*{2\*} *\&.
+.IP "\(bu" 2
+*s\*<6\*>  = m\*<1\*> \*{6\*}  + m\*<2\*> \*{6\*}  + \&.\&.\&. = (m\*<1\*> \*{3\*}  + m\*<2\*> \*{3\*}  + \&.\&.\&.)\*{2\*}  = s\*<3\*> \*{2\*} *\&.
+.IP "\(bu" 2
+\&.\&.\&.
+.PP
+\*> \*> \fP
+
+.PP
+\fI\*<\*<In other words, we only need to send *s\*<1\*> , s\*<3\*> , s\*<5\*> , \&.\&.\&., s\*<2n-1\*> * to recover all \fI2n\fP *s\*<i\*> * values, and proceed with reconstruction\&.\*> \*> \fP
+
+.PP
+\fI\*<\*<\fBQuadratic performance rather than cubic\fP\*> \*> \fP
+
+.PP
+\fI\*<\*<Using Gaussian elimination to solve the set of equations above for the *l\*<i\*> * values requires *O(n\*{3\*} )* field operations\&. However, due to the special structure in the equations (look at the repeated *s\*<i\*> * values), it can be solved in *O(n\*{2\*} )* time using a number of techniques, including the \fRBerlekamp-Massey algorithm\fP (BM)\&.\*> \*> \fP
+
+.PP
+\fI\*<\*<\fBRoots instead of factorization\fP\*> \*> \fP
+
+.PP
+\fI\*<\*<As explained above, the polynomial \fIL\fP can be factored into *(1 - m\*<i\*> x)* factors, where the values *m\*<i\*> * are the set elements\&. However, since we know that a decodable sketch must result in a polynomial that is fully factorizable into degree-*1* factors, we can instead use a more efficient root-finding algorithm rather than a factorization algorithm\&. As the root of each *(1 - m\*<i\*> x)* factor is *m\*<i\*> \*{-1\*} \fI, we conclude that the set elements are in fact the inverses of the roots of *L\fP\&.\*> \*> \fP
+
+.PP
+\fI\*<\*<\fBAvoiding inversions\fP\*> \*> \fP
+
+.PP
+\fI\*<\*<As inversions are a relatively expensive operation, it would be useful to avoid them\&.\*> \*> \fP
+
+.PP
+\fI\*<\*<Say that we're trying to find the inverses of the roots of *L = 1 + l\*<1\*> x + l\*<2\*> x\*{2\*}  + \&.\&.\&. + l\*<n\*> x\*{n\*} \fI, then we're really interested in the solutions *y\fP for *1 + l\*<1\*> y\*{-1\*}  + l\*<2\*> y\*{-2\*}  + \&.\&.\&. + l\*<n\*> y\*{-n\*}  = 0*\&. By multiplying both sides in the equations with *y\*{n\*} *, we find *l\*<n\*>  + l\*<n-1\*> y + l\*<n-2\*> y\*{2\*}  + \&.\&.\&. + y\*{n\*}  = 0*\&.\*> \*> \fP
+
+.PP
+\fI\*<\*<In other words, we can find the inverses of the roots of \fIL\fP by instead factoring the polynomial with the coefficients of \fIL\fP in reverse order\&.\*> \*> \fP
+
+.PP
+\fI\*<\*<
+.IP "\(bu" 2
+[1] For those familiar with coding theory: PinSketch communicates a set difference by encoding the set members as errors in a binary \fRBCH\fP codeword 2\*{bits\*}  in size and sends the syndromes\&. The linearity of the syndromes provides all the properties needed for a sketch\&. \fBSketch\fP decoding is simply finding the error locations\&. Decode is much faster than an ordinary BCH decoder for such a large codeword because the need to take a discrete log is avoided by storing the set in the roots directly instead of in an exponent (logically permuting the bits of the codeword)\&. 
+.PP
+\*> \*> \fP

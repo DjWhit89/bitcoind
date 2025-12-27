@@ -1,0 +1,121 @@
+\doxysection{obfuscation.\+h}
+\label{obfuscation_8h_source}\index{src/util/obfuscation.h@{src/util/obfuscation.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2025-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_OBFUSCATION\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_OBFUSCATION\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <tinyformat.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <util/strencodings.h>}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <bit>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <climits>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <ios>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }Obfuscation}
+\DoxyCodeLine{00020\ \{}
+\DoxyCodeLine{00021\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keyword}{using\ }KeyType\ =\ uint64\_t;}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ KEY\_SIZE\{\textcolor{keyword}{sizeof}(KeyType)\};}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \ \ \ \ Obfuscation()\ \{\ SetRotations(0);\ \}}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keyword}{explicit}\ Obfuscation(std::span<const\ std::byte,\ KEY\_SIZE>\ key\_bytes)}
+\DoxyCodeLine{00027\ \ \ \ \ \{}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ SetRotations(ToKey(key\_bytes));}
+\DoxyCodeLine{00029\ \ \ \ \ \}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keyword}{operator}\ bool()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_rotations[0]\ !=\ 0;\ \}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keywordtype}{void}\ operator()(std::span<std::byte>\ target,\ \textcolor{keywordtype}{size\_t}\ key\_offset\ =\ 0)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00034\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!*\textcolor{keyword}{this})\ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ KeyType\ rot\_key\{m\_rotations[key\_offset\ \%\ KEY\_SIZE]\};\ \textcolor{comment}{//\ Continue\ obfuscation\ from\ where\ we\ left\ off}}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (target.size()\ >\ KEY\_SIZE)\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Obfuscate\ until\ KEY\_SIZE\ alignment\ boundary}}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ misalign\{\textcolor{keyword}{reinterpret\_cast<}uintptr\_t\textcolor{keyword}{>}(target.data())\ \%\ KEY\_SIZE\})\ \{}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ alignment\{KEY\_SIZE\ -\/\ misalign\};}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ XorWord(target.first(alignment),\ rot\_key);}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ target\ =\ \{std::assume\_aligned<KEY\_SIZE>(target.data()\ +\ alignment),\ target.size()\ -\/\ alignment\};}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ rot\_key\ =\ m\_rotations[(key\_offset\ +\ alignment)\ \%\ KEY\_SIZE];}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Aligned\ obfuscation\ in\ 8*KEY\_SIZE\ chunks}}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ unroll\{8\};\ target.size()\ >=\ KEY\_SIZE\ *\ unroll;\ target\ =\ target.subspan(KEY\_SIZE\ *\ unroll))\ \{}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\{0\};\ i\ <\ unroll;\ ++i)\ \{}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ XorWord(target.subspan(i\ *\ KEY\_SIZE,\ KEY\_SIZE),\ rot\_key);}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Aligned\ obfuscation\ in\ KEY\_SIZE\ chunks}}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (;\ target.size()\ >=\ KEY\_SIZE;\ target\ =\ target.subspan(KEY\_SIZE))\ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ XorWord(target.first<KEY\_SIZE>(),\ rot\_key);}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ XorWord(target,\ rot\_key);}
+\DoxyCodeLine{00059\ \ \ \ \ \}}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00063\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Use\ vector\ serialization\ for\ convenient\ compact\ size\ prefix.}}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ std::vector<std::byte>\ bytes\{KEY\_SIZE\};}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ std::memcpy(bytes.data(),\ \&m\_rotations[0],\ KEY\_SIZE);}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ s\ <<\ bytes;}
+\DoxyCodeLine{00068\ \ \ \ \ \}}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)}
+\DoxyCodeLine{00072\ \ \ \ \ \{}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ std::vector<std::byte>\ bytes\{KEY\_SIZE\};}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ s\ >>\ bytes;}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bytes.size()\ !=\ KEY\_SIZE)\ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(strprintf(\textcolor{stringliteral}{"{}Obfuscation\ key\ size\ should\ be\ exactly\ \%s\ bytes\ long"{}},\ KEY\_SIZE));}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ SetRotations(ToKey(std::span<std::byte,\ KEY\_SIZE>(bytes)));}
+\DoxyCodeLine{00077\ \ \ \ \ \}}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ std::string\ HexKey()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00080\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ HexStr(std::as\_bytes(std::span\{\&m\_rotations[0],\ 1\}));}
+\DoxyCodeLine{00082\ \ \ \ \ \}}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{comment}{//\ Cached\ key\ rotations\ for\ different\ offsets.}}
+\DoxyCodeLine{00086\ \ \ \ \ std::array<KeyType,\ KEY\_SIZE>\ m\_rotations;}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keywordtype}{void}\ SetRotations(KeyType\ key)}
+\DoxyCodeLine{00089\ \ \ \ \ \{}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\{0\};\ i\ <\ KEY\_SIZE;\ ++i)\ \{}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ key\_rotation\_bits\{int(CHAR\_BIT\ *\ i)\};}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::endian::native\ ==\ std::endian::big)\ key\_rotation\_bits\ *=\ -\/1;}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ m\_rotations[i]\ =\ std::rotr(key,\ key\_rotation\_bits);}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00095\ \ \ \ \ \}}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keyword}{static}\ KeyType\ ToKey(std::span<const\ std::byte,\ KEY\_SIZE>\ key\_span)}
+\DoxyCodeLine{00098\ \ \ \ \ \{}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ KeyType\ key\{\};}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ std::memcpy(\&key,\ key\_span.data(),\ KEY\_SIZE);}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ key;}
+\DoxyCodeLine{00102\ \ \ \ \ \}}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ XorWord(std::span<std::byte>\ target,\ KeyType\ key)}
+\DoxyCodeLine{00105\ \ \ \ \ \{}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ assert(target.size()\ <=\ KEY\_SIZE);}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (target.empty())\ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ KeyType\ raw\{\};}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ std::memcpy(\&raw,\ target.data(),\ target.size());}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ raw\ \string^=\ key;}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ std::memcpy(target.data(),\ \&raw,\ target.size());}
+\DoxyCodeLine{00112\ \ \ \ \ \}}
+\DoxyCodeLine{00113\ \};}
+\DoxyCodeLine{00114\ }
+\DoxyCodeLine{00115\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_OBFUSCATION\_H}}
+
+\end{DoxyCode}

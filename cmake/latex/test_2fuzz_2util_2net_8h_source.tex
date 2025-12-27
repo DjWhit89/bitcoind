@@ -1,0 +1,286 @@
+\doxysection{net.\+h}
+\label{test_2fuzz_2util_2net_8h_source}\index{src/test/fuzz/util/net.h@{src/test/fuzz/util/net.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_TEST\_FUZZ\_UTIL\_NET\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_TEST\_FUZZ\_UTIL\_NET\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <addrman.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <addrman\_impl.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <net.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <net\_permissions.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <netaddress.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <node/connection\_types.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <node/eviction.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <protocol.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <test/fuzz/FuzzedDataProvider.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <test/fuzz/util.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <test/util/net.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <threadsafety.h>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <util/asmap.h>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <util/sock.h>}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <chrono>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00038\ CNetAddr\ ConsumeNetAddr(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ FastRandomContext*\ rand\ =\ \textcolor{keyword}{nullptr})\ noexcept;}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ class\ AddrManDeterministic\ :\ public\ AddrMan}
+\DoxyCodeLine{00041\ \{}
+\DoxyCodeLine{00042\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keyword}{explicit}\ AddrManDeterministic(\textcolor{keyword}{const}\ NetGroupManager\&\ netgroupman,\ FuzzedDataProvider\&\ fuzzed\_data\_provider,\ int32\_t\ check\_ratio)}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ :\ AddrMan(netgroupman,\ \textcolor{comment}{/*deterministic=*/}true,\ check\_ratio)}
+\DoxyCodeLine{00045\ \ \ \ \ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ WITH\_LOCK(m\_impl-\/>cs,\ m\_impl-\/>insecure\_rand.Reseed(ConsumeUInt256(fuzzed\_data\_provider)));}
+\DoxyCodeLine{00047\ \ \ \ \ \}}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ AddrManDeterministic\&\ other)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00057\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ LOCK2(m\_impl-\/>cs,\ other.m\_impl-\/>cs);}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_impl-\/>mapInfo.size()\ !=\ other.m\_impl-\/>mapInfo.size()\ ||\ m\_impl-\/>nNew\ !=\ other.m\_impl-\/>nNew\ ||}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ m\_impl-\/>nTried\ !=\ other.m\_impl-\/>nTried)\ \{}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Check\ that\ all\ values\ in\ \`{}mapInfo`\ are\ equal\ to\ all\ values\ in\ \`{}other.mapInfo`.}}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Keys\ may\ be\ different.}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ addrinfo\_hasher\ =\ [](\textcolor{keyword}{const}\ AddrInfo\&\ a)\ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ CSipHasher\ hasher(0,\ 0);}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ addr\_key\ =\ a.GetKey();}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ source\_key\ =\ a.source.GetAddrBytes();}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ hasher.Write(TicksSinceEpoch<std::chrono::seconds>(a.m\_last\_success));}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ hasher.Write(a.nAttempts);}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ hasher.Write(a.nRefCount);}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ hasher.Write(a.fInTried);}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ hasher.Write(a.GetNetwork());}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ hasher.Write(a.source.GetNetwork());}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ hasher.Write(addr\_key.size());}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ \ \ hasher.Write(source\_key.size());}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ hasher.Write(addr\_key);}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ hasher.Write(source\_key);}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (\textcolor{keywordtype}{size\_t})hasher.Finalize();}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ addrinfo\_eq\ =\ [](\textcolor{keyword}{const}\ AddrInfo\&\ lhs,\ \textcolor{keyword}{const}\ AddrInfo\&\ rhs)\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::tie(\textcolor{keyword}{static\_cast<}\textcolor{keyword}{const\ }CService\&\textcolor{keyword}{>}(lhs),\ lhs.source,\ lhs.m\_last\_success,\ lhs.nAttempts,\ lhs.nRefCount,\ lhs.fInTried)\ ==}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::tie(\textcolor{keyword}{static\_cast<}\textcolor{keyword}{const\ }CService\&\textcolor{keyword}{>}(rhs),\ rhs.source,\ rhs.m\_last\_success,\ rhs.nAttempts,\ rhs.nRefCount,\ rhs.fInTried);}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }Addresses\ =\ std::unordered\_set<AddrInfo,\ \textcolor{keyword}{decltype}(addrinfo\_hasher),\ \textcolor{keyword}{decltype}(addrinfo\_eq)>;}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ num\_addresses\{m\_impl-\/>mapInfo.size()\};}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ Addresses\ addresses\{num\_addresses,\ addrinfo\_hasher,\ addrinfo\_eq\};}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [\textcolor{keywordtype}{id},\ addr]\ :\ m\_impl-\/>mapInfo)\ \{}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ addresses.insert(addr);}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ Addresses\ other\_addresses\{num\_addresses,\ addrinfo\_hasher,\ addrinfo\_eq\};}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [\textcolor{keywordtype}{id},\ addr]\ :\ other.m\_impl-\/>mapInfo)\ \{}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \ \ \ \ other\_addresses.insert(addr);}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (addresses\ !=\ other\_addresses)\ \{}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ IdsReferToSameAddress\ =\ [\&](nid\_type\ id,\ nid\_type\ other\_id)\ EXCLUSIVE\_LOCKS\_REQUIRED(m\_impl-\/>cs,\ other.m\_impl-\/>cs)\ \{}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keywordtype}{id}\ ==\ -\/1\ \&\&\ other\_id\ ==\ -\/1)\ \{}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((\textcolor{keywordtype}{id}\ ==\ -\/1\ \&\&\ other\_id\ !=\ -\/1)\ ||\ (\textcolor{keywordtype}{id}\ !=\ -\/1\ \&\&\ other\_id\ ==\ -\/1))\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_impl-\/>mapInfo.at(\textcolor{keywordtype}{id})\ ==\ other.m\_impl-\/>mapInfo.at(other\_id);}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Check\ that\ \`{}vvNew`\ contains\ the\ same\ addresses\ as\ \`{}other.vvNew`.\ Notice\ -\/\ \`{}vvNew[i][j]`}}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ contains\ just\ an\ id\ and\ the\ address\ is\ to\ be\ found\ in\ \`{}mapInfo.at(id)`.\ The\ ids}}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ themselves\ may\ differ\ between\ \`{}vvNew`\ and\ \`{}other.vvNew`.}}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ ADDRMAN\_NEW\_BUCKET\_COUNT;\ ++i)\ \{}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ j\ =\ 0;\ j\ <\ ADDRMAN\_BUCKET\_SIZE;\ ++j)\ \{}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!IdsReferToSameAddress(m\_impl-\/>vvNew[i][j],\ other.m\_impl-\/>vvNew[i][j]))\ \{}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Same\ for\ \`{}vvTried`.}}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ ADDRMAN\_TRIED\_BUCKET\_COUNT;\ ++i)\ \{}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ j\ =\ 0;\ j\ <\ ADDRMAN\_BUCKET\_SIZE;\ ++j)\ \{}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!IdsReferToSameAddress(m\_impl-\/>vvTried[i][j],\ other.m\_impl-\/>vvTried[i][j]))\ \{}
+\DoxyCodeLine{00133\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00139\ \ \ \ \ \}}
+\DoxyCodeLine{00140\ \};}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00142\ \textcolor{keyword}{class\ }FuzzedNetEvents\ :\ \textcolor{keyword}{public}\ NetEventsInterface}
+\DoxyCodeLine{00143\ \{}
+\DoxyCodeLine{00144\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00145\ \ \ \ \ FuzzedNetEvents(FuzzedDataProvider\&\ fdp)\ :\ m\_fdp(fdp)\ \{\}}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ InitializeNode(\textcolor{keyword}{const}\ CNode\&,\ ServiceFlags)\textcolor{keyword}{\ override\ }\{\}}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ FinalizeNode(\textcolor{keyword}{const}\ CNode\&)\textcolor{keyword}{\ override\ }\{\}}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HasAllDesirableServiceFlags(ServiceFlags)\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ m\_fdp.ConsumeBool();\ \}}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ ProcessMessages(CNode*,\ std::atomic<bool>\&)\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ m\_fdp.ConsumeBool();\ \}}
+\DoxyCodeLine{00154\ }
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ SendMessages(CNode*)\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ m\_fdp.ConsumeBool();\ \}}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00158\ \ \ \ \ FuzzedDataProvider\&\ m\_fdp;}
+\DoxyCodeLine{00159\ \};}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00161\ \textcolor{keyword}{class\ }FuzzedSock\ :\ \textcolor{keyword}{public}\ Sock}
+\DoxyCodeLine{00162\ \{}
+\DoxyCodeLine{00163\ \ \ \ \ FuzzedDataProvider\&\ m\_fuzzed\_data\_provider;}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{keyword}{mutable}\ std::vector<uint8\_t>\ m\_peek\_data;}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00177\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ m\_selectable;}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{keyword}{mutable}\ std::chrono::milliseconds\ m\_time;}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00187\ \ \ \ \ \textcolor{keywordtype}{void}\ ElapseTime(std::chrono::milliseconds\ duration)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00189\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00190\ \ \ \ \ \textcolor{keyword}{explicit}\ FuzzedSock(FuzzedDataProvider\&\ fuzzed\_data\_provider);}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00192\ \ \ \ \ \string~FuzzedSock()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00194\ \ \ \ \ FuzzedSock\&\ operator=(Sock\&\&\ other)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00195\ }
+\DoxyCodeLine{00196\ \ \ \ \ ssize\_t\ Send(\textcolor{keyword}{const}\ \textcolor{keywordtype}{void}*\ data,\ \textcolor{keywordtype}{size\_t}\ len,\ \textcolor{keywordtype}{int}\ flags)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00198\ \ \ \ \ ssize\_t\ Recv(\textcolor{keywordtype}{void}*\ buf,\ \textcolor{keywordtype}{size\_t}\ len,\ \textcolor{keywordtype}{int}\ flags)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \ \ \ \ \textcolor{keywordtype}{int}\ Connect(\textcolor{keyword}{const}\ sockaddr*,\ socklen\_t)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00201\ }
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keywordtype}{int}\ Bind(\textcolor{keyword}{const}\ sockaddr*,\ socklen\_t)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00203\ }
+\DoxyCodeLine{00204\ \ \ \ \ \textcolor{keywordtype}{int}\ Listen(\textcolor{keywordtype}{int}\ backlog)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \ \ \ \ std::unique\_ptr<Sock>\ Accept(sockaddr*\ addr,\ socklen\_t*\ addr\_len)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00207\ }
+\DoxyCodeLine{00208\ \ \ \ \ \textcolor{keywordtype}{int}\ GetSockOpt(\textcolor{keywordtype}{int}\ level,\ \textcolor{keywordtype}{int}\ opt\_name,\ \textcolor{keywordtype}{void}*\ opt\_val,\ socklen\_t*\ opt\_len)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00209\ }
+\DoxyCodeLine{00210\ \ \ \ \ \textcolor{keywordtype}{int}\ SetSockOpt(\textcolor{keywordtype}{int}\ level,\ \textcolor{keywordtype}{int}\ opt\_name,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{void}*\ opt\_val,\ socklen\_t\ opt\_len)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{keywordtype}{int}\ GetSockName(sockaddr*\ name,\ socklen\_t*\ name\_len)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00213\ }
+\DoxyCodeLine{00214\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetNonBlocking()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00215\ }
+\DoxyCodeLine{00216\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsSelectable()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00217\ }
+\DoxyCodeLine{00218\ \ \ \ \ \textcolor{keywordtype}{bool}\ Wait(std::chrono::milliseconds\ timeout,\ Event\ requested,\ Event*\ occurred\ =\ \textcolor{keyword}{nullptr})\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00220\ \ \ \ \ \textcolor{keywordtype}{bool}\ WaitMany(std::chrono::milliseconds\ timeout,\ EventsPerSock\&\ events\_per\_sock)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsConnected(std::string\&\ errmsg)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00223\ \};}
+\DoxyCodeLine{00224\ }
+\DoxyCodeLine{00225\ [[nodiscard]]\ \textcolor{keyword}{inline}\ FuzzedNetEvents\ ConsumeNetEvents(FuzzedDataProvider\&\ fdp)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00226\ \{}
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{keywordflow}{return}\ FuzzedNetEvents\{fdp\};}
+\DoxyCodeLine{00228\ \}}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00230\ [[nodiscard]]\ \textcolor{keyword}{inline}\ FuzzedSock\ ConsumeSock(FuzzedDataProvider\&\ fuzzed\_data\_provider)}
+\DoxyCodeLine{00231\ \{}
+\DoxyCodeLine{00232\ \ \ \ \ \textcolor{keywordflow}{return}\ FuzzedSock\{fuzzed\_data\_provider\};}
+\DoxyCodeLine{00233\ \}}
+\DoxyCodeLine{00234\ }
+\DoxyCodeLine{00235\ [[nodiscard]]\ \textcolor{keyword}{inline}\ NetGroupManager\ ConsumeNetGroupManager(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00236\ \{}
+\DoxyCodeLine{00237\ \ \ \ \ std::vector<bool>\ asmap\ =\ ConsumeRandomLengthBitVector(fuzzed\_data\_provider);}
+\DoxyCodeLine{00238\ \ \ \ \ \textcolor{keywordflow}{if}\ (!SanityCheckASMap(asmap,\ 128))\ asmap.clear();}
+\DoxyCodeLine{00239\ \ \ \ \ \textcolor{keywordflow}{return}\ NetGroupManager(asmap);}
+\DoxyCodeLine{00240\ \}}
+\DoxyCodeLine{00241\ }
+\DoxyCodeLine{00242\ \textcolor{keyword}{inline}\ CSubNet\ ConsumeSubNet(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00243\ \{}
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keywordflow}{return}\ \{ConsumeNetAddr(fuzzed\_data\_provider),\ fuzzed\_data\_provider.ConsumeIntegral<uint8\_t>()\};}
+\DoxyCodeLine{00245\ \}}
+\DoxyCodeLine{00246\ }
+\DoxyCodeLine{00247\ \textcolor{keyword}{inline}\ CService\ ConsumeService(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00248\ \{}
+\DoxyCodeLine{00249\ \ \ \ \ \textcolor{keywordflow}{return}\ \{ConsumeNetAddr(fuzzed\_data\_provider),\ fuzzed\_data\_provider.ConsumeIntegral<uint16\_t>()\};}
+\DoxyCodeLine{00250\ \}}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00252\ \textcolor{keyword}{inline}\ std::vector<CService>\ ConsumeServiceVector(FuzzedDataProvider\&\ fuzzed\_data\_provider,}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ max\_vector\_size\ =\ 5)\ noexcept}
+\DoxyCodeLine{00254\ \{}
+\DoxyCodeLine{00255\ \ \ \ \ std::vector<CService>\ ret;}
+\DoxyCodeLine{00256\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ size\ =\ fuzzed\_data\_provider.ConsumeIntegralInRange<\textcolor{keywordtype}{size\_t}>(0,\ max\_vector\_size);}
+\DoxyCodeLine{00257\ \ \ \ \ ret.reserve(size);}
+\DoxyCodeLine{00258\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ size;\ ++i)\ \{}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ ret.emplace\_back(ConsumeService(fuzzed\_data\_provider));}
+\DoxyCodeLine{00260\ \ \ \ \ \}}
+\DoxyCodeLine{00261\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00262\ \}}
+\DoxyCodeLine{00263\ }
+\DoxyCodeLine{00264\ CAddress\ ConsumeAddress(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00266\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{bool}\ ReturnUniquePtr\ =\ false>}
+\DoxyCodeLine{00267\ \textcolor{keyword}{auto}\ ConsumeNode(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ std::optional<NodeId>\&\ node\_id\_in\ =\ std::nullopt)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00268\ \{}
+\DoxyCodeLine{00269\ \ \ \ \ \textcolor{keyword}{const}\ NodeId\ node\_id\ =\ node\_id\_in.value\_or(fuzzed\_data\_provider.ConsumeIntegralInRange<NodeId>(0,\ std::numeric\_limits<NodeId>::max()));}
+\DoxyCodeLine{00270\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ sock\ =\ std::make\_shared<FuzzedSock>(fuzzed\_data\_provider);}
+\DoxyCodeLine{00271\ \ \ \ \ \textcolor{keyword}{const}\ CAddress\ address\ =\ ConsumeAddress(fuzzed\_data\_provider);}
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ keyed\_net\_group\ =\ fuzzed\_data\_provider.ConsumeIntegral<uint64\_t>();}
+\DoxyCodeLine{00273\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ local\_host\_nonce\ =\ fuzzed\_data\_provider.ConsumeIntegral<uint64\_t>();}
+\DoxyCodeLine{00274\ \ \ \ \ \textcolor{keyword}{const}\ CAddress\ addr\_bind\ =\ ConsumeAddress(fuzzed\_data\_provider);}
+\DoxyCodeLine{00275\ \ \ \ \ \textcolor{keyword}{const}\ std::string\ addr\_name\ =\ fuzzed\_data\_provider.ConsumeRandomLengthString(64);}
+\DoxyCodeLine{00276\ \ \ \ \ \textcolor{keyword}{const}\ ConnectionType\ conn\_type\ =\ fuzzed\_data\_provider.PickValueInArray(ALL\_CONNECTION\_TYPES);}
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ inbound\_onion\{conn\_type\ ==\ ConnectionType::INBOUND\ ?\ fuzzed\_data\_provider.ConsumeBool()\ :\ \textcolor{keyword}{false}\};}
+\DoxyCodeLine{00278\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ network\_id\ =\ fuzzed\_data\_provider.ConsumeIntegral<uint64\_t>();}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00280\ \ \ \ \ NetPermissionFlags\ permission\_flags\ =\ ConsumeWeakEnum(fuzzed\_data\_provider,\ ALL\_NET\_PERMISSION\_FLAGS);}
+\DoxyCodeLine{00281\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (ReturnUniquePtr)\ \{}
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::make\_unique<CNode>(node\_id,}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sock,}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ address,}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ keyed\_net\_group,}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ local\_host\_nonce,}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ addr\_bind,}
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ addr\_name,}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ conn\_type,}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ inbound\_onion,}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ network\_id,}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CNodeOptions\{\ .permission\_flags\ =\ permission\_flags\ \});}
+\DoxyCodeLine{00293\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ CNode\{node\_id,}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ sock,}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ address,}
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ keyed\_net\_group,}
+\DoxyCodeLine{00298\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ local\_host\_nonce,}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ addr\_bind,}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ addr\_name,}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ conn\_type,}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ inbound\_onion,}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ network\_id,}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CNodeOptions\{\ .permission\_flags\ =\ permission\_flags\ \}\};}
+\DoxyCodeLine{00305\ \ \ \ \ \}}
+\DoxyCodeLine{00306\ \}}
+\DoxyCodeLine{00307\ \textcolor{keyword}{inline}\ std::unique\_ptr<CNode>\ ConsumeNodeAsUniquePtr(FuzzedDataProvider\&\ fdp,\ \textcolor{keyword}{const}\ std::optional<NodeId>\&\ node\_id\_in\ =\ std::nullopt)\ \{\ \textcolor{keywordflow}{return}\ ConsumeNode<true>(fdp,\ node\_id\_in);\ \}}
+\DoxyCodeLine{00308\ }
+\DoxyCodeLine{00309\ \textcolor{keywordtype}{void}\ FillNode(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ ConnmanTestMsg\&\ connman,\ CNode\&\ node)\ \textcolor{keyword}{noexcept}\ EXCLUSIVE\_LOCKS\_REQUIRED(NetEventsInterface::g\_msgproc\_mutex);}
+\DoxyCodeLine{00310\ }
+\DoxyCodeLine{00311\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_TEST\_FUZZ\_UTIL\_NET\_H}}
+
+\end{DoxyCode}

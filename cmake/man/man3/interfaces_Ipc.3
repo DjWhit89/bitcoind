@@ -1,0 +1,98 @@
+.TH "Ipc" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+Ipc
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <ipc\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "virtual \fB~Ipc\fP ()=default"
+.br
+.ti -1c
+.RI "virtual std::unique_ptr< \fBInit\fP > \fBspawnProcess\fP (const char *exe_name)=0"
+.br
+.RI "Spawn a child process returning pointer to its \fBInit\fP interface\&. "
+.ti -1c
+.RI "virtual bool \fBstartSpawnedProcess\fP (int argc, char *argv[], int &\fBexit_status\fP)=0"
+.br
+.ti -1c
+.RI "virtual std::unique_ptr< \fBInit\fP > \fBconnectAddress\fP (std::string &address)=0"
+.br
+.ti -1c
+.RI "virtual void \fBlistenAddress\fP (std::string &address)=0"
+.br
+.ti -1c
+.RI "virtual void \fBdisconnectIncoming\fP ()=0"
+.br
+.RI "Disconnect any incoming connections that are still connected\&. "
+.ti -1c
+.RI "template<typename Interface> void \fBaddCleanup\fP (Interface &iface, std::function< void()> cleanup)"
+.br
+.ti -1c
+.RI "virtual \fBipc::Context\fP & \fBcontext\fP ()=0"
+.br
+.RI "IPC context struct accessor (see struct definition for more description)\&. "
+.in -1c
+.SS "Protected Member Functions"
+
+.in +1c
+.ti -1c
+.RI "virtual void \fBaddCleanup\fP (std::type_index type, void *iface, std::function< void()> cleanup)=0"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Interface providing access to interprocess-communication (IPC) functionality\&. The IPC implementation is responsible for establishing connections between a controlling process and a process being controlled\&. When a connection is established, the process being controlled returns an \fBinterfaces::Init\fP pointer to the controlling process, which the controlling process can use to get access to other interfaces and functionality\&.
+
+.PP
+When spawning a new process, the steps are:
+
+.PP
+.IP "1." 4
+The controlling process calls \fBinterfaces::Ipc::spawnProcess()\fP, which calls \fBipc::Process::spawn()\fP, which spawns a new process and returns a socketpair file descriptor for communicating with it\&. \fBinterfaces::Ipc::spawnProcess()\fP then calls \fBipc::Protocol::connect()\fP passing the socketpair descriptor, which returns a local proxy \fBinterfaces::Init\fP implementation calling remote \fBinterfaces::Init\fP methods\&.
+.IP "2." 4
+The spawned process calls interfaces::Ipc::startSpawnProcess(), which calls \fBipc::Process::checkSpawned()\fP to read command line arguments and determine whether it is a spawned process and what socketpair file descriptor it should use\&. It then calls \fBipc::Protocol::serve()\fP to handle incoming requests from the socketpair and invoke \fBinterfaces::Init\fP interface methods, and exit when the socket is closed\&.
+.IP "3." 4
+The controlling process calls local proxy \fBinterfaces::Init\fP object methods to make other proxy objects calling other remote interfaces\&. It can also destroy the initial \fBinterfaces::Init\fP object to close the connection and shut down the spawned process\&.
+.PP
+
+.PP
+When connecting to an existing process, the steps are similar to spawning a new process, except a socket is created instead of a socketpair, and destroying an \fBInit\fP interface doesn't end the process, since there can be multiple connections\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "virtual ~\fBIpc\fP ()\fR [virtual]\fP, \fR [default]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "template<typename Interface> void addCleanup (Interface & iface, std::function< void()> cleanup)\fR [inline]\fP"
+Add cleanup callback to remote interface that will run when the interface is deleted\&. 
+.SS "virtual void addCleanup (std::type_index type, void * iface, std::function< void()> cleanup)\fR [protected]\fP, \fR [pure virtual]\fP"
+Internal implementation of public addCleanup method (above) as a type-erased virtual function, since template functions can't be virtual\&. 
+.SS "virtual std::unique_ptr< \fBInit\fP > connectAddress (std::string & address)\fR [pure virtual]\fP"
+Connect to a socket address and return a pointer to its \fBInit\fP interface\&. Returns a non-null pointer if the connection was established, returns null if address is empty ("") or disabled ("0") or if a connection was refused but not required ("auto"), and throws an exception if there was an unexpected error\&. 
+.SS "virtual \fBipc::Context\fP & context ()\fR [pure virtual]\fP"
+
+.PP
+IPC context struct accessor (see struct definition for more description)\&. 
+.SS "virtual void disconnectIncoming ()\fR [pure virtual]\fP"
+
+.PP
+Disconnect any incoming connections that are still connected\&. 
+.SS "virtual void listenAddress (std::string & address)\fR [pure virtual]\fP"
+Listen on a socket address exposing this process's init interface to clients\&. Throws an exception if there was an error\&. 
+.SS "virtual std::unique_ptr< \fBInit\fP > spawnProcess (const char * exe_name)\fR [pure virtual]\fP"
+
+.PP
+Spawn a child process returning pointer to its \fBInit\fP interface\&. 
+.SS "virtual bool startSpawnedProcess (int argc, char * argv[], int & exit_status)\fR [pure virtual]\fP"
+If this is a spawned process, block and handle requests from the parent process by forwarding them to this process's \fBInit\fP interface, then return true\&. If this is not a spawned child process, return false\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

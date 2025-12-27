@@ -1,0 +1,72 @@
+\doxysection{testutil.\+h}
+\label{leveldb_2util_2testutil_8h_source}\index{src/leveldb/util/testutil.h@{src/leveldb/util/testutil.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_UTIL\_TESTUTIL\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_UTIL\_TESTUTIL\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ "{}helpers/memenv/memenv.h"{}}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ "{}leveldb/env.h"{}}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}leveldb/slice.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}util/random.h"{}}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00014\ \textcolor{keyword}{namespace\ }test\ \{}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{comment}{//\ Store\ in\ *dst\ a\ random\ string\ of\ length\ "{}len"{}\ and\ return\ a\ Slice\ that}}
+\DoxyCodeLine{00017\ \textcolor{comment}{//\ references\ the\ generated\ data.}}
+\DoxyCodeLine{00018\ Slice\ RandomString(Random*\ rnd,\ \textcolor{keywordtype}{int}\ len,\ std::string*\ dst);}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{comment}{//\ Return\ a\ random\ key\ with\ the\ specified\ length\ that\ may\ contain\ interesting}}
+\DoxyCodeLine{00021\ \textcolor{comment}{//\ characters\ (e.g.\ \(\backslash\)x00,\ \(\backslash\)xff,\ etc.).}}
+\DoxyCodeLine{00022\ std::string\ RandomKey(Random*\ rnd,\ \textcolor{keywordtype}{int}\ len);}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{comment}{//\ Store\ in\ *dst\ a\ string\ of\ length\ "{}len"{}\ that\ will\ compress\ to}}
+\DoxyCodeLine{00025\ \textcolor{comment}{//\ "{}N*compressed\_fraction"{}\ bytes\ and\ return\ a\ Slice\ that\ references}}
+\DoxyCodeLine{00026\ \textcolor{comment}{//\ the\ generated\ data.}}
+\DoxyCodeLine{00027\ Slice\ CompressibleString(Random*\ rnd,\ \textcolor{keywordtype}{double}\ compressed\_fraction,\ \textcolor{keywordtype}{size\_t}\ len,}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::string*\ dst);}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{comment}{//\ A\ wrapper\ that\ allows\ injection\ of\ errors.}}
+\DoxyCodeLine{00031\ \textcolor{keyword}{class\ }ErrorEnv\ :\ \textcolor{keyword}{public}\ EnvWrapper\ \{}
+\DoxyCodeLine{00032\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00033\ \ \ \textcolor{keywordtype}{bool}\ writable\_file\_error\_;}
+\DoxyCodeLine{00034\ \ \ \textcolor{keywordtype}{int}\ num\_writable\_file\_errors\_;}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ ErrorEnv()}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ :\ EnvWrapper(NewMemEnv(Env::Default())),}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ writable\_file\_error\_(false),}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ num\_writable\_file\_errors\_(0)\ \{\}}
+\DoxyCodeLine{00040\ \ \ \string~ErrorEnv()\textcolor{keyword}{\ override\ }\{\ \textcolor{keyword}{delete}\ target();\ \}}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \ \ Status\ NewWritableFile(\textcolor{keyword}{const}\ std::string\&\ fname,}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WritableFile**\ result)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordflow}{if}\ (writable\_file\_error\_)\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ ++num\_writable\_file\_errors\_;}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ *result\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Status::IOError(fname,\ \textcolor{stringliteral}{"{}fake\ error"{}});}
+\DoxyCodeLine{00048\ \ \ \ \ \}}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordflow}{return}\ target()-\/>NewWritableFile(fname,\ result);}
+\DoxyCodeLine{00050\ \ \ \}}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ Status\ NewAppendableFile(\textcolor{keyword}{const}\ std::string\&\ fname,}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WritableFile**\ result)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keywordflow}{if}\ (writable\_file\_error\_)\ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ ++num\_writable\_file\_errors\_;}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ *result\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Status::IOError(fname,\ \textcolor{stringliteral}{"{}fake\ error"{}});}
+\DoxyCodeLine{00058\ \ \ \ \ \}}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keywordflow}{return}\ target()-\/>NewAppendableFile(fname,\ result);}
+\DoxyCodeLine{00060\ \ \ \}}
+\DoxyCodeLine{00061\ \};}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \}\ \ \textcolor{comment}{//\ namespace\ test}}
+\DoxyCodeLine{00064\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_UTIL\_TESTUTIL\_H\_}}
+
+\end{DoxyCode}

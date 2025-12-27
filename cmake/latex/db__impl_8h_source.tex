@@ -1,0 +1,223 @@
+\doxysection{db\+\_\+impl.\+h}
+\label{db__impl_8h_source}\index{src/leveldb/db/db\_impl.h@{src/leveldb/db/db\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_DB\_DB\_IMPL\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_DB\_DB\_IMPL\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <deque>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}db/dbformat.h"{}}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}db/log\_writer.h"{}}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}db/snapshot.h"{}}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ "{}leveldb/db.h"{}}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ "{}leveldb/env.h"{}}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ "{}port/port.h"{}}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ "{}port/thread\_annotations.h"{}}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{class\ }MemTable;}
+\DoxyCodeLine{00024\ \textcolor{keyword}{class\ }TableCache;}
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }Version;}
+\DoxyCodeLine{00026\ \textcolor{keyword}{class\ }VersionEdit;}
+\DoxyCodeLine{00027\ \textcolor{keyword}{class\ }VersionSet;}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{keyword}{class\ }DBImpl\ :\ \textcolor{keyword}{public}\ DB\ \{}
+\DoxyCodeLine{00030\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00031\ \ \ DBImpl(\textcolor{keyword}{const}\ Options\&\ options,\ \textcolor{keyword}{const}\ std::string\&\ dbname);}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \ \ DBImpl(\textcolor{keyword}{const}\ DBImpl\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00034\ \ \ DBImpl\&\ operator=(\textcolor{keyword}{const}\ DBImpl\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \string~DBImpl()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \textcolor{comment}{//\ Implementations\ of\ the\ DB\ interface}}
+\DoxyCodeLine{00039\ \ \ Status\ Put(\textcolor{keyword}{const}\ WriteOptions\&,\ \textcolor{keyword}{const}\ Slice\&\ key,}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Slice\&\ value)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00041\ \ \ Status\ Delete(\textcolor{keyword}{const}\ WriteOptions\&,\ \textcolor{keyword}{const}\ Slice\&\ key)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00042\ \ \ Status\ Write(\textcolor{keyword}{const}\ WriteOptions\&\ options,\ WriteBatch*\ updates)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00043\ \ \ Status\ Get(\textcolor{keyword}{const}\ ReadOptions\&\ options,\ \textcolor{keyword}{const}\ Slice\&\ key,}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \ \ \ \ \ std::string*\ value)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00045\ \ \ Iterator*\ NewIterator(\textcolor{keyword}{const}\ ReadOptions\&)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00046\ \ \ \textcolor{keyword}{const}\ Snapshot*\ GetSnapshot()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00047\ \ \ \textcolor{keywordtype}{void}\ ReleaseSnapshot(\textcolor{keyword}{const}\ Snapshot*\ snapshot)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00048\ \ \ \textcolor{keywordtype}{bool}\ GetProperty(\textcolor{keyword}{const}\ Slice\&\ property,\ std::string*\ value)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00049\ \ \ \textcolor{keywordtype}{void}\ GetApproximateSizes(\textcolor{keyword}{const}\ Range*\ range,\ \textcolor{keywordtype}{int}\ n,\ uint64\_t*\ sizes)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00050\ \ \ \textcolor{keywordtype}{void}\ CompactRange(\textcolor{keyword}{const}\ Slice*\ begin,\ \textcolor{keyword}{const}\ Slice*\ end)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ \textcolor{comment}{//\ Extra\ methods\ (for\ testing)\ that\ are\ not\ in\ the\ public\ DB\ interface}}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \textcolor{comment}{//\ Compact\ any\ files\ in\ the\ named\ level\ that\ overlap\ [*begin,*end]}}
+\DoxyCodeLine{00055\ \ \ \textcolor{keywordtype}{void}\ TEST\_CompactRange(\textcolor{keywordtype}{int}\ level,\ \textcolor{keyword}{const}\ Slice*\ begin,\ \textcolor{keyword}{const}\ Slice*\ end);}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \textcolor{comment}{//\ Force\ current\ memtable\ contents\ to\ be\ compacted.}}
+\DoxyCodeLine{00058\ \ \ Status\ TEST\_CompactMemTable();}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \textcolor{comment}{//\ Return\ an\ internal\ iterator\ over\ the\ current\ state\ of\ the\ database.}}
+\DoxyCodeLine{00061\ \ \ \textcolor{comment}{//\ The\ keys\ of\ this\ iterator\ are\ internal\ keys\ (see\ format.h).}}
+\DoxyCodeLine{00062\ \ \ \textcolor{comment}{//\ The\ returned\ iterator\ should\ be\ deleted\ when\ no\ longer\ needed.}}
+\DoxyCodeLine{00063\ \ \ Iterator*\ TEST\_NewInternalIterator();}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \textcolor{comment}{//\ Return\ the\ maximum\ overlapping\ data\ (in\ bytes)\ at\ next\ level\ for\ any}}
+\DoxyCodeLine{00066\ \ \ \textcolor{comment}{//\ file\ at\ a\ level\ >=\ 1.}}
+\DoxyCodeLine{00067\ \ \ int64\_t\ TEST\_MaxNextLevelOverlappingBytes();}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \textcolor{comment}{//\ Record\ a\ sample\ of\ bytes\ read\ at\ the\ specified\ internal\ key.}}
+\DoxyCodeLine{00070\ \ \ \textcolor{comment}{//\ Samples\ are\ taken\ approximately\ once\ every\ config::kReadBytesPeriod}}
+\DoxyCodeLine{00071\ \ \ \textcolor{comment}{//\ bytes.}}
+\DoxyCodeLine{00072\ \ \ \textcolor{keywordtype}{void}\ RecordReadSample(Slice\ key);}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00075\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }DB;}
+\DoxyCodeLine{00076\ \ \ \textcolor{keyword}{struct\ }CompactionState;}
+\DoxyCodeLine{00077\ \ \ \textcolor{keyword}{struct\ }Writer;}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \textcolor{comment}{//\ Information\ for\ a\ manual\ compaction}}
+\DoxyCodeLine{00080\ \ \ \textcolor{keyword}{struct\ }ManualCompaction\ \{}
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{keywordtype}{int}\ level;}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keywordtype}{bool}\ done;}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keyword}{const}\ InternalKey*\ begin;\ \ \textcolor{comment}{//\ null\ means\ beginning\ of\ key\ range}}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keyword}{const}\ InternalKey*\ end;\ \ \ \ \textcolor{comment}{//\ null\ means\ end\ of\ key\ range}}
+\DoxyCodeLine{00085\ \ \ \ \ InternalKey\ tmp\_storage;\ \ \ \textcolor{comment}{//\ Used\ to\ keep\ track\ of\ compaction\ progress}}
+\DoxyCodeLine{00086\ \ \ \};}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ \textcolor{comment}{//\ Per\ level\ compaction\ stats.\ \ stats\_[level]\ stores\ the\ stats\ for}}
+\DoxyCodeLine{00089\ \ \ \textcolor{comment}{//\ compactions\ that\ produced\ data\ for\ the\ specified\ "{}level"{}.}}
+\DoxyCodeLine{00090\ \ \ \textcolor{keyword}{struct\ }CompactionStats\ \{}
+\DoxyCodeLine{00091\ \ \ \ \ CompactionStats()\ :\ micros(0),\ bytes\_read(0),\ bytes\_written(0)\ \{\}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keywordtype}{void}\ Add(\textcolor{keyword}{const}\ CompactionStats\&\ c)\ \{}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ this-\/>micros\ +=\ c.micros;}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ this-\/>bytes\_read\ +=\ c.bytes\_read;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ this-\/>bytes\_written\ +=\ c.bytes\_written;}
+\DoxyCodeLine{00097\ \ \ \ \ \}}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ \ \ int64\_t\ micros;}
+\DoxyCodeLine{00100\ \ \ \ \ int64\_t\ bytes\_read;}
+\DoxyCodeLine{00101\ \ \ \ \ int64\_t\ bytes\_written;}
+\DoxyCodeLine{00102\ \ \ \};}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \ \ Iterator*\ NewInternalIterator(\textcolor{keyword}{const}\ ReadOptions\&,}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SequenceNumber*\ latest\_snapshot,}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint32\_t*\ seed);}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ Status\ NewDB();}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \ \ \textcolor{comment}{//\ Recover\ the\ descriptor\ from\ persistent\ storage.\ \ May\ do\ a\ significant}}
+\DoxyCodeLine{00111\ \ \ \textcolor{comment}{//\ amount\ of\ work\ to\ recover\ recently\ logged\ updates.\ \ Any\ changes\ to}}
+\DoxyCodeLine{00112\ \ \ \textcolor{comment}{//\ be\ made\ to\ the\ descriptor\ are\ added\ to\ *edit.}}
+\DoxyCodeLine{00113\ \ \ Status\ Recover(VersionEdit*\ edit,\ \textcolor{keywordtype}{bool}*\ save\_manifest)}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \ \ \textcolor{keywordtype}{void}\ MaybeIgnoreError(Status*\ s)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ \ \ \textcolor{comment}{//\ Delete\ any\ unneeded\ files\ and\ stale\ in-\/memory\ entries.}}
+\DoxyCodeLine{00119\ \ \ \textcolor{keywordtype}{void}\ DeleteObsoleteFiles()\ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \ \ \textcolor{comment}{//\ Compact\ the\ in-\/memory\ write\ buffer\ to\ disk.\ \ Switches\ to\ a\ new}}
+\DoxyCodeLine{00122\ \ \ \textcolor{comment}{//\ log-\/file/memtable\ and\ writes\ a\ new\ descriptor\ iff\ successful.}}
+\DoxyCodeLine{00123\ \ \ \textcolor{comment}{//\ Errors\ are\ recorded\ in\ bg\_error\_.}}
+\DoxyCodeLine{00124\ \ \ \textcolor{keywordtype}{void}\ CompactMemTable()\ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \ \ Status\ RecoverLogFile(uint64\_t\ log\_number,\ \textcolor{keywordtype}{bool}\ last\_log,\ \textcolor{keywordtype}{bool}*\ save\_manifest,}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ VersionEdit*\ edit,\ SequenceNumber*\ max\_sequence)}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \ \ Status\ WriteLevel0Table(MemTable*\ mem,\ VersionEdit*\ edit,\ Version*\ base)}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00133\ \ \ Status\ MakeRoomForWrite(\textcolor{keywordtype}{bool}\ force\ \textcolor{comment}{/*\ compact\ even\ if\ there\ is\ room?\ */})}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00135\ \ \ WriteBatch*\ BuildBatchGroup(Writer**\ last\_writer)}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \ \ \textcolor{keywordtype}{void}\ RecordBackgroundError(const\ Status\&\ s);}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00140\ \ \ \textcolor{keywordtype}{void}\ MaybeScheduleCompaction()\ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00141\ \ \ static\ \textcolor{keywordtype}{void}\ BGWork(\textcolor{keywordtype}{void}*\ db);}
+\DoxyCodeLine{00142\ \ \ \textcolor{keywordtype}{void}\ BackgroundCall();}
+\DoxyCodeLine{00143\ \ \ \textcolor{keywordtype}{void}\ BackgroundCompaction()\ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00144\ \ \ \textcolor{keywordtype}{void}\ CleanupCompaction(CompactionState*\ compact)}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00146\ \ \ Status\ DoCompactionWork(CompactionState*\ compact)}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00149\ \ \ Status\ OpenCompactionOutputFile(CompactionState*\ compact);}
+\DoxyCodeLine{00150\ \ \ Status\ FinishCompactionOutputFile(CompactionState*\ compact,\ Iterator*\ input);}
+\DoxyCodeLine{00151\ \ \ Status\ InstallCompactionResults(CompactionState*\ compact)}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(mutex\_);}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \ \ const\ Comparator*\ user\_comparator()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keywordflow}{return}\ internal\_comparator\_.user\_comparator();}
+\DoxyCodeLine{00156\ \ \ \}}
+\DoxyCodeLine{00157\ }
+\DoxyCodeLine{00158\ \ \ \textcolor{comment}{//\ Constant\ after\ construction}}
+\DoxyCodeLine{00159\ \ \ Env*\ \textcolor{keyword}{const}\ env\_;}
+\DoxyCodeLine{00160\ \ \ \textcolor{keyword}{const}\ InternalKeyComparator\ internal\_comparator\_;}
+\DoxyCodeLine{00161\ \ \ \textcolor{keyword}{const}\ InternalFilterPolicy\ internal\_filter\_policy\_;}
+\DoxyCodeLine{00162\ \ \ \textcolor{keyword}{const}\ Options\ options\_;\ \ \textcolor{comment}{//\ options\_.comparator\ ==\ \&internal\_comparator\_}}
+\DoxyCodeLine{00163\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ owns\_info\_log\_;}
+\DoxyCodeLine{00164\ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ owns\_cache\_;}
+\DoxyCodeLine{00165\ \ \ \textcolor{keyword}{const}\ std::string\ dbname\_;}
+\DoxyCodeLine{00166\ }
+\DoxyCodeLine{00167\ \ \ \textcolor{comment}{//\ table\_cache\_\ provides\ its\ own\ synchronization}}
+\DoxyCodeLine{00168\ \ \ TableCache*\ \textcolor{keyword}{const}\ table\_cache\_;}
+\DoxyCodeLine{00169\ }
+\DoxyCodeLine{00170\ \ \ \textcolor{comment}{//\ Lock\ over\ the\ persistent\ DB\ state.\ \ Non-\/null\ iff\ successfully\ acquired.}}
+\DoxyCodeLine{00171\ \ \ FileLock*\ db\_lock\_;}
+\DoxyCodeLine{00172\ }
+\DoxyCodeLine{00173\ \ \ \textcolor{comment}{//\ State\ below\ is\ protected\ by\ mutex\_}}
+\DoxyCodeLine{00174\ \ \ port::Mutex\ mutex\_;}
+\DoxyCodeLine{00175\ \ \ std::atomic<bool>\ shutting\_down\_;}
+\DoxyCodeLine{00176\ \ \ port::CondVar\ background\_work\_finished\_signal\_\ GUARDED\_BY(mutex\_);}
+\DoxyCodeLine{00177\ \ \ MemTable*\ mem\_;}
+\DoxyCodeLine{00178\ \ \ MemTable*\ imm\_\ GUARDED\_BY(mutex\_);\ \ \textcolor{comment}{//\ Memtable\ being\ compacted}}
+\DoxyCodeLine{00179\ \ \ std::atomic<bool>\ has\_imm\_;\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ So\ bg\ thread\ can\ detect\ non-\/null\ imm\_}}
+\DoxyCodeLine{00180\ \ \ WritableFile*\ logfile\_;}
+\DoxyCodeLine{00181\ \ \ uint64\_t\ logfile\_number\_\ GUARDED\_BY(mutex\_);}
+\DoxyCodeLine{00182\ \ \ log::Writer*\ log\_;}
+\DoxyCodeLine{00183\ \ \ uint32\_t\ seed\_\ GUARDED\_BY(mutex\_);\ \ \textcolor{comment}{//\ For\ sampling.}}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00185\ \ \ \textcolor{comment}{//\ Queue\ of\ writers.}}
+\DoxyCodeLine{00186\ \ \ std::deque<Writer*>\ writers\_\ GUARDED\_BY(mutex\_);}
+\DoxyCodeLine{00187\ \ \ WriteBatch*\ tmp\_batch\_\ GUARDED\_BY(mutex\_);}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00189\ \ \ SnapshotList\ snapshots\_\ GUARDED\_BY(mutex\_);}
+\DoxyCodeLine{00190\ }
+\DoxyCodeLine{00191\ \ \ \textcolor{comment}{//\ Set\ of\ table\ files\ to\ protect\ from\ deletion\ because\ they\ are}}
+\DoxyCodeLine{00192\ \ \ \textcolor{comment}{//\ part\ of\ ongoing\ compactions.}}
+\DoxyCodeLine{00193\ \ \ std::set<uint64\_t>\ pending\_outputs\_\ GUARDED\_BY(mutex\_);}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00195\ \ \ \textcolor{comment}{//\ Has\ a\ background\ compaction\ been\ scheduled\ or\ is\ running?}}
+\DoxyCodeLine{00196\ \ \ \textcolor{keywordtype}{bool}\ background\_compaction\_scheduled\_\ GUARDED\_BY(mutex\_);}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00198\ \ \ ManualCompaction*\ manual\_compaction\_\ GUARDED\_BY(mutex\_);}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \ \ VersionSet*\ \textcolor{keyword}{const}\ versions\_\ GUARDED\_BY(mutex\_);}
+\DoxyCodeLine{00201\ }
+\DoxyCodeLine{00202\ \ \ \textcolor{comment}{//\ Have\ we\ encountered\ a\ background\ error\ in\ paranoid\ mode?}}
+\DoxyCodeLine{00203\ \ \ Status\ bg\_error\_\ GUARDED\_BY(mutex\_);}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \ \ CompactionStats\ stats\_[config::kNumLevels]\ GUARDED\_BY(mutex\_);}
+\DoxyCodeLine{00206\ \};}
+\DoxyCodeLine{00207\ }
+\DoxyCodeLine{00208\ \textcolor{comment}{//\ Sanitize\ db\ options.\ \ The\ caller\ should\ delete\ result.info\_log\ if}}
+\DoxyCodeLine{00209\ \textcolor{comment}{//\ it\ is\ not\ equal\ to\ src.info\_log.}}
+\DoxyCodeLine{00210\ Options\ SanitizeOptions(\textcolor{keyword}{const}\ std::string\&\ db,}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ InternalKeyComparator*\ icmp,}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ InternalFilterPolicy*\ ipolicy,}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Options\&\ src);}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00215\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00217\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_DB\_DB\_IMPL\_H\_}}
+
+\end{DoxyCode}

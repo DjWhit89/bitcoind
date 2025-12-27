@@ -1,0 +1,832 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="safegcd__implementation_8md" kind="file" language="Markdown">
+    <compoundname>safegcd_implementation.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">#<sp/>The<sp/>safegcd<sp/>implementation<sp/>in<sp/>libsecp256k1<sp/>explained</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>document<sp/>explains<sp/>the<sp/>modular<sp/>inverse<sp/>and<sp/>Jacobi<sp/>symbol<sp/>implementations<sp/>in<sp/>the<sp/>`src/modinv*.h`<sp/>files.</highlight></codeline>
+<codeline><highlight class="normal">It<sp/>is<sp/>based<sp/>on<sp/>the<sp/>paper</highlight></codeline>
+<codeline><highlight class="normal">[&quot;Fast<sp/>constant-time<sp/>gcd<sp/>computation<sp/>and<sp/>modular<sp/>inversion&quot;](https://gcd.cr.yp.to/papers.html#safegcd)</highlight></codeline>
+<codeline><highlight class="normal">by<sp/>Daniel<sp/>J.<sp/>Bernstein<sp/>and<sp/>Bo-Yin<sp/>Yang.<sp/>The<sp/>references<sp/>below<sp/>are<sp/>for<sp/>the<sp/>Date:<sp/>2019.04.13<sp/>version.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>actual<sp/>implementation<sp/>is<sp/>in<sp/>C<sp/>of<sp/>course,<sp/>but<sp/>for<sp/>demonstration<sp/>purposes<sp/>Python3<sp/>is<sp/>used<sp/>here.</highlight></codeline>
+<codeline><highlight class="normal">Most<sp/>implementation<sp/>aspects<sp/>and<sp/>optimizations<sp/>are<sp/>explained,<sp/>except<sp/>those<sp/>that<sp/>depend<sp/>on<sp/>the<sp/>specific</highlight></codeline>
+<codeline><highlight class="normal">number<sp/>representation<sp/>used<sp/>in<sp/>the<sp/>C<sp/>code.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>1.<sp/>Computing<sp/>the<sp/>Greatest<sp/>Common<sp/>Divisor<sp/>(GCD)<sp/>using<sp/>divsteps</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>algorithm<sp/>from<sp/>the<sp/>paper<sp/>(section<sp/>11),<sp/>at<sp/>a<sp/>very<sp/>high<sp/>level,<sp/>is<sp/>this:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>gcd(f,<sp/>g):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Compute<sp/>the<sp/>GCD<sp/>of<sp/>an<sp/>odd<sp/>integer<sp/>f<sp/>and<sp/>another<sp/>integer<sp/>g.&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>assert<sp/>f<sp/>&amp;<sp/>1<sp/><sp/>#<sp/>require<sp/>f<sp/>to<sp/>be<sp/>odd</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>delta<sp/>=<sp/>1<sp/><sp/><sp/><sp/><sp/>#<sp/>additional<sp/>state<sp/>variable</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>while<sp/>g<sp/>!=<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>assert<sp/>f<sp/>&amp;<sp/>1<sp/><sp/>#<sp/>f<sp/>will<sp/>be<sp/>odd<sp/>in<sp/>every<sp/>iteration</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>delta<sp/>&gt;<sp/>0<sp/>and<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g<sp/>=<sp/>1<sp/>-<sp/>delta,<sp/>g,<sp/>(g<sp/>-<sp/>f)<sp/>//<sp/>2</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>elif<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g<sp/>=<sp/>1<sp/>+<sp/>delta,<sp/>f,<sp/>(g<sp/>+<sp/>f)<sp/>//<sp/>2</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>else:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g<sp/>=<sp/>1<sp/>+<sp/>delta,<sp/>f,<sp/>(g<sp/><sp/><sp/><sp/>)<sp/>//<sp/>2</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>abs(f)</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">It<sp/>computes<sp/>the<sp/>greatest<sp/>common<sp/>divisor<sp/>of<sp/>an<sp/>odd<sp/>integer<sp/>*f*<sp/>and<sp/>any<sp/>integer<sp/>*g*.<sp/>Its<sp/>inner<sp/>loop</highlight></codeline>
+<codeline><highlight class="normal">keeps<sp/>rewriting<sp/>the<sp/>variables<sp/>*f*<sp/>and<sp/>*g*<sp/>alongside<sp/>a<sp/>state<sp/>variable<sp/>*&amp;delta;*<sp/>that<sp/>starts<sp/>at<sp/>*1*,<sp/>until</highlight></codeline>
+<codeline><highlight class="normal">*g=0*<sp/>is<sp/>reached.<sp/>At<sp/>that<sp/>point,<sp/>*|f|*<sp/>gives<sp/>the<sp/>GCD.<sp/>Each<sp/>of<sp/>the<sp/>transitions<sp/>in<sp/>the<sp/>loop<sp/>is<sp/>called<sp/>a</highlight></codeline>
+<codeline><highlight class="normal">&quot;division<sp/>step&quot;<sp/>(referred<sp/>to<sp/>as<sp/>divstep<sp/>in<sp/>what<sp/>follows).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">For<sp/>example,<sp/>*gcd(21,<sp/>14)*<sp/>would<sp/>be<sp/>computed<sp/>as:</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>Start<sp/>with<sp/>*&amp;delta;=1<sp/>f=21<sp/>g=14*</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>Take<sp/>the<sp/>third<sp/>branch:<sp/>*&amp;delta;=2<sp/>f=21<sp/>g=7*</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>Take<sp/>the<sp/>first<sp/>branch:<sp/>*&amp;delta;=-1<sp/>f=7<sp/>g=-7*</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>Take<sp/>the<sp/>second<sp/>branch:<sp/>*&amp;delta;=0<sp/>f=7<sp/>g=0*</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>The<sp/>answer<sp/>*|f|<sp/>=<sp/>7*.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Why<sp/>it<sp/>works:</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>Divsteps<sp/>can<sp/>be<sp/>decomposed<sp/>into<sp/>two<sp/>steps<sp/>(see<sp/>paragraph<sp/>8.2<sp/>in<sp/>the<sp/>paper):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>-<sp/>(a)<sp/>If<sp/>*g*<sp/>is<sp/>odd,<sp/>replace<sp/>*(f,g)*<sp/>with<sp/>*(g,g-f)*<sp/>or<sp/>(f,g+f),<sp/>resulting<sp/>in<sp/>an<sp/>even<sp/>*g*.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>-<sp/>(b)<sp/>Replace<sp/>*(f,g)*<sp/>with<sp/>*(f,g/2)*<sp/>(where<sp/>*g*<sp/>is<sp/>guaranteed<sp/>to<sp/>be<sp/>even).</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>Neither<sp/>of<sp/>those<sp/>two<sp/>operations<sp/>change<sp/>the<sp/>GCD:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>-<sp/>For<sp/>(a),<sp/>assume<sp/>*gcd(f,g)=c*,<sp/>then<sp/>it<sp/>must<sp/>be<sp/>the<sp/>case<sp/>that<sp/>*f=a&amp;thinsp;c*<sp/>and<sp/>*g=b&amp;thinsp;c*<sp/>for<sp/>some<sp/>integers<sp/>*a*</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>and<sp/>*b*.<sp/>As<sp/>*(g,g-f)=(b&amp;thinsp;c,(b-a)c)*<sp/>and<sp/>*(f,f+g)=(a&amp;thinsp;c,(a+b)c)*,<sp/>the<sp/>result<sp/>clearly<sp/>still<sp/>has</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>common<sp/>factor<sp/>*c*.<sp/>Reasoning<sp/>in<sp/>the<sp/>other<sp/>direction<sp/>shows<sp/>that<sp/>no<sp/>common<sp/>factor<sp/>can<sp/>be<sp/>added<sp/>by</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>doing<sp/>so<sp/>either.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>-<sp/>For<sp/>(b),<sp/>we<sp/>know<sp/>that<sp/>*f*<sp/>is<sp/>odd,<sp/>so<sp/>*gcd(f,g)*<sp/>clearly<sp/>has<sp/>no<sp/>factor<sp/>*2*,<sp/>and<sp/>we<sp/>can<sp/>remove</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>it<sp/>from<sp/>*g*.</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>The<sp/>algorithm<sp/>will<sp/>eventually<sp/>converge<sp/>to<sp/>*g=0*.<sp/>This<sp/>is<sp/>proven<sp/>in<sp/>the<sp/>paper<sp/>(see<sp/>theorem<sp/>G.3).</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>It<sp/>follows<sp/>that<sp/>eventually<sp/>we<sp/>find<sp/>a<sp/>final<sp/>value<sp/>*f&apos;*<sp/>for<sp/>which<sp/>*gcd(f,g)<sp/>=<sp/>gcd(f&apos;,0)*.<sp/>As<sp/>the</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>gcd<sp/>of<sp/>*f&apos;*<sp/>and<sp/>*0*<sp/>is<sp/>*|f&apos;|*<sp/>by<sp/>definition,<sp/>that<sp/>is<sp/>our<sp/>answer.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Compared<sp/>to<sp/>more<sp/>[traditional<sp/>GCD<sp/>algorithms](https://en.wikipedia.org/wiki/Euclidean_algorithm),<sp/>this<sp/>one<sp/>has<sp/>the<sp/>property<sp/>of<sp/>only<sp/>ever<sp/>looking<sp/>at</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>low-order<sp/>bits<sp/>of<sp/>the<sp/>variables<sp/>to<sp/>decide<sp/>the<sp/>next<sp/>steps,<sp/>and<sp/>being<sp/>easy<sp/>to<sp/>make</highlight></codeline>
+<codeline><highlight class="normal">constant-time<sp/>(in<sp/>more<sp/>low-level<sp/>languages<sp/>than<sp/>Python).<sp/>The<sp/>*&amp;delta;*<sp/>parameter<sp/>is<sp/>necessary<sp/>to</highlight></codeline>
+<codeline><highlight class="normal">guide<sp/>the<sp/>algorithm<sp/>towards<sp/>shrinking<sp/>the<sp/>numbers&apos;<sp/>magnitudes<sp/>without<sp/>explicitly<sp/>needing<sp/>to<sp/>look</highlight></codeline>
+<codeline><highlight class="normal">at<sp/>high<sp/>order<sp/>bits.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Properties<sp/>that<sp/>will<sp/>become<sp/>important<sp/>later:</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>Performing<sp/>more<sp/>divsteps<sp/>than<sp/>needed<sp/>is<sp/>not<sp/>a<sp/>problem,<sp/>as<sp/>*f*<sp/>does<sp/>not<sp/>change<sp/>anymore<sp/>after<sp/>*g=0*.</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>Only<sp/>even<sp/>numbers<sp/>are<sp/>divided<sp/>by<sp/>*2*.<sp/>This<sp/>means<sp/>that<sp/>when<sp/>reasoning<sp/>about<sp/>it<sp/>algebraically<sp/>we</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>do<sp/>not<sp/>need<sp/>to<sp/>worry<sp/>about<sp/>rounding.</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>At<sp/>every<sp/>point<sp/>during<sp/>the<sp/>algorithm&apos;s<sp/>execution<sp/>the<sp/>next<sp/>*N*<sp/>steps<sp/>only<sp/>depend<sp/>on<sp/>the<sp/>bottom<sp/>*N*</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>bits<sp/>of<sp/>*f*<sp/>and<sp/>*g*,<sp/>and<sp/>on<sp/>*&amp;delta;*.</highlight></codeline>
+<codeline></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>2.<sp/>From<sp/>GCDs<sp/>to<sp/>modular<sp/>inverses</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">We<sp/>want<sp/>an<sp/>algorithm<sp/>to<sp/>compute<sp/>the<sp/>inverse<sp/>*a*<sp/>of<sp/>*x*<sp/>modulo<sp/>*M*,<sp/>i.e.<sp/>the<sp/>number<sp/>a<sp/>such<sp/>that<sp/>*a&amp;thinsp;x=1</highlight></codeline>
+<codeline><highlight class="normal">mod<sp/>M*.<sp/>This<sp/>inverse<sp/>only<sp/>exists<sp/>if<sp/>the<sp/>GCD<sp/>of<sp/>*x*<sp/>and<sp/>*M*<sp/>is<sp/>*1*,<sp/>but<sp/>that<sp/>is<sp/>always<sp/>the<sp/>case<sp/>if<sp/>*M*<sp/>is</highlight></codeline>
+<codeline><highlight class="normal">prime<sp/>and<sp/>*0<sp/>&lt;<sp/>x<sp/>&lt;<sp/>M*.<sp/>In<sp/>what<sp/>follows,<sp/>assume<sp/>that<sp/>the<sp/>modular<sp/>inverse<sp/>exists.</highlight></codeline>
+<codeline><highlight class="normal">It<sp/>turns<sp/>out<sp/>this<sp/>inverse<sp/>can<sp/>be<sp/>computed<sp/>as<sp/>a<sp/>side<sp/>effect<sp/>of<sp/>computing<sp/>the<sp/>GCD<sp/>by<sp/>keeping<sp/>track</highlight></codeline>
+<codeline><highlight class="normal">of<sp/>how<sp/>the<sp/>internal<sp/>variables<sp/>can<sp/>be<sp/>written<sp/>as<sp/>linear<sp/>combinations<sp/>of<sp/>the<sp/>inputs<sp/>at<sp/>every<sp/>step</highlight></codeline>
+<codeline><highlight class="normal">(see<sp/>the<sp/>[extended<sp/>Euclidean<sp/>algorithm](https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm)).</highlight></codeline>
+<codeline><highlight class="normal">Since<sp/>the<sp/>GCD<sp/>is<sp/>*1*,<sp/>such<sp/>an<sp/>algorithm<sp/>will<sp/>compute<sp/>numbers<sp/>*a*<sp/>and<sp/>*b*<sp/>such<sp/>that<sp/>a&amp;thinsp;x<sp/>+<sp/>b&amp;thinsp;M<sp/>=<sp/>1*.</highlight></codeline>
+<codeline><highlight class="normal">Taking<sp/>that<sp/>expression<sp/>*mod<sp/>M*<sp/>gives<sp/>*a&amp;thinsp;x<sp/>mod<sp/>M<sp/>=<sp/>1*,<sp/>and<sp/>we<sp/>see<sp/>that<sp/>*a*<sp/>is<sp/>the<sp/>modular<sp/>inverse<sp/>of<sp/>*x</highlight></codeline>
+<codeline><highlight class="normal">mod<sp/>M*.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>similar<sp/>approach<sp/>can<sp/>be<sp/>used<sp/>to<sp/>calculate<sp/>modular<sp/>inverses<sp/>using<sp/>the<sp/>divsteps-based<sp/>GCD</highlight></codeline>
+<codeline><highlight class="normal">algorithm<sp/>shown<sp/>above,<sp/>if<sp/>the<sp/>modulus<sp/>*M*<sp/>is<sp/>odd.<sp/>To<sp/>do<sp/>so,<sp/>compute<sp/>*gcd(f=M,g=x)*,<sp/>while<sp/>keeping</highlight></codeline>
+<codeline><highlight class="normal">track<sp/>of<sp/>extra<sp/>variables<sp/>*d*<sp/>and<sp/>*e*,<sp/>for<sp/>which<sp/>at<sp/>every<sp/>step<sp/>*d<sp/>=<sp/>f/x<sp/>(mod<sp/>M)*<sp/>and<sp/>*e<sp/>=<sp/>g/x<sp/>(mod<sp/>M)*.</highlight></codeline>
+<codeline><highlight class="normal">*f/x*<sp/>here<sp/>means<sp/>the<sp/>number<sp/>which<sp/>multiplied<sp/>with<sp/>*x*<sp/>gives<sp/>*f<sp/>mod<sp/>M*.<sp/>As<sp/>*f*<sp/>and<sp/>*g*<sp/>are<sp/>initialized<sp/>to<sp/>*M*</highlight></codeline>
+<codeline><highlight class="normal">and<sp/>*x*<sp/>respectively,<sp/>*d*<sp/>and<sp/>*e*<sp/>just<sp/>start<sp/>off<sp/>being<sp/>*0*<sp/>(*M/x<sp/>mod<sp/>M<sp/>=<sp/>0/x<sp/>mod<sp/>M<sp/>=<sp/>0*)<sp/>and<sp/>*1*<sp/>(*x/x<sp/>mod<sp/>M</highlight></codeline>
+<codeline><highlight class="normal">=<sp/>1*).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>div2(M,<sp/>x):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Helper<sp/>routine<sp/>to<sp/>compute<sp/>x/2<sp/>mod<sp/>M<sp/>(where<sp/>M<sp/>is<sp/>odd).&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>assert<sp/>M<sp/>&amp;<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>x<sp/>&amp;<sp/>1:<sp/>#<sp/>If<sp/>x<sp/>is<sp/>odd,<sp/>make<sp/>it<sp/>even<sp/>by<sp/>adding<sp/>M.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>x<sp/>+=<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>x<sp/>must<sp/>be<sp/>even<sp/>now,<sp/>so<sp/>a<sp/>clean<sp/>division<sp/>by<sp/>2<sp/>is<sp/>possible.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>x<sp/>//<sp/>2</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">def<sp/>modinv(M,<sp/>x):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Compute<sp/>the<sp/>inverse<sp/>of<sp/>x<sp/>mod<sp/>M<sp/>(given<sp/>that<sp/>it<sp/>exists,<sp/>and<sp/>M<sp/>is<sp/>odd).&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>assert<sp/>M<sp/>&amp;<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g,<sp/>d,<sp/>e<sp/>=<sp/>1,<sp/>M,<sp/>x,<sp/>0,<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>while<sp/>g<sp/>!=<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Note<sp/>that<sp/>while<sp/>division<sp/>by<sp/>two<sp/>for<sp/>f<sp/>and<sp/>g<sp/>is<sp/>only<sp/>ever<sp/>done<sp/>on<sp/>even<sp/>inputs,<sp/>this<sp/>is</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>not<sp/>true<sp/>for<sp/>d<sp/>and<sp/>e,<sp/>so<sp/>we<sp/>need<sp/>the<sp/>div2<sp/>helper<sp/>function.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>delta<sp/>&gt;<sp/>0<sp/>and<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g,<sp/>d,<sp/>e<sp/>=<sp/>1<sp/>-<sp/>delta,<sp/>g,<sp/>(g<sp/>-<sp/>f)<sp/>//<sp/>2,<sp/>e,<sp/>div2(M,<sp/>e<sp/>-<sp/>d)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>elif<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g,<sp/>d,<sp/>e<sp/>=<sp/>1<sp/>+<sp/>delta,<sp/>f,<sp/>(g<sp/>+<sp/>f)<sp/>//<sp/>2,<sp/>d,<sp/>div2(M,<sp/>e<sp/>+<sp/>d)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>else:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g,<sp/>d,<sp/>e<sp/>=<sp/>1<sp/>+<sp/>delta,<sp/>f,<sp/>(g<sp/><sp/><sp/><sp/>)<sp/>//<sp/>2,<sp/>d,<sp/>div2(M,<sp/>e<sp/><sp/><sp/><sp/>)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Verify<sp/>that<sp/>the<sp/>invariants<sp/>d=f/x<sp/>mod<sp/>M,<sp/>e=g/x<sp/>mod<sp/>M<sp/>are<sp/>maintained.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>assert<sp/>f<sp/>%<sp/>M<sp/>==<sp/>(d<sp/>*<sp/>x)<sp/>%<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>assert<sp/>g<sp/>%<sp/>M<sp/>==<sp/>(e<sp/>*<sp/>x)<sp/>%<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>assert<sp/>f<sp/>==<sp/>1<sp/>or<sp/>f<sp/>==<sp/>-1<sp/><sp/>#<sp/>|f|<sp/>is<sp/>the<sp/>GCD,<sp/>it<sp/>must<sp/>be<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Because<sp/>of<sp/>invariant<sp/>d<sp/>=<sp/>f/x<sp/>(mod<sp/>M),<sp/>1/x<sp/>=<sp/>d/f<sp/>(mod<sp/>M).<sp/>As<sp/>|f|=1,<sp/>d/f<sp/>=<sp/>d*f.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>(d<sp/>*<sp/>f)<sp/>%<sp/>M</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Also<sp/>note<sp/>that<sp/>this<sp/>approach<sp/>to<sp/>track<sp/>*d*<sp/>and<sp/>*e*<sp/>throughout<sp/>the<sp/>computation<sp/>to<sp/>determine<sp/>the<sp/>inverse</highlight></codeline>
+<codeline><highlight class="normal">is<sp/>different<sp/>from<sp/>the<sp/>paper.<sp/>There<sp/>(see<sp/>paragraph<sp/>12.1<sp/>in<sp/>the<sp/>paper)<sp/>a<sp/>transition<sp/>matrix<sp/>for<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">entire<sp/>computation<sp/>is<sp/>determined<sp/>(see<sp/>section<sp/>3<sp/>below)<sp/>and<sp/>the<sp/>inverse<sp/>is<sp/>computed<sp/>from<sp/>that.</highlight></codeline>
+<codeline><highlight class="normal">The<sp/>approach<sp/>here<sp/>avoids<sp/>the<sp/>need<sp/>for<sp/>2x2<sp/>matrix<sp/>multiplications<sp/>of<sp/>various<sp/>sizes,<sp/>and<sp/>appears<sp/>to</highlight></codeline>
+<codeline><highlight class="normal">be<sp/>faster<sp/>at<sp/>the<sp/>level<sp/>of<sp/>optimization<sp/>we&apos;re<sp/>able<sp/>to<sp/>do<sp/>in<sp/>C.</highlight></codeline>
+<codeline></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>3.<sp/>Batching<sp/>multiple<sp/>divsteps</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Every<sp/>divstep<sp/>can<sp/>be<sp/>expressed<sp/>as<sp/>a<sp/>matrix<sp/>multiplication,<sp/>applying<sp/>a<sp/>transition<sp/>matrix<sp/>*(1/2<sp/>t)*</highlight></codeline>
+<codeline><highlight class="normal">to<sp/>both<sp/>vectors<sp/>*[f,<sp/>g]*<sp/>and<sp/>*[d,<sp/>e]*<sp/>(see<sp/>paragraph<sp/>8.1<sp/>in<sp/>the<sp/>paper):</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>t<sp/>=<sp/>[<sp/>u,<sp/><sp/>v<sp/>]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>[<sp/>q,<sp/><sp/>r<sp/>]</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/>[<sp/>out_f<sp/>]<sp/>=<sp/>(1/2<sp/>*<sp/>t)<sp/>*<sp/>[<sp/>in_f<sp/>]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>[<sp/>out_g<sp/>]<sp/>=<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[<sp/>in_g<sp/>]</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/>[<sp/>out_d<sp/>]<sp/>=<sp/>(1/2<sp/>*<sp/>t)<sp/>*<sp/>[<sp/>in_d<sp/>]<sp/><sp/>(mod<sp/>M)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>[<sp/>out_e<sp/>]<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[<sp/>in_e<sp/>]</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">where<sp/>*(u,<sp/>v,<sp/>q,<sp/>r)*<sp/>is<sp/>*(0,<sp/>2,<sp/>-1,<sp/>1)*,<sp/>*(2,<sp/>0,<sp/>1,<sp/>1)*,<sp/>or<sp/>*(2,<sp/>0,<sp/>0,<sp/>1)*,<sp/>depending<sp/>on<sp/>which<sp/>branch<sp/>is</highlight></codeline>
+<codeline><highlight class="normal">taken.<sp/>As<sp/>above,<sp/>the<sp/>resulting<sp/>*f*<sp/>and<sp/>*g*<sp/>are<sp/>always<sp/>integers.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Performing<sp/>multiple<sp/>divsteps<sp/>corresponds<sp/>to<sp/>a<sp/>multiplication<sp/>with<sp/>the<sp/>product<sp/>of<sp/>all<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">individual<sp/>divsteps&apos;<sp/>transition<sp/>matrices.<sp/>As<sp/>each<sp/>transition<sp/>matrix<sp/>consists<sp/>of<sp/>integers</highlight></codeline>
+<codeline><highlight class="normal">divided<sp/>by<sp/>*2*,<sp/>the<sp/>product<sp/>of<sp/>these<sp/>matrices<sp/>will<sp/>consist<sp/>of<sp/>integers<sp/>divided<sp/>by<sp/>*2&lt;sup&gt;N&lt;/sup&gt;*<sp/>(see<sp/>also</highlight></codeline>
+<codeline><highlight class="normal">theorem<sp/>9.2<sp/>in<sp/>the<sp/>paper).<sp/>These<sp/>divisions<sp/>are<sp/>expensive<sp/>when<sp/>updating<sp/>*d*<sp/>and<sp/>*e*,<sp/>so<sp/>we<sp/>delay</highlight></codeline>
+<codeline><highlight class="normal">them:<sp/>we<sp/>compute<sp/>the<sp/>integer<sp/>coefficients<sp/>of<sp/>the<sp/>combined<sp/>transition<sp/>matrix<sp/>scaled<sp/>by<sp/>*2&lt;sup&gt;N&lt;/sup&gt;*,<sp/>and</highlight></codeline>
+<codeline><highlight class="normal">do<sp/>one<sp/>division<sp/>by<sp/>*2&lt;sup&gt;N&lt;/sup&gt;*<sp/>as<sp/>a<sp/>final<sp/>step:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>divsteps_n_matrix(delta,<sp/>f,<sp/>g):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Compute<sp/>delta<sp/>and<sp/>transition<sp/>matrix<sp/>t<sp/>after<sp/>N<sp/>divsteps<sp/>(multiplied<sp/>by<sp/>2^N).&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>1,<sp/>0,<sp/>0,<sp/>1<sp/>#<sp/>start<sp/>with<sp/>identity<sp/>matrix</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>for<sp/>_<sp/>in<sp/>range(N):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>delta<sp/>&gt;<sp/>0<sp/>and<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g,<sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>1<sp/>-<sp/>delta,<sp/>g,<sp/>(g<sp/>-<sp/>f)<sp/>//<sp/>2,<sp/>2*q,<sp/>2*r,<sp/>q-u,<sp/>r-v</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>elif<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g,<sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>1<sp/>+<sp/>delta,<sp/>f,<sp/>(g<sp/>+<sp/>f)<sp/>//<sp/>2,<sp/>2*u,<sp/>2*v,<sp/>q+u,<sp/>r+v</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>else:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g,<sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>1<sp/>+<sp/>delta,<sp/>f,<sp/>(g<sp/><sp/><sp/><sp/>)<sp/>//<sp/>2,<sp/>2*u,<sp/>2*v,<sp/>q<sp/><sp/>,<sp/>r</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>delta,<sp/>(u,<sp/>v,<sp/>q,<sp/>r)</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">As<sp/>the<sp/>branches<sp/>in<sp/>the<sp/>divsteps<sp/>are<sp/>completely<sp/>determined<sp/>by<sp/>the<sp/>bottom<sp/>*N*<sp/>bits<sp/>of<sp/>*f*<sp/>and<sp/>*g*,<sp/>this</highlight></codeline>
+<codeline><highlight class="normal">function<sp/>to<sp/>compute<sp/>the<sp/>transition<sp/>matrix<sp/>only<sp/>needs<sp/>to<sp/>see<sp/>those<sp/>bottom<sp/>bits.<sp/>Furthermore<sp/>all</highlight></codeline>
+<codeline><highlight class="normal">intermediate<sp/>results<sp/>and<sp/>outputs<sp/>fit<sp/>in<sp/>*(N+1)*-bit<sp/>numbers<sp/>(unsigned<sp/>for<sp/>*f*<sp/>and<sp/>*g*;<sp/>signed<sp/>for<sp/>*u*,<sp/>*v*,</highlight></codeline>
+<codeline><highlight class="normal">*q*,<sp/>and<sp/>*r*)<sp/>(see<sp/>also<sp/>paragraph<sp/>8.3<sp/>in<sp/>the<sp/>paper).<sp/>This<sp/>means<sp/>that<sp/>an<sp/>implementation<sp/>using<sp/>64-bit</highlight></codeline>
+<codeline><highlight class="normal">integers<sp/>could<sp/>set<sp/>*N=62*<sp/>and<sp/>compute<sp/>the<sp/>full<sp/>transition<sp/>matrix<sp/>for<sp/>62<sp/>steps<sp/>at<sp/>once<sp/>without<sp/>any</highlight></codeline>
+<codeline><highlight class="normal">big<sp/>integer<sp/>arithmetic<sp/>at<sp/>all.<sp/>This<sp/>is<sp/>the<sp/>reason<sp/>why<sp/>this<sp/>algorithm<sp/>is<sp/>efficient:<sp/>it<sp/>only<sp/>needs</highlight></codeline>
+<codeline><highlight class="normal">to<sp/>update<sp/>the<sp/>full-size<sp/>*f*,<sp/>*g*,<sp/>*d*,<sp/>and<sp/>*e*<sp/>numbers<sp/>once<sp/>every<sp/>*N*<sp/>steps.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">We<sp/>still<sp/>need<sp/>functions<sp/>to<sp/>compute:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>[<sp/>out_f<sp/>]<sp/>=<sp/>(1/2^N<sp/>*<sp/>[<sp/>u,<sp/><sp/>v<sp/>])<sp/>*<sp/>[<sp/>in_f<sp/>]</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>[<sp/>out_g<sp/>]<sp/><sp/><sp/>(<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[<sp/>q,<sp/><sp/>r<sp/>])<sp/><sp/><sp/>[<sp/>in_g<sp/>]</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/>[<sp/>out_d<sp/>]<sp/>=<sp/>(1/2^N<sp/>*<sp/>[<sp/>u,<sp/><sp/>v<sp/>])<sp/>*<sp/>[<sp/>in_d<sp/>]<sp/><sp/>(mod<sp/>M)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>[<sp/>out_e<sp/>]<sp/><sp/><sp/>(<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>[<sp/>q,<sp/><sp/>r<sp/>])<sp/><sp/><sp/>[<sp/>in_e<sp/>]</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Because<sp/>the<sp/>divsteps<sp/>transformation<sp/>only<sp/>ever<sp/>divides<sp/>even<sp/>numbers<sp/>by<sp/>two,<sp/>the<sp/>result<sp/>of<sp/>*t&amp;thinsp;[f,g]*<sp/>is<sp/>always<sp/>even.<sp/>When<sp/>*t*<sp/>is<sp/>a<sp/>composition<sp/>of<sp/>*N*<sp/>divsteps,<sp/>it<sp/>follows<sp/>that<sp/>the<sp/>resulting<sp/>*f*</highlight></codeline>
+<codeline><highlight class="normal">and<sp/>*g*<sp/>will<sp/>be<sp/>multiple<sp/>of<sp/>*2&lt;sup&gt;N&lt;/sup&gt;*,<sp/>and<sp/>division<sp/>by<sp/>*2&lt;sup&gt;N&lt;/sup&gt;*<sp/>is<sp/>simply<sp/>shifting<sp/>them<sp/>down:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>update_fg(f,<sp/>g,<sp/>t):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Multiply<sp/>matrix<sp/>t/2^N<sp/>with<sp/>[f,<sp/>g].&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>t</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cf,<sp/>cg<sp/>=<sp/>u*f<sp/>+<sp/>v*g,<sp/>q*f<sp/>+<sp/>r*g</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>(t<sp/>/<sp/>2^N)<sp/>should<sp/>cleanly<sp/>apply<sp/>to<sp/>[f,g]<sp/>so<sp/>the<sp/>result<sp/>of<sp/>t*[f,g]<sp/>should<sp/>have<sp/>N<sp/>zero</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>bottom<sp/>bits.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>assert<sp/>cf<sp/>%<sp/>2**N<sp/>==<sp/>0</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>assert<sp/>cg<sp/>%<sp/>2**N<sp/>==<sp/>0</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>cf<sp/>&gt;&gt;<sp/>N,<sp/>cg<sp/>&gt;&gt;<sp/>N</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>same<sp/>is<sp/>not<sp/>true<sp/>for<sp/>*d*<sp/>and<sp/>*e*,<sp/>and<sp/>we<sp/>need<sp/>an<sp/>equivalent<sp/>of<sp/>the<sp/>`div2`<sp/>function<sp/>for<sp/>division<sp/>by<sp/>*2&lt;sup&gt;N&lt;/sup&gt;<sp/>mod<sp/>M*.</highlight></codeline>
+<codeline><highlight class="normal">This<sp/>is<sp/>easy<sp/>if<sp/>we<sp/>have<sp/>precomputed<sp/>*1/M<sp/>mod<sp/>2&lt;sup&gt;N&lt;/sup&gt;*<sp/>(which<sp/>always<sp/>exists<sp/>for<sp/>odd<sp/>*M*):</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>div2n(M,<sp/>Mi,<sp/>x):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Compute<sp/>x/2^N<sp/>mod<sp/>M,<sp/>given<sp/>Mi<sp/>=<sp/>1/M<sp/>mod<sp/>2^N.&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>assert<sp/>(M<sp/>*<sp/>Mi)<sp/>%<sp/>2**N<sp/>==<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Find<sp/>a<sp/>factor<sp/>m<sp/>such<sp/>that<sp/>m*M<sp/>has<sp/>the<sp/>same<sp/>bottom<sp/>N<sp/>bits<sp/>as<sp/>x.<sp/>We<sp/>want:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/><sp/><sp/><sp/><sp/>(m<sp/>*<sp/>M)<sp/>mod<sp/>2^N<sp/>=<sp/>x<sp/>mod<sp/>2^N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>&lt;=&gt;<sp/>m<sp/>mod<sp/>2^N<sp/>=<sp/>(x<sp/>/<sp/>M)<sp/>mod<sp/>2^N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>&lt;=&gt;<sp/>m<sp/>mod<sp/>2^N<sp/>=<sp/>(x<sp/>*<sp/>Mi)<sp/>mod<sp/>2^N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>m<sp/>=<sp/>(Mi<sp/>*<sp/>x)<sp/>%<sp/>2**N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Subtract<sp/>that<sp/>multiple<sp/>from<sp/>x,<sp/>cancelling<sp/>its<sp/>bottom<sp/>N<sp/>bits.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>x<sp/>-=<sp/>m<sp/>*<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Now<sp/>a<sp/>clean<sp/>division<sp/>by<sp/>2^N<sp/>is<sp/>possible.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>assert<sp/>x<sp/>%<sp/>2**N<sp/>==<sp/>0</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>(x<sp/>&gt;&gt;<sp/>N)<sp/>%<sp/>M</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">def<sp/>update_de(d,<sp/>e,<sp/>t,<sp/>M,<sp/>Mi):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Multiply<sp/>matrix<sp/>t/2^N<sp/>with<sp/>[d,<sp/>e],<sp/>modulo<sp/>M.&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>t</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd,<sp/>ce<sp/>=<sp/>u*d<sp/>+<sp/>v*e,<sp/>q*d<sp/>+<sp/>r*e</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>div2n(M,<sp/>Mi,<sp/>cd),<sp/>div2n(M,<sp/>Mi,<sp/>ce)</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">With<sp/>all<sp/>of<sp/>those,<sp/>we<sp/>can<sp/>write<sp/>a<sp/>version<sp/>of<sp/>`modinv`<sp/>that<sp/>performs<sp/>*N*<sp/>divsteps<sp/>at<sp/>once:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python3</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>modinv(M,<sp/>Mi,<sp/>x):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Compute<sp/>the<sp/>modular<sp/>inverse<sp/>of<sp/>x<sp/>mod<sp/>M,<sp/>given<sp/>Mi=1/M<sp/>mod<sp/>2^N.&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>assert<sp/>M<sp/>&amp;<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g,<sp/>d,<sp/>e<sp/>=<sp/>1,<sp/>M,<sp/>x,<sp/>0,<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>while<sp/>g<sp/>!=<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>the<sp/>delta<sp/>and<sp/>transition<sp/>matrix<sp/>t<sp/>for<sp/>the<sp/>next<sp/>N<sp/>divsteps<sp/>(this<sp/>only<sp/>needs</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>(N+1)-bit<sp/>signed<sp/>integer<sp/>arithmetic).</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>t<sp/>=<sp/>divsteps_n_matrix(delta,<sp/>f<sp/>%<sp/>2**N,<sp/>g<sp/>%<sp/>2**N)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Apply<sp/>the<sp/>transition<sp/>matrix<sp/>t<sp/>to<sp/>[f,<sp/>g]:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>f,<sp/>g<sp/>=<sp/>update_fg(f,<sp/>g,<sp/>t)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Apply<sp/>the<sp/>transition<sp/>matrix<sp/>t<sp/>to<sp/>[d,<sp/>e]:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>d,<sp/>e<sp/>=<sp/>update_de(d,<sp/>e,<sp/>t,<sp/>M,<sp/>Mi)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>(d<sp/>*<sp/>f)<sp/>%<sp/>M</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>means<sp/>that<sp/>in<sp/>practice<sp/>we&apos;ll<sp/>always<sp/>perform<sp/>a<sp/>multiple<sp/>of<sp/>*N*<sp/>divsteps.<sp/>This<sp/>is<sp/>not<sp/>a<sp/>problem</highlight></codeline>
+<codeline><highlight class="normal">because<sp/>once<sp/>*g=0*,<sp/>further<sp/>divsteps<sp/>do<sp/>not<sp/>affect<sp/>*f*,<sp/>*g*,<sp/>*d*,<sp/>or<sp/>*e*<sp/>anymore<sp/>(only<sp/>*&amp;delta;*<sp/>keeps</highlight></codeline>
+<codeline><highlight class="normal">increasing).<sp/>For<sp/>variable<sp/>time<sp/>code<sp/>such<sp/>excess<sp/>iterations<sp/>will<sp/>be<sp/>mostly<sp/>optimized<sp/>away<sp/>in<sp/>later</highlight></codeline>
+<codeline><highlight class="normal">sections.</highlight></codeline>
+<codeline></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>4.<sp/>Avoiding<sp/>modulus<sp/>operations</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">So<sp/>far,<sp/>there<sp/>are<sp/>two<sp/>places<sp/>where<sp/>we<sp/>compute<sp/>a<sp/>remainder<sp/>of<sp/>big<sp/>numbers<sp/>modulo<sp/>*M*:<sp/>at<sp/>the<sp/>end<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">`div2n`<sp/>in<sp/>every<sp/>`update_de`,<sp/>and<sp/>at<sp/>the<sp/>very<sp/>end<sp/>of<sp/>`modinv`<sp/>after<sp/>potentially<sp/>negating<sp/>*d*<sp/>due<sp/>to<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">sign<sp/>of<sp/>*f*.<sp/>These<sp/>are<sp/>relatively<sp/>expensive<sp/>operations<sp/>when<sp/>done<sp/>generically.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>deal<sp/>with<sp/>the<sp/>modulus<sp/>operation<sp/>in<sp/>`div2n`,<sp/>we<sp/>simply<sp/>stop<sp/>requiring<sp/>*d*<sp/>and<sp/>*e*<sp/>to<sp/>be<sp/>in<sp/>range</highlight></codeline>
+<codeline><highlight class="normal">*[0,M)*<sp/>all<sp/>the<sp/>time.<sp/>Let&apos;s<sp/>start<sp/>by<sp/>inlining<sp/>`div2n`<sp/>into<sp/>`update_de`,<sp/>and<sp/>dropping<sp/>the<sp/>modulus</highlight></codeline>
+<codeline><highlight class="normal">operation<sp/>at<sp/>the<sp/>end:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>update_de(d,<sp/>e,<sp/>t,<sp/>M,<sp/>Mi):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Multiply<sp/>matrix<sp/>t/2^N<sp/>with<sp/>[d,<sp/>e]<sp/>mod<sp/>M,<sp/>given<sp/>Mi=1/M<sp/>mod<sp/>2^N.&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>t</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd,<sp/>ce<sp/>=<sp/>u*d<sp/>+<sp/>v*e,<sp/>q*d<sp/>+<sp/>r*e</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Cancel<sp/>out<sp/>bottom<sp/>N<sp/>bits<sp/>of<sp/>cd<sp/>and<sp/>ce.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>md<sp/>=<sp/>-((Mi<sp/>*<sp/>cd)<sp/>%<sp/>2**N)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>me<sp/>=<sp/>-((Mi<sp/>*<sp/>ce)<sp/>%<sp/>2**N)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd<sp/>+=<sp/>md<sp/>*<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>ce<sp/>+=<sp/>me<sp/>*<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>And<sp/>cleanly<sp/>divide<sp/>by<sp/>2**N.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>cd<sp/>&gt;&gt;<sp/>N,<sp/>ce<sp/>&gt;&gt;<sp/>N</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Let&apos;s<sp/>look<sp/>at<sp/>bounds<sp/>on<sp/>the<sp/>ranges<sp/>of<sp/>these<sp/>numbers.<sp/>It<sp/>can<sp/>be<sp/>shown<sp/>that<sp/>*|u|+|v|*<sp/>and<sp/>*|q|+|r|*</highlight></codeline>
+<codeline><highlight class="normal">never<sp/>exceed<sp/>*2&lt;sup&gt;N&lt;/sup&gt;*<sp/>(see<sp/>paragraph<sp/>8.3<sp/>in<sp/>the<sp/>paper),<sp/>and<sp/>thus<sp/>a<sp/>multiplication<sp/>with<sp/>*t*<sp/>will<sp/>have</highlight></codeline>
+<codeline><highlight class="normal">outputs<sp/>whose<sp/>absolute<sp/>values<sp/>are<sp/>at<sp/>most<sp/>*2&lt;sup&gt;N&lt;/sup&gt;*<sp/>times<sp/>the<sp/>maximum<sp/>absolute<sp/>input<sp/>value.<sp/>In<sp/>case<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">inputs<sp/>*d*<sp/>and<sp/>*e*<sp/>are<sp/>in<sp/>*(-M,M)*,<sp/>which<sp/>is<sp/>certainly<sp/>true<sp/>for<sp/>the<sp/>initial<sp/>values<sp/>*d=0*<sp/>and<sp/>*e=1*<sp/>assuming</highlight></codeline>
+<codeline><highlight class="normal">*M<sp/>&gt;<sp/>1*,<sp/>the<sp/>multiplication<sp/>results<sp/>in<sp/>numbers<sp/>in<sp/>range<sp/>*(-2&lt;sup&gt;N&lt;/sup&gt;M,2&lt;sup&gt;N&lt;/sup&gt;M)*.<sp/>Subtracting<sp/>less<sp/>than<sp/>*2&lt;sup&gt;N&lt;/sup&gt;*</highlight></codeline>
+<codeline><highlight class="normal">times<sp/>*M*<sp/>to<sp/>cancel<sp/>out<sp/>*N*<sp/>bits<sp/>brings<sp/>that<sp/>up<sp/>to<sp/>*(-2&lt;sup&gt;N+1&lt;/sup&gt;M,2&lt;sup&gt;N&lt;/sup&gt;M)*,<sp/>and</highlight></codeline>
+<codeline><highlight class="normal">dividing<sp/>by<sp/>*2&lt;sup&gt;N&lt;/sup&gt;*<sp/>at<sp/>the<sp/>end<sp/>takes<sp/>it<sp/>to<sp/>*(-2M,M)*.<sp/>Another<sp/>application<sp/>of<sp/>`update_de`<sp/>would<sp/>take<sp/>that</highlight></codeline>
+<codeline><highlight class="normal">to<sp/>*(-3M,2M)*,<sp/>and<sp/>so<sp/>forth.<sp/>This<sp/>progressive<sp/>expansion<sp/>of<sp/>the<sp/>variables&apos;<sp/>ranges<sp/>can<sp/>be</highlight></codeline>
+<codeline><highlight class="normal">counteracted<sp/>by<sp/>incrementing<sp/>*d*<sp/>and<sp/>*e*<sp/>by<sp/>*M*<sp/>whenever<sp/>they&apos;re<sp/>negative:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>d<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>d<sp/>+=<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>e<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>e<sp/>+=<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd,<sp/>ce<sp/>=<sp/>u*d<sp/>+<sp/>v*e,<sp/>q*d<sp/>+<sp/>r*e</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Cancel<sp/>out<sp/>bottom<sp/>N<sp/>bits<sp/>of<sp/>cd<sp/>and<sp/>ce.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">With<sp/>inputs<sp/>in<sp/>*(-2M,M)*,<sp/>they<sp/>will<sp/>first<sp/>be<sp/>shifted<sp/>into<sp/>range<sp/>*(-M,M)*,<sp/>which<sp/>means<sp/>that<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">output<sp/>will<sp/>again<sp/>be<sp/>in<sp/>*(-2M,M)*,<sp/>and<sp/>this<sp/>remains<sp/>the<sp/>case<sp/>regardless<sp/>of<sp/>how<sp/>many<sp/>`update_de`</highlight></codeline>
+<codeline><highlight class="normal">invocations<sp/>there<sp/>are.<sp/>In<sp/>what<sp/>follows,<sp/>we<sp/>will<sp/>try<sp/>to<sp/>make<sp/>this<sp/>more<sp/>efficient.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Note<sp/>that<sp/>increasing<sp/>*d*<sp/>by<sp/>*M*<sp/>is<sp/>equal<sp/>to<sp/>incrementing<sp/>*cd*<sp/>by<sp/>*u&amp;thinsp;M*<sp/>and<sp/>*ce*<sp/>by<sp/>*q&amp;thinsp;M*.<sp/>Similarly,</highlight></codeline>
+<codeline><highlight class="normal">increasing<sp/>*e*<sp/>by<sp/>*M*<sp/>is<sp/>equal<sp/>to<sp/>incrementing<sp/>*cd*<sp/>by<sp/>*v&amp;thinsp;M*<sp/>and<sp/>*ce*<sp/>by<sp/>*r&amp;thinsp;M*.<sp/>So<sp/>we<sp/>could<sp/>instead<sp/>write:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd,<sp/>ce<sp/>=<sp/>u*d<sp/>+<sp/>v*e,<sp/>q*d<sp/>+<sp/>r*e</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Perform<sp/>the<sp/>equivalent<sp/>of<sp/>incrementing<sp/>d,<sp/>e<sp/>by<sp/>M<sp/>when<sp/>they&apos;re<sp/>negative.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>d<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>cd<sp/>+=<sp/>u*M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ce<sp/>+=<sp/>q*M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>e<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>cd<sp/>+=<sp/>v*M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>ce<sp/>+=<sp/>r*M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Cancel<sp/>out<sp/>bottom<sp/>N<sp/>bits<sp/>of<sp/>cd<sp/>and<sp/>ce.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>md<sp/>=<sp/>-((Mi<sp/>*<sp/>cd)<sp/>%<sp/>2**N)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>me<sp/>=<sp/>-((Mi<sp/>*<sp/>ce)<sp/>%<sp/>2**N)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd<sp/>+=<sp/>md<sp/>*<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>ce<sp/>+=<sp/>me<sp/>*<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Now<sp/>note<sp/>that<sp/>we<sp/>have<sp/>two<sp/>steps<sp/>of<sp/>corrections<sp/>to<sp/>*cd*<sp/>and<sp/>*ce*<sp/>that<sp/>add<sp/>multiples<sp/>of<sp/>*M*:<sp/>this</highlight></codeline>
+<codeline><highlight class="normal">increment,<sp/>and<sp/>the<sp/>decrement<sp/>that<sp/>cancels<sp/>out<sp/>bottom<sp/>bits.<sp/>The<sp/>second<sp/>one<sp/>depends<sp/>on<sp/>the<sp/>first</highlight></codeline>
+<codeline><highlight class="normal">one,<sp/>but<sp/>they<sp/>can<sp/>still<sp/>be<sp/>efficiently<sp/>combined<sp/>by<sp/>only<sp/>computing<sp/>the<sp/>bottom<sp/>bits<sp/>of<sp/>*cd*<sp/>and<sp/>*ce*</highlight></codeline>
+<codeline><highlight class="normal">at<sp/>first,<sp/>and<sp/>using<sp/>that<sp/>to<sp/>compute<sp/>the<sp/>final<sp/>*md*,<sp/>*me*<sp/>values:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>update_de(d,<sp/>e,<sp/>t,<sp/>M,<sp/>Mi):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Multiply<sp/>matrix<sp/>t/2^N<sp/>with<sp/>[d,<sp/>e],<sp/>modulo<sp/>M.&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>t</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>md,<sp/>me<sp/>=<sp/>0,<sp/>0</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>what<sp/>multiples<sp/>of<sp/>M<sp/>to<sp/>add<sp/>to<sp/>cd<sp/>and<sp/>ce.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>d<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>md<sp/>+=<sp/>u</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>me<sp/>+=<sp/>q</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>e<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>md<sp/>+=<sp/>v</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>me<sp/>+=<sp/>r</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>bottom<sp/>N<sp/>bits<sp/>of<sp/>t*[d,e]<sp/>+<sp/>M*[md,me].</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd,<sp/>ce<sp/>=<sp/>(u*d<sp/>+<sp/>v*e<sp/>+<sp/>md*M)<sp/>%<sp/>2**N,<sp/>(q*d<sp/>+<sp/>r*e<sp/>+<sp/>me*M)<sp/>%<sp/>2**N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Correct<sp/>md<sp/>and<sp/>me<sp/>such<sp/>that<sp/>the<sp/>bottom<sp/>N<sp/>bits<sp/>of<sp/>t*[d,e]<sp/>+<sp/>M*[md,me]<sp/>are<sp/>zero.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>md<sp/>-=<sp/>(Mi<sp/>*<sp/>cd)<sp/>%<sp/>2**N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>me<sp/>-=<sp/>(Mi<sp/>*<sp/>ce)<sp/>%<sp/>2**N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Do<sp/>the<sp/>full<sp/>computation.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd,<sp/>ce<sp/>=<sp/>u*d<sp/>+<sp/>v*e<sp/>+<sp/>md*M,<sp/>q*d<sp/>+<sp/>r*e<sp/>+<sp/>me*M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>And<sp/>cleanly<sp/>divide<sp/>by<sp/>2**N.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>cd<sp/>&gt;&gt;<sp/>N,<sp/>ce<sp/>&gt;&gt;<sp/>N</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">One<sp/>last<sp/>optimization:<sp/>we<sp/>can<sp/>avoid<sp/>the<sp/>*md&amp;thinsp;M*<sp/>and<sp/>*me&amp;thinsp;M*<sp/>multiplications<sp/>in<sp/>the<sp/>bottom<sp/>bits<sp/>of<sp/>*cd*</highlight></codeline>
+<codeline><highlight class="normal">and<sp/>*ce*<sp/>by<sp/>moving<sp/>them<sp/>to<sp/>the<sp/>*md*<sp/>and<sp/>*me*<sp/>correction:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>bottom<sp/>N<sp/>bits<sp/>of<sp/>t*[d,e].</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd,<sp/>ce<sp/>=<sp/>(u*d<sp/>+<sp/>v*e)<sp/>%<sp/>2**N,<sp/>(q*d<sp/>+<sp/>r*e)<sp/>%<sp/>2**N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Correct<sp/>md<sp/>and<sp/>me<sp/>such<sp/>that<sp/>the<sp/>bottom<sp/>N<sp/>bits<sp/>of<sp/>t*[d,e]+M*[md,me]<sp/>are<sp/>zero.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Note<sp/>that<sp/>this<sp/>is<sp/>not<sp/>the<sp/>same<sp/>as<sp/>{md<sp/>=<sp/>(-Mi<sp/>*<sp/>cd)<sp/>%<sp/>2**N}<sp/>etc.<sp/>That<sp/>would<sp/>also<sp/>result<sp/>in<sp/>N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>zero<sp/>bottom<sp/>bits,<sp/>but<sp/>isn&apos;t<sp/>guaranteed<sp/>to<sp/>be<sp/>a<sp/>reduction<sp/>of<sp/>[0,2^N)<sp/>compared<sp/>to<sp/>the</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>previous<sp/>md<sp/>and<sp/>me<sp/>values,<sp/>and<sp/>thus<sp/>would<sp/>violate<sp/>our<sp/>bounds<sp/>analysis.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>md<sp/>-=<sp/>(Mi*cd<sp/>+<sp/>md)<sp/>%<sp/>2**N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>me<sp/>-=<sp/>(Mi*ce<sp/>+<sp/>me)<sp/>%<sp/>2**N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>resulting<sp/>function<sp/>takes<sp/>*d*<sp/>and<sp/>*e*<sp/>in<sp/>range<sp/>*(-2M,M)*<sp/>as<sp/>inputs,<sp/>and<sp/>outputs<sp/>values<sp/>in<sp/>the<sp/>same</highlight></codeline>
+<codeline><highlight class="normal">range.<sp/>That<sp/>also<sp/>means<sp/>that<sp/>the<sp/>*d*<sp/>value<sp/>at<sp/>the<sp/>end<sp/>of<sp/>`modinv`<sp/>will<sp/>be<sp/>in<sp/>that<sp/>range,<sp/>while<sp/>we<sp/>want</highlight></codeline>
+<codeline><highlight class="normal">a<sp/>result<sp/>in<sp/>*[0,M)*.<sp/>To<sp/>do<sp/>that,<sp/>we<sp/>need<sp/>a<sp/>normalization<sp/>function.<sp/>It&apos;s<sp/>easy<sp/>to<sp/>integrate<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">conditional<sp/>negation<sp/>of<sp/>*d*<sp/>(based<sp/>on<sp/>the<sp/>sign<sp/>of<sp/>*f*)<sp/>into<sp/>it<sp/>as<sp/>well:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>normalize(sign,<sp/>v,<sp/>M):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Compute<sp/>sign*v<sp/>mod<sp/>M,<sp/>where<sp/>v<sp/>is<sp/>in<sp/>range<sp/>(-2*M,M);<sp/>output<sp/>in<sp/>[0,M).&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>assert<sp/>sign<sp/>==<sp/>1<sp/>or<sp/>sign<sp/>==<sp/>-1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>v<sp/>in<sp/>(-2*M,M)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>v<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>+=<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>v<sp/>in<sp/>(-M,M).<sp/>Now<sp/>multiply<sp/>v<sp/>with<sp/>sign<sp/>(which<sp/>can<sp/>only<sp/>be<sp/>1<sp/>or<sp/>-1).</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>sign<sp/>==<sp/>-1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>=<sp/>-v</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>v<sp/>in<sp/>(-M,M)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>v<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>v<sp/>+=<sp/>M</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>v<sp/>in<sp/>[0,M)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>v</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">And<sp/>calling<sp/>it<sp/>in<sp/>`modinv`<sp/>is<sp/>simply:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>return<sp/>normalize(f,<sp/>d,<sp/>M)</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>5.<sp/>Constant-time<sp/>operation</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>primary<sp/>selling<sp/>point<sp/>of<sp/>the<sp/>algorithm<sp/>is<sp/>fast<sp/>constant-time<sp/>operation.<sp/>What<sp/>code<sp/>flow<sp/>still</highlight></codeline>
+<codeline><highlight class="normal">depends<sp/>on<sp/>the<sp/>input<sp/>data<sp/>so<sp/>far?</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>the<sp/>number<sp/>of<sp/>iterations<sp/>of<sp/>the<sp/>while<sp/>*g<sp/>&amp;ne;<sp/>0*<sp/>loop<sp/>in<sp/>`modinv`</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>the<sp/>branches<sp/>inside<sp/>`divsteps_n_matrix`</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>the<sp/>sign<sp/>checks<sp/>in<sp/>`update_de`</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>the<sp/>sign<sp/>checks<sp/>in<sp/>`normalize`</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>make<sp/>the<sp/>while<sp/>loop<sp/>in<sp/>`modinv`<sp/>constant<sp/>time<sp/>it<sp/>can<sp/>be<sp/>replaced<sp/>with<sp/>a<sp/>constant<sp/>number<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">iterations.<sp/>The<sp/>paper<sp/>proves<sp/>(Theorem<sp/>11.2)<sp/>that<sp/>*741*<sp/>divsteps<sp/>are<sp/>sufficient<sp/>for<sp/>any<sp/>*256*-bit</highlight></codeline>
+<codeline><highlight class="normal">inputs,<sp/>and<sp/>[safegcd-bounds](https://github.com/sipa/safegcd-bounds)<sp/>shows<sp/>that<sp/>the<sp/>slightly<sp/>better<sp/>bound<sp/>*724*<sp/>is</highlight></codeline>
+<codeline><highlight class="normal">sufficient<sp/>even.<sp/>Given<sp/>that<sp/>every<sp/>loop<sp/>iteration<sp/>performs<sp/>*N*<sp/>divsteps,<sp/>it<sp/>will<sp/>run<sp/>a<sp/>total<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">*&amp;lceil;724/N&amp;rceil;*<sp/>times.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>deal<sp/>with<sp/>the<sp/>branches<sp/>in<sp/>`divsteps_n_matrix`<sp/>we<sp/>will<sp/>replace<sp/>them<sp/>with<sp/>constant-time<sp/>bitwise</highlight></codeline>
+<codeline><highlight class="normal">operations<sp/>(and<sp/>hope<sp/>the<sp/>C<sp/>compiler<sp/>isn&apos;t<sp/>smart<sp/>enough<sp/>to<sp/>turn<sp/>them<sp/>back<sp/>into<sp/>branches;<sp/>see</highlight></codeline>
+<codeline><highlight class="normal">`ctime_tests.c`<sp/>for<sp/>automated<sp/>tests<sp/>that<sp/>this<sp/>isn&apos;t<sp/>the<sp/>case).<sp/>To<sp/>do<sp/>so,<sp/>observe<sp/>that<sp/>a</highlight></codeline>
+<codeline><highlight class="normal">divstep<sp/>can<sp/>be<sp/>written<sp/>instead<sp/>as<sp/>(compare<sp/>to<sp/>the<sp/>inner<sp/>loop<sp/>of<sp/>`gcd`<sp/>in<sp/>section<sp/>1).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>x<sp/>=<sp/>-f<sp/>if<sp/>delta<sp/>&gt;<sp/>0<sp/>else<sp/>f<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>set<sp/>x<sp/>equal<sp/>to<sp/>(input)<sp/>-f<sp/>or<sp/>f</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>g<sp/>+=<sp/>x<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>set<sp/>g<sp/>to<sp/>(input)<sp/>g-f<sp/>or<sp/>g+f</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>delta<sp/>&gt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta<sp/>=<sp/>-delta</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>f<sp/>+=<sp/>g<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>set<sp/>f<sp/>to<sp/>(input)<sp/>g<sp/>(note<sp/>that<sp/>g<sp/>was<sp/>set<sp/>to<sp/>g-f<sp/>before)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>delta<sp/>+=<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>g<sp/>&gt;&gt;=<sp/>1</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>convert<sp/>the<sp/>above<sp/>to<sp/>bitwise<sp/>operations,<sp/>we<sp/>rely<sp/>on<sp/>a<sp/>trick<sp/>to<sp/>negate<sp/>conditionally:<sp/>per<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">definition<sp/>of<sp/>negative<sp/>numbers<sp/>in<sp/>two&apos;s<sp/>complement,<sp/>(*-v<sp/>==<sp/>~v<sp/>+<sp/>1*)<sp/>holds<sp/>for<sp/>every<sp/>number<sp/>*v*.<sp/>As</highlight></codeline>
+<codeline><highlight class="normal">*-1*<sp/>in<sp/>two&apos;s<sp/>complement<sp/>is<sp/>all<sp/>*1*<sp/>bits,<sp/>bitflipping<sp/>can<sp/>be<sp/>expressed<sp/>as<sp/>xor<sp/>with<sp/>*-1*.<sp/>It<sp/>follows</highlight></codeline>
+<codeline><highlight class="normal">that<sp/>*-v<sp/>==<sp/>(v<sp/>^<sp/>-1)<sp/>-<sp/>(-1)*.<sp/>Thus,<sp/>if<sp/>we<sp/>have<sp/>a<sp/>variable<sp/>*c*<sp/>that<sp/>takes<sp/>on<sp/>values<sp/>*0*<sp/>or<sp/>*-1*,<sp/>then</highlight></codeline>
+<codeline><highlight class="normal">*(v<sp/>^<sp/>c)<sp/>-<sp/>c*<sp/>is<sp/>*v*<sp/>if<sp/>*c=0*<sp/>and<sp/>*-v*<sp/>if<sp/>*c=-1*.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Using<sp/>this<sp/>we<sp/>can<sp/>write:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>x<sp/>=<sp/>-f<sp/>if<sp/>delta<sp/>&gt;<sp/>0<sp/>else<sp/>f</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">in<sp/>constant-time<sp/>form<sp/>as:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>c1<sp/>=<sp/>(-delta)<sp/>&gt;&gt;<sp/>63</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Conditionally<sp/>negate<sp/>f<sp/>based<sp/>on<sp/>c1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>x<sp/>=<sp/>(f<sp/>^<sp/>c1)<sp/>-<sp/>c1</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>use<sp/>that<sp/>trick,<sp/>we<sp/>need<sp/>a<sp/>helper<sp/>mask<sp/>variable<sp/>*c1*<sp/>that<sp/>resolves<sp/>the<sp/>condition<sp/>*&amp;delta;&gt;0*<sp/>to<sp/>*-1*</highlight></codeline>
+<codeline><highlight class="normal">(if<sp/>true)<sp/>or<sp/>*0*<sp/>(if<sp/>false).<sp/>We<sp/>compute<sp/>*c1*<sp/>using<sp/>right<sp/>shifting,<sp/>which<sp/>is<sp/>equivalent<sp/>to<sp/>dividing<sp/>by</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>specified<sp/>power<sp/>of<sp/>*2*<sp/>and<sp/>rounding<sp/>down<sp/>(in<sp/>Python,<sp/>and<sp/>also<sp/>in<sp/>C<sp/>under<sp/>the<sp/>assumption<sp/>of<sp/>a<sp/>typical<sp/>two&apos;s<sp/>complement<sp/>system;<sp/>see</highlight></codeline>
+<codeline><highlight class="normal">`assumptions.h`<sp/>for<sp/>tests<sp/>that<sp/>this<sp/>is<sp/>the<sp/>case).<sp/>Right<sp/>shifting<sp/>by<sp/>*63*<sp/>thus<sp/>maps<sp/>all</highlight></codeline>
+<codeline><highlight class="normal">numbers<sp/>in<sp/>range<sp/>*[-2&lt;sup&gt;63&lt;/sup&gt;,0)*<sp/>to<sp/>*-1*,<sp/>and<sp/>numbers<sp/>in<sp/>range<sp/>*[0,2&lt;sup&gt;63&lt;/sup&gt;)*<sp/>to<sp/>*0*.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Using<sp/>the<sp/>facts<sp/>that<sp/>*x&amp;0=0*<sp/>and<sp/>*x&amp;(-1)=x*<sp/>(on<sp/>two&apos;s<sp/>complement<sp/>systems<sp/>again),<sp/>we<sp/>can<sp/>write:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>g<sp/>+=<sp/>x</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">as:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>c2=0<sp/>if<sp/>g<sp/>is<sp/>even<sp/>and<sp/>c2=-1<sp/>if<sp/>g<sp/>is<sp/>odd.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>c2<sp/>=<sp/>-(g<sp/>&amp;<sp/>1)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>This<sp/>masks<sp/>out<sp/>x<sp/>if<sp/>g<sp/>is<sp/>even,<sp/>and<sp/>leaves<sp/>x<sp/>be<sp/>if<sp/>g<sp/>is<sp/>odd.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>g<sp/>+=<sp/>x<sp/>&amp;<sp/>c2</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Using<sp/>the<sp/>conditional<sp/>negation<sp/>trick<sp/>again<sp/>we<sp/>can<sp/>write:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>delta<sp/>&gt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta<sp/>=<sp/>-delta</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">as:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>c3=-1<sp/>if<sp/>g<sp/>is<sp/>odd<sp/>and<sp/>delta&gt;0,<sp/>and<sp/>0<sp/>otherwise.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>c3<sp/>=<sp/>c1<sp/>&amp;<sp/>c2</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Conditionally<sp/>negate<sp/>delta<sp/>based<sp/>on<sp/>c3:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>delta<sp/>=<sp/>(delta<sp/>^<sp/>c3)<sp/>-<sp/>c3</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Finally:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>delta<sp/>&gt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>f<sp/>+=<sp/>g</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">becomes:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>f<sp/>+=<sp/>g<sp/>&amp;<sp/>c3</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">It<sp/>turns<sp/>out<sp/>that<sp/>this<sp/>can<sp/>be<sp/>implemented<sp/>more<sp/>efficiently<sp/>by<sp/>applying<sp/>the<sp/>substitution</highlight></codeline>
+<codeline><highlight class="normal">*&amp;eta;=-&amp;delta;*.<sp/>In<sp/>this<sp/>representation,<sp/>negating<sp/>*&amp;delta;*<sp/>corresponds<sp/>to<sp/>negating<sp/>*&amp;eta;*,<sp/>and<sp/>incrementing</highlight></codeline>
+<codeline><highlight class="normal">*&amp;delta;*<sp/>corresponds<sp/>to<sp/>decrementing<sp/>*&amp;eta;*.<sp/>This<sp/>allows<sp/>us<sp/>to<sp/>remove<sp/>the<sp/>negation<sp/>in<sp/>the<sp/>*c1*</highlight></codeline>
+<codeline><highlight class="normal">computation:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>a<sp/>mask<sp/>c1<sp/>for<sp/>eta<sp/>&lt;<sp/>0,<sp/>and<sp/>compute<sp/>the<sp/>conditional<sp/>negation<sp/>x<sp/>of<sp/>f:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>c1<sp/>=<sp/>eta<sp/>&gt;&gt;<sp/>63</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>x<sp/>=<sp/>(f<sp/>^<sp/>c1)<sp/>-<sp/>c1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>a<sp/>mask<sp/>c2<sp/>for<sp/>odd<sp/>g,<sp/>and<sp/>conditionally<sp/>add<sp/>x<sp/>to<sp/>g:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>c2<sp/>=<sp/>-(g<sp/>&amp;<sp/>1)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>g<sp/>+=<sp/>x<sp/>&amp;<sp/>c2</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>a<sp/>mask<sp/>c<sp/>for<sp/>(eta<sp/>&lt;<sp/>0)<sp/>and<sp/>odd<sp/>(input)<sp/>g,<sp/>and<sp/>use<sp/>it<sp/>to<sp/>conditionally<sp/>negate<sp/>eta,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>and<sp/>add<sp/>g<sp/>to<sp/>f:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>c3<sp/>=<sp/>c1<sp/>&amp;<sp/>c2</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>eta<sp/>=<sp/>(eta<sp/>^<sp/>c3)<sp/>-<sp/>c3</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>f<sp/>+=<sp/>g<sp/>&amp;<sp/>c3</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Incrementing<sp/>delta<sp/>corresponds<sp/>to<sp/>decrementing<sp/>eta.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>eta<sp/>-=<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>g<sp/>&gt;&gt;=<sp/>1</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>variant<sp/>of<sp/>divsteps<sp/>with<sp/>better<sp/>worst-case<sp/>performance<sp/>can<sp/>be<sp/>used<sp/>instead:<sp/>starting<sp/>*&amp;delta;*<sp/>at</highlight></codeline>
+<codeline><highlight class="normal">*1/2*<sp/>instead<sp/>of<sp/>*1*.<sp/>This<sp/>reduces<sp/>the<sp/>worst<sp/>case<sp/>number<sp/>of<sp/>iterations<sp/>to<sp/>*590*<sp/>for<sp/>*256*-bit<sp/>inputs</highlight></codeline>
+<codeline><highlight class="normal">(which<sp/>can<sp/>be<sp/>shown<sp/>using<sp/>convex<sp/>hull<sp/>analysis).<sp/>In<sp/>this<sp/>case,<sp/>the<sp/>substitution<sp/>*&amp;zeta;=-(&amp;delta;+1/2)*</highlight></codeline>
+<codeline><highlight class="normal">is<sp/>used<sp/>instead<sp/>to<sp/>keep<sp/>the<sp/>variable<sp/>integral.<sp/>Incrementing<sp/>*&amp;delta;*<sp/>by<sp/>*1*<sp/>still<sp/>translates<sp/>to</highlight></codeline>
+<codeline><highlight class="normal">decrementing<sp/>*&amp;zeta;*<sp/>by<sp/>*1*,<sp/>but<sp/>negating<sp/>*&amp;delta;*<sp/>now<sp/>corresponds<sp/>to<sp/>going<sp/>from<sp/>*&amp;zeta;*<sp/>to<sp/>*-(&amp;zeta;+1)*,<sp/>or</highlight></codeline>
+<codeline><highlight class="normal">*~&amp;zeta;*.<sp/>Doing<sp/>that<sp/>conditionally<sp/>based<sp/>on<sp/>*c3*<sp/>is<sp/>simply:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>c3<sp/>=<sp/>c1<sp/>&amp;<sp/>c2</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>zeta<sp/>^=<sp/>c3</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>...</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">By<sp/>replacing<sp/>the<sp/>loop<sp/>in<sp/>`divsteps_n_matrix`<sp/>with<sp/>a<sp/>variant<sp/>of<sp/>the<sp/>divstep<sp/>code<sp/>above<sp/>(extended<sp/>to</highlight></codeline>
+<codeline><highlight class="normal">also<sp/>apply<sp/>all<sp/>*f*<sp/>operations<sp/>to<sp/>*u*,<sp/>*v*<sp/>and<sp/>all<sp/>*g*<sp/>operations<sp/>to<sp/>*q*,<sp/>*r*),<sp/>a<sp/>constant-time<sp/>version<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">`divsteps_n_matrix`<sp/>is<sp/>obtained.<sp/>The<sp/>full<sp/>code<sp/>will<sp/>be<sp/>in<sp/>section<sp/>7.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">These<sp/>bit<sp/>fiddling<sp/>tricks<sp/>can<sp/>also<sp/>be<sp/>used<sp/>to<sp/>make<sp/>the<sp/>conditional<sp/>negations<sp/>and<sp/>additions<sp/>in</highlight></codeline>
+<codeline><highlight class="normal">`update_de`<sp/>and<sp/>`normalize`<sp/>constant-time.</highlight></codeline>
+<codeline></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>6.<sp/>Variable-time<sp/>optimizations</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">In<sp/>section<sp/>5,<sp/>we<sp/>modified<sp/>the<sp/>`divsteps_n_matrix`<sp/>function<sp/>(and<sp/>a<sp/>few<sp/>others)<sp/>to<sp/>be<sp/>constant<sp/>time.</highlight></codeline>
+<codeline><highlight class="normal">Constant<sp/>time<sp/>operations<sp/>are<sp/>only<sp/>necessary<sp/>when<sp/>computing<sp/>modular<sp/>inverses<sp/>of<sp/>secret<sp/>data.<sp/>In</highlight></codeline>
+<codeline><highlight class="normal">other<sp/>cases,<sp/>it<sp/>slows<sp/>down<sp/>calculations<sp/>unnecessarily.<sp/>In<sp/>this<sp/>section,<sp/>we<sp/>will<sp/>construct<sp/>a</highlight></codeline>
+<codeline><highlight class="normal">faster<sp/>non-constant<sp/>time<sp/>`divsteps_n_matrix`<sp/>function.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">To<sp/>do<sp/>so,<sp/>first<sp/>consider<sp/>yet<sp/>another<sp/>way<sp/>of<sp/>writing<sp/>the<sp/>inner<sp/>loop<sp/>of<sp/>divstep<sp/>operations<sp/>in</highlight></codeline>
+<codeline><highlight class="normal">`gcd`<sp/>from<sp/>section<sp/>1.<sp/>This<sp/>decomposition<sp/>is<sp/>also<sp/>explained<sp/>in<sp/>the<sp/>paper<sp/>in<sp/>section<sp/>8.2.<sp/>We<sp/>use</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>original<sp/>version<sp/>with<sp/>initial<sp/>*&amp;delta;=1*<sp/>and<sp/>*&amp;eta;=-&amp;delta;*<sp/>here.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">for<sp/>_<sp/>in<sp/>range(N):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>g<sp/>&amp;<sp/>1<sp/>and<sp/>eta<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>eta,<sp/>f,<sp/>g<sp/>=<sp/>-eta,<sp/>g,<sp/>-f</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>g<sp/>+=<sp/>f</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>eta<sp/>-=<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>g<sp/>&gt;&gt;=<sp/>1</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Whenever<sp/>*g*<sp/>is<sp/>even,<sp/>the<sp/>loop<sp/>only<sp/>shifts<sp/>*g*<sp/>down<sp/>and<sp/>decreases<sp/>*&amp;eta;*.<sp/>When<sp/>*g*<sp/>ends<sp/>in<sp/>multiple<sp/>zero</highlight></codeline>
+<codeline><highlight class="normal">bits,<sp/>these<sp/>iterations<sp/>can<sp/>be<sp/>consolidated<sp/>into<sp/>one<sp/>step.<sp/>This<sp/>requires<sp/>counting<sp/>the<sp/>bottom<sp/>zero</highlight></codeline>
+<codeline><highlight class="normal">bits<sp/>efficiently,<sp/>which<sp/>is<sp/>possible<sp/>on<sp/>most<sp/>platforms;<sp/>it<sp/>is<sp/>abstracted<sp/>here<sp/>as<sp/>the<sp/>function</highlight></codeline>
+<codeline><highlight class="normal">`count_trailing_zeros`.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>count_trailing_zeros(v):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>When<sp/>v<sp/>is<sp/>zero,<sp/>consider<sp/>all<sp/>N<sp/>zero<sp/>bits<sp/>as<sp/>&quot;trailing&quot;.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>For<sp/>a<sp/>non-zero<sp/>value<sp/>v,<sp/>find<sp/>z<sp/>such<sp/>that<sp/>v=(d&lt;&lt;z)<sp/>for<sp/>some<sp/>odd<sp/>d.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>v<sp/>==<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>else:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>(v<sp/>&amp;<sp/>-v).bit_length()<sp/>-<sp/>1</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">i<sp/>=<sp/>N<sp/>#<sp/>divsteps<sp/>left<sp/>to<sp/>do</highlight></codeline>
+<codeline><highlight class="normal">while<sp/>True:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Get<sp/>rid<sp/>of<sp/>all<sp/>bottom<sp/>zeros<sp/>at<sp/>once.<sp/>In<sp/>the<sp/>first<sp/>iteration,<sp/>g<sp/>may<sp/>be<sp/>odd<sp/>and<sp/>the<sp/>following</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>lines<sp/>have<sp/>no<sp/>effect<sp/>(until<sp/>&quot;if<sp/>eta<sp/>&lt;<sp/>0&quot;).</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>zeros<sp/>=<sp/>min(i,<sp/>count_trailing_zeros(g))</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>eta<sp/>-=<sp/>zeros</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>g<sp/>&gt;&gt;=<sp/>zeros</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>i<sp/>-=<sp/>zeros</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>i<sp/>==<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>break</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>We<sp/>know<sp/>g<sp/>is<sp/>odd<sp/>now</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>eta<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>eta,<sp/>f,<sp/>g<sp/>=<sp/>-eta,<sp/>g,<sp/>-f</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>g<sp/>+=<sp/>f</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>g<sp/>is<sp/>even<sp/>now,<sp/>and<sp/>the<sp/>eta<sp/>decrement<sp/>and<sp/>g<sp/>shift<sp/>will<sp/>happen<sp/>in<sp/>the<sp/>next<sp/>loop.</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">We<sp/>can<sp/>now<sp/>remove<sp/>multiple<sp/>bottom<sp/>*0*<sp/>bits<sp/>from<sp/>*g*<sp/>at<sp/>once,<sp/>but<sp/>still<sp/>need<sp/>a<sp/>full<sp/>iteration<sp/>whenever</highlight></codeline>
+<codeline><highlight class="normal">there<sp/>is<sp/>a<sp/>bottom<sp/>*1*<sp/>bit.<sp/>In<sp/>what<sp/>follows,<sp/>we<sp/>will<sp/>get<sp/>rid<sp/>of<sp/>multiple<sp/>*1*<sp/>bits<sp/>simultaneously<sp/>as</highlight></codeline>
+<codeline><highlight class="normal">well.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Observe<sp/>that<sp/>as<sp/>long<sp/>as<sp/>*&amp;eta;<sp/>&amp;geq;<sp/>0*,<sp/>the<sp/>loop<sp/>does<sp/>not<sp/>modify<sp/>*f*.<sp/>Instead,<sp/>it<sp/>cancels<sp/>out<sp/>bottom</highlight></codeline>
+<codeline><highlight class="normal">bits<sp/>of<sp/>*g*<sp/>and<sp/>shifts<sp/>them<sp/>out,<sp/>and<sp/>decreases<sp/>*&amp;eta;*<sp/>and<sp/>*i*<sp/>accordingly<sp/>-<sp/>interrupting<sp/>only<sp/>when<sp/>*&amp;eta;*</highlight></codeline>
+<codeline><highlight class="normal">becomes<sp/>negative,<sp/>or<sp/>when<sp/>*i*<sp/>reaches<sp/>*0*.<sp/>Combined,<sp/>this<sp/>is<sp/>equivalent<sp/>to<sp/>adding<sp/>a<sp/>multiple<sp/>of<sp/>*f*<sp/>to</highlight></codeline>
+<codeline><highlight class="normal">*g*<sp/>to<sp/>cancel<sp/>out<sp/>multiple<sp/>bottom<sp/>bits,<sp/>and<sp/>then<sp/>shifting<sp/>them<sp/>out.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">It<sp/>is<sp/>easy<sp/>to<sp/>find<sp/>what<sp/>that<sp/>multiple<sp/>is:<sp/>we<sp/>want<sp/>a<sp/>number<sp/>*w*<sp/>such<sp/>that<sp/>*g+w&amp;thinsp;f*<sp/>has<sp/>a<sp/>few<sp/>bottom</highlight></codeline>
+<codeline><highlight class="normal">zero<sp/>bits.<sp/>If<sp/>that<sp/>number<sp/>of<sp/>bits<sp/>is<sp/>*L*,<sp/>we<sp/>want<sp/>*g+w&amp;thinsp;f<sp/>mod<sp/>2&lt;sup&gt;L&lt;/sup&gt;<sp/>=<sp/>0*,<sp/>or<sp/>*w<sp/>=<sp/>-g/f<sp/>mod<sp/>2&lt;sup&gt;L&lt;/sup&gt;*.<sp/>Since<sp/>*f*</highlight></codeline>
+<codeline><highlight class="normal">is<sp/>odd,<sp/>such<sp/>a<sp/>*w*<sp/>exists<sp/>for<sp/>any<sp/>*L*.<sp/>*L*<sp/>cannot<sp/>be<sp/>more<sp/>than<sp/>*i*<sp/>steps<sp/>(as<sp/>we&apos;d<sp/>finish<sp/>the<sp/>loop<sp/>before</highlight></codeline>
+<codeline><highlight class="normal">doing<sp/>more)<sp/>or<sp/>more<sp/>than<sp/>*&amp;eta;+1*<sp/>steps<sp/>(as<sp/>we&apos;d<sp/>run<sp/>`eta,<sp/>f,<sp/>g<sp/>=<sp/>-eta,<sp/>g,<sp/>-f`<sp/>at<sp/>that<sp/>point),<sp/>but</highlight></codeline>
+<codeline><highlight class="normal">apart<sp/>from<sp/>that,<sp/>we&apos;re<sp/>only<sp/>limited<sp/>by<sp/>the<sp/>complexity<sp/>of<sp/>computing<sp/>*w*.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>code<sp/>demonstrates<sp/>how<sp/>to<sp/>cancel<sp/>up<sp/>to<sp/>4<sp/>bits<sp/>per<sp/>step:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">NEGINV16<sp/>=<sp/>[15,<sp/>5,<sp/>3,<sp/>9,<sp/>7,<sp/>13,<sp/>11,<sp/>1]<sp/>#<sp/>NEGINV16[n//2]<sp/>=<sp/>(-n)^-1<sp/>mod<sp/>16,<sp/>for<sp/>odd<sp/>n</highlight></codeline>
+<codeline><highlight class="normal">i<sp/>=<sp/>N</highlight></codeline>
+<codeline><highlight class="normal">while<sp/>True:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>zeros<sp/>=<sp/>min(i,<sp/>count_trailing_zeros(g))</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>eta<sp/>-=<sp/>zeros</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>g<sp/>&gt;&gt;=<sp/>zeros</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>i<sp/>-=<sp/>zeros</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>i<sp/>==<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>break</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>We<sp/>know<sp/>g<sp/>is<sp/>odd<sp/>now</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>if<sp/>eta<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>eta,<sp/>f,<sp/>g<sp/>=<sp/>-eta,<sp/>g,<sp/>-f</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>limit<sp/>on<sp/>number<sp/>of<sp/>bits<sp/>to<sp/>cancel</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>limit<sp/>=<sp/>min(min(eta<sp/>+<sp/>1,<sp/>i),<sp/>4)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>w<sp/>=<sp/>-g/f<sp/>mod<sp/>2**limit,<sp/>using<sp/>the<sp/>table<sp/>value<sp/>for<sp/>-1/f<sp/>mod<sp/>2**4.<sp/>Note<sp/>that<sp/>f<sp/>is</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>always<sp/>odd,<sp/>so<sp/>its<sp/>inverse<sp/>modulo<sp/>a<sp/>power<sp/>of<sp/>two<sp/>always<sp/>exists.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>w<sp/>=<sp/>(g<sp/>*<sp/>NEGINV16[(f<sp/>&amp;<sp/>15)<sp/>//<sp/>2])<sp/>%<sp/>(2**limit)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>As<sp/>w<sp/>=<sp/>-g/f<sp/>mod<sp/>(2**limit),<sp/>g+w*f<sp/>mod<sp/>2**limit<sp/>=<sp/>0<sp/>mod<sp/>2**limit.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>g<sp/>+=<sp/>w<sp/>*<sp/>f</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>assert<sp/>g<sp/>%<sp/>(2**limit)<sp/>==<sp/>0</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>The<sp/>next<sp/>iteration<sp/>will<sp/>now<sp/>shift<sp/>out<sp/>at<sp/>least<sp/>limit<sp/>bottom<sp/>zero<sp/>bits<sp/>from<sp/>g.</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">By<sp/>using<sp/>a<sp/>bigger<sp/>table<sp/>more<sp/>bits<sp/>can<sp/>be<sp/>cancelled<sp/>at<sp/>once.<sp/>The<sp/>table<sp/>can<sp/>also<sp/>be<sp/>implemented</highlight></codeline>
+<codeline><highlight class="normal">as<sp/>a<sp/>formula.<sp/>Several<sp/>formulas<sp/>are<sp/>known<sp/>for<sp/>computing<sp/>modular<sp/>inverses<sp/>modulo<sp/>powers<sp/>of<sp/>two;</highlight></codeline>
+<codeline><highlight class="normal">some<sp/>can<sp/>be<sp/>found<sp/>in<sp/>Hacker&apos;s<sp/>Delight<sp/>second<sp/>edition<sp/>by<sp/>Henry<sp/>S.<sp/>Warren,<sp/>Jr.<sp/>pages<sp/>245-247.</highlight></codeline>
+<codeline><highlight class="normal">Here<sp/>we<sp/>need<sp/>the<sp/>negated<sp/>modular<sp/>inverse,<sp/>which<sp/>is<sp/>a<sp/>simple<sp/>transformation<sp/>of<sp/>those:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>Instead<sp/>of<sp/>a<sp/>3-bit<sp/>table:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>-<sp/>*-f*<sp/>or<sp/>*f<sp/>^<sp/>6*</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>Instead<sp/>of<sp/>a<sp/>4-bit<sp/>table:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>-<sp/>*1<sp/>-<sp/>f(f<sp/>+<sp/>1)*</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>-<sp/>*-(f<sp/>+<sp/>(((f<sp/>+<sp/>1)<sp/>&amp;<sp/>4)<sp/>&lt;&lt;<sp/>1))*</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>For<sp/>larger<sp/>tables<sp/>the<sp/>following<sp/>technique<sp/>can<sp/>be<sp/>used:<sp/>if<sp/>*w=-1/f<sp/>mod<sp/>2&lt;sup&gt;L&lt;/sup&gt;*,<sp/>then<sp/>*w(w&amp;thinsp;f+2)*<sp/>is</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>*-1/f<sp/>mod<sp/>2&lt;sup&gt;2L&lt;/sup&gt;*.<sp/>This<sp/>allows<sp/>extending<sp/>the<sp/>previous<sp/>formulas<sp/>(or<sp/>tables).<sp/>In<sp/>particular<sp/>we</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>have<sp/>this<sp/>6-bit<sp/>function<sp/>(based<sp/>on<sp/>the<sp/>3-bit<sp/>function<sp/>above):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>-<sp/>*f(f&lt;sup&gt;2&lt;/sup&gt;<sp/>-<sp/>2)*</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>loop,<sp/>again<sp/>extended<sp/>to<sp/>also<sp/>handle<sp/>*u*,<sp/>*v*,<sp/>*q*,<sp/>and<sp/>*r*<sp/>alongside<sp/>*f*<sp/>and<sp/>*g*,<sp/>placed<sp/>in</highlight></codeline>
+<codeline><highlight class="normal">`divsteps_n_matrix`,<sp/>gives<sp/>a<sp/>significantly<sp/>faster,<sp/>but<sp/>non-constant<sp/>time<sp/>version.</highlight></codeline>
+<codeline></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>7.<sp/>Final<sp/>Python<sp/>version</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">All<sp/>together<sp/>we<sp/>need<sp/>the<sp/>following<sp/>functions:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>A<sp/>way<sp/>to<sp/>compute<sp/>the<sp/>transition<sp/>matrix<sp/>in<sp/>constant<sp/>time,<sp/>using<sp/>the<sp/>`divsteps_n_matrix`<sp/>function</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>from<sp/>section<sp/>2,<sp/>but<sp/>with<sp/>its<sp/>loop<sp/>replaced<sp/>by<sp/>a<sp/>variant<sp/>of<sp/>the<sp/>constant-time<sp/>divstep<sp/>from</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>section<sp/>5,<sp/>extended<sp/>to<sp/>handle<sp/>*u*,<sp/>*v*,<sp/>*q*,<sp/>*r*:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>divsteps_n_matrix(zeta,<sp/>f,<sp/>g):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Compute<sp/>zeta<sp/>and<sp/>transition<sp/>matrix<sp/>t<sp/>after<sp/>N<sp/>divsteps<sp/>(multiplied<sp/>by<sp/>2^N).&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>1,<sp/>0,<sp/>0,<sp/>1<sp/>#<sp/>start<sp/>with<sp/>identity<sp/>matrix</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>for<sp/>_<sp/>in<sp/>range(N):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>c1<sp/>=<sp/>zeta<sp/>&gt;&gt;<sp/>63</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Compute<sp/>x,<sp/>y,<sp/>z<sp/>as<sp/>conditionally-negated<sp/>versions<sp/>of<sp/>f,<sp/>u,<sp/>v.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>x,<sp/>y,<sp/>z<sp/>=<sp/>(f<sp/>^<sp/>c1)<sp/>-<sp/>c1,<sp/>(u<sp/>^<sp/>c1)<sp/>-<sp/>c1,<sp/>(v<sp/>^<sp/>c1)<sp/>-<sp/>c1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>c2<sp/>=<sp/>-(g<sp/>&amp;<sp/>1)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Conditionally<sp/>add<sp/>x,<sp/>y,<sp/>z<sp/>to<sp/>g,<sp/>q,<sp/>r.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>g,<sp/>q,<sp/>r<sp/>=<sp/>g<sp/>+<sp/>(x<sp/>&amp;<sp/>c2),<sp/>q<sp/>+<sp/>(y<sp/>&amp;<sp/>c2),<sp/>r<sp/>+<sp/>(z<sp/>&amp;<sp/>c2)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>c1<sp/>&amp;=<sp/>c2<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>reusing<sp/>c1<sp/>here<sp/>for<sp/>the<sp/>earlier<sp/>c3<sp/>variable</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>zeta<sp/>=<sp/>(zeta<sp/>^<sp/>c1)<sp/>-<sp/>1<sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>inlining<sp/>the<sp/>unconditional<sp/>zeta<sp/>decrement<sp/>here</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Conditionally<sp/>add<sp/>g,<sp/>q,<sp/>r<sp/>to<sp/>f,<sp/>u,<sp/>v.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>f,<sp/>u,<sp/>v<sp/>=<sp/>f<sp/>+<sp/>(g<sp/>&amp;<sp/>c1),<sp/>u<sp/>+<sp/>(q<sp/>&amp;<sp/>c1),<sp/>v<sp/>+<sp/>(r<sp/>&amp;<sp/>c1)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>When<sp/>shifting<sp/>g<sp/>down,<sp/>don&apos;t<sp/>shift<sp/>q,<sp/>r,<sp/>as<sp/>we<sp/>construct<sp/>a<sp/>transition<sp/>matrix<sp/>multiplied</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>by<sp/>2^N.<sp/>Instead,<sp/>shift<sp/>f&apos;s<sp/>coefficients<sp/>u<sp/>and<sp/>v<sp/>up.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>g,<sp/>u,<sp/>v<sp/>=<sp/>g<sp/>&gt;&gt;<sp/>1,<sp/>u<sp/>&lt;&lt;<sp/>1,<sp/>v<sp/>&lt;&lt;<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>zeta,<sp/>(u,<sp/>v,<sp/>q,<sp/>r)</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>The<sp/>functions<sp/>to<sp/>update<sp/>*f*<sp/>and<sp/>*g*,<sp/>and<sp/>*d*<sp/>and<sp/>*e*,<sp/>from<sp/>section<sp/>2<sp/>and<sp/>section<sp/>4,<sp/>with<sp/>the<sp/>constant-time</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>changes<sp/>to<sp/>`update_de`<sp/>from<sp/>section<sp/>5:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>update_fg(f,<sp/>g,<sp/>t):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Multiply<sp/>matrix<sp/>t/2^N<sp/>with<sp/>[f,<sp/>g].&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>t</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cf,<sp/>cg<sp/>=<sp/>u*f<sp/>+<sp/>v*g,<sp/>q*f<sp/>+<sp/>r*g</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>cf<sp/>&gt;&gt;<sp/>N,<sp/>cg<sp/>&gt;&gt;<sp/>N</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">def<sp/>update_de(d,<sp/>e,<sp/>t,<sp/>M,<sp/>Mi):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Multiply<sp/>matrix<sp/>t/2^N<sp/>with<sp/>[d,<sp/>e],<sp/>modulo<sp/>M.&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>t</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>d_sign,<sp/>e_sign<sp/>=<sp/>d<sp/>&gt;&gt;<sp/>257,<sp/>e<sp/>&gt;&gt;<sp/>257</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>md,<sp/>me<sp/>=<sp/>(u<sp/>&amp;<sp/>d_sign)<sp/>+<sp/>(v<sp/>&amp;<sp/>e_sign),<sp/>(q<sp/>&amp;<sp/>d_sign)<sp/>+<sp/>(r<sp/>&amp;<sp/>e_sign)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd,<sp/>ce<sp/>=<sp/>(u*d<sp/>+<sp/>v*e)<sp/>%<sp/>2**N,<sp/>(q*d<sp/>+<sp/>r*e)<sp/>%<sp/>2**N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>md<sp/>-=<sp/>(Mi*cd<sp/>+<sp/>md)<sp/>%<sp/>2**N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>me<sp/>-=<sp/>(Mi*ce<sp/>+<sp/>me)<sp/>%<sp/>2**N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>cd,<sp/>ce<sp/>=<sp/>u*d<sp/>+<sp/>v*e<sp/>+<sp/>M*md,<sp/>q*d<sp/>+<sp/>r*e<sp/>+<sp/>M*me</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>cd<sp/>&gt;&gt;<sp/>N,<sp/>ce<sp/>&gt;&gt;<sp/>N</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>The<sp/>`normalize`<sp/>function<sp/>from<sp/>section<sp/>4,<sp/>made<sp/>constant<sp/>time<sp/>as<sp/>well:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>normalize(sign,<sp/>v,<sp/>M):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Compute<sp/>sign*v<sp/>mod<sp/>M,<sp/>where<sp/>v<sp/>in<sp/>(-2*M,M);<sp/>output<sp/>in<sp/>[0,M).&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>v_sign<sp/>=<sp/>v<sp/>&gt;&gt;<sp/>257</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Conditionally<sp/>add<sp/>M<sp/>to<sp/>v.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>v<sp/>+=<sp/>M<sp/>&amp;<sp/>v_sign</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>c<sp/>=<sp/>(sign<sp/>-<sp/>1)<sp/>&gt;&gt;<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Conditionally<sp/>negate<sp/>v.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>v<sp/>=<sp/>(v<sp/>^<sp/>c)<sp/>-<sp/>c</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>v_sign<sp/>=<sp/>v<sp/>&gt;&gt;<sp/>257</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>#<sp/>Conditionally<sp/>add<sp/>M<sp/>to<sp/>v<sp/>again.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>v<sp/>+=<sp/>M<sp/>&amp;<sp/>v_sign</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>v</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>And<sp/>finally<sp/>the<sp/>`modinv`<sp/>function<sp/>too,<sp/>adapted<sp/>to<sp/>use<sp/>*&amp;zeta;*<sp/>instead<sp/>of<sp/>*&amp;delta;*,<sp/>and<sp/>using<sp/>the<sp/>fixed</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>iteration<sp/>count<sp/>from<sp/>section<sp/>5:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>modinv(M,<sp/>Mi,<sp/>x):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Compute<sp/>the<sp/>modular<sp/>inverse<sp/>of<sp/>x<sp/>mod<sp/>M,<sp/>given<sp/>Mi=1/M<sp/>mod<sp/>2^N.&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>zeta,<sp/>f,<sp/>g,<sp/>d,<sp/>e<sp/>=<sp/>-1,<sp/>M,<sp/>x,<sp/>0,<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>for<sp/>_<sp/>in<sp/>range((590<sp/>+<sp/>N<sp/>-<sp/>1)<sp/>//<sp/>N):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>zeta,<sp/>t<sp/>=<sp/>divsteps_n_matrix(zeta,<sp/>f<sp/>%<sp/>2**N,<sp/>g<sp/>%<sp/>2**N)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>f,<sp/>g<sp/>=<sp/>update_fg(f,<sp/>g,<sp/>t)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>d,<sp/>e<sp/>=<sp/>update_de(d,<sp/>e,<sp/>t,<sp/>M,<sp/>Mi)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>normalize(f,<sp/>d,<sp/>M)</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">-<sp/>To<sp/>get<sp/>a<sp/>variable<sp/>time<sp/>version,<sp/>replace<sp/>the<sp/>`divsteps_n_matrix`<sp/>function<sp/>with<sp/>one<sp/>that<sp/>uses<sp/>the</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>divsteps<sp/>loop<sp/>from<sp/>section<sp/>5,<sp/>and<sp/>a<sp/>`modinv`<sp/>version<sp/>that<sp/>calls<sp/>it<sp/>without<sp/>the<sp/>fixed<sp/>iteration</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/>count:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal">NEGINV16<sp/>=<sp/>[15,<sp/>5,<sp/>3,<sp/>9,<sp/>7,<sp/>13,<sp/>11,<sp/>1]<sp/>#<sp/>NEGINV16[n//2]<sp/>=<sp/>(-n)^-1<sp/>mod<sp/>16,<sp/>for<sp/>odd<sp/>n</highlight></codeline>
+<codeline><highlight class="normal">def<sp/>divsteps_n_matrix_var(eta,<sp/>f,<sp/>g):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Compute<sp/>eta<sp/>and<sp/>transition<sp/>matrix<sp/>t<sp/>after<sp/>N<sp/>divsteps<sp/>(multiplied<sp/>by<sp/>2^N).&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>u,<sp/>v,<sp/>q,<sp/>r<sp/>=<sp/>1,<sp/>0,<sp/>0,<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>i<sp/>=<sp/>N</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>while<sp/>True:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>zeros<sp/>=<sp/>min(i,<sp/>count_trailing_zeros(g))</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>eta,<sp/>i<sp/>=<sp/>eta<sp/>-<sp/>zeros,<sp/>i<sp/>-<sp/>zeros</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>g,<sp/>u,<sp/>v<sp/>=<sp/>g<sp/>&gt;&gt;<sp/>zeros,<sp/>u<sp/>&lt;&lt;<sp/>zeros,<sp/>v<sp/>&lt;&lt;<sp/>zeros</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>i<sp/>==<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>break</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>eta<sp/>&lt;<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>eta,<sp/>f,<sp/>u,<sp/>v,<sp/>g,<sp/>q,<sp/>r<sp/>=<sp/>-eta,<sp/>g,<sp/>q,<sp/>r,<sp/>-f,<sp/>-u,<sp/>-v</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>limit<sp/>=<sp/>min(min(eta<sp/>+<sp/>1,<sp/>i),<sp/>4)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>w<sp/>=<sp/>(g<sp/>*<sp/>NEGINV16[(f<sp/>&amp;<sp/>15)<sp/>//<sp/>2])<sp/>%<sp/>(2**limit)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>g,<sp/>q,<sp/>r<sp/>=<sp/>g<sp/>+<sp/>w*f,<sp/>q<sp/>+<sp/>w*u,<sp/>r<sp/>+<sp/>w*v</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>eta,<sp/>(u,<sp/>v,<sp/>q,<sp/>r)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">def<sp/>modinv_var(M,<sp/>Mi,<sp/>x):</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>&quot;&quot;&quot;Compute<sp/>the<sp/>modular<sp/>inverse<sp/>of<sp/>x<sp/>mod<sp/>M,<sp/>given<sp/>Mi<sp/>=<sp/>1/M<sp/>mod<sp/>2^N.&quot;&quot;&quot;</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>eta,<sp/>f,<sp/>g,<sp/>d,<sp/>e<sp/>=<sp/>-1,<sp/>M,<sp/>x,<sp/>0,<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>while<sp/>g<sp/>!=<sp/>0:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>eta,<sp/>t<sp/>=<sp/>divsteps_n_matrix_var(eta,<sp/>f<sp/>%<sp/>2**N,<sp/>g<sp/>%<sp/>2**N)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>f,<sp/>g<sp/>=<sp/>update_fg(f,<sp/>g,<sp/>t)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>d,<sp/>e<sp/>=<sp/>update_de(d,<sp/>e,<sp/>t,<sp/>M,<sp/>Mi)</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>return<sp/>normalize(f,<sp/>d,<sp/>Mi)</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>8.<sp/>From<sp/>GCDs<sp/>to<sp/>Jacobi<sp/>symbol</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">We<sp/>can<sp/>also<sp/>use<sp/>a<sp/>similar<sp/>approach<sp/>to<sp/>calculate<sp/>Jacobi<sp/>symbol<sp/>*(x<sp/>|<sp/>M)*<sp/>by<sp/>keeping<sp/>track<sp/>of<sp/>an</highlight></codeline>
+<codeline><highlight class="normal">extra<sp/>variable<sp/>*j*,<sp/>for<sp/>which<sp/>at<sp/>every<sp/>step<sp/>*(x<sp/>|<sp/>M)<sp/>=<sp/>j<sp/>(g<sp/>|<sp/>f)*.<sp/>As<sp/>we<sp/>update<sp/>*f*<sp/>and<sp/>*g*,<sp/>we</highlight></codeline>
+<codeline><highlight class="normal">make<sp/>corresponding<sp/>updates<sp/>to<sp/>*j*<sp/>using</highlight></codeline>
+<codeline><highlight class="normal">[properties<sp/>of<sp/>the<sp/>Jacobi<sp/>symbol](https://en.wikipedia.org/wiki/Jacobi_symbol#Properties):</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>*((g/2)<sp/>|<sp/>f)*<sp/>is<sp/>either<sp/>*(g<sp/>|<sp/>f)*<sp/>or<sp/>*-(g<sp/>|<sp/>f)*,<sp/>depending<sp/>on<sp/>the<sp/>value<sp/>of<sp/>*f<sp/>mod<sp/>8*<sp/>(negating<sp/>if<sp/>it&apos;s<sp/>*3*<sp/>or<sp/>*5*).</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>*(f<sp/>|<sp/>g)*<sp/>is<sp/>either<sp/>*(g<sp/>|<sp/>f)*<sp/>or<sp/>*-(g<sp/>|<sp/>f)*,<sp/>depending<sp/>on<sp/>*f<sp/>mod<sp/>4*<sp/>and<sp/>*g<sp/>mod<sp/>4*<sp/>(negating<sp/>if<sp/>both<sp/>are<sp/>*3*).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">These<sp/>updates<sp/>depend<sp/>only<sp/>on<sp/>the<sp/>values<sp/>of<sp/>*f*<sp/>and<sp/>*g*<sp/>modulo<sp/>*4*<sp/>or<sp/>*8*,<sp/>and<sp/>can<sp/>thus<sp/>be<sp/>applied</highlight></codeline>
+<codeline><highlight class="normal">very<sp/>quickly,<sp/>as<sp/>long<sp/>as<sp/>we<sp/>keep<sp/>track<sp/>of<sp/>a<sp/>few<sp/>additional<sp/>bits<sp/>of<sp/>*f*<sp/>and<sp/>*g*.<sp/>Overall,<sp/>this</highlight></codeline>
+<codeline><highlight class="normal">calculation<sp/>is<sp/>slightly<sp/>simpler<sp/>than<sp/>the<sp/>one<sp/>for<sp/>the<sp/>modular<sp/>inverse<sp/>because<sp/>we<sp/>no<sp/>longer<sp/>need<sp/>to</highlight></codeline>
+<codeline><highlight class="normal">keep<sp/>track<sp/>of<sp/>*d*<sp/>and<sp/>*e*.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">However,<sp/>one<sp/>difficulty<sp/>of<sp/>this<sp/>approach<sp/>is<sp/>that<sp/>the<sp/>Jacobi<sp/>symbol<sp/>*(a<sp/>|<sp/>n)*<sp/>is<sp/>only<sp/>defined<sp/>for</highlight></codeline>
+<codeline><highlight class="normal">positive<sp/>odd<sp/>integers<sp/>*n*,<sp/>whereas<sp/>in<sp/>the<sp/>original<sp/>safegcd<sp/>algorithm,<sp/>*f,<sp/>g*<sp/>can<sp/>take<sp/>negative</highlight></codeline>
+<codeline><highlight class="normal">values.<sp/>We<sp/>resolve<sp/>this<sp/>by<sp/>using<sp/>the<sp/>following<sp/>modified<sp/>steps:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">```python</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>Before</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>delta<sp/>&gt;<sp/>0<sp/>and<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g<sp/>=<sp/>1<sp/>-<sp/>delta,<sp/>g,<sp/>(g<sp/>-<sp/>f)<sp/>//<sp/>2</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>#<sp/>After</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>delta<sp/>&gt;<sp/>0<sp/>and<sp/>g<sp/>&amp;<sp/>1:</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>delta,<sp/>f,<sp/>g<sp/>=<sp/>1<sp/>-<sp/>delta,<sp/>g,<sp/>(g<sp/>+<sp/>f)<sp/>//<sp/>2</highlight></codeline>
+<codeline><highlight class="normal">```</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>algorithm<sp/>is<sp/>still<sp/>correct,<sp/>since<sp/>the<sp/>changed<sp/>divstep,<sp/>called<sp/>a<sp/>&quot;posdivstep&quot;<sp/>(see<sp/>section<sp/>8.4</highlight></codeline>
+<codeline><highlight class="normal">and<sp/>E.5<sp/>in<sp/>the<sp/>paper)<sp/>preserves<sp/>*gcd(f,<sp/>g)*.<sp/>However,<sp/>there&apos;s<sp/>no<sp/>proof<sp/>that<sp/>the<sp/>modified<sp/>algorithm</highlight></codeline>
+<codeline><highlight class="normal">will<sp/>converge.<sp/>The<sp/>justification<sp/>for<sp/>posdivsteps<sp/>is<sp/>completely<sp/>empirical:<sp/>in<sp/>practice,<sp/>it<sp/>appears</highlight></codeline>
+<codeline><highlight class="normal">that<sp/>the<sp/>vast<sp/>majority<sp/>of<sp/>nonzero<sp/>inputs<sp/>converge<sp/>to<sp/>*f=g=gcd(f&lt;sub&gt;0&lt;/sub&gt;,<sp/>g&lt;sub&gt;0&lt;/sub&gt;)*<sp/>in<sp/>a</highlight></codeline>
+<codeline><highlight class="normal">number<sp/>of<sp/>steps<sp/>proportional<sp/>to<sp/>their<sp/>logarithm.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Note<sp/>that:</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>We<sp/>require<sp/>inputs<sp/>to<sp/>satisfy<sp/>*gcd(x,<sp/>M)<sp/>=<sp/>1*,<sp/>as<sp/>otherwise<sp/>*f=1*<sp/>is<sp/>not<sp/>reached.</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>We<sp/>require<sp/>inputs<sp/>*x<sp/>&amp;neq;<sp/>0*,<sp/>because<sp/>applying<sp/>posdivstep<sp/>with<sp/>*g=0*<sp/>has<sp/>no<sp/>effect.</highlight></codeline>
+<codeline><highlight class="normal">-<sp/>We<sp/>need<sp/>to<sp/>update<sp/>the<sp/>termination<sp/>condition<sp/>from<sp/>*g=0*<sp/>to<sp/>*f=1*.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">We<sp/>account<sp/>for<sp/>the<sp/>possibility<sp/>of<sp/>nonconvergence<sp/>by<sp/>only<sp/>performing<sp/>a<sp/>bounded<sp/>number<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">posdivsteps,<sp/>and<sp/>then<sp/>falling<sp/>back<sp/>to<sp/>square-root<sp/>based<sp/>Jacobi<sp/>calculation<sp/>if<sp/>a<sp/>solution<sp/>has<sp/>not</highlight></codeline>
+<codeline><highlight class="normal">yet<sp/>been<sp/>found.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>optimizations<sp/>in<sp/>sections<sp/>3-7<sp/>above<sp/>are<sp/>described<sp/>in<sp/>the<sp/>context<sp/>of<sp/>the<sp/>original<sp/>divsteps,<sp/>but</highlight></codeline>
+<codeline><highlight class="normal">in<sp/>the<sp/>C<sp/>implementation<sp/>we<sp/>also<sp/>adapt<sp/>most<sp/>of<sp/>them<sp/>(not<sp/>including<sp/>&quot;avoiding<sp/>modulus<sp/>operations&quot;,</highlight></codeline>
+<codeline><highlight class="normal">since<sp/>it&apos;s<sp/>not<sp/>necessary<sp/>to<sp/>track<sp/>*d,<sp/>e*,<sp/>and<sp/>&quot;constant-time<sp/>operation&quot;,<sp/>since<sp/>we<sp/>never<sp/>calculate</highlight></codeline>
+<codeline><highlight class="normal">Jacobi<sp/>symbols<sp/>for<sp/>secret<sp/>data)<sp/>to<sp/>the<sp/>posdivsteps<sp/>version.</highlight></codeline>
+    </programlisting>
+    <location file="src/secp256k1/doc/safegcd_implementation.md"/>
+  </compounddef>
+</doxygen>

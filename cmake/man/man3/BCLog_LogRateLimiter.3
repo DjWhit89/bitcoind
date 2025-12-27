@@ -1,0 +1,125 @@
+.TH "LogRateLimiter" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+LogRateLimiter \- Fixed window rate limiter for logging\&.  
+
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <logging\&.h>\fP
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBStats\fP"
+.br
+.RI "Keeps track of an individual source location and how many available bytes are left for logging from it\&. "
+.in -1c
+.SS "Public Types"
+
+.in +1c
+.ti -1c
+.RI "enum class \fBStatus\fP { \fBUNSUPPRESSED\fP, \fBNEWLY_SUPPRESSED\fP, \fBSTILL_SUPPRESSED\fP }"
+.br
+.RI "Suppression status of a source log location\&. "
+.ti -1c
+.RI "using \fBSchedulerFunction\fP = std::function<void(std::function<void()>, std::chrono::milliseconds)>"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBStatus\fP\fBStatus\fP \fBConsume\fP (const \fBSourceLocation\fP &source_loc, const std::string &str) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!m_mutex)"
+.br
+.ti -1c
+.RI "void \fBReset\fP () \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!m_mutex)"
+.br
+.RI "Resets all usage to zero\&. Called periodically by the scheduler\&. "
+.ti -1c
+.RI "bool \fBSuppressionsActive\fP () const"
+.br
+.RI "Returns true if any log locations are currently being suppressed\&. "
+.in -1c
+.SS "Static Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "static std::shared_ptr< LogRateLimiter > \fBCreate\fP (\fBSchedulerFunction\fP &&scheduler_func, uint64_t max_bytes, std::chrono::seconds reset_window)"
+.br
+.in -1c
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "const uint64_t \fBm_max_bytes\fP"
+.br
+.RI "Maximum number of bytes logged per location per window\&. "
+.ti -1c
+.RI "const std::chrono::seconds \fBm_reset_window\fP"
+.br
+.RI "Interval after which the window is reset\&. "
+.in -1c
+.SH "Detailed Description"
+.PP 
+Fixed window rate limiter for logging\&. 
+.SH "Member Typedef Documentation"
+.PP 
+.SS "using \fBSchedulerFunction\fP = std::function<void(std::function<void()>, std::chrono::milliseconds)>"
+
+.SH "Member Enumeration Documentation"
+.PP 
+.SS "enum class \fBStatus\fP\fBStatus\fP\fR [strong]\fP"
+
+.PP
+Suppression status of a source log location\&. 
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BIUNSUPPRESSED \fP
+.TP
+\f(BINEWLY_SUPPRESSED \fP
+.TP
+\f(BISTILL_SUPPRESSED \fP
+.SH "Member Function Documentation"
+.PP 
+.SS "\fBBCLog::LogRateLimiter::Status\fP Consume (const \fBSourceLocation\fP & source_loc, const std::string & str)\fR [nodiscard]\fP"
+Consumes \fRsource_loc\fP's available bytes corresponding to the size of the (formatted) \fRstr\fP and returns its status\&. 
+.SS "std::shared_ptr< \fBBCLog::LogRateLimiter\fP > Create (\fBSchedulerFunction\fP && scheduler_func, uint64_t max_bytes, std::chrono::seconds reset_window)\fR [static]\fP"
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIscheduler_func\fP Callable object used to schedule resetting the window\&. The first parameter is the function to be executed, and the second is the reset_window interval\&. 
+.br
+\fImax_bytes\fP Maximum number of bytes that can be logged for each source location\&. 
+.br
+\fIreset_window\fP Time window after which the stats are reset\&. 
+.RE
+.PP
+
+.SS "void Reset ()"
+
+.PP
+Resets all usage to zero\&. Called periodically by the scheduler\&. 
+.SS "bool SuppressionsActive () const\fR [inline]\fP"
+
+.PP
+Returns true if any log locations are currently being suppressed\&. 
+.SH "Field Documentation"
+.PP 
+.SS "const uint64_t m_max_bytes"
+
+.PP
+Maximum number of bytes logged per location per window\&. 
+.SS "const std::chrono::seconds m_reset_window"
+
+.PP
+Interval after which the window is reset\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

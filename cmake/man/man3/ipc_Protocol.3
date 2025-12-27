@@ -1,0 +1,85 @@
+.TH "Protocol" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+Protocol
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <protocol\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "virtual \fB~Protocol\fP ()=default"
+.br
+.ti -1c
+.RI "virtual std::unique_ptr< \fBinterfaces::Init\fP > \fBconnect\fP (int fd, const char *exe_name)=0"
+.br
+.ti -1c
+.RI "virtual void \fBlisten\fP (int listen_fd, const char *exe_name, \fBinterfaces::Init\fP &\fBinit\fP)=0"
+.br
+.ti -1c
+.RI "virtual void \fBserve\fP (int fd, const char *exe_name, \fBinterfaces::Init\fP &\fBinit\fP, const std::function< void()> &ready_fn={})=0"
+.br
+.ti -1c
+.RI "virtual void \fBdisconnectIncoming\fP ()=0"
+.br
+.RI "Disconnect any incoming connections that are still connected\&. "
+.ti -1c
+.RI "virtual void \fBaddCleanup\fP (std::type_index type, void *iface, std::function< void()> cleanup)=0"
+.br
+.ti -1c
+.RI "virtual \fBContext\fP & \fBcontext\fP ()=0"
+.br
+.RI "\fBContext\fP accessor\&. "
+.in -1c
+.SH "Detailed Description"
+.PP 
+IPC protocol interface for calling IPC methods over sockets\&.
+
+.PP
+There may be different implementations of this interface for different IPC protocols (e\&.g\&. Cap'n Proto, gRPC, JSON-RPC, or custom protocols)\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "virtual ~\fBProtocol\fP ()\fR [virtual]\fP, \fR [default]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "virtual void addCleanup (std::type_index type, void * iface, std::function< void()> cleanup)\fR [pure virtual]\fP"
+Add cleanup callback to interface that will run when the interface is deleted\&. 
+.SS "virtual std::unique_ptr< \fBinterfaces::Init\fP > connect (int fd, const char * exe_name)\fR [pure virtual]\fP"
+Return \fBInit\fP interface that forwards requests over given socket descriptor\&. Socket communication is handled on a background thread\&.
+
+.PP
+\fBNote\fP
+.RS 4
+It could be potentially useful in the future to add std::function<void()> on_disconnect callback argument here\&. But there isn't an immediate need, because the protocol implementation can clean up its own state (calling ProxyServer destructors, etc) on disconnect, and any client calls will just throw \fBipc::Exception\fP errors after a disconnect\&. 
+.RE
+.PP
+
+.SS "virtual \fBContext\fP & context ()\fR [pure virtual]\fP"
+
+.PP
+\fBContext\fP accessor\&. 
+.SS "virtual void disconnectIncoming ()\fR [pure virtual]\fP"
+
+.PP
+Disconnect any incoming connections that are still connected\&. 
+.SS "virtual void listen (int listen_fd, const char * exe_name, \fBinterfaces::Init\fP & init)\fR [pure virtual]\fP"
+Listen for connections on provided socket descriptor, accept them, and handle requests on accepted connections\&. This method doesn't block, and performs I/O on a background thread\&. 
+.SS "virtual void serve (int fd, const char * exe_name, \fBinterfaces::Init\fP & init, const std::function< void()> & ready_fn = \fR{}\fP)\fR [pure virtual]\fP"
+Handle requests on provided socket descriptor, forwarding them to the provided \fBInit\fP interface\&. Socket communication is handled on the current thread, and this call blocks until the socket is closed\&.
+
+.PP
+\fBNote\fP
+.RS 4
+: If this method is called, it needs be called before \fBconnect()\fP or \fBlisten()\fP methods, because for ease of implementation it's inflexible and always runs the event loop in the foreground thread\&. It can share its event loop with the other methods but can't share an event loop that was created by them\&. This isn't really a problem because \fBserve()\fP is only called by spawned child processes that call it immediately to communicate back with parent processes\&.
+.RE
+.PP
+The optional \fRready_fn\fP callback will be called after the event loop is created but before it is started\&. This can be useful in tests to trigger client connections from another thread as soon as the event loop is available, but should not be necessary in normal code which starts clients and servers independently\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

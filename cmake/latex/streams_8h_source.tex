@@ -1,0 +1,622 @@
+\doxysection{streams.\+h}
+\label{streams_8h_source}\index{src/streams.h@{src/streams.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_STREAMS\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_STREAMS\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <logging.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <support/allocators/zeroafterfree.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/obfuscation.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <util/overflow.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <util/syserror.h>}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <cstdio>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <ios>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{comment}{/*\ Minimal\ stream\ for\ overwriting\ and/or\ appending\ to\ an\ existing\ byte\ vector}}
+\DoxyCodeLine{00031\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00032\ \textcolor{comment}{\ *\ The\ referenced\ vector\ will\ grow\ as\ necessary}}
+\DoxyCodeLine{00033\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00034\ \textcolor{keyword}{class\ }VectorWriter}
+\DoxyCodeLine{00035\ \{}
+\DoxyCodeLine{00036\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00037\ \textcolor{comment}{/*}}
+\DoxyCodeLine{00038\ \textcolor{comment}{\ *\ @param[in]\ \ vchDataIn\ \ Referenced\ byte\ vector\ to\ overwrite/append}}
+\DoxyCodeLine{00039\ \textcolor{comment}{\ *\ @param[in]\ \ nPosIn\ Starting\ position.\ Vector\ index\ where\ writes\ should\ start.\ The\ vector\ will\ initially}}
+\DoxyCodeLine{00040\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ grow\ as\ necessary\ to\ max(nPosIn,\ vec.size()).\ So\ to\ append,\ use\ vec.size().}}
+\DoxyCodeLine{00041\ \textcolor{comment}{*/}}
+\DoxyCodeLine{00042\ \ \ \ \ VectorWriter(std::vector<unsigned\ char>\&\ vchDataIn,\ \textcolor{keywordtype}{size\_t}\ nPosIn)\ :\ vchData\{vchDataIn\},\ nPos\{nPosIn\}}
+\DoxyCodeLine{00043\ \ \ \ \ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}(nPos\ >\ vchData.size())}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \ \ \ \ vchData.resize(nPos);}
+\DoxyCodeLine{00046\ \ \ \ \ \}}
+\DoxyCodeLine{00047\ \textcolor{comment}{/*}}
+\DoxyCodeLine{00048\ \textcolor{comment}{\ *\ (other\ params\ same\ as\ above)}}
+\DoxyCodeLine{00049\ \textcolor{comment}{\ *\ @param[in]\ \ args\ \ A\ list\ of\ items\ to\ serialize\ starting\ at\ nPosIn.}}
+\DoxyCodeLine{00050\ \textcolor{comment}{*/}}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00052\ \ \ \ \ VectorWriter(std::vector<unsigned\ char>\&\ vchDataIn,\ \textcolor{keywordtype}{size\_t}\ nPosIn,\ Args\&\&...\ args)\ :\ VectorWriter\{vchDataIn,\ nPosIn\}}
+\DoxyCodeLine{00053\ \ \ \ \ \{}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ ::SerializeMany(*\textcolor{keyword}{this},\ std::forward<Args>(args)...);}
+\DoxyCodeLine{00055\ \ \ \ \ \}}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{void}\ write(std::span<const\ std::byte>\ src)}
+\DoxyCodeLine{00057\ \ \ \ \ \{}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ assert(nPos\ <=\ vchData.size());}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ nOverwrite\ =\ std::min(src.size(),\ vchData.size()\ -\/\ nPos);}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nOverwrite)\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(vchData.data()\ +\ nPos,\ src.data(),\ nOverwrite);}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nOverwrite\ <\ src.size())\ \{}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ vchData.insert(vchData.end(),\ UCharCast(src.data())\ +\ nOverwrite,\ UCharCast(src.data()\ +\ src.size()));}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ nPos\ +=\ src.size();}
+\DoxyCodeLine{00067\ \ \ \ \ \}}
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00069\ \ \ \ \ VectorWriter\&\ operator<<(\textcolor{keyword}{const}\ T\&\ obj)}
+\DoxyCodeLine{00070\ \ \ \ \ \{}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ ::Serialize(*\textcolor{keyword}{this},\ obj);}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (*\textcolor{keyword}{this});}
+\DoxyCodeLine{00073\ \ \ \ \ \}}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00076\ \ \ \ \ std::vector<unsigned\ char>\&\ vchData;}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ nPos;}
+\DoxyCodeLine{00078\ \};}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00082\ \textcolor{keyword}{class\ }SpanReader}
+\DoxyCodeLine{00083\ \{}
+\DoxyCodeLine{00084\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00085\ \ \ \ \ std::span<const\ std::byte>\ m\_data;}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{keyword}{explicit}\ SpanReader(std::span<const\ unsigned\ char>\ data)\ :\ m\_data\{std::as\_bytes(data)\}\ \{\}}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keyword}{explicit}\ SpanReader(std::span<const\ std::byte>\ data)\ :\ m\_data\{data\}\ \{\}}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00095\ \ \ \ \ SpanReader\&\ operator>>(T\&\&\ obj)}
+\DoxyCodeLine{00096\ \ \ \ \ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ ::Unserialize(*\textcolor{keyword}{this},\ obj);}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (*\textcolor{keyword}{this});}
+\DoxyCodeLine{00099\ \ \ \ \ \}}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_data.size();\ \}}
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{keywordtype}{bool}\ empty()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_data.empty();\ \}}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keywordtype}{void}\ read(std::span<std::byte>\ dst)}
+\DoxyCodeLine{00105\ \ \ \ \ \{}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dst.size()\ ==\ 0)\ \{}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ from\ the\ beginning\ of\ the\ buffer}}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dst.size()\ >\ m\_data.size())\ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}SpanReader::read():\ end\ of\ data"{}});}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ memcpy(dst.data(),\ m\_data.data(),\ dst.size());}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ m\_data\ =\ m\_data.subspan(dst.size());}
+\DoxyCodeLine{00116\ \ \ \ \ \}}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keywordtype}{void}\ ignore(\textcolor{keywordtype}{size\_t}\ n)}
+\DoxyCodeLine{00119\ \ \ \ \ \{}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ m\_data\ =\ m\_data.subspan(n);}
+\DoxyCodeLine{00121\ \ \ \ \ \}}
+\DoxyCodeLine{00122\ \};}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00129\ \textcolor{keyword}{class\ }DataStream}
+\DoxyCodeLine{00130\ \{}
+\DoxyCodeLine{00131\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keyword}{using\ }vector\_type\ =\ SerializeData;}
+\DoxyCodeLine{00133\ \ \ \ \ vector\_type\ vch;}
+\DoxyCodeLine{00134\ \ \ \ \ vector\_type::size\_type\ m\_read\_pos\{0\};}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00136\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keyword}{typedef}\ vector\_type::allocator\_type\ \ \ allocator\_type;}
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{keyword}{typedef}\ vector\_type::size\_type\ \ \ \ \ \ \ \ size\_type;}
+\DoxyCodeLine{00139\ \ \ \ \ \textcolor{keyword}{typedef}\ vector\_type::difference\_type\ \ difference\_type;}
+\DoxyCodeLine{00140\ \ \ \ \ \textcolor{keyword}{typedef}\ vector\_type::reference\ \ \ \ \ \ \ \ reference;}
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{keyword}{typedef}\ vector\_type::const\_reference\ \ const\_reference;}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keyword}{typedef}\ vector\_type::value\_type\ \ \ \ \ \ \ value\_type;}
+\DoxyCodeLine{00143\ \ \ \ \ \textcolor{keyword}{typedef}\ vector\_type::iterator\ \ \ \ \ \ \ \ \ iterator;}
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keyword}{typedef}\ vector\_type::const\_iterator\ \ \ const\_iterator;}
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keyword}{typedef}\ vector\_type::reverse\_iterator\ reverse\_iterator;}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keyword}{explicit}\ DataStream()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{keyword}{explicit}\ DataStream(std::span<const\ uint8\_t>\ sp)\ :\ DataStream\{std::as\_bytes(sp)\}\ \{\}}
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keyword}{explicit}\ DataStream(std::span<const\ value\_type>\ sp)\ :\ vch(sp.data(),\ sp.data()\ +\ sp.size())\ \{\}}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00151\ \ \ \ \ std::string\ str()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00152\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::string\{UCharCast(data()),\ UCharCast(data()\ +\ size())\};}
+\DoxyCodeLine{00154\ \ \ \ \ \}}
+\DoxyCodeLine{00155\ }
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00158\ \ \ \ \ \textcolor{comment}{//\ Vector\ subset}}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00160\ \ \ \ \ const\_iterator\ begin()\textcolor{keyword}{\ const\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ vch.begin()\ +\ m\_read\_pos;\ \}}
+\DoxyCodeLine{00161\ \ \ \ \ iterator\ begin()\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \textcolor{keywordflow}{return}\ vch.begin()\ +\ m\_read\_pos;\ \}}
+\DoxyCodeLine{00162\ \ \ \ \ const\_iterator\ end()\textcolor{keyword}{\ const\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ vch.end();\ \}}
+\DoxyCodeLine{00163\ \ \ \ \ iterator\ end()\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \textcolor{keywordflow}{return}\ vch.end();\ \}}
+\DoxyCodeLine{00164\ \ \ \ \ size\_type\ size()\textcolor{keyword}{\ const\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ vch.size()\ -\/\ m\_read\_pos;\ \}}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keywordtype}{bool}\ empty()\textcolor{keyword}{\ const\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ vch.size()\ ==\ m\_read\_pos;\ \}}
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{keywordtype}{void}\ resize(size\_type\ n,\ value\_type\ c\ =\ value\_type\{\})\ \{\ vch.resize(n\ +\ m\_read\_pos,\ c);\ \}}
+\DoxyCodeLine{00167\ \ \ \ \ \textcolor{keywordtype}{void}\ reserve(size\_type\ n)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ vch.reserve(n\ +\ m\_read\_pos);\ \}}
+\DoxyCodeLine{00168\ \ \ \ \ const\_reference\ operator[](size\_type\ pos)\textcolor{keyword}{\ const\ \ }\{\ \textcolor{keywordflow}{return}\ vch[pos\ +\ m\_read\_pos];\ \}}
+\DoxyCodeLine{00169\ \ \ \ \ reference\ operator[](size\_type\ pos)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \textcolor{keywordflow}{return}\ vch[pos\ +\ m\_read\_pos];\ \}}
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{keywordtype}{void}\ clear()\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ vch.clear();\ m\_read\_pos\ =\ 0;\ \}}
+\DoxyCodeLine{00171\ \ \ \ \ value\_type*\ data()\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \textcolor{keywordflow}{return}\ vch.data()\ +\ m\_read\_pos;\ \}}
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keyword}{const}\ value\_type*\ data()\textcolor{keyword}{\ const\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ vch.data()\ +\ m\_read\_pos;\ \}}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Compact()}
+\DoxyCodeLine{00175\ \ \ \ \ \{}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ vch.erase(vch.begin(),\ vch.begin()\ +\ m\_read\_pos);}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ m\_read\_pos\ =\ 0;}
+\DoxyCodeLine{00178\ \ \ \ \ \}}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keywordtype}{bool}\ Rewind(std::optional<size\_type>\ n\ =\ std::nullopt)}
+\DoxyCodeLine{00181\ \ \ \ \ \{}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Total\ rewind\ if\ no\ size\ is\ passed}}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!n)\ \{}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ \ \ \ \ m\_read\_pos\ =\ 0;}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Rewind\ by\ n\ characters\ if\ the\ buffer\ hasn't\ been\ compacted\ yet}}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (*n\ >\ m\_read\_pos)}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ m\_read\_pos\ -\/=\ *n;}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00192\ \ \ \ \ \}}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00195\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{comment}{//\ Stream\ subset}}
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{keywordtype}{bool}\ eof()\textcolor{keyword}{\ const\ \ \ \ \ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ size()\ ==\ 0;\ \}}
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{keywordtype}{int}\ in\_avail()\textcolor{keyword}{\ const\ \ \ \ \ \ \ \ \ }\{\ \textcolor{keywordflow}{return}\ size();\ \}}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00201\ \ \ \ \ \textcolor{keywordtype}{void}\ read(std::span<value\_type>\ dst)}
+\DoxyCodeLine{00202\ \ \ \ \ \{}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dst.size()\ ==\ 0)\ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ from\ the\ beginning\ of\ the\ buffer}}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ next\_read\_pos\{CheckedAdd(m\_read\_pos,\ dst.size())\};}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!next\_read\_pos.has\_value()\ ||\ next\_read\_pos.value()\ >\ vch.size())\ \{}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}DataStream::read():\ end\ of\ data"{}});}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ memcpy(dst.data(),\ \&vch[m\_read\_pos],\ dst.size());}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (next\_read\_pos.value()\ ==\ vch.size())\ \{}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \ \ \ \ m\_read\_pos\ =\ 0;}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \ \ \ \ vch.clear();}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ m\_read\_pos\ =\ next\_read\_pos.value();}
+\DoxyCodeLine{00217\ \ \ \ \ \}}
+\DoxyCodeLine{00218\ }
+\DoxyCodeLine{00219\ \ \ \ \ \textcolor{keywordtype}{void}\ ignore(\textcolor{keywordtype}{size\_t}\ num\_ignore)}
+\DoxyCodeLine{00220\ \ \ \ \ \{}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Ignore\ from\ the\ beginning\ of\ the\ buffer}}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ next\_read\_pos\{CheckedAdd(m\_read\_pos,\ num\_ignore)\};}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!next\_read\_pos.has\_value()\ ||\ next\_read\_pos.value()\ >\ vch.size())\ \{}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}DataStream::ignore():\ end\ of\ data"{}});}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (next\_read\_pos.value()\ ==\ vch.size())\ \{}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \ \ \ \ m\_read\_pos\ =\ 0;}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \ \ \ \ vch.clear();}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ m\_read\_pos\ =\ next\_read\_pos.value();}
+\DoxyCodeLine{00232\ \ \ \ \ \}}
+\DoxyCodeLine{00233\ }
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{keywordtype}{void}\ write(std::span<const\ value\_type>\ src)}
+\DoxyCodeLine{00235\ \ \ \ \ \{}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ to\ the\ end\ of\ the\ buffer}}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ vch.insert(vch.end(),\ src.begin(),\ src.end());}
+\DoxyCodeLine{00238\ \ \ \ \ \}}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00241\ \ \ \ \ DataStream\&\ operator<<(\textcolor{keyword}{const}\ T\&\ obj)}
+\DoxyCodeLine{00242\ \ \ \ \ \{}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ ::Serialize(*\textcolor{keyword}{this},\ obj);}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (*\textcolor{keyword}{this});}
+\DoxyCodeLine{00245\ \ \ \ \ \}}
+\DoxyCodeLine{00246\ }
+\DoxyCodeLine{00247\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00248\ \ \ \ \ DataStream\&\ operator>>(T\&\&\ obj)}
+\DoxyCodeLine{00249\ \ \ \ \ \{}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ ::Unserialize(*\textcolor{keyword}{this},\ obj);}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (*\textcolor{keyword}{this});}
+\DoxyCodeLine{00252\ \ \ \ \ \}}
+\DoxyCodeLine{00253\ }
+\DoxyCodeLine{00255\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ GetMemoryUsage()\ const\ noexcept;}
+\DoxyCodeLine{00256\ \};}
+\DoxyCodeLine{00257\ }
+\DoxyCodeLine{00258\ template\ <typename\ IStream>}
+\DoxyCodeLine{00259\ class\ BitStreamReader}
+\DoxyCodeLine{00260\ \{}
+\DoxyCodeLine{00261\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00262\ \ \ \ \ IStream\&\ m\_istream;}
+\DoxyCodeLine{00263\ }
+\DoxyCodeLine{00266\ \ \ \ \ uint8\_t\ m\_buffer\{0\};}
+\DoxyCodeLine{00267\ }
+\DoxyCodeLine{00271\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_offset\{8\};}
+\DoxyCodeLine{00272\ }
+\DoxyCodeLine{00273\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00274\ \ \ \ \ \textcolor{keyword}{explicit}\ BitStreamReader(IStream\&\ istream)\ :\ m\_istream(istream)\ \{\}}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00279\ \ \ \ \ uint64\_t\ Read(\textcolor{keywordtype}{int}\ nbits)\ \{}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nbits\ <\ 0\ ||\ nbits\ >\ 64)\ \{}
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::out\_of\_range(\textcolor{stringliteral}{"{}nbits\ must\ be\ between\ 0\ and\ 64"{}});}
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00283\ }
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ uint64\_t\ data\ =\ 0;}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (nbits\ >\ 0)\ \{}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_offset\ ==\ 8)\ \{}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_istream\ >>\ m\_buffer;}
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_offset\ =\ 0;}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00290\ }
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ bits\ =\ std::min(8\ -\/\ m\_offset,\ nbits);}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \ \ \ \ data\ <<=\ bits;}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \ \ \ \ data\ |=\ \textcolor{keyword}{static\_cast<}uint8\_t\textcolor{keyword}{>}(m\_buffer\ <<\ m\_offset)\ >>\ (8\ -\/\ bits);}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \ \ \ \ m\_offset\ +=\ bits;}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \ \ \ \ nbits\ -\/=\ bits;}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ data;}
+\DoxyCodeLine{00298\ \ \ \ \ \}}
+\DoxyCodeLine{00299\ \};}
+\DoxyCodeLine{00300\ }
+\DoxyCodeLine{00301\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ OStream>}
+\DoxyCodeLine{00302\ \textcolor{keyword}{class\ }BitStreamWriter}
+\DoxyCodeLine{00303\ \{}
+\DoxyCodeLine{00304\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00305\ \ \ \ \ OStream\&\ m\_ostream;}
+\DoxyCodeLine{00306\ }
+\DoxyCodeLine{00309\ \ \ \ \ uint8\_t\ m\_buffer\{0\};}
+\DoxyCodeLine{00310\ }
+\DoxyCodeLine{00314\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_offset\{0\};}
+\DoxyCodeLine{00315\ }
+\DoxyCodeLine{00316\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00317\ \ \ \ \ \textcolor{keyword}{explicit}\ BitStreamWriter(OStream\&\ ostream)\ :\ m\_ostream(ostream)\ \{\}}
+\DoxyCodeLine{00318\ }
+\DoxyCodeLine{00319\ \ \ \ \ \string~BitStreamWriter()}
+\DoxyCodeLine{00320\ \ \ \ \ \{}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ Flush();}
+\DoxyCodeLine{00322\ \ \ \ \ \}}
+\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00327\ \ \ \ \ \textcolor{keywordtype}{void}\ Write(uint64\_t\ data,\ \textcolor{keywordtype}{int}\ nbits)\ \{}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nbits\ <\ 0\ ||\ nbits\ >\ 64)\ \{}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::out\_of\_range(\textcolor{stringliteral}{"{}nbits\ must\ be\ between\ 0\ and\ 64"{}});}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00331\ }
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (nbits\ >\ 0)\ \{}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ bits\ =\ std::min(8\ -\/\ m\_offset,\ nbits);}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ \ \ \ \ m\_buffer\ |=\ (data\ <<\ (64\ -\/\ nbits))\ >>\ (64\ -\/\ 8\ +\ m\_offset);}
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ \ \ \ \ m\_offset\ +=\ bits;}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ \ \ \ \ nbits\ -\/=\ bits;}
+\DoxyCodeLine{00337\ }
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_offset\ ==\ 8)\ \{}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Flush();}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00342\ \ \ \ \ \}}
+\DoxyCodeLine{00343\ }
+\DoxyCodeLine{00347\ \ \ \ \ \textcolor{keywordtype}{void}\ Flush()\ \{}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_offset\ ==\ 0)\ \{}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00351\ }
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ m\_ostream\ <<\ m\_buffer;}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ m\_buffer\ =\ 0;}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ m\_offset\ =\ 0;}
+\DoxyCodeLine{00355\ \ \ \ \ \}}
+\DoxyCodeLine{00356\ \};}
+\DoxyCodeLine{00357\ }
+\DoxyCodeLine{00370\ \textcolor{keyword}{class\ }AutoFile}
+\DoxyCodeLine{00371\ \{}
+\DoxyCodeLine{00372\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00373\ \ \ \ \ std::FILE*\ m\_file;}
+\DoxyCodeLine{00374\ \ \ \ \ Obfuscation\ m\_obfuscation;}
+\DoxyCodeLine{00375\ \ \ \ \ std::optional<int64\_t>\ m\_position;}
+\DoxyCodeLine{00376\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_was\_written\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00377\ }
+\DoxyCodeLine{00378\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00379\ \ \ \ \ \textcolor{keyword}{explicit}\ AutoFile(std::FILE*\ file,\ \textcolor{keyword}{const}\ Obfuscation\&\ obfuscation\ =\ \{\});}
+\DoxyCodeLine{00380\ }
+\DoxyCodeLine{00381\ \ \ \ \ \string~AutoFile()}
+\DoxyCodeLine{00382\ \ \ \ \ \{}
+\DoxyCodeLine{00383\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_was\_written)\ \{}
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Callers\ that\ wrote\ to\ the\ file\ must\ have\ closed\ it\ explicitly}}
+\DoxyCodeLine{00385\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ with\ the\ fclose()\ method\ and\ checked\ that\ the\ close\ succeeded.}}
+\DoxyCodeLine{00386\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ This\ is\ because\ here\ in\ the\ destructor\ we\ have\ no\ way\ to\ signal}}
+\DoxyCodeLine{00387\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ errors\ from\ fclose()\ which,\ after\ write,\ could\ mean\ the\ file\ is}}
+\DoxyCodeLine{00388\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ corrupted\ and\ must\ be\ handled\ properly\ at\ the\ call\ site.}}
+\DoxyCodeLine{00389\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Destructors\ in\ C++\ cannot\ signal\ an\ error\ to\ the\ callers\ because}}
+\DoxyCodeLine{00390\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ they\ do\ not\ return\ a\ value\ and\ are\ not\ allowed\ to\ throw\ exceptions.}}
+\DoxyCodeLine{00391\ \ \ \ \ \ \ \ \ \ \ \ \ Assume(IsNull());}
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00393\ }
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fclose()\ !=\ 0)\ \{}
+\DoxyCodeLine{00395\ \ \ \ \ \ \ \ \ \ \ \ \ LogError(\textcolor{stringliteral}{"{}Failed\ to\ close\ file:\ \%s"{}},\ SysErrorString(errno));}
+\DoxyCodeLine{00396\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00397\ \ \ \ \ \}}
+\DoxyCodeLine{00398\ }
+\DoxyCodeLine{00399\ \ \ \ \ \textcolor{comment}{//\ Disallow\ copies}}
+\DoxyCodeLine{00400\ \ \ \ \ AutoFile(\textcolor{keyword}{const}\ AutoFile\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00401\ \ \ \ \ AutoFile\&\ operator=(\textcolor{keyword}{const}\ AutoFile\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00402\ }
+\DoxyCodeLine{00403\ \ \ \ \ \textcolor{keywordtype}{bool}\ feof()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ std::feof(m\_file);\ \}}
+\DoxyCodeLine{00404\ }
+\DoxyCodeLine{00405\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{int}\ fclose()}
+\DoxyCodeLine{00406\ \ \ \ \ \{}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{auto}\ rel\{release()\})\ \textcolor{keywordflow}{return}\ std::fclose(rel);}
+\DoxyCodeLine{00408\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00409\ \ \ \ \ \}}
+\DoxyCodeLine{00410\ }
+\DoxyCodeLine{00415\ \ \ \ \ std::FILE*\ release()}
+\DoxyCodeLine{00416\ \ \ \ \ \{}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ std::FILE*\ ret\{m\_file\};}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ m\_file\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00420\ \ \ \ \ \}}
+\DoxyCodeLine{00421\ }
+\DoxyCodeLine{00424\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsNull()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_file\ ==\ \textcolor{keyword}{nullptr};\ \}}
+\DoxyCodeLine{00425\ }
+\DoxyCodeLine{00427\ \ \ \ \ \textcolor{keywordtype}{void}\ SetObfuscation(\textcolor{keyword}{const}\ Obfuscation\&\ obfuscation)\ \{\ m\_obfuscation\ =\ obfuscation;\ \}}
+\DoxyCodeLine{00428\ }
+\DoxyCodeLine{00430\ \ \ \ \ std::size\_t\ detail\_fread(std::span<std::byte>\ dst);}
+\DoxyCodeLine{00431\ }
+\DoxyCodeLine{00433\ \ \ \ \ \textcolor{keywordtype}{void}\ seek(int64\_t\ offset,\ \textcolor{keywordtype}{int}\ origin);}
+\DoxyCodeLine{00434\ }
+\DoxyCodeLine{00436\ \ \ \ \ int64\_t\ tell();}
+\DoxyCodeLine{00437\ }
+\DoxyCodeLine{00439\ \ \ \ \ int64\_t\ size();}
+\DoxyCodeLine{00440\ }
+\DoxyCodeLine{00442\ \ \ \ \ \textcolor{keywordtype}{bool}\ Commit();}
+\DoxyCodeLine{00443\ }
+\DoxyCodeLine{00445\ \ \ \ \ \textcolor{keywordtype}{bool}\ Truncate(\textcolor{keywordtype}{unsigned}\ size);}
+\DoxyCodeLine{00446\ }
+\DoxyCodeLine{00448\ \ \ \ \ \textcolor{keywordtype}{void}\ write\_buffer(std::span<std::byte>\ src);}
+\DoxyCodeLine{00449\ }
+\DoxyCodeLine{00450\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00451\ \ \ \ \ \textcolor{comment}{//\ Stream\ subset}}
+\DoxyCodeLine{00452\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00453\ \ \ \ \ \textcolor{keywordtype}{void}\ read(std::span<std::byte>\ dst);}
+\DoxyCodeLine{00454\ \ \ \ \ \textcolor{keywordtype}{void}\ ignore(\textcolor{keywordtype}{size\_t}\ nSize);}
+\DoxyCodeLine{00455\ \ \ \ \ \textcolor{keywordtype}{void}\ write(std::span<const\ std::byte>\ src);}
+\DoxyCodeLine{00456\ }
+\DoxyCodeLine{00457\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00458\ \ \ \ \ AutoFile\&\ operator<<(\textcolor{keyword}{const}\ T\&\ obj)}
+\DoxyCodeLine{00459\ \ \ \ \ \{}
+\DoxyCodeLine{00460\ \ \ \ \ \ \ \ \ ::Serialize(*\textcolor{keyword}{this},\ obj);}
+\DoxyCodeLine{00461\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00462\ \ \ \ \ \}}
+\DoxyCodeLine{00463\ }
+\DoxyCodeLine{00464\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00465\ \ \ \ \ AutoFile\&\ operator>>(T\&\&\ obj)}
+\DoxyCodeLine{00466\ \ \ \ \ \{}
+\DoxyCodeLine{00467\ \ \ \ \ \ \ \ \ ::Unserialize(*\textcolor{keyword}{this},\ obj);}
+\DoxyCodeLine{00468\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00469\ \ \ \ \ \}}
+\DoxyCodeLine{00470\ \};}
+\DoxyCodeLine{00471\ }
+\DoxyCodeLine{00472\ \textcolor{keyword}{using\ }DataBuffer\ =\ std::vector<std::byte>;}
+\DoxyCodeLine{00473\ }
+\DoxyCodeLine{00480\ \textcolor{keyword}{class\ }BufferedFile}
+\DoxyCodeLine{00481\ \{}
+\DoxyCodeLine{00482\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00483\ \ \ \ \ AutoFile\&\ m\_src;}
+\DoxyCodeLine{00484\ \ \ \ \ uint64\_t\ nSrcPos\{0\};\ \ }
+\DoxyCodeLine{00485\ \ \ \ \ uint64\_t\ m\_read\_pos\{0\};\ }
+\DoxyCodeLine{00486\ \ \ \ \ uint64\_t\ nReadLimit;\ \ }
+\DoxyCodeLine{00487\ \ \ \ \ uint64\_t\ nRewind;\ \ \ \ \ }
+\DoxyCodeLine{00488\ \ \ \ \ DataBuffer\ vchBuf;}
+\DoxyCodeLine{00489\ }
+\DoxyCodeLine{00491\ \ \ \ \ \textcolor{keywordtype}{bool}\ Fill()\ \{}
+\DoxyCodeLine{00492\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ pos\ =\ nSrcPos\ \%\ vchBuf.size();}
+\DoxyCodeLine{00493\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ readNow\ =\ vchBuf.size()\ -\/\ pos;}
+\DoxyCodeLine{00494\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nAvail\ =\ vchBuf.size()\ -\/\ (nSrcPos\ -\/\ m\_read\_pos)\ -\/\ nRewind;}
+\DoxyCodeLine{00495\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nAvail\ <\ readNow)}
+\DoxyCodeLine{00496\ \ \ \ \ \ \ \ \ \ \ \ \ readNow\ =\ nAvail;}
+\DoxyCodeLine{00497\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (readNow\ ==\ 0)}
+\DoxyCodeLine{00498\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00499\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ nBytes\{m\_src.detail\_fread(std::span\{vchBuf\}.subspan(pos,\ readNow))\};}
+\DoxyCodeLine{00500\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nBytes\ ==\ 0)\ \{}
+\DoxyCodeLine{00501\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure\{m\_src.feof()\ ?\ \textcolor{stringliteral}{"{}BufferedFile::Fill:\ end\ of\ file"{}}\ :\ \textcolor{stringliteral}{"{}BufferedFile::Fill:\ fread\ failed"{}}\};}
+\DoxyCodeLine{00502\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00503\ \ \ \ \ \ \ \ \ nSrcPos\ +=\ nBytes;}
+\DoxyCodeLine{00504\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00505\ \ \ \ \ \}}
+\DoxyCodeLine{00506\ }
+\DoxyCodeLine{00512\ \ \ \ \ std::pair<std::byte*,\ size\_t>\ AdvanceStream(\textcolor{keywordtype}{size\_t}\ length)}
+\DoxyCodeLine{00513\ \ \ \ \ \{}
+\DoxyCodeLine{00514\ \ \ \ \ \ \ \ \ assert(m\_read\_pos\ <=\ nSrcPos);}
+\DoxyCodeLine{00515\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_read\_pos\ +\ length\ >\ nReadLimit)\ \{}
+\DoxyCodeLine{00516\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Attempt\ to\ position\ past\ buffer\ limit"{}});}
+\DoxyCodeLine{00517\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00518\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ there\ are\ no\ bytes\ available,\ read\ from\ the\ file.}}
+\DoxyCodeLine{00519\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_read\_pos\ ==\ nSrcPos\ \&\&\ length\ >\ 0)\ Fill();}
+\DoxyCodeLine{00520\ }
+\DoxyCodeLine{00521\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ buffer\_offset\{\textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{size\_t}\textcolor{keyword}{>}(m\_read\_pos\ \%\ vchBuf.size())\};}
+\DoxyCodeLine{00522\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ buffer\_available\{\textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{size\_t}\textcolor{keyword}{>}(vchBuf.size()\ -\/\ buffer\_offset)\};}
+\DoxyCodeLine{00523\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ bytes\_until\_source\_pos\{\textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{size\_t}\textcolor{keyword}{>}(nSrcPos\ -\/\ m\_read\_pos)\};}
+\DoxyCodeLine{00524\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ advance\{std::min(\{length,\ buffer\_available,\ bytes\_until\_source\_pos\})\};}
+\DoxyCodeLine{00525\ \ \ \ \ \ \ \ \ m\_read\_pos\ +=\ advance;}
+\DoxyCodeLine{00526\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::make\_pair(\&vchBuf[buffer\_offset],\ advance);}
+\DoxyCodeLine{00527\ \ \ \ \ \}}
+\DoxyCodeLine{00528\ }
+\DoxyCodeLine{00529\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00530\ \ \ \ \ BufferedFile(AutoFile\&\ file\ LIFETIMEBOUND,\ uint64\_t\ nBufSize,\ uint64\_t\ nRewindIn)}
+\DoxyCodeLine{00531\ \ \ \ \ \ \ \ \ :\ m\_src\{file\},\ nReadLimit\{std::numeric\_limits<uint64\_t>::max()\},\ nRewind\{nRewindIn\},\ vchBuf(nBufSize,\ std::byte\{0\})}
+\DoxyCodeLine{00532\ \ \ \ \ \{}
+\DoxyCodeLine{00533\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nRewindIn\ >=\ nBufSize)}
+\DoxyCodeLine{00534\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Rewind\ limit\ must\ be\ less\ than\ buffer\ size"{}});}
+\DoxyCodeLine{00535\ \ \ \ \ \}}
+\DoxyCodeLine{00536\ }
+\DoxyCodeLine{00538\ \ \ \ \ \textcolor{keywordtype}{bool}\ eof()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00539\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_read\_pos\ ==\ nSrcPos\ \&\&\ m\_src.feof();}
+\DoxyCodeLine{00540\ \ \ \ \ \}}
+\DoxyCodeLine{00541\ }
+\DoxyCodeLine{00543\ \ \ \ \ \textcolor{keywordtype}{void}\ read(std::span<std::byte>\ dst)}
+\DoxyCodeLine{00544\ \ \ \ \ \{}
+\DoxyCodeLine{00545\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (dst.size()\ >\ 0)\ \{}
+\DoxyCodeLine{00546\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ [buffer\_pointer,\ length]\{AdvanceStream(dst.size())\};}
+\DoxyCodeLine{00547\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(dst.data(),\ buffer\_pointer,\ length);}
+\DoxyCodeLine{00548\ \ \ \ \ \ \ \ \ \ \ \ \ dst\ =\ dst.subspan(length);}
+\DoxyCodeLine{00549\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00550\ \ \ \ \ \}}
+\DoxyCodeLine{00551\ }
+\DoxyCodeLine{00554\ \ \ \ \ \textcolor{keywordtype}{void}\ SkipTo(\textcolor{keyword}{const}\ uint64\_t\ file\_pos)}
+\DoxyCodeLine{00555\ \ \ \ \ \{}
+\DoxyCodeLine{00556\ \ \ \ \ \ \ \ \ assert(file\_pos\ >=\ m\_read\_pos);}
+\DoxyCodeLine{00557\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (m\_read\_pos\ <\ file\_pos)\ AdvanceStream(file\_pos\ -\/\ m\_read\_pos);}
+\DoxyCodeLine{00558\ \ \ \ \ \}}
+\DoxyCodeLine{00559\ }
+\DoxyCodeLine{00561\ \ \ \ \ uint64\_t\ GetPos()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00562\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_read\_pos;}
+\DoxyCodeLine{00563\ \ \ \ \ \}}
+\DoxyCodeLine{00564\ }
+\DoxyCodeLine{00566\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetPos(uint64\_t\ nPos)\ \{}
+\DoxyCodeLine{00567\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ bufsize\ =\ vchBuf.size();}
+\DoxyCodeLine{00568\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nPos\ +\ bufsize\ <\ nSrcPos)\ \{}
+\DoxyCodeLine{00569\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ rewinding\ too\ far,\ rewind\ as\ far\ as\ possible}}
+\DoxyCodeLine{00570\ \ \ \ \ \ \ \ \ \ \ \ \ m\_read\_pos\ =\ nSrcPos\ -\/\ bufsize;}
+\DoxyCodeLine{00571\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00572\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00573\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nPos\ >\ nSrcPos)\ \{}
+\DoxyCodeLine{00574\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ can't\ go\ this\ far\ forward,\ go\ as\ far\ as\ possible}}
+\DoxyCodeLine{00575\ \ \ \ \ \ \ \ \ \ \ \ \ m\_read\_pos\ =\ nSrcPos;}
+\DoxyCodeLine{00576\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00577\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00578\ \ \ \ \ \ \ \ \ m\_read\_pos\ =\ nPos;}
+\DoxyCodeLine{00579\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00580\ \ \ \ \ \}}
+\DoxyCodeLine{00581\ }
+\DoxyCodeLine{00584\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetLimit(uint64\_t\ nPos\ =\ std::numeric\_limits<uint64\_t>::max())\ \{}
+\DoxyCodeLine{00585\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nPos\ <\ m\_read\_pos)}
+\DoxyCodeLine{00586\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00587\ \ \ \ \ \ \ \ \ nReadLimit\ =\ nPos;}
+\DoxyCodeLine{00588\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00589\ \ \ \ \ \}}
+\DoxyCodeLine{00590\ }
+\DoxyCodeLine{00591\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00592\ \ \ \ \ BufferedFile\&\ operator>>(T\&\&\ obj)\ \{}
+\DoxyCodeLine{00593\ \ \ \ \ \ \ \ \ ::Unserialize(*\textcolor{keyword}{this},\ obj);}
+\DoxyCodeLine{00594\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (*\textcolor{keyword}{this});}
+\DoxyCodeLine{00595\ \ \ \ \ \}}
+\DoxyCodeLine{00596\ }
+\DoxyCodeLine{00598\ \ \ \ \ \textcolor{keywordtype}{void}\ FindByte(std::byte\ \textcolor{keywordtype}{byte})}
+\DoxyCodeLine{00599\ \ \ \ \ \{}
+\DoxyCodeLine{00600\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ For\ best\ performance,\ avoid\ mod\ operation\ within\ the\ loop.}}
+\DoxyCodeLine{00601\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ buf\_offset\{size\_t(m\_read\_pos\ \%\ uint64\_t(vchBuf.size()))\};}
+\DoxyCodeLine{00602\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00603\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_read\_pos\ ==\ nSrcPos)\ \{}
+\DoxyCodeLine{00604\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ No\ more\ bytes\ available;\ read\ from\ the\ file\ into\ the\ buffer,}}
+\DoxyCodeLine{00605\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ setting\ nSrcPos\ to\ one\ beyond\ the\ end\ of\ the\ new\ data.}}
+\DoxyCodeLine{00606\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Throws\ exception\ if\ end-\/of-\/file\ reached.}}
+\DoxyCodeLine{00607\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Fill();}
+\DoxyCodeLine{00608\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00609\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ len\{std::min<size\_t>(vchBuf.size()\ -\/\ buf\_offset,\ nSrcPos\ -\/\ m\_read\_pos)\};}
+\DoxyCodeLine{00610\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ it\_start\{vchBuf.begin()\ +\ buf\_offset\};}
+\DoxyCodeLine{00611\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ it\_find\{std::find(it\_start,\ it\_start\ +\ len,\ \textcolor{keywordtype}{byte})\};}
+\DoxyCodeLine{00612\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ inc\{size\_t(std::distance(it\_start,\ it\_find))\};}
+\DoxyCodeLine{00613\ \ \ \ \ \ \ \ \ \ \ \ \ m\_read\_pos\ +=\ inc;}
+\DoxyCodeLine{00614\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (inc\ <\ len)\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00615\ \ \ \ \ \ \ \ \ \ \ \ \ buf\_offset\ +=\ inc;}
+\DoxyCodeLine{00616\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (buf\_offset\ >=\ vchBuf.size())\ buf\_offset\ =\ 0;}
+\DoxyCodeLine{00617\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00618\ \ \ \ \ \}}
+\DoxyCodeLine{00619\ \};}
+\DoxyCodeLine{00620\ }
+\DoxyCodeLine{00626\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ S>}
+\DoxyCodeLine{00627\ \textcolor{keyword}{class\ }BufferedReader}
+\DoxyCodeLine{00628\ \{}
+\DoxyCodeLine{00629\ \ \ \ \ S\&\ m\_src;}
+\DoxyCodeLine{00630\ \ \ \ \ DataBuffer\ m\_buf;}
+\DoxyCodeLine{00631\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_buf\_pos;}
+\DoxyCodeLine{00632\ }
+\DoxyCodeLine{00633\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00635\ \ \ \ \ \textcolor{keyword}{explicit}\ BufferedReader(S\&\&\ stream\ LIFETIMEBOUND,\ \textcolor{keywordtype}{size\_t}\ size\ =\ 1\ <<\ 16)}
+\DoxyCodeLine{00636\ \ \ \ \ \ \ \ \ \textcolor{keyword}{requires}\ std::is\_rvalue\_reference\_v<S\&\&>}
+\DoxyCodeLine{00637\ \ \ \ \ \ \ \ \ :\ m\_src\{stream\},\ m\_buf(size),\ m\_buf\_pos\{size\}\ \{\}}
+\DoxyCodeLine{00638\ }
+\DoxyCodeLine{00639\ \ \ \ \ \textcolor{keywordtype}{void}\ read(std::span<std::byte>\ dst)}
+\DoxyCodeLine{00640\ \ \ \ \ \{}
+\DoxyCodeLine{00641\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ available\{std::min(dst.size(),\ m\_buf.size()\ -\/\ m\_buf\_pos)\})\ \{}
+\DoxyCodeLine{00642\ \ \ \ \ \ \ \ \ \ \ \ \ std::copy\_n(m\_buf.begin()\ +\ m\_buf\_pos,\ available,\ dst.begin());}
+\DoxyCodeLine{00643\ \ \ \ \ \ \ \ \ \ \ \ \ m\_buf\_pos\ +=\ available;}
+\DoxyCodeLine{00644\ \ \ \ \ \ \ \ \ \ \ \ \ dst\ =\ dst.subspan(available);}
+\DoxyCodeLine{00645\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00646\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dst.size())\ \{}
+\DoxyCodeLine{00647\ \ \ \ \ \ \ \ \ \ \ \ \ assert(m\_buf\_pos\ ==\ m\_buf.size());}
+\DoxyCodeLine{00648\ \ \ \ \ \ \ \ \ \ \ \ \ m\_src.read(dst);}
+\DoxyCodeLine{00649\ }
+\DoxyCodeLine{00650\ \ \ \ \ \ \ \ \ \ \ \ \ m\_buf\_pos\ =\ 0;}
+\DoxyCodeLine{00651\ \ \ \ \ \ \ \ \ \ \ \ \ m\_buf.resize(m\_src.detail\_fread(m\_buf));}
+\DoxyCodeLine{00652\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00653\ \ \ \ \ \}}
+\DoxyCodeLine{00654\ }
+\DoxyCodeLine{00655\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00656\ \ \ \ \ BufferedReader\&\ operator>>(T\&\&\ obj)}
+\DoxyCodeLine{00657\ \ \ \ \ \{}
+\DoxyCodeLine{00658\ \ \ \ \ \ \ \ \ Unserialize(*\textcolor{keyword}{this},\ obj);}
+\DoxyCodeLine{00659\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00660\ \ \ \ \ \}}
+\DoxyCodeLine{00661\ \};}
+\DoxyCodeLine{00662\ }
+\DoxyCodeLine{00668\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ S>}
+\DoxyCodeLine{00669\ \textcolor{keyword}{class\ }BufferedWriter}
+\DoxyCodeLine{00670\ \{}
+\DoxyCodeLine{00671\ \ \ \ \ S\&\ m\_dst;}
+\DoxyCodeLine{00672\ \ \ \ \ DataBuffer\ m\_buf;}
+\DoxyCodeLine{00673\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_buf\_pos\{0\};}
+\DoxyCodeLine{00674\ }
+\DoxyCodeLine{00675\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00676\ \ \ \ \ \textcolor{keyword}{explicit}\ BufferedWriter(S\&\ stream\ LIFETIMEBOUND,\ \textcolor{keywordtype}{size\_t}\ size\ =\ 1\ <<\ 16)\ :\ m\_dst\{stream\},\ m\_buf(size)\ \{\}}
+\DoxyCodeLine{00677\ }
+\DoxyCodeLine{00678\ \ \ \ \ \string~BufferedWriter()\ \{\ flush();\ \}}
+\DoxyCodeLine{00679\ }
+\DoxyCodeLine{00680\ \ \ \ \ \textcolor{keywordtype}{void}\ flush()}
+\DoxyCodeLine{00681\ \ \ \ \ \{}
+\DoxyCodeLine{00682\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_buf\_pos)\ m\_dst.write\_buffer(std::span\{m\_buf\}.first(m\_buf\_pos));}
+\DoxyCodeLine{00683\ \ \ \ \ \ \ \ \ m\_buf\_pos\ =\ 0;}
+\DoxyCodeLine{00684\ \ \ \ \ \}}
+\DoxyCodeLine{00685\ }
+\DoxyCodeLine{00686\ \ \ \ \ \textcolor{keywordtype}{void}\ write(std::span<const\ std::byte>\ src)}
+\DoxyCodeLine{00687\ \ \ \ \ \{}
+\DoxyCodeLine{00688\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ available\{std::min(src.size(),\ m\_buf.size()\ -\/\ m\_buf\_pos)\})\ \{}
+\DoxyCodeLine{00689\ \ \ \ \ \ \ \ \ \ \ \ \ std::copy\_n(src.begin(),\ available,\ m\_buf.begin()\ +\ m\_buf\_pos);}
+\DoxyCodeLine{00690\ \ \ \ \ \ \ \ \ \ \ \ \ m\_buf\_pos\ +=\ available;}
+\DoxyCodeLine{00691\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_buf\_pos\ ==\ m\_buf.size())\ flush();}
+\DoxyCodeLine{00692\ \ \ \ \ \ \ \ \ \ \ \ \ src\ =\ src.subspan(available);}
+\DoxyCodeLine{00693\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00694\ \ \ \ \ \}}
+\DoxyCodeLine{00695\ }
+\DoxyCodeLine{00696\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00697\ \ \ \ \ BufferedWriter\&\ operator<<(\textcolor{keyword}{const}\ T\&\ obj)}
+\DoxyCodeLine{00698\ \ \ \ \ \{}
+\DoxyCodeLine{00699\ \ \ \ \ \ \ \ \ Serialize(*\textcolor{keyword}{this},\ obj);}
+\DoxyCodeLine{00700\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00701\ \ \ \ \ \}}
+\DoxyCodeLine{00702\ \};}
+\DoxyCodeLine{00703\ }
+\DoxyCodeLine{00704\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_STREAMS\_H}}
+
+\end{DoxyCode}

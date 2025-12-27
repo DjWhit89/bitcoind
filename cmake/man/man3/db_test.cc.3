@@ -1,0 +1,259 @@
+.TH "src/leveldb/db/db_test.cc" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/leveldb/db/db_test.cc
+.SH SYNOPSIS
+.br
+.PP
+\fR#include 'leveldb/db\&.h'\fP
+.br
+\fR#include <atomic>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include 'db/db_impl\&.h'\fP
+.br
+\fR#include 'db/filename\&.h'\fP
+.br
+\fR#include 'db/version_set\&.h'\fP
+.br
+\fR#include 'db/write_batch_internal\&.h'\fP
+.br
+\fR#include 'leveldb/cache\&.h'\fP
+.br
+\fR#include 'leveldb/env\&.h'\fP
+.br
+\fR#include 'leveldb/filter_policy\&.h'\fP
+.br
+\fR#include 'leveldb/table\&.h'\fP
+.br
+\fR#include 'port/port\&.h'\fP
+.br
+\fR#include 'port/thread_annotations\&.h'\fP
+.br
+\fR#include 'util/hash\&.h'\fP
+.br
+\fR#include 'util/logging\&.h'\fP
+.br
+\fR#include 'util/mutexlock\&.h'\fP
+.br
+\fR#include 'util/testharness\&.h'\fP
+.br
+\fR#include 'util/testutil\&.h'\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBTestEnv\fP"
+.br
+.ti -1c
+.RI "class \fBSpecialEnv\fP"
+.br
+.ti -1c
+.RI "class \fBDBTest\fP"
+.br
+.ti -1c
+.RI "class \fBModelDB\fP"
+.br
+.ti -1c
+.RI "class \fBModelDB::ModelSnapshot\fP"
+.br
+.in -1c
+.SS "Namespaces"
+
+.in +1c
+.ti -1c
+.RI "namespace \fBleveldb\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, Empty)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, EmptyKey)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, EmptyValue)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, ReadWrite)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, PutDeleteGet)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, GetFromImmutableLayer)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, GetFromVersions)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, GetMemUsage)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, GetSnapshot)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, GetIdenticalSnapshots)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, IterateOverEmptySnapshot)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, GetLevel0Ordering)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, GetOrderedByLevels)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, GetPicksCorrectFile)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, GetEncountersEmptyLevel)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, IterEmpty)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, IterSingle)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, IterMulti)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, IterSmallAndLargeMix)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, IterMultiWithDelete)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, Recover)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, RecoveryWithEmptyLog)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, RecoverDuringMemtableCompaction)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, MinorCompactionsHappen)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, RecoverWithLargeLog)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, CompactionsGenerateMultipleFiles)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, RepeatedWritesToSameKey)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, SparseMerge)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, ApproximateSizes)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, ApproximateSizes_MixOfSmallAndLarge)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, IteratorPinsRef)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, \fBSnapshot\fP)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, HiddenValuesAreRemoved)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, DeletionMarkers1)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, DeletionMarkers2)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, OverlapInLevel0)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, L0_CompactionBug_Issue44_a)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, L0_CompactionBug_Issue44_b)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, Fflush_Issue474)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, ComparatorCheck)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, CustomComparator)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, ManualCompaction)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, DBOpen_Options)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, DestroyEmptyDir)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, DestroyOpenDB)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, Locking)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, NoSpace)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, NonWritableFileSystem)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, WriteSyncError)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, ManifestWriteError)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, MissingSSTFile)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, StillReadSST)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, FilesDeletedAfterCompaction)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, BloomFilter)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, MultiThreaded)"
+.br
+.ti -1c
+.RI "\fBTEST\fP (\fBDBTest\fP, Randomized)"
+.br
+.ti -1c
+.RI "std::string \fBMakeKey\fP (unsigned int num)"
+.br
+.ti -1c
+.RI "void \fBBM_LogAndApply\fP (int iters, int num_base_files)"
+.br
+.ti -1c
+.RI "int \fBmain\fP (int argc, char **argv)"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "int main (int argc, char ** argv)"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

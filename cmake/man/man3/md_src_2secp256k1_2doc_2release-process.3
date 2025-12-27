@@ -1,0 +1,173 @@
+.TH "md_src_2secp256k1_2doc_2release-process" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+md_src_2secp256k1_2doc_2release-process \- Release process 
+.PP
+
+
+.PP
+This document outlines the process for releasing versions of the form \fR$MAJOR\&.$MINOR\&.$PATCH\fP\&.
+
+.PP
+We distinguish between two types of releases: \fIregular\fP and \fImaintenance\fP releases\&. Regular releases are releases of a new major or minor version as well as patches of the most recent release\&. Maintenance releases, on the other hand, are required for patches of older releases\&.
+
+.PP
+You should coordinate with the other maintainers on the release date, if possible\&. This date will be part of the release entry in \fBCHANGELOG\&.md\fP and it should match the dates of the remaining steps in the release process (including the date of the tag and the GitHub release)\&. It is best if the maintainers are present during the release, so they can help ensure that the process is followed correctly and, in the case of a regular release, they are aware that they should not modify the master branch between merging the PR in step 1 and the PR in step 3\&.
+
+.PP
+This process also assumes that there will be no minor releases for old major releases\&.
+
+.PP
+We aim to cut a regular release every 3-4 months, approximately twice as frequent as major Bitcoin Core releases\&. Every second release should be published one month before the feature freeze of the next major Bitcoin Core release, allowing sufficient time to update the library in Core\&.
+.SH "Sanity checks"
+.PP
+Perform these checks when reviewing the release PR (see below):
+
+.PP
+.IP "1." 4
+Ensure \fRmake distcheck\fP doesn't fail\&. 
+.PP
+.nf
+\&./autogen\&.sh && \&./configure \-\-enable\-dev\-mode && make distcheck
+
+.fi
+.PP
+
+.IP "2." 4
+Check installation with autotools: 
+.PP
+.nf
+dir=$(mktemp \-d)
+\&./autogen\&.sh && \&./configure \-\-prefix=$dir && make clean && make install && ls \-RlAh $dir
+gcc \-o ecdsa examples/ecdsa\&.c $(PKG_CONFIG_PATH=$dir/lib/pkgconfig pkg\-config \-\-cflags \-\-libs libsecp256k1) \-Wl,\-rpath,"$dir/lib" && \&./ecdsa
+
+.fi
+.PP
+
+.IP "3." 4
+Check installation with CMake: 
+.PP
+.nf
+dir=$(mktemp \-d)
+build=$(mktemp \-d)
+cmake \-B $build \-DCMAKE_INSTALL_PREFIX=$dir && cmake \-\-build $build && cmake \-\-install $build && ls \-RlAh $dir
+gcc \-o ecdsa examples/ecdsa\&.c \-I $dir/include \-L $dir/lib*/ \-l secp256k1 \-Wl,\-rpath,"$dir/lib",\-rpath,"$dir/lib64" && \&./ecdsa
+
+.fi
+.PP
+
+.IP "4." 4
+Use the \fR\fRcheck-abi\&.sh\fP\fP tool to verify that there are no unexpected ABI incompatibilities and that the version number and the release notes accurately reflect all potential ABI changes\&. To run this tool, the \fRabi-dumper\fP and \fRabi-compliance-checker\fP packages are required\&. 
+.PP
+.nf
+tools/check\-abi\&.sh
+
+.fi
+.PP
+
+.PP
+.SH "Regular release"
+.PP
+.IP "1." 4
+Open a PR to the master branch with a commit (using message \fR"release: prepare \fBfor\fP $MAJOR\&.$MINOR\&.$PATCH"\fP, for example) that
+.IP "  \(bu" 4
+finalizes the release notes in \fBCHANGELOG\&.md\fP by
+.IP "    \(bu" 6
+adding a section for the release (make sure that the version number is a link to a diff between the previous and new version),
+.IP "    \(bu" 6
+removing the \fR[Unreleased]\fP section header,
+.IP "    \(bu" 6
+ensuring that the release notes are not missing entries (check the \fRneeds-changelog\fP label on github), and
+.IP "    \(bu" 6
+including an entry for \fR### ABI Compatibility\fP if it doesn't exist,
+.PP
+
+.IP "  \(bu" 4
+sets \fR_PKG_VERSION_IS_RELEASE\fP to \fRtrue\fP in \fRconfigure\&.ac\fP, and,
+.IP "  \(bu" 4
+if this is not a patch release,
+.IP "    \(bu" 6
+updates \fR_PKG_VERSION_*\fP and \fR_LIB_VERSION_*\fP in \fRconfigure\&.ac\fP, and
+.IP "    \(bu" 6
+updates \fRproject(libsecp256k1 VERSION \&.\&.\&.)\fP and \fR${PROJECT_NAME}_LIB_VERSION_*\fP in \fRCMakeLists\&.txt\fP\&.
+.PP
+
+.PP
+
+.IP "2." 4
+Perform the \fBsanity checks\fP on the PR branch\&.
+.IP "3." 4
+After the PR is merged, tag the commit, and push the tag: 
+.PP
+.nf
+RELEASE_COMMIT=<merge commit of step 1>
+git tag \-s v$MAJOR\&.$MINOR\&.$PATCH \-m "libsecp256k1 $MAJOR\&.$MINOR\&.$PATCH" $RELEASE_COMMIT
+git push git@github\&.com:bitcoin\-core/secp256k1\&.git v$MAJOR\&.$MINOR\&.$PATCH
+
+.fi
+.PP
+
+.IP "4." 4
+Open a PR to the master branch with a commit (using message \fR"release cleanup: bump version after $MAJOR\&.$MINOR\&.$PATCH"\fP, for example) that
+.IP "  \(bu" 4
+sets \fR_PKG_VERSION_IS_RELEASE\fP to \fRfalse\fP and increments \fR_PKG_VERSION_PATCH\fP and \fR_LIB_VERSION_REVISION\fP in \fRconfigure\&.ac\fP,
+.IP "  \(bu" 4
+increments the \fR$PATCH\fP component of \fRproject(libsecp256k1 VERSION \&.\&.\&.)\fP and \fR${PROJECT_NAME}_LIB_VERSION_REVISION\fP in \fRCMakeLists\&.txt\fP, and
+.IP "  \(bu" 4
+adds an \fR[Unreleased]\fP section header to the \fBCHANGELOG\&.md\fP\&.
+.PP
+
+.PP
+If other maintainers are not present to approve the PR, it can be merged without ACKs\&.
+.IP "5." 4
+Create a new GitHub release with a link to the corresponding entry in \fBCHANGELOG\&.md\fP\&.
+.IP "6." 4
+Send an announcement email to the bitcoin-dev mailing list\&.
+.PP
+.SH "Maintenance release"
+.PP
+Note that bug fixes need to be backported only to releases for which no compatible release without the bug exists\&.
+
+.PP
+.IP "1." 4
+If there's no maintenance branch \fR$MAJOR\&.$MINOR\fP, create one: 
+.PP
+.nf
+git checkout \-b $MAJOR\&.$MINOR v$MAJOR\&.$MINOR\&.$((PATCH \- 1))
+git push git@github\&.com:bitcoin\-core/secp256k1\&.git $MAJOR\&.$MINOR
+
+.fi
+.PP
+
+.IP "2." 4
+Open a pull request to the \fR$MAJOR\&.$MINOR\fP branch that
+.IP "  \(bu" 4
+includes the bug fixes,
+.IP "  \(bu" 4
+finalizes the release notes similar to a regular release,
+.IP "  \(bu" 4
+increments \fR_PKG_VERSION_PATCH\fP and \fR_LIB_VERSION_REVISION\fP in \fRconfigure\&.ac\fP and the \fR$PATCH\fP component of \fRproject(libsecp256k1 VERSION \&.\&.\&.)\fP and \fR${PROJECT_NAME}_LIB_VERSION_REVISION\fP in \fRCMakeLists\&.txt\fP (with commit message \fR"release: bump versions \fBfor\fP $MAJOR\&.$MINOR\&.$PATCH"\fP, for example)\&.
+.PP
+
+.IP "3." 4
+Perform the \fBsanity checks\fP on the PR branch\&.
+.IP "4." 4
+After the PRs are merged, update the release branch, tag the commit, and push the tag: 
+.PP
+.nf
+git checkout $MAJOR\&.$MINOR && git pull
+git tag \-s v$MAJOR\&.$MINOR\&.$PATCH \-m "libsecp256k1 $MAJOR\&.$MINOR\&.$PATCH"
+git push git@github\&.com:bitcoin\-core/secp256k1\&.git v$MAJOR\&.$MINOR\&.$PATCH
+
+.fi
+.PP
+
+.IP "6." 4
+Create a new GitHub release with a link to the corresponding entry in \fBCHANGELOG\&.md\fP\&.
+.IP "7." 4
+Send an announcement email to the bitcoin-dev mailing list\&.
+.IP "8." 4
+Open PR to the master branch that includes a commit (with commit message \fR"release notes: add $MAJOR\&.$MINOR\&.$PATCH"\fP, for example) that adds release notes to \fBCHANGELOG\&.md\fP\&. 
+.PP
+

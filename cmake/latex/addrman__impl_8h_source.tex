@@ -1,0 +1,232 @@
+\doxysection{addrman\+\_\+impl.\+h}
+\label{addrman__impl_8h_source}\index{src/addrman\_impl.h@{src/addrman\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2021-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_ADDRMAN\_IMPL\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_ADDRMAN\_IMPL\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <logging.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <logging/timer.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <netaddress.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <protocol.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <util/time.h>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <unordered\_set>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00026\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int32\_t\ ADDRMAN\_TRIED\_BUCKET\_COUNT\_LOG2\{8\};}
+\DoxyCodeLine{00027\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ ADDRMAN\_TRIED\_BUCKET\_COUNT\{1\ <<\ ADDRMAN\_TRIED\_BUCKET\_COUNT\_LOG2\};}
+\DoxyCodeLine{00029\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int32\_t\ ADDRMAN\_NEW\_BUCKET\_COUNT\_LOG2\{10\};}
+\DoxyCodeLine{00030\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ ADDRMAN\_NEW\_BUCKET\_COUNT\{1\ <<\ ADDRMAN\_NEW\_BUCKET\_COUNT\_LOG2\};}
+\DoxyCodeLine{00032\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int32\_t\ ADDRMAN\_BUCKET\_SIZE\_LOG2\{6\};}
+\DoxyCodeLine{00033\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ ADDRMAN\_BUCKET\_SIZE\{1\ <<\ ADDRMAN\_BUCKET\_SIZE\_LOG2\};}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00040\ \textcolor{keyword}{using\ }nid\_type\ =\ int64\_t;}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00045\ \textcolor{keyword}{class\ }AddrInfo\ :\ \textcolor{keyword}{public}\ CAddress}
+\DoxyCodeLine{00046\ \{}
+\DoxyCodeLine{00047\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00049\ \ \ \ \ NodeSeconds\ m\_last\_try\{0s\};}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00052\ \ \ \ \ NodeSeconds\ m\_last\_count\_attempt\{0s\};}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00055\ \ \ \ \ CNetAddr\ source;}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00058\ \ \ \ \ NodeSeconds\ m\_last\_success\{0s\};}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordtype}{int}\ nAttempts\{0\};}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordtype}{int}\ nRefCount\{0\};}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keywordtype}{bool}\ fInTried\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keyword}{mutable}\ \textcolor{keywordtype}{int}\ nRandomPos\{-\/1\};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ SERIALIZE\_METHODS(AddrInfo,\ obj)}
+\DoxyCodeLine{00073\ \ \ \ \ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ READWRITE(AsBase<CAddress>(obj),\ obj.source,\ Using<ChronoFormatter<int64\_t>>(obj.m\_last\_success),\ obj.nAttempts);}
+\DoxyCodeLine{00075\ \ \ \ \ \}}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ \ \ \ \ AddrInfo(\textcolor{keyword}{const}\ CAddress\ \&addrIn,\ \textcolor{keyword}{const}\ CNetAddr\ \&addrSource)\ :\ CAddress(addrIn),\ source(addrSource)}
+\DoxyCodeLine{00078\ \ \ \ \ \{}
+\DoxyCodeLine{00079\ \ \ \ \ \}}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ \ \ AddrInfo()\ :\ CAddress(),\ source()}
+\DoxyCodeLine{00082\ \ \ \ \ \{}
+\DoxyCodeLine{00083\ \ \ \ \ \}}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keywordtype}{int}\ GetTriedBucket(\textcolor{keyword}{const}\ uint256\&\ nKey,\ \textcolor{keyword}{const}\ NetGroupManager\&\ netgroupman)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordtype}{int}\ GetNewBucket(\textcolor{keyword}{const}\ uint256\&\ nKey,\ \textcolor{keyword}{const}\ CNetAddr\&\ src,\ \textcolor{keyword}{const}\ NetGroupManager\&\ netgroupman)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keywordtype}{int}\ GetNewBucket(\textcolor{keyword}{const}\ uint256\&\ nKey,\ \textcolor{keyword}{const}\ NetGroupManager\&\ netgroupman)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00093\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ GetNewBucket(nKey,\ source,\ netgroupman);}
+\DoxyCodeLine{00095\ \ \ \ \ \}}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keywordtype}{int}\ GetBucketPosition(\textcolor{keyword}{const}\ uint256\ \&nKey,\ \textcolor{keywordtype}{bool}\ fNew,\ \textcolor{keywordtype}{int}\ bucket)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsTerrible(NodeSeconds\ now\ =\ Now<NodeSeconds>())\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keywordtype}{double}\ GetChance(NodeSeconds\ now\ =\ Now<NodeSeconds>())\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00105\ \};}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \textcolor{keyword}{class\ }AddrManImpl}
+\DoxyCodeLine{00108\ \{}
+\DoxyCodeLine{00109\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00110\ \ \ \ \ AddrManImpl(\textcolor{keyword}{const}\ NetGroupManager\&\ netgroupman,\ \textcolor{keywordtype}{bool}\ deterministic,\ int32\_t\ consistency\_check\_ratio);}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \ \ \ \ \string~AddrManImpl();}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s\_)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s\_)\ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ Size(std::optional<Network>\ net,\ std::optional<bool>\ in\_new)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00121\ }
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{keywordtype}{bool}\ Add(\textcolor{keyword}{const}\ std::vector<CAddress>\&\ vAddr,\ \textcolor{keyword}{const}\ CNetAddr\&\ source,\ std::chrono::seconds\ time\_penalty)}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keywordtype}{bool}\ Good(\textcolor{keyword}{const}\ CService\&\ addr,\ NodeSeconds\ time)}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keywordtype}{void}\ Attempt(\textcolor{keyword}{const}\ CService\&\ addr,\ \textcolor{keywordtype}{bool}\ fCountFailure,\ NodeSeconds\ time)}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00131\ \ \ \ \ \textcolor{keywordtype}{void}\ ResolveCollisions()\ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00133\ \ \ \ \ std::pair<CAddress,\ NodeSeconds>\ SelectTriedCollision()\ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00134\ }
+\DoxyCodeLine{00135\ \ \ \ \ std::pair<CAddress,\ NodeSeconds>\ Select(\textcolor{keywordtype}{bool}\ new\_only,\ \textcolor{keyword}{const}\ std::unordered\_set<Network>\&\ networks)\ \textcolor{keyword}{const}}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \ \ \ \ std::vector<CAddress>\ GetAddr(\textcolor{keywordtype}{size\_t}\ max\_addresses,\ \textcolor{keywordtype}{size\_t}\ max\_pct,\ std::optional<Network>\ network,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ filtered\ =\ \textcolor{keyword}{true})\ \textcolor{keyword}{const}}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00141\ \ \ \ \ std::vector<std::pair<AddrInfo,\ AddressPosition>>\ GetEntries(\textcolor{keywordtype}{bool}\ from\_tried)\ \textcolor{keyword}{const}}
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keywordtype}{void}\ Connected(\textcolor{keyword}{const}\ CService\&\ addr,\ NodeSeconds\ time)}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordtype}{void}\ SetServices(\textcolor{keyword}{const}\ CService\&\ addr,\ ServiceFlags\ nServices)}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00150\ \ \ \ \ std::optional<AddressPosition>\ FindAddressEntry(\textcolor{keyword}{const}\ CAddress\&\ addr)}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!cs);}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }AddrManDeterministic;}
+\DoxyCodeLine{00154\ }
+\DoxyCodeLine{00155\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00157\ \ \ \ \ \textcolor{keyword}{mutable}\ Mutex\ cs;}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{keyword}{mutable}\ FastRandomContext\ insecure\_rand\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00161\ }
+\DoxyCodeLine{00163\ \ \ \ \ uint256\ nKey;}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{keyword}{enum}\ Format\ :\ uint8\_t\ \{}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ V0\_HISTORICAL\ =\ 0,\ \ \ \ }
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ V1\_DETERMINISTIC\ =\ 1,\ }
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ V2\_ASMAP\ =\ 2,\ \ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ V3\_BIP155\ =\ 3,\ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ V4\_MULTIPORT\ =\ 4,\ \ \ \ \ }
+\DoxyCodeLine{00172\ \ \ \ \ \};}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ Format\ FILE\_FORMAT\ =\ Format::V4\_MULTIPORT;}
+\DoxyCodeLine{00180\ }
+\DoxyCodeLine{00186\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ INCOMPATIBILITY\_BASE\ =\ 32;}
+\DoxyCodeLine{00187\ }
+\DoxyCodeLine{00189\ \ \ \ \ nid\_type\ nIdCount\ GUARDED\_BY(cs)\{0\};}
+\DoxyCodeLine{00190\ }
+\DoxyCodeLine{00192\ \ \ \ \ std::unordered\_map<nid\_type,\ AddrInfo>\ mapInfo\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00195\ \ \ \ \ std::unordered\_map<CService,\ nid\_type,\ CServiceHash>\ mapAddr\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00200\ \ \ \ \ \textcolor{keyword}{mutable}\ std::vector<nid\_type>\ vRandom\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00201\ }
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{comment}{//\ number\ of\ "{}tried"{}\ entries}}
+\DoxyCodeLine{00203\ \ \ \ \ \textcolor{keywordtype}{int}\ nTried\ GUARDED\_BY(cs)\{0\};}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00206\ \ \ \ \ nid\_type\ vvTried[ADDRMAN\_TRIED\_BUCKET\_COUNT][ADDRMAN\_BUCKET\_SIZE]\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00207\ }
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{keywordtype}{int}\ nNew\ GUARDED\_BY(cs)\{0\};}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00212\ \ \ \ \ nid\_type\ vvNew[ADDRMAN\_NEW\_BUCKET\_COUNT][ADDRMAN\_BUCKET\_SIZE]\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00213\ }
+\DoxyCodeLine{00215\ \ \ \ \ NodeSeconds\ m\_last\_good\ GUARDED\_BY(cs)\{1s\};}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00218\ \ \ \ \ std::set<nid\_type>\ m\_tried\_collisions;}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00221\ \ \ \ \ \textcolor{keyword}{const}\ int32\_t\ m\_consistency\_check\_ratio;}
+\DoxyCodeLine{00222\ }
+\DoxyCodeLine{00224\ \ \ \ \ \textcolor{keyword}{const}\ NetGroupManager\&\ m\_netgroupman;}
+\DoxyCodeLine{00225\ }
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{keyword}{struct\ }NewTriedCount\ \{}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\_new;}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\_tried;}
+\DoxyCodeLine{00229\ \ \ \ \ \};}
+\DoxyCodeLine{00230\ }
+\DoxyCodeLine{00232\ \ \ \ \ std::unordered\_map<Network,\ NewTriedCount>\ m\_network\_counts\ GUARDED\_BY(cs);}
+\DoxyCodeLine{00233\ }
+\DoxyCodeLine{00235\ \ \ \ \ AddrInfo*\ Find(\textcolor{keyword}{const}\ CService\&\ addr,\ nid\_type*\ pnId\ =\ \textcolor{keyword}{nullptr})\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00236\ }
+\DoxyCodeLine{00238\ \ \ \ \ AddrInfo*\ Create(const\ CAddress\&\ addr,\ const\ CNetAddr\&\ addrSource,\ nid\_type*\ pnId\ =\ \textcolor{keywordtype}{nullptr})\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00241\ \ \ \ \ \textcolor{keywordtype}{void}\ SwapRandom(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nRandomPos1,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nRandomPos2)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keywordtype}{void}\ Delete(nid\_type\ nId)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00245\ }
+\DoxyCodeLine{00247\ \ \ \ \ \textcolor{keywordtype}{void}\ ClearNew(\textcolor{keywordtype}{int}\ nUBucket,\ \textcolor{keywordtype}{int}\ nUBucketPos)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00248\ }
+\DoxyCodeLine{00250\ \ \ \ \ \textcolor{keywordtype}{void}\ MakeTried(AddrInfo\&\ info,\ nid\_type\ nId)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00254\ \ \ \ \ \textcolor{keywordtype}{bool}\ AddSingle(const\ CAddress\&\ addr,\ const\ CNetAddr\&\ source,\ std::chrono::seconds\ time\_penalty)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00255\ }
+\DoxyCodeLine{00256\ \ \ \ \ \textcolor{keywordtype}{bool}\ Good\_(const\ CService\&\ addr,\ \textcolor{keywordtype}{bool}\ test\_before\_evict,\ NodeSeconds\ time)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00257\ }
+\DoxyCodeLine{00258\ \ \ \ \ \textcolor{keywordtype}{bool}\ Add\_(const\ std::vector<CAddress>\&\ vAddr,\ const\ CNetAddr\&\ source,\ std::chrono::seconds\ time\_penalty)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00260\ \ \ \ \ \textcolor{keywordtype}{void}\ Attempt\_(const\ CService\&\ addr,\ \textcolor{keywordtype}{bool}\ fCountFailure,\ NodeSeconds\ time)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00261\ }
+\DoxyCodeLine{00262\ \ \ \ \ std::pair<CAddress,\ NodeSeconds>\ Select\_(\textcolor{keywordtype}{bool}\ new\_only,\ const\ std::unordered\_set<Network>\&\ networks)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00263\ }
+\DoxyCodeLine{00268\ \ \ \ \ nid\_type\ GetEntry(\textcolor{keywordtype}{bool}\ use\_tried,\ \textcolor{keywordtype}{size\_t}\ bucket,\ \textcolor{keywordtype}{size\_t}\ position)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00269\ }
+\DoxyCodeLine{00270\ \ \ \ \ std::vector<CAddress>\ GetAddr\_(\textcolor{keywordtype}{size\_t}\ max\_addresses,\ \textcolor{keywordtype}{size\_t}\ max\_pct,\ std::optional<Network>\ network,\ const\ \textcolor{keywordtype}{bool}\ filtered\ =\ true)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00271\ }
+\DoxyCodeLine{00272\ \ \ \ \ std::vector<std::pair<AddrInfo,\ AddressPosition>>\ GetEntries\_(\textcolor{keywordtype}{bool}\ from\_tried)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00273\ }
+\DoxyCodeLine{00274\ \ \ \ \ \textcolor{keywordtype}{void}\ Connected\_(const\ CService\&\ addr,\ NodeSeconds\ time)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00276\ \ \ \ \ \textcolor{keywordtype}{void}\ SetServices\_(const\ CService\&\ addr,\ ServiceFlags\ nServices)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00277\ }
+\DoxyCodeLine{00278\ \ \ \ \ \textcolor{keywordtype}{void}\ ResolveCollisions\_()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00280\ \ \ \ \ std::pair<CAddress,\ NodeSeconds>\ SelectTriedCollision\_()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00282\ \ \ \ \ std::optional<AddressPosition>\ FindAddressEntry\_(const\ CAddress\&\ addr)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00283\ }
+\DoxyCodeLine{00284\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ Size\_(std::optional<Network>\ net,\ std::optional<\textcolor{keywordtype}{bool}>\ in\_new)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00285\ }
+\DoxyCodeLine{00288\ \ \ \ \ \textcolor{keywordtype}{void}\ Check()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00289\ }
+\DoxyCodeLine{00292\ \ \ \ \ \textcolor{keywordtype}{int}\ CheckAddrman()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs);}
+\DoxyCodeLine{00293\ \};}
+\DoxyCodeLine{00294\ }
+\DoxyCodeLine{00295\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_ADDRMAN\_IMPL\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,86 @@
+.TH "ProxyServerBase< Interface_, Impl_ >" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+ProxyServerBase< Interface_, Impl_ >
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <proxy\&.h>\fP
+.PP
+Inherits Server\&.
+.SS "Public Types"
+
+.in +1c
+.ti -1c
+.RI "using \fBInterface\fP = Interface_"
+.br
+.ti -1c
+.RI "using \fBImpl\fP = Impl_"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBProxyServerBase\fP (std::shared_ptr< \fBImpl\fP > impl, \fBConnection\fP &connection)"
+.br
+.ti -1c
+.RI "virtual \fB~ProxyServerBase\fP ()"
+.br
+.ti -1c
+.RI "void \fBinvokeDestroy\fP ()"
+.br
+.in -1c
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "std::shared_ptr< \fBImpl\fP > \fBm_impl\fP"
+.br
+.ti -1c
+.RI "\fBProxyContext\fP \fBm_context\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+
+.SS "template<typename Interface_, typename Impl_>
+.br
+struct mp::ProxyServerBase< Interface_, Impl_ >"\fBBase\fP class for generated \fBProxyServer\fP classes that implement capnp server methods and forward calls to a wrapped c++ implementation class\&. 
+.SH "Member Typedef Documentation"
+.PP 
+.SS "template<typename Interface_, typename Impl_> using \fBImpl\fP = Impl_"
+
+.SS "template<typename Interface_, typename Impl_> using \fBInterface\fP = Interface_"
+
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "template<typename \fBInterface\fP, typename \fBImpl\fP> ProxyServerBase (std::shared_ptr< \fBImpl\fP > impl, \fBConnection\fP & connection)"
+
+.SS "template<typename \fBInterface\fP, typename \fBImpl\fP> ~\fBProxyServerBase\fP ()\fR [virtual]\fP"
+\fBProxyServer\fP destructor, called from the \fBEventLoop\fP thread by Cap'n Proto garbage collection code after there are no more references to this object\&. This will typically happen when the corresponding \fBProxyClient\fP object on the other side of the connection is destroyed\&. It can also happen earlier if the connection is broken or destroyed\&. In the latter case this destructor will typically be called inside m_rpc_system\&.reset() call in the ~Connection destructor while the \fBConnection\fP object still exists\&. However, because \fBProxyServer\fP objects are refcounted, and the \fBConnection\fP object could be destroyed while asynchronous IPC calls are still in-flight, it's possible for this destructor to be called after the \fBConnection\fP object no longer exists, so it is NOT valid to dereference the m_context\&.connection pointer from this function\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "template<typename \fBInterface\fP, typename \fBImpl\fP> void invokeDestroy ()"
+If the capnp interface defined a special "destroy" method, as described the \fBProxyClientBase\fP class, this method will be called and synchronously destroy m_impl before returning to the client\&.
+
+.PP
+If the capnp interface does not define a "destroy" method, this will never be called and the ~ProxyServerBase destructor will be responsible for deleting m_impl asynchronously, whenever the \fBProxyServer\fP object gets garbage collected by Cap'n Proto\&.
+
+.PP
+This method is called in the same way other proxy server methods are called, via the serverInvoke function\&. Basically serverInvoke just calls this as a substitute for a non-existent m_impl->destroy() method\&. If the destroy method has any parameters or return values they will be handled in the normal way by PassField/ReadField/BuildField functions\&. Particularly if a Context\&.thread parameter was passed, this method will run on the worker thread specified by the client\&. Otherwise it will run on the \fBEventLoop\fP thread, like other server methods without an assigned thread\&. 
+.SH "Field Documentation"
+.PP 
+.SS "template<typename Interface_, typename Impl_> \fBProxyContext\fP m_context"
+
+.SS "template<typename Interface_, typename Impl_> std::shared_ptr<\fBImpl\fP> m_impl"
+Implementation pointer that may or may not be owned and deleted when this capnp server goes out of scope\&. It is owned for servers created to wrap unique_ptr<Impl> method arguments, but unowned for servers created to wrap \fBImpl\fP& method arguments\&.
+
+.PP
+In the case of \fBImpl\fP& arguments, custom code is required on other side of the connection to delete the capnp client & server objects since native code on that side of the connection will just be taking a plain reference rather than a pointer, so won't be able to do its own cleanup\&. Right now this is implemented with addCloseHook callbacks to delete clients at appropriate times depending on semantics of the particular method being wrapped\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

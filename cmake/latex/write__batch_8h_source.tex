@@ -1,0 +1,89 @@
+\doxysection{write\+\_\+batch.\+h}
+\label{write__batch_8h_source}\index{src/leveldb/include/leveldb/write\_batch.h@{src/leveldb/include/leveldb/write\_batch.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ WriteBatch\ holds\ a\ collection\ of\ updates\ to\ apply\ atomically\ to\ a\ DB.}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//\ The\ updates\ are\ applied\ in\ the\ order\ in\ which\ they\ are\ added}}
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ to\ the\ WriteBatch.\ \ For\ example,\ the\ value\ of\ "{}key"{}\ will\ be\ "{}v3"{}}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//\ after\ the\ following\ batch\ is\ written:}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//\ \ \ \ batch.Put("{}key"{},\ "{}v1"{});}}
+\DoxyCodeLine{00012\ \textcolor{comment}{//\ \ \ \ batch.Delete("{}key"{});}}
+\DoxyCodeLine{00013\ \textcolor{comment}{//\ \ \ \ batch.Put("{}key"{},\ "{}v2"{});}}
+\DoxyCodeLine{00014\ \textcolor{comment}{//\ \ \ \ batch.Put("{}key"{},\ "{}v3"{});}}
+\DoxyCodeLine{00015\ \textcolor{comment}{//}}
+\DoxyCodeLine{00016\ \textcolor{comment}{//\ Multiple\ threads\ can\ invoke\ const\ methods\ on\ a\ WriteBatch\ without}}
+\DoxyCodeLine{00017\ \textcolor{comment}{//\ external\ synchronization,\ but\ if\ any\ of\ the\ threads\ may\ call\ a}}
+\DoxyCodeLine{00018\ \textcolor{comment}{//\ non-\/const\ method,\ all\ threads\ accessing\ the\ same\ WriteBatch\ must\ use}}
+\DoxyCodeLine{00019\ \textcolor{comment}{//\ external\ synchronization.}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_WRITE\_BATCH\_H\_}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_WRITE\_BATCH\_H\_}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ "{}leveldb/status.h"{}}}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{keyword}{class\ }Slice;}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ WriteBatch\ \{}
+\DoxyCodeLine{00034\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00035\ \ \ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ Handler\ \{}
+\DoxyCodeLine{00036\ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~Handler();}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Put(\textcolor{keyword}{const}\ Slice\&\ key,\ \textcolor{keyword}{const}\ Slice\&\ value)\ =\ 0;}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Delete(\textcolor{keyword}{const}\ Slice\&\ key)\ =\ 0;}
+\DoxyCodeLine{00040\ \ \ \};}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \ \ WriteBatch();}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \textcolor{comment}{//\ Intentionally\ copyable.}}
+\DoxyCodeLine{00045\ \ \ WriteBatch(\textcolor{keyword}{const}\ WriteBatch\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00046\ \ \ WriteBatch\&\ operator=(\textcolor{keyword}{const}\ WriteBatch\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \string~WriteBatch();}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \ \ \textcolor{comment}{//\ Store\ the\ mapping\ "{}key-\/>value"{}\ in\ the\ database.}}
+\DoxyCodeLine{00051\ \ \ \textcolor{keywordtype}{void}\ Put(\textcolor{keyword}{const}\ Slice\&\ key,\ \textcolor{keyword}{const}\ Slice\&\ value);}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \ \ \textcolor{comment}{//\ If\ the\ database\ contains\ a\ mapping\ for\ "{}key"{},\ erase\ it.\ \ Else\ do\ nothing.}}
+\DoxyCodeLine{00054\ \ \ \textcolor{keywordtype}{void}\ Delete(\textcolor{keyword}{const}\ Slice\&\ key);}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \textcolor{comment}{//\ Clear\ all\ updates\ buffered\ in\ this\ batch.}}
+\DoxyCodeLine{00057\ \ \ \textcolor{keywordtype}{void}\ Clear();}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \textcolor{comment}{//\ The\ size\ of\ the\ database\ changes\ caused\ by\ this\ batch.}}
+\DoxyCodeLine{00060\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00061\ \ \ \textcolor{comment}{//\ This\ number\ is\ tied\ to\ implementation\ details,\ and\ may\ change\ across}}
+\DoxyCodeLine{00062\ \ \ \textcolor{comment}{//\ releases.\ It\ is\ intended\ for\ LevelDB\ usage\ metrics.}}
+\DoxyCodeLine{00063\ \ \ \textcolor{keywordtype}{size\_t}\ ApproximateSize()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \textcolor{comment}{//\ Copies\ the\ operations\ in\ "{}source"{}\ to\ this\ batch.}}
+\DoxyCodeLine{00066\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00067\ \ \ \textcolor{comment}{//\ This\ runs\ in\ O(source\ size)\ time.\ However,\ the\ constant\ factor\ is\ better}}
+\DoxyCodeLine{00068\ \ \ \textcolor{comment}{//\ than\ calling\ Iterate()\ over\ the\ source\ batch\ with\ a\ Handler\ that\ replicates}}
+\DoxyCodeLine{00069\ \ \ \textcolor{comment}{//\ the\ operations\ into\ this\ batch.}}
+\DoxyCodeLine{00070\ \ \ \textcolor{keywordtype}{void}\ Append(\textcolor{keyword}{const}\ WriteBatch\&\ source);}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \textcolor{comment}{//\ Support\ for\ iterating\ over\ the\ contents\ of\ a\ batch.}}
+\DoxyCodeLine{00073\ \ \ Status\ Iterate(Handler*\ handler)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00076\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }WriteBatchInternal;}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ std::string\ rep\_;\ \ \textcolor{comment}{//\ See\ comment\ in\ write\_batch.cc\ for\ the\ format\ of\ rep\_}}
+\DoxyCodeLine{00079\ \};}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_INCLUDE\_WRITE\_BATCH\_H\_}}
+
+\end{DoxyCode}

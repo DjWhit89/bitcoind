@@ -1,0 +1,419 @@
+\doxysection{netaddress.\+h}
+\label{netaddress_8h_source}\index{src/netaddress.h@{src/netaddress.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_NETADDRESS\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_NETADDRESS\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <compat/compat.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <crypto/siphash.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <prevector.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <random.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <tinyformat.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/strencodings.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <util/string.h>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <ios>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <string\_view>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{enum}\ Network\ \{}
+\DoxyCodeLine{00035\ \ \ \ \ NET\_UNROUTABLE\ =\ 0,}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00038\ \ \ \ \ NET\_IPV4,}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00041\ \ \ \ \ NET\_IPV6,}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00044\ \ \ \ \ NET\_ONION,}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00047\ \ \ \ \ NET\_I2P,}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00050\ \ \ \ \ NET\_CJDNS,}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00054\ \ \ \ \ NET\_INTERNAL,}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00057\ \ \ \ \ NET\_MAX,}
+\DoxyCodeLine{00058\ \};}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00062\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ std::array<uint8\_t,\ 12>\ IPV4\_IN\_IPV6\_PREFIX\{}
+\DoxyCodeLine{00063\ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0xFF,\ 0xFF\};}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00069\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ std::array<uint8\_t,\ 6>\ TORV2\_IN\_IPV6\_PREFIX\{}
+\DoxyCodeLine{00070\ \ \ \ \ 0xFD,\ 0x87,\ 0xD8,\ 0x7E,\ 0xEB,\ 0x43\};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00077\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ std::array<uint8\_t,\ 6>\ INTERNAL\_IN\_IPV6\_PREFIX\{}
+\DoxyCodeLine{00078\ \ \ \ \ 0xFD,\ 0x6B,\ 0x88,\ 0xC0,\ 0x87,\ 0x24\ \textcolor{comment}{//\ 0xFD\ +\ sha256("{}bitcoin"{})[0:5].}}
+\DoxyCodeLine{00079\ \};}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00083\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint8\_t\ CJDNS\_PREFIX\{0xFC\};}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00086\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ ADDR\_IPV4\_SIZE\ =\ 4;}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00089\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ ADDR\_IPV6\_SIZE\ =\ 16;}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00093\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ ADDR\_TORV3\_SIZE\ =\ 32;}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00096\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ ADDR\_I2P\_SIZE\ =\ 32;}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00099\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ ADDR\_CJDNS\_SIZE\ =\ 16;}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00102\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ ADDR\_INTERNAL\_SIZE\ =\ 10;}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00105\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint16\_t\ I2P\_SAM31\_PORT\{0\};}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ std::string\ OnionToString(std::span<const\ uint8\_t>\ addr);}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00112\ \textcolor{keyword}{class\ }CNetAddr}
+\DoxyCodeLine{00113\ \{}
+\DoxyCodeLine{00114\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00119\ \ \ \ \ prevector<ADDR\_IPV6\_SIZE,\ uint8\_t>\ m\_addr\{ADDR\_IPV6\_SIZE,\ 0x0\};}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00124\ \ \ \ \ Network\ m\_net\{NET\_IPV6\};}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00130\ \ \ \ \ uint32\_t\ m\_scope\_id\{0\};}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00133\ \ \ \ \ CNetAddr();}
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keyword}{explicit}\ CNetAddr(\textcolor{keyword}{const}\ \textcolor{keyword}{struct}\ in\_addr\&\ ipv4Addr);}
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{keywordtype}{void}\ SetIP(\textcolor{keyword}{const}\ CNetAddr\&\ ip);}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00143\ \ \ \ \ \textcolor{keywordtype}{void}\ SetLegacyIPv6(std::span<const\ uint8\_t>\ ipv6);}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetInternal(\textcolor{keyword}{const}\ std::string\&\ name);}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetSpecial(std::string\_view\ addr);}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsBindAny()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ INADDR\_ANY\ equivalent}}
+\DoxyCodeLine{00158\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ IsIPv4()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_net\ ==\ NET\_IPV4;\ \}\ \textcolor{comment}{//\ IPv4\ mapped\ address\ (::FFFF:0:0/96,\ 0.0.0.0/0)}}
+\DoxyCodeLine{00159\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ IsIPv6()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_net\ ==\ NET\_IPV6;\ \}\ \textcolor{comment}{//\ IPv6\ address\ (not\ mapped\ IPv4,\ not\ Tor)}}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC1918()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv4\ private\ networks\ (10.0.0.0/8,\ 192.168.0.0/16,\ 172.16.0.0/12)}}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC2544()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv4\ inter-\/network\ communications\ (198.18.0.0/15)}}
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC6598()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv4\ ISP-\/level\ NAT\ (100.64.0.0/10)}}
+\DoxyCodeLine{00163\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC5737()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv4\ documentation\ addresses\ (192.0.2.0/24,\ 198.51.100.0/24,\ 203.0.113.0/24)}}
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC3849()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv6\ documentation\ address\ (2001:0DB8::/32)}}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC3927()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv4\ autoconfig\ (169.254.0.0/16)}}
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC3964()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv6\ 6to4\ tunnelling\ (2002::/16)}}
+\DoxyCodeLine{00167\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC4193()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv6\ unique\ local\ (FC00::/7)}}
+\DoxyCodeLine{00168\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC4380()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv6\ Teredo\ tunnelling\ (2001::/32)}}
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC4843()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv6\ ORCHID\ (deprecated)\ (2001:10::/28)}}
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC7343()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv6\ ORCHIDv2\ (2001:20::/28)}}
+\DoxyCodeLine{00171\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC4862()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv6\ autoconfig\ (FE80::/64)}}
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC6052()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv6\ well-\/known\ prefix\ for\ IPv4-\/embedded\ address\ (64:FF9B::/96)}}
+\DoxyCodeLine{00173\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRFC6145()\ \textcolor{keyword}{const};\ \textcolor{comment}{//\ IPv6\ IPv4-\/translated\ address\ (::FFFF:0:0:0/96)\ (actually\ defined\ in\ RFC2765)}}
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsHeNet()\ \textcolor{keyword}{const};\ \ \ \textcolor{comment}{//\ IPv6\ Hurricane\ Electric\ -\/\ https://he.net\ (2001:0470::/36)}}
+\DoxyCodeLine{00175\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ IsTor()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_net\ ==\ NET\_ONION;\ \}}
+\DoxyCodeLine{00176\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ IsI2P()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_net\ ==\ NET\_I2P;\ \}}
+\DoxyCodeLine{00177\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ IsCJDNS()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_net\ ==\ NET\_CJDNS;\ \}}
+\DoxyCodeLine{00178\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ HasCJDNSPrefix()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_addr[0]\ ==\ CJDNS\_PREFIX;\ \}}
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsLocal()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRoutable()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00181\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsInternal()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsValid()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00189\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ IsPrivacyNet()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ IsTor()\ ||\ IsI2P();\ \}}
+\DoxyCodeLine{00190\ }
+\DoxyCodeLine{00194\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsAddrV1Compatible()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00195\ }
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{keyword}{enum}\ Network\ GetNetwork()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00197\ \ \ \ \ std::string\ ToStringAddr()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetInAddr(\textcolor{keyword}{struct}\ in\_addr*\ pipv4Addr)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00199\ \ \ \ \ Network\ GetNetClass()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00202\ \ \ \ \ uint32\_t\ GetLinkedIPv4()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00204\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasLinkedIPv4()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \ \ \ \ std::vector<unsigned\ char>\ GetAddrBytes()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{keywordtype}{int}\ GetReachabilityFrom(\textcolor{keyword}{const}\ CNetAddr\&\ paddrPartner)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00208\ }
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{keyword}{explicit}\ CNetAddr(\textcolor{keyword}{const}\ \textcolor{keyword}{struct}\ in6\_addr\&\ pipv6Addr,\ \textcolor{keyword}{const}\ uint32\_t\ scope\ =\ 0);}
+\DoxyCodeLine{00210\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetIn6Addr(\textcolor{keyword}{struct}\ in6\_addr*\ pipv6Addr)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ CNetAddr\&\ a,\ \textcolor{keyword}{const}\ CNetAddr\&\ b);}
+\DoxyCodeLine{00213\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator<(\textcolor{keyword}{const}\ CNetAddr\&\ a,\ \textcolor{keyword}{const}\ CNetAddr\&\ b);}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00218\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsRelayable()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00219\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ IsIPv4()\ ||\ IsIPv6()\ ||\ IsTor()\ ||\ IsI2P()\ ||\ IsCJDNS();}
+\DoxyCodeLine{00221\ \ \ \ \ \}}
+\DoxyCodeLine{00222\ }
+\DoxyCodeLine{00223\ \ \ \ \ \textcolor{keyword}{enum\ class}\ Encoding\ \{}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ V1,}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ V2,\ }
+\DoxyCodeLine{00226\ \ \ \ \ \};}
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{keyword}{struct\ }SerParams\ \{}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Encoding\ enc;}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ SER\_PARAMS\_OPFUNC}
+\DoxyCodeLine{00230\ \ \ \ \ \};}
+\DoxyCodeLine{00231\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ SerParams\ V1\{Encoding::V1\};}
+\DoxyCodeLine{00232\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ SerParams\ V2\{Encoding::V2\};}
+\DoxyCodeLine{00233\ }
+\DoxyCodeLine{00237\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00238\ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00239\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (s.template\ GetParams<SerParams>().enc\ ==\ Encoding::V2)\ \{}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeV2Stream(s);}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeV1Stream(s);}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00245\ \ \ \ \ \}}
+\DoxyCodeLine{00246\ }
+\DoxyCodeLine{00250\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00251\ \ \ \ \ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)}
+\DoxyCodeLine{00252\ \ \ \ \ \{}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (s.template\ GetParams<SerParams>().enc\ ==\ Encoding::V2)\ \{}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeV2Stream(s);}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \ \ \ \ UnserializeV1Stream(s);}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00258\ \ \ \ \ \}}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00263\ \ \ \ \ \textcolor{keyword}{enum}\ BIP155Network\ :\ uint8\_t\ \{}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ IPV4\ =\ 1,}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ IPV6\ =\ 2,}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ TORV2\ =\ 3,}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ TORV3\ =\ 4,}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ I2P\ =\ 5,}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ CJDNS\ =\ 6,}
+\DoxyCodeLine{00270\ \ \ \ \ \};}
+\DoxyCodeLine{00271\ }
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }CSubNet;}
+\DoxyCodeLine{00273\ }
+\DoxyCodeLine{00274\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00282\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetTor(std::string\_view\ addr);}
+\DoxyCodeLine{00283\ }
+\DoxyCodeLine{00291\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetI2P(std::string\_view\ addr);}
+\DoxyCodeLine{00292\ }
+\DoxyCodeLine{00296\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ V1\_SERIALIZATION\_SIZE\ =\ ADDR\_IPV6\_SIZE;}
+\DoxyCodeLine{00297\ }
+\DoxyCodeLine{00303\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ MAX\_ADDRV2\_SIZE\ =\ 512;}
+\DoxyCodeLine{00304\ }
+\DoxyCodeLine{00310\ \ \ \ \ BIP155Network\ GetBIP155Network()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00311\ }
+\DoxyCodeLine{00319\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetNetFromBIP155Network(uint8\_t\ possible\_bip155\_net,\ \textcolor{keywordtype}{size\_t}\ address\_size);}
+\DoxyCodeLine{00320\ }
+\DoxyCodeLine{00324\ \ \ \ \ \textcolor{keywordtype}{void}\ SerializeV1Array(uint8\_t\ (\&arr)[V1\_SERIALIZATION\_SIZE])\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00325\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00326\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ prefix\_size;}
+\DoxyCodeLine{00327\ }
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{switch}\ (m\_net)\ \{}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ NET\_IPV6:}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \ \ \ \ assert(m\_addr.size()\ ==\ \textcolor{keyword}{sizeof}(arr));}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(arr,\ m\_addr.data(),\ m\_addr.size());}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ NET\_IPV4:}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ \ \ \ \ prefix\_size\ =\ \textcolor{keyword}{sizeof}(IPV4\_IN\_IPV6\_PREFIX);}
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ \ \ \ \ assert(prefix\_size\ +\ m\_addr.size()\ ==\ \textcolor{keyword}{sizeof}(arr));}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(arr,\ IPV4\_IN\_IPV6\_PREFIX.data(),\ prefix\_size);}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(arr\ +\ prefix\_size,\ m\_addr.data(),\ m\_addr.size());}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ NET\_INTERNAL:}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ \ \ \ \ prefix\_size\ =\ \textcolor{keyword}{sizeof}(INTERNAL\_IN\_IPV6\_PREFIX);}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ \ \ \ \ assert(prefix\_size\ +\ m\_addr.size()\ ==\ \textcolor{keyword}{sizeof}(arr));}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(arr,\ INTERNAL\_IN\_IPV6\_PREFIX.data(),\ prefix\_size);}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(arr\ +\ prefix\_size,\ m\_addr.data(),\ m\_addr.size());}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ NET\_ONION:}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ NET\_I2P:}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ NET\_CJDNS:}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ NET\_UNROUTABLE:}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ NET\_MAX:}
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ \ \ \ \ assert(\textcolor{keyword}{false});}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ \}\ \textcolor{comment}{//\ no\ default\ case,\ so\ the\ compiler\ can\ warn\ about\ missing\ cases}}
+\DoxyCodeLine{00353\ }
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Serialize\ ONION,\ I2P\ and\ CJDNS\ as\ all-\/zeros.}}
+\DoxyCodeLine{00355\ \ \ \ \ \ \ \ \ memset(arr,\ 0x0,\ V1\_SERIALIZATION\_SIZE);}
+\DoxyCodeLine{00356\ \ \ \ \ \}}
+\DoxyCodeLine{00357\ }
+\DoxyCodeLine{00361\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00362\ \ \ \ \ \textcolor{keywordtype}{void}\ SerializeV1Stream(Stream\&\ s)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00363\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ uint8\_t\ serialized[V1\_SERIALIZATION\_SIZE];}
+\DoxyCodeLine{00365\ }
+\DoxyCodeLine{00366\ \ \ \ \ \ \ \ \ SerializeV1Array(serialized);}
+\DoxyCodeLine{00367\ }
+\DoxyCodeLine{00368\ \ \ \ \ \ \ \ \ s\ <<\ serialized;}
+\DoxyCodeLine{00369\ \ \ \ \ \}}
+\DoxyCodeLine{00370\ }
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00375\ \ \ \ \ \textcolor{keywordtype}{void}\ SerializeV2Stream(Stream\&\ s)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00376\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (IsInternal())\ \{}
+\DoxyCodeLine{00378\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Serialize\ NET\_INTERNAL\ as\ embedded\ in\ IPv6.\ We\ need\ to}}
+\DoxyCodeLine{00379\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ serialize\ such\ addresses\ from\ addrman.}}
+\DoxyCodeLine{00380\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ static\_cast<uint8\_t>(BIP155Network::IPV6);}
+\DoxyCodeLine{00381\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ COMPACTSIZE(ADDR\_IPV6\_SIZE);}
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ \ \ \ \ SerializeV1Stream(s);}
+\DoxyCodeLine{00383\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00385\ }
+\DoxyCodeLine{00386\ \ \ \ \ \ \ \ \ s\ <<\ static\_cast<uint8\_t>(GetBIP155Network());}
+\DoxyCodeLine{00387\ \ \ \ \ \ \ \ \ s\ <<\ m\_addr;}
+\DoxyCodeLine{00388\ \ \ \ \ \}}
+\DoxyCodeLine{00389\ }
+\DoxyCodeLine{00399\ \ \ \ \ \textcolor{keywordtype}{void}\ UnserializeV1Array(uint8\_t\ (\&arr)[V1\_SERIALIZATION\_SIZE])}
+\DoxyCodeLine{00400\ \ \ \ \ \{}
+\DoxyCodeLine{00401\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Use\ SetLegacyIPv6()\ so\ that\ m\_net\ is\ set\ correctly.\ For\ example}}
+\DoxyCodeLine{00402\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ::FFFF:0102:0304\ should\ be\ set\ as\ m\_net=NET\_IPV4\ (1.2.3.4).}}
+\DoxyCodeLine{00403\ \ \ \ \ \ \ \ \ SetLegacyIPv6(arr);}
+\DoxyCodeLine{00404\ \ \ \ \ \}}
+\DoxyCodeLine{00405\ }
+\DoxyCodeLine{00409\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00410\ \ \ \ \ \textcolor{keywordtype}{void}\ UnserializeV1Stream(Stream\&\ s)}
+\DoxyCodeLine{00411\ \ \ \ \ \{}
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ uint8\_t\ serialized[V1\_SERIALIZATION\_SIZE];}
+\DoxyCodeLine{00413\ }
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ s\ >>\ serialized;}
+\DoxyCodeLine{00415\ }
+\DoxyCodeLine{00416\ \ \ \ \ \ \ \ \ UnserializeV1Array(serialized);}
+\DoxyCodeLine{00417\ \ \ \ \ \}}
+\DoxyCodeLine{00418\ }
+\DoxyCodeLine{00422\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00423\ \ \ \ \ \textcolor{keywordtype}{void}\ UnserializeV2Stream(Stream\&\ s)}
+\DoxyCodeLine{00424\ \ \ \ \ \{}
+\DoxyCodeLine{00425\ \ \ \ \ \ \ \ \ uint8\_t\ bip155\_net;}
+\DoxyCodeLine{00426\ \ \ \ \ \ \ \ \ s\ >>\ bip155\_net;}
+\DoxyCodeLine{00427\ }
+\DoxyCodeLine{00428\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ address\_size;}
+\DoxyCodeLine{00429\ \ \ \ \ \ \ \ \ s\ >>\ COMPACTSIZE(address\_size);}
+\DoxyCodeLine{00430\ }
+\DoxyCodeLine{00431\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (address\_size\ >\ MAX\_ADDRV2\_SIZE)\ \{}
+\DoxyCodeLine{00432\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(strprintf(}
+\DoxyCodeLine{00433\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}Address\ too\ long:\ \%u\ >\ \%u"{}},\ address\_size,\ MAX\_ADDRV2\_SIZE));}
+\DoxyCodeLine{00434\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00435\ }
+\DoxyCodeLine{00436\ \ \ \ \ \ \ \ \ m\_scope\_id\ =\ 0;}
+\DoxyCodeLine{00437\ }
+\DoxyCodeLine{00438\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (SetNetFromBIP155Network(bip155\_net,\ address\_size))\ \{}
+\DoxyCodeLine{00439\ \ \ \ \ \ \ \ \ \ \ \ \ m\_addr.resize(address\_size);}
+\DoxyCodeLine{00440\ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ std::span\{m\_addr\};}
+\DoxyCodeLine{00441\ }
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_net\ !=\ NET\_IPV6)\ \{}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00445\ }
+\DoxyCodeLine{00446\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Do\ some\ special\ checks\ on\ IPv6\ addresses.}}
+\DoxyCodeLine{00447\ }
+\DoxyCodeLine{00448\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Recognize\ NET\_INTERNAL\ embedded\ in\ IPv6,\ such\ addresses\ are\ not}}
+\DoxyCodeLine{00449\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ gossiped\ but\ could\ be\ coming\ from\ addrman,\ when\ unserializing\ from}}
+\DoxyCodeLine{00450\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ disk.}}
+\DoxyCodeLine{00451\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (util::HasPrefix(m\_addr,\ INTERNAL\_IN\_IPV6\_PREFIX))\ \{}
+\DoxyCodeLine{00452\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_net\ =\ NET\_INTERNAL;}
+\DoxyCodeLine{00453\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ memmove(m\_addr.data(),\ m\_addr.data()\ +\ INTERNAL\_IN\_IPV6\_PREFIX.size(),}
+\DoxyCodeLine{00454\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ADDR\_INTERNAL\_SIZE);}
+\DoxyCodeLine{00455\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_addr.resize(ADDR\_INTERNAL\_SIZE);}
+\DoxyCodeLine{00456\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00457\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00458\ }
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!util::HasPrefix(m\_addr,\ IPV4\_IN\_IPV6\_PREFIX)\ \&\&}
+\DoxyCodeLine{00460\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ !util::HasPrefix(m\_addr,\ TORV2\_IN\_IPV6\_PREFIX))\ \{}
+\DoxyCodeLine{00461\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00462\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00463\ }
+\DoxyCodeLine{00464\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ IPv4\ and\ TORv2\ are\ not\ supposed\ to\ be\ embedded\ in\ IPv6\ (like\ in\ V1}}
+\DoxyCodeLine{00465\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ encoding).\ Unserialize\ as\ !IsValid(),\ thus\ ignoring\ them.}}
+\DoxyCodeLine{00466\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00467\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ we\ receive\ an\ unknown\ BIP155\ network\ id\ (from\ the\ future?)\ then}}
+\DoxyCodeLine{00468\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ignore\ the\ address\ -\/\ unserialize\ as\ !IsValid().}}
+\DoxyCodeLine{00469\ \ \ \ \ \ \ \ \ \ \ \ \ s.ignore(address\_size);}
+\DoxyCodeLine{00470\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00471\ }
+\DoxyCodeLine{00472\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Mimic\ a\ default-\/constructed\ CNetAddr\ object\ which\ is\ !IsValid()\ and\ thus}}
+\DoxyCodeLine{00473\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ will\ not\ be\ gossiped,\ but\ continue\ reading\ next\ addresses\ from\ the\ stream.}}
+\DoxyCodeLine{00474\ \ \ \ \ \ \ \ \ m\_net\ =\ NET\_IPV6;}
+\DoxyCodeLine{00475\ \ \ \ \ \ \ \ \ m\_addr.assign(ADDR\_IPV6\_SIZE,\ 0x0);}
+\DoxyCodeLine{00476\ \ \ \ \ \}}
+\DoxyCodeLine{00477\ \};}
+\DoxyCodeLine{00478\ }
+\DoxyCodeLine{00479\ \textcolor{keyword}{class\ }CSubNet}
+\DoxyCodeLine{00480\ \{}
+\DoxyCodeLine{00481\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00483\ \ \ \ \ CNetAddr\ network;}
+\DoxyCodeLine{00485\ \ \ \ \ uint8\_t\ netmask[16];}
+\DoxyCodeLine{00487\ \ \ \ \ \textcolor{keywordtype}{bool}\ valid;}
+\DoxyCodeLine{00488\ }
+\DoxyCodeLine{00489\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00493\ \ \ \ \ CSubNet();}
+\DoxyCodeLine{00494\ }
+\DoxyCodeLine{00502\ \ \ \ \ CSubNet(\textcolor{keyword}{const}\ CNetAddr\&\ addr,\ uint8\_t\ mask);}
+\DoxyCodeLine{00503\ }
+\DoxyCodeLine{00511\ \ \ \ \ CSubNet(\textcolor{keyword}{const}\ CNetAddr\&\ addr,\ \textcolor{keyword}{const}\ CNetAddr\&\ mask);}
+\DoxyCodeLine{00512\ }
+\DoxyCodeLine{00517\ \ \ \ \ \textcolor{keyword}{explicit}\ CSubNet(\textcolor{keyword}{const}\ CNetAddr\&\ addr);}
+\DoxyCodeLine{00518\ }
+\DoxyCodeLine{00519\ \ \ \ \ \textcolor{keywordtype}{bool}\ Match(\textcolor{keyword}{const}\ CNetAddr\&\ addr)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00520\ }
+\DoxyCodeLine{00521\ \ \ \ \ std::string\ ToString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00522\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsValid()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00523\ }
+\DoxyCodeLine{00524\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ CSubNet\&\ a,\ \textcolor{keyword}{const}\ CSubNet\&\ b);}
+\DoxyCodeLine{00525\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator<(\textcolor{keyword}{const}\ CSubNet\&\ a,\ \textcolor{keyword}{const}\ CSubNet\&\ b);}
+\DoxyCodeLine{00526\ \};}
+\DoxyCodeLine{00527\ }
+\DoxyCodeLine{00529\ \textcolor{keyword}{class\ }CService\ :\ \textcolor{keyword}{public}\ CNetAddr}
+\DoxyCodeLine{00530\ \{}
+\DoxyCodeLine{00531\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00532\ \ \ \ \ uint16\_t\ port;\ \textcolor{comment}{//\ host\ order}}
+\DoxyCodeLine{00533\ }
+\DoxyCodeLine{00534\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00535\ \ \ \ \ CService();}
+\DoxyCodeLine{00536\ \ \ \ \ CService(\textcolor{keyword}{const}\ CNetAddr\&\ ip,\ uint16\_t\ port);}
+\DoxyCodeLine{00537\ \ \ \ \ CService(\textcolor{keyword}{const}\ \textcolor{keyword}{struct}\ in\_addr\&\ ipv4Addr,\ uint16\_t\ port);}
+\DoxyCodeLine{00538\ \ \ \ \ \textcolor{keyword}{explicit}\ CService(\textcolor{keyword}{const}\ \textcolor{keyword}{struct}\ sockaddr\_in\&\ addr);}
+\DoxyCodeLine{00539\ \ \ \ \ uint16\_t\ GetPort()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00540\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetSockAddr(\textcolor{keyword}{struct}\ sockaddr*\ paddr,\ socklen\_t*\ addrlen)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00548\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetSockAddr(\textcolor{keyword}{const}\ \textcolor{keyword}{struct}\ sockaddr*\ paddr,\ socklen\_t\ addrlen);}
+\DoxyCodeLine{00553\ \ \ \ \ [[nodiscard]]\ sa\_family\_t\ GetSAFamily()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00554\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ CService\&\ a,\ \textcolor{keyword}{const}\ CService\&\ b);}
+\DoxyCodeLine{00555\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator<(\textcolor{keyword}{const}\ CService\&\ a,\ \textcolor{keyword}{const}\ CService\&\ b);}
+\DoxyCodeLine{00556\ \ \ \ \ std::vector<unsigned\ char>\ GetKey()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00557\ \ \ \ \ std::string\ ToStringAddrPort()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00558\ }
+\DoxyCodeLine{00559\ \ \ \ \ CService(\textcolor{keyword}{const}\ \textcolor{keyword}{struct}\ in6\_addr\&\ ipv6Addr,\ uint16\_t\ port);}
+\DoxyCodeLine{00560\ \ \ \ \ \textcolor{keyword}{explicit}\ CService(\textcolor{keyword}{const}\ \textcolor{keyword}{struct}\ sockaddr\_in6\&\ addr);}
+\DoxyCodeLine{00561\ }
+\DoxyCodeLine{00562\ \ \ \ \ SERIALIZE\_METHODS(CService,\ obj)}
+\DoxyCodeLine{00563\ \ \ \ \ \{}
+\DoxyCodeLine{00564\ \ \ \ \ \ \ \ \ READWRITE(AsBase<CNetAddr>(obj),\ Using<BigEndianFormatter<2>>(obj.port));}
+\DoxyCodeLine{00565\ \ \ \ \ \}}
+\DoxyCodeLine{00566\ }
+\DoxyCodeLine{00567\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }CServiceHash;}
+\DoxyCodeLine{00568\ \ \ \ \ \textcolor{keyword}{friend}\ CService\ MaybeFlipIPv6toCJDNS(\textcolor{keyword}{const}\ CService\&\ service);}
+\DoxyCodeLine{00569\ \};}
+\DoxyCodeLine{00570\ }
+\DoxyCodeLine{00571\ \textcolor{keyword}{class\ }CServiceHash}
+\DoxyCodeLine{00572\ \{}
+\DoxyCodeLine{00573\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00574\ \ \ \ \ CServiceHash()}
+\DoxyCodeLine{00575\ \ \ \ \ \ \ \ \ :\ m\_salt\_k0\{FastRandomContext().rand64()\},}
+\DoxyCodeLine{00576\ \ \ \ \ \ \ \ \ \ \ m\_salt\_k1\{FastRandomContext().rand64()\}}
+\DoxyCodeLine{00577\ \ \ \ \ \{}
+\DoxyCodeLine{00578\ \ \ \ \ \}}
+\DoxyCodeLine{00579\ }
+\DoxyCodeLine{00580\ \ \ \ \ CServiceHash(uint64\_t\ salt\_k0,\ uint64\_t\ salt\_k1)\ :\ m\_salt\_k0\{salt\_k0\},\ m\_salt\_k1\{salt\_k1\}\ \{\}}
+\DoxyCodeLine{00581\ }
+\DoxyCodeLine{00582\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ operator()(\textcolor{keyword}{const}\ CService\&\ a)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00583\ \ \ \ \ \{}
+\DoxyCodeLine{00584\ \ \ \ \ \ \ \ \ CSipHasher\ hasher(m\_salt\_k0,\ m\_salt\_k1);}
+\DoxyCodeLine{00585\ \ \ \ \ \ \ \ \ hasher.Write(a.m\_net);}
+\DoxyCodeLine{00586\ \ \ \ \ \ \ \ \ hasher.Write(a.port);}
+\DoxyCodeLine{00587\ \ \ \ \ \ \ \ \ hasher.Write(a.m\_addr);}
+\DoxyCodeLine{00588\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{size\_t}\textcolor{keyword}{>}(hasher.Finalize());}
+\DoxyCodeLine{00589\ \ \ \ \ \}}
+\DoxyCodeLine{00590\ }
+\DoxyCodeLine{00591\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00592\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ m\_salt\_k0;}
+\DoxyCodeLine{00593\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ m\_salt\_k1;}
+\DoxyCodeLine{00594\ \};}
+\DoxyCodeLine{00595\ }
+\DoxyCodeLine{00596\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_NETADDRESS\_H}}
+
+\end{DoxyCode}

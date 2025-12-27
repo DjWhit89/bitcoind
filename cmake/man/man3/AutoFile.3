@@ -1,0 +1,177 @@
+.TH "AutoFile" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+AutoFile
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <streams\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBAutoFile\fP (std::FILE *file, const \fBObfuscation\fP &obfuscation={})"
+.br
+.ti -1c
+.RI "\fB~AutoFile\fP ()"
+.br
+.ti -1c
+.RI "\fBAutoFile\fP (const \fBAutoFile\fP &)=delete"
+.br
+.ti -1c
+.RI "\fBAutoFile\fP & \fBoperator=\fP (const \fBAutoFile\fP &)=delete"
+.br
+.ti -1c
+.RI "bool \fBfeof\fP () const"
+.br
+.ti -1c
+.RI "int \fBfclose\fP ()"
+.br
+.ti -1c
+.RI "std::FILE * \fBrelease\fP ()"
+.br
+.ti -1c
+.RI "bool \fBIsNull\fP () const"
+.br
+.ti -1c
+.RI "void \fBSetObfuscation\fP (const \fBObfuscation\fP &obfuscation)"
+.br
+.ti -1c
+.RI "std::size_t \fBdetail_fread\fP (std::span< std::byte > dst)"
+.br
+.ti -1c
+.RI "void \fBseek\fP (int64_t offset, int origin)"
+.br
+.ti -1c
+.RI "int64_t \fBtell\fP ()"
+.br
+.ti -1c
+.RI "int64_t \fBsize\fP ()"
+.br
+.ti -1c
+.RI "bool \fBCommit\fP ()"
+.br
+.ti -1c
+.RI "bool \fBTruncate\fP (unsigned \fBsize\fP)"
+.br
+.ti -1c
+.RI "void \fBwrite_buffer\fP (std::span< std::byte > src)"
+.br
+.RI "Write a mutable buffer more efficiently than \fBwrite()\fP, obfuscating the buffer in-place\&. "
+.ti -1c
+.RI "void \fBread\fP (std::span< std::byte > dst)"
+.br
+.ti -1c
+.RI "void \fBignore\fP (size_t nSize)"
+.br
+.ti -1c
+.RI "void \fBwrite\fP (std::span< const std::byte > src)"
+.br
+.ti -1c
+.RI "template<typename \fBT\fP> \fBAutoFile\fP & \fBoperator<<\fP (const \fBT\fP &obj)"
+.br
+.ti -1c
+.RI "template<typename \fBT\fP> \fBAutoFile\fP & \fBoperator>>\fP (\fBT\fP &&obj)"
+.br
+.in -1c
+.SS "Protected Attributes"
+
+.in +1c
+.ti -1c
+.RI "std::FILE * \fBm_file\fP"
+.br
+.ti -1c
+.RI "\fBObfuscation\fP \fBm_obfuscation\fP"
+.br
+.ti -1c
+.RI "std::optional< int64_t > \fBm_position\fP"
+.br
+.ti -1c
+.RI "bool \fBm_was_written\fP {false}"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Non-refcounted RAII wrapper for FILE*
+
+.PP
+Will automatically close the file when it goes out of scope if not null\&. If you're returning the file pointer, return file\&.release()\&. If you need to close the file early, use autofile\&.fclose() instead of fclose(underlying_FILE)\&.
+
+.PP
+\fBNote\fP
+.RS 4
+If the file has been written to, then the caller must close it explicitly with the \fR\fBfclose()\fP\fP method, check if it returns an error and treat such an error as if the \fR\fBwrite()\fP\fP method failed\&. The OS's \fRfclose(3)\fP may fail to flush to disk data that has been previously written, rendering the file corrupt\&. 
+.RE
+.PP
+
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBAutoFile\fP (std::FILE * file, const \fBObfuscation\fP & obfuscation = \fR{}\fP)\fR [explicit]\fP"
+
+.SS "~\fBAutoFile\fP ()\fR [inline]\fP"
+
+.SS "\fBAutoFile\fP (const \fBAutoFile\fP & )\fR [delete]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "bool Commit ()"
+\fBWrapper\fP around \fBFileCommit()\fP\&. 
+.SS "std::size_t detail_fread (std::span< std::byte > dst)"
+Implementation detail, only used internally\&. 
+.SS "int fclose ()\fR [inline]\fP, \fR [nodiscard]\fP"
+
+.SS "bool feof () const\fR [inline]\fP"
+
+.SS "void ignore (size_t nSize)"
+
+.SS "bool IsNull () const\fR [inline]\fP"
+Return true if the wrapped FILE* is nullptr, false otherwise\&. 
+.SS "template<typename \fBT\fP> \fBAutoFile\fP & operator<< (const \fBT\fP & obj)\fR [inline]\fP"
+
+.SS "\fBAutoFile\fP & operator= (const \fBAutoFile\fP & )\fR [delete]\fP"
+
+.SS "template<typename \fBT\fP> \fBAutoFile\fP & operator>> (\fBT\fP && obj)\fR [inline]\fP"
+
+.SS "void read (std::span< std::byte > dst)"
+
+.SS "std::FILE * release ()\fR [inline]\fP"
+Get wrapped FILE* with transfer of ownership\&. 
+.PP
+\fBNote\fP
+.RS 4
+This will invalidate the \fBAutoFile\fP object, and makes it the responsibility of the caller of this function to clean up the returned FILE*\&. 
+.RE
+.PP
+
+.SS "void seek (int64_t offset, int origin)"
+\fBWrapper\fP around fseek()\&. Will throw if seeking is not possible\&. 
+.SS "void SetObfuscation (const \fBObfuscation\fP & obfuscation)\fR [inline]\fP"
+Continue with a different XOR key 
+.SS "int64_t size ()"
+Return the size of the file\&. Will throw if unknown\&. 
+.SS "int64_t tell ()"
+Find position within the file\&. Will throw if unknown\&. 
+.SS "bool Truncate (unsigned size)"
+\fBWrapper\fP around \fBTruncateFile()\fP\&. 
+.SS "void write (std::span< const std::byte > src)"
+
+.SS "void write_buffer (std::span< std::byte > src)"
+
+.PP
+Write a mutable buffer more efficiently than \fBwrite()\fP, obfuscating the buffer in-place\&. 
+.SH "Field Documentation"
+.PP 
+.SS "std::FILE* m_file\fR [protected]\fP"
+
+.SS "\fBObfuscation\fP m_obfuscation\fR [protected]\fP"
+
+.SS "std::optional<int64_t> m_position\fR [protected]\fP"
+
+.SS "bool m_was_written {false}\fR [protected]\fP"
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

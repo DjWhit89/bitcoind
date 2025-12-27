@@ -1,0 +1,701 @@
+\doxysection{proxy-\/types.h}
+\label{proxy-types_8h_source}\index{src/ipc/libmultiprocess/include/mp/proxy-\/types.h@{src/ipc/libmultiprocess/include/mp/proxy-\/types.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ MP\_PROXY\_TYPES\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ MP\_PROXY\_TYPES\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <mp/proxy-\/io.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <exception>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <typeindex>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{keyword}{namespace\ }mp\ \{}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Value>}
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }ValueField}
+\DoxyCodeLine{00020\ \{}
+\DoxyCodeLine{00021\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00022\ \ \ \ \ ValueField(Value\&\ value)\ :\ m\_value(value)\ \{\}}
+\DoxyCodeLine{00023\ \ \ \ \ ValueField(Value\&\&\ value)\ :\ m\_value(value)\ \{\}}
+\DoxyCodeLine{00024\ \ \ \ \ Value\&\ m\_value;}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \ \ \ \ Value\&\ get()\ \{\ \textcolor{keywordflow}{return}\ m\_value;\ \}}
+\DoxyCodeLine{00027\ \ \ \ \ Value\&\ init()\ \{\ \textcolor{keywordflow}{return}\ m\_value;\ \}}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keywordtype}{bool}\ has()\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};\ \}}
+\DoxyCodeLine{00029\ \};}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}\ Struct>}
+\DoxyCodeLine{00032\ \textcolor{keyword}{struct\ }StructField}
+\DoxyCodeLine{00033\ \{}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ S>}
+\DoxyCodeLine{00035\ \ \ \ \ StructField(S\&\ struct\_)\ :\ m\_struct(struct\_)}
+\DoxyCodeLine{00036\ \ \ \ \ \{}
+\DoxyCodeLine{00037\ \ \ \ \ \}}
+\DoxyCodeLine{00038\ \ \ \ \ Struct\&\ m\_struct;}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ get()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ Accessor::get(this-\/>m\_struct);\ \}}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordtype}{bool}\ has()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (Accessor::optional)\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Accessor::getHas(m\_struct);}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (Accessor::boxed)\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Accessor::has(m\_struct);}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00050\ \ \ \ \ \}}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keywordtype}{bool}\ want()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (Accessor::requested)\ \{}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Accessor::getWant(m\_struct);}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00058\ \ \ \ \ \}}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ set(Args\ \&\&...args)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Accessor::set(this-\/>m\_struct,\ std::forward<Args>(args)...);}
+\DoxyCodeLine{00062\ \ \ \ \ \}}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ init(Args\ \&\&...args)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Accessor::init(this-\/>m\_struct,\ std::forward<Args>(args)...);}
+\DoxyCodeLine{00066\ \ \ \ \ \}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keywordtype}{void}\ setHas()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (Accessor::optional)\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ Accessor::setHas(m\_struct);}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00072\ \ \ \ \ \}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keywordtype}{void}\ setWant()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (Accessor::requested)\ \{}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ Accessor::setWant(m\_struct);}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00078\ \ \ \ \ \}}
+\DoxyCodeLine{00079\ \};}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \textcolor{comment}{//\ Destination\ parameter\ type\ that\ can\ be\ passed\ to\ ReadField\ function\ as\ an}}
+\DoxyCodeLine{00084\ \textcolor{comment}{//\ alternative\ to\ ReadDestUpdate.\ It\ allows\ the\ ReadField\ implementation\ to\ call}}
+\DoxyCodeLine{00085\ \textcolor{comment}{//\ the\ provided\ emplace\_fn\ function\ with\ constructor\ arguments,\ so\ it\ only\ needs}}
+\DoxyCodeLine{00086\ \textcolor{comment}{//\ to\ determine\ the\ arguments,\ and\ can\ let\ the\ emplace\ function\ decide\ how\ to}}
+\DoxyCodeLine{00087\ \textcolor{comment}{//\ actually\ construct\ the\ read\ destination\ object.\ For\ example,\ if\ a\ std::string}}
+\DoxyCodeLine{00088\ \textcolor{comment}{//\ is\ being\ read,\ the\ ReadField\ call\ will\ call\ the\ custom\ emplace\_fn\ with\ char*}}
+\DoxyCodeLine{00089\ \textcolor{comment}{//\ and\ size\_t\ arguments,\ and\ the\ emplace\ function\ can\ decide\ whether\ to\ call\ the}}
+\DoxyCodeLine{00090\ \textcolor{comment}{//\ constructor\ via\ the\ operator\ or\ make\_shared\ or\ emplace\ or\ just\ return\ a}}
+\DoxyCodeLine{00091\ \textcolor{comment}{//\ temporary\ string\ that\ is\ moved\ from.}}
+\DoxyCodeLine{00092\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ EmplaceFn>}
+\DoxyCodeLine{00093\ \textcolor{keyword}{struct\ }ReadDestEmplace}
+\DoxyCodeLine{00094\ \{}
+\DoxyCodeLine{00095\ \ \ \ \ ReadDestEmplace(TypeList<LocalType>,\ EmplaceFn\ emplace\_fn)\ :\ m\_emplace\_fn(std::move(emplace\_fn))\ \{\}}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ construct(Args\&\&...\ args)}
+\DoxyCodeLine{00101\ \ \ \ \ \{}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_emplace\_fn(std::forward<Args>(args)...);}
+\DoxyCodeLine{00103\ \ \ \ \ \}}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ UpdateFn>}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ update(UpdateFn\&\&\ update\_fn)}
+\DoxyCodeLine{00111\ \ \ \ \ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_const\_v<std::remove\_reference\_t<std::invoke\_result\_t<EmplaceFn>>>)\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ destination\ type\ is\ const,\ default\ construct\ temporary}}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ to\ pass\ to\ update,\ then\ call\ move\ constructor\ via\ construct()\ to}}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ move\ from\ that\ temporary.}}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \ \ \ \ std::remove\_cv\_t<LocalType>\ temp;}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \ \ \ \ update\_fn(temp);}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ construct(std::move(temp));}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Default\ construct\ object\ and\ pass\ it\ to\ update\_fn.}}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ temp\ =\ construct();}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ \ \ \ \ update\_fn(temp);}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ temp;}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00125\ \ \ \ \ \}}
+\DoxyCodeLine{00126\ \ \ \ \ EmplaceFn\ m\_emplace\_fn;}
+\DoxyCodeLine{00127\ \};}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00131\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType>}
+\DoxyCodeLine{00132\ \textcolor{keyword}{auto}\ ReadDestTemp()}
+\DoxyCodeLine{00133\ \{}
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keywordflow}{return}\ ReadDestEmplace\{TypeList<LocalType>(),\ [](\textcolor{keyword}{auto}\&\&...\ args)\ -\/>\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ \{}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ LocalType\{std::forward<decltype(args)>(args)...\};}
+\DoxyCodeLine{00136\ \ \ \ \ \}\};}
+\DoxyCodeLine{00137\ \}}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00143\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Value>}
+\DoxyCodeLine{00144\ \textcolor{keyword}{struct\ }ReadDestUpdate}
+\DoxyCodeLine{00145\ \{}
+\DoxyCodeLine{00146\ \ \ \ \ ReadDestUpdate(Value\&\ value)\ :\ m\_value(value)\ \{\}}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ UpdateFn>}
+\DoxyCodeLine{00150\ \ \ \ \ Value\&\ update(UpdateFn\&\&\ update\_fn)}
+\DoxyCodeLine{00151\ \ \ \ \ \{}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ update\_fn(m\_value);}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_value;}
+\DoxyCodeLine{00154\ \ \ \ \ \}}
+\DoxyCodeLine{00155\ }
+\DoxyCodeLine{00158\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00159\ \ \ \ \ Value\&\ construct(Args\&\&...\ args)}
+\DoxyCodeLine{00160\ \ \ \ \ \{}
+\DoxyCodeLine{00161\ \ \ \ \ \ \ \ \ m\_value.\string~Value();}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \textcolor{keyword}{new}\ (\&m\_value)\ Value(std::forward<Args>(args)...);}
+\DoxyCodeLine{00163\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_value;}
+\DoxyCodeLine{00164\ \ \ \ \ \}}
+\DoxyCodeLine{00165\ }
+\DoxyCodeLine{00166\ \ \ \ \ Value\&\ m\_value;}
+\DoxyCodeLine{00167\ \};}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00169\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ LocalTypes,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00170\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ ReadField(TypeList<LocalTypes...>,\ Args\&\&...\ args)}
+\DoxyCodeLine{00171\ \{}
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keywordflow}{return}\ CustomReadField(TypeList<RemoveCvRef<LocalTypes>...>(),\ Priority<2>(),\ std::forward<Args>(args)...);}
+\DoxyCodeLine{00173\ \}}
+\DoxyCodeLine{00174\ }
+\DoxyCodeLine{00175\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input>}
+\DoxyCodeLine{00176\ \textcolor{keywordtype}{void}\ ThrowField(TypeList<LocalType>,\ InvokeContext\&\ invoke\_context,\ Input\&\&\ input)}
+\DoxyCodeLine{00177\ \{}
+\DoxyCodeLine{00178\ \ \ \ \ ReadField(}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ TypeList<LocalType>(),\ invoke\_context,\ input,\ ReadDestEmplace(TypeList<LocalType>(),}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \ \ \ \ [](\textcolor{keyword}{auto}\&\&\ ...args)\ -\/>\ \textcolor{keyword}{const}\ LocalType\&\ \{\ \textcolor{keywordflow}{throw}\ LocalType\{std::forward<decltype(args)>(args)...\};\ \}));}
+\DoxyCodeLine{00181\ \}}
+\DoxyCodeLine{00182\ }
+\DoxyCodeLine{00186\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Input>}
+\DoxyCodeLine{00187\ \textcolor{keywordtype}{void}\ ThrowField(TypeList<std::exception>,\ InvokeContext\&\ invoke\_context,\ Input\&\&\ input)}
+\DoxyCodeLine{00188\ \{}
+\DoxyCodeLine{00189\ \ \ \ \ \textcolor{keyword}{auto}\ data\ =\ input.get();}
+\DoxyCodeLine{00190\ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(std::string(CharCast(data.begin()),\ data.size()));}
+\DoxyCodeLine{00191\ \}}
+\DoxyCodeLine{00192\ }
+\DoxyCodeLine{00193\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Values>}
+\DoxyCodeLine{00194\ \textcolor{keywordtype}{bool}\ CustomHasValue(InvokeContext\&\ invoke\_context,\ \textcolor{keyword}{const}\ Values\&...\ value)}
+\DoxyCodeLine{00195\ \{}
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00197\ \}}
+\DoxyCodeLine{00198\ }
+\DoxyCodeLine{00199\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ LocalTypes,\ \textcolor{keyword}{typename}\ Context,\ \textcolor{keyword}{typename}...\ Values,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00200\ \textcolor{keywordtype}{void}\ BuildField(TypeList<LocalTypes...>,\ Context\&\ context,\ Output\&\&\ output,\ Values\&\&...\ values)}
+\DoxyCodeLine{00201\ \{}
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keywordflow}{if}\ (CustomHasValue(context,\ values...))\ \{}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ CustomBuildField(TypeList<LocalTypes...>(),\ Priority<3>(),\ context,\ std::forward<Values>(values)...,}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \ \ \ \ std::forward<Output>(output));}
+\DoxyCodeLine{00205\ \ \ \ \ \}}
+\DoxyCodeLine{00206\ \}}
+\DoxyCodeLine{00207\ }
+\DoxyCodeLine{00208\ \textcolor{comment}{//\ Adapter\ to\ let\ BuildField\ overloads\ methods\ work\ set\ \&\ init\ list\ elements\ as}}
+\DoxyCodeLine{00209\ \textcolor{comment}{//\ if\ they\ were\ fields\ of\ a\ struct.\ If\ BuildField\ is\ changed\ to\ use\ some\ kind\ of}}
+\DoxyCodeLine{00210\ \textcolor{comment}{//\ accessor\ class\ instead\ of\ calling\ method\ pointers,\ then\ then\ maybe\ this\ could}}
+\DoxyCodeLine{00211\ \textcolor{comment}{//\ go\ away\ or\ be\ simplified,\ because\ would\ no\ longer\ be\ a\ need\ to\ return}}
+\DoxyCodeLine{00212\ \textcolor{comment}{//\ ListOutput\ method\ pointers\ emulating\ capnp\ struct\ method\ pointers..}}
+\DoxyCodeLine{00213\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ ListType>}
+\DoxyCodeLine{00214\ \textcolor{keyword}{struct\ }ListOutput;}
+\DoxyCodeLine{00215\ }
+\DoxyCodeLine{00216\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T,\ ::capnp::Kind\ kind>}
+\DoxyCodeLine{00217\ \textcolor{keyword}{struct\ }ListOutput<::capnp::List<T,\ kind>>}
+\DoxyCodeLine{00218\ \{}
+\DoxyCodeLine{00219\ \ \ \ \ \textcolor{keyword}{using\ }Builder\ =\ typename\ ::capnp::List<T,\ kind>::Builder;}
+\DoxyCodeLine{00220\ }
+\DoxyCodeLine{00221\ \ \ \ \ ListOutput(Builder\&\ builder,\ \textcolor{keywordtype}{size\_t}\ index)\ :\ m\_builder(builder),\ m\_index(index)\ \{\}}
+\DoxyCodeLine{00222\ \ \ \ \ Builder\&\ m\_builder;}
+\DoxyCodeLine{00223\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_index;}
+\DoxyCodeLine{00224\ }
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{comment}{//\ clang-\/format\ off}}
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ get()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ this-\/>m\_builder[this-\/>m\_index];\ \}}
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ init()\ \textcolor{keyword}{const}\ \{\ \textcolor{keywordflow}{return}\ this-\/>m\_builder[this-\/>m\_index];\ \}}
+\DoxyCodeLine{00228\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ B\ =\ Builder,\ \textcolor{keyword}{typename}\ Arg>\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ set(Arg\&\&\ arg)\ \textcolor{keyword}{const}\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}B\&\textcolor{keyword}{>}(this-\/>m\_builder).set(m\_index,\ std::forward<Arg>(arg));\ \}}
+\DoxyCodeLine{00229\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ B\ =\ Builder,\ \textcolor{keyword}{typename}\ Arg>\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ init(Arg\&\&\ arg)\ \textcolor{keyword}{const}\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}B\&\textcolor{keyword}{>}(this-\/>m\_builder).init(m\_index,\ std::forward<Arg>(arg));\ \}}
+\DoxyCodeLine{00230\ \ \ \ \ \textcolor{comment}{//\ clang-\/format\ on}}
+\DoxyCodeLine{00231\ \};}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00233\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Value,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00234\ \textcolor{keywordtype}{void}\ CustomBuildField(TypeList<LocalType>,\ Priority<0>,\ InvokeContext\&\ invoke\_context,\ Value\&\&\ value,\ Output\&\&\ output)}
+\DoxyCodeLine{00235\ \{}
+\DoxyCodeLine{00236\ \ \ \ \ output.set(BuildPrimitive(invoke\_context,\ std::forward<Value>(value),\ TypeList<\textcolor{keyword}{decltype}(output.get())>()));}
+\DoxyCodeLine{00237\ \}}
+\DoxyCodeLine{00238\ }
+\DoxyCodeLine{00240\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ ServerContext,\ \textcolor{keyword}{typename}\ Fn,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00241\ \textcolor{keyword}{auto}\ PassField(Priority<1>,\ TypeList<LocalType\&>,\ ServerContext\&\ server\_context,\ Fn\&\&\ fn,\ Args\&\&...\ args)}
+\DoxyCodeLine{00242\ \ \ \ \ -\/>\ Require<\textcolor{keyword}{typename}\ \textcolor{keyword}{decltype}(Accessor::get(server\_context.call\_context.getParams()))::Calls>}
+\DoxyCodeLine{00243\ \{}
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{comment}{//\ Just\ create\ a\ temporary\ ProxyClient\ if\ argument\ is\ a\ reference\ to\ an}}
+\DoxyCodeLine{00245\ \ \ \ \ \textcolor{comment}{//\ interface\ client.\ If\ argument\ needs\ to\ have\ a\ longer\ lifetime\ and\ not\ be}}
+\DoxyCodeLine{00246\ \ \ \ \ \textcolor{comment}{//\ destroyed\ after\ this\ call,\ a\ CustomPassField\ overload\ can\ be\ implemented}}
+\DoxyCodeLine{00247\ \ \ \ \ \textcolor{comment}{//\ to\ bypass\ this\ code,\ and\ a\ custom\ ProxyServerMethodTraits\ overload\ can\ be}}
+\DoxyCodeLine{00248\ \ \ \ \ \textcolor{comment}{//\ implemented\ in\ order\ to\ read\ the\ capability\ pointer\ out\ of\ params\ and}}
+\DoxyCodeLine{00249\ \ \ \ \ \textcolor{comment}{//\ construct\ a\ ProxyClient\ with\ a\ longer\ lifetime.}}
+\DoxyCodeLine{00250\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ params\ =\ server\_context.call\_context.getParams();}
+\DoxyCodeLine{00251\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ input\ =\ Make<StructField,\ Accessor>(params);}
+\DoxyCodeLine{00252\ \ \ \ \ \textcolor{keyword}{using\ }Interface\ =\ \textcolor{keyword}{typename}\ Decay<\textcolor{keyword}{decltype}(input.get())>::Calls;}
+\DoxyCodeLine{00253\ \ \ \ \ \textcolor{keyword}{auto}\ param\ =\ std::make\_unique<ProxyClient<Interface>>(input.get(),\ server\_context.proxy\_server.m\_context.connection,\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00254\ \ \ \ \ fn.invoke(server\_context,\ std::forward<Args>(args)...,\ *param);}
+\DoxyCodeLine{00255\ \}}
+\DoxyCodeLine{00256\ }
+\DoxyCodeLine{00257\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00258\ \textcolor{keywordtype}{void}\ MaybeBuildField(std::true\_type,\ Args\&\&...\ args)}
+\DoxyCodeLine{00259\ \{}
+\DoxyCodeLine{00260\ \ \ \ \ BuildField(std::forward<Args>(args)...);}
+\DoxyCodeLine{00261\ \}}
+\DoxyCodeLine{00262\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00263\ \textcolor{keywordtype}{void}\ MaybeBuildField(std::false\_type,\ Args\&\&...)}
+\DoxyCodeLine{00264\ \{}
+\DoxyCodeLine{00265\ \}}
+\DoxyCodeLine{00266\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00267\ \textcolor{keywordtype}{void}\ MaybeReadField(std::true\_type,\ Args\&\&...\ args)}
+\DoxyCodeLine{00268\ \{}
+\DoxyCodeLine{00269\ \ \ \ \ ReadField(std::forward<Args>(args)...);}
+\DoxyCodeLine{00270\ \}}
+\DoxyCodeLine{00271\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00272\ \textcolor{keywordtype}{void}\ MaybeReadField(std::false\_type,\ Args\&\&...)}
+\DoxyCodeLine{00273\ \{}
+\DoxyCodeLine{00274\ \}}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00276\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Value,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00277\ \textcolor{keywordtype}{void}\ MaybeSetWant(TypeList<LocalType*>,\ Priority<1>,\ \textcolor{keyword}{const}\ Value\&\ value,\ Output\&\&\ output)}
+\DoxyCodeLine{00278\ \{}
+\DoxyCodeLine{00279\ \ \ \ \ \textcolor{keywordflow}{if}\ (value)\ \{}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ output.setWant();}
+\DoxyCodeLine{00281\ \ \ \ \ \}}
+\DoxyCodeLine{00282\ \}}
+\DoxyCodeLine{00283\ }
+\DoxyCodeLine{00284\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalTypes,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00285\ \textcolor{keywordtype}{void}\ MaybeSetWant(LocalTypes,\ Priority<0>,\ \textcolor{keyword}{const}\ Args\&...)}
+\DoxyCodeLine{00286\ \{}
+\DoxyCodeLine{00287\ \}}
+\DoxyCodeLine{00288\ }
+\DoxyCodeLine{00290\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ ServerContext,\ \textcolor{keyword}{typename}\ Fn,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00291\ \textcolor{keywordtype}{void}\ PassField(Priority<0>,\ TypeList<LocalType>,\ ServerContext\&\ server\_context,\ Fn\&\&\ fn,\ Args\&\&...\ args)}
+\DoxyCodeLine{00292\ \{}
+\DoxyCodeLine{00293\ \ \ \ \ InvokeContext\&\ invoke\_context\ =\ server\_context;}
+\DoxyCodeLine{00294\ \ \ \ \ \textcolor{keyword}{using\ }ArgType\ =\ RemoveCvRef<LocalType>;}
+\DoxyCodeLine{00295\ \ \ \ \ std::optional<ArgType>\ param;}
+\DoxyCodeLine{00296\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ params\ =\ server\_context.call\_context.getParams();}
+\DoxyCodeLine{00297\ \ \ \ \ MaybeReadField(std::integral\_constant<bool,\ Accessor::in>(),\ TypeList<ArgType>(),\ invoke\_context,}
+\DoxyCodeLine{00298\ \ \ \ \ \ \ \ \ Make<StructField,\ Accessor>(params),\ ReadDestEmplace(TypeList<ArgType>(),\ [\&](\textcolor{keyword}{auto}\&\&...\ args)\ -\/>\ \textcolor{keyword}{auto}\&\ \{}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \ \ \ \ param.emplace(std::forward<\textcolor{keyword}{decltype}(args)>(args)...);}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *param;}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \}));}
+\DoxyCodeLine{00302\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (Accessor::in)\ \{}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ assert(param);}
+\DoxyCodeLine{00304\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!param)\ param.emplace();}
+\DoxyCodeLine{00306\ \ \ \ \ \}}
+\DoxyCodeLine{00307\ \ \ \ \ fn.invoke(server\_context,\ std::forward<Args>(args)...,\ \textcolor{keyword}{static\_cast<}LocalType\&\&\textcolor{keyword}{>}(*param));}
+\DoxyCodeLine{00308\ \ \ \ \ \textcolor{keyword}{auto}\&\&\ results\ =\ server\_context.call\_context.getResults();}
+\DoxyCodeLine{00309\ \ \ \ \ MaybeBuildField(std::integral\_constant<bool,\ Accessor::out>(),\ TypeList<LocalType>(),\ invoke\_context,}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ Make<StructField,\ Accessor>(results),\ *param);}
+\DoxyCodeLine{00311\ \}}
+\DoxyCodeLine{00312\ }
+\DoxyCodeLine{00314\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}\ ServerContext,\ \textcolor{keyword}{typename}\ Fn,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00315\ \textcolor{keywordtype}{void}\ PassField(Priority<0>,\ TypeList<>,\ ServerContext\&\ server\_context,\ \textcolor{keyword}{const}\ Fn\&\ fn,\ Args\&\&...\ args)}
+\DoxyCodeLine{00316\ \{}
+\DoxyCodeLine{00317\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ params\ =\ server\_context.call\_context.getParams();}
+\DoxyCodeLine{00318\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ input\ =\ Make<StructField,\ Accessor>(params);}
+\DoxyCodeLine{00319\ \ \ \ \ ReadField(TypeList<>(),\ server\_context,\ input);}
+\DoxyCodeLine{00320\ \ \ \ \ fn.invoke(server\_context,\ std::forward<Args>(args)...);}
+\DoxyCodeLine{00321\ \ \ \ \ \textcolor{keyword}{auto}\&\&\ results\ =\ server\_context.call\_context.getResults();}
+\DoxyCodeLine{00322\ \ \ \ \ BuildField(TypeList<>(),\ server\_context,\ Make<StructField,\ Accessor>(results));}
+\DoxyCodeLine{00323\ \}}
+\DoxyCodeLine{00324\ }
+\DoxyCodeLine{00325\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Derived,\ \textcolor{keywordtype}{size\_t}\ N\ =\ 0>}
+\DoxyCodeLine{00326\ \textcolor{keyword}{struct\ }IterateFieldsHelper}
+\DoxyCodeLine{00327\ \{}
+\DoxyCodeLine{00328\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Arg1,\ \textcolor{keyword}{typename}\ Arg2,\ \textcolor{keyword}{typename}\ ParamList,\ \textcolor{keyword}{typename}\ NextFn,\ \textcolor{keyword}{typename}...\ NextFnArgs>}
+\DoxyCodeLine{00329\ \ \ \ \ \textcolor{keywordtype}{void}\ handleChain(Arg1\&\ arg1,\ Arg2\&\ arg2,\ ParamList,\ NextFn\&\&\ next\_fn,\ NextFnArgs\&\&...\ next\_fn\_args)}
+\DoxyCodeLine{00330\ \ \ \ \ \{}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }S\ =\ Split<N,\ ParamList>;}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ handleChain(arg1,\ arg2,\ \textcolor{keyword}{typename}\ S::First());}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ next\_fn.handleChain(arg1,\ arg2,\ \textcolor{keyword}{typename}\ S::Second(),}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ \ \ \ \ std::forward<NextFnArgs>(next\_fn\_args)...);}
+\DoxyCodeLine{00335\ \ \ \ \ \}}
+\DoxyCodeLine{00336\ }
+\DoxyCodeLine{00337\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Arg1,\ \textcolor{keyword}{typename}\ Arg2,\ \textcolor{keyword}{typename}\ ParamList>}
+\DoxyCodeLine{00338\ \ \ \ \ \textcolor{keywordtype}{void}\ handleChain(Arg1\&\ arg1,\ Arg2\&\ arg2,\ ParamList)}
+\DoxyCodeLine{00339\ \ \ \ \ \{}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_cast<}Derived*\textcolor{keyword}{>}(\textcolor{keyword}{this})-\/>handleField(arg1,\ arg2,\ ParamList());}
+\DoxyCodeLine{00341\ \ \ \ \ \}}
+\DoxyCodeLine{00342\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00343\ \ \ \ \ IterateFieldsHelper()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00344\ \ \ \ \ \textcolor{keyword}{friend}\ Derived;}
+\DoxyCodeLine{00345\ \};}
+\DoxyCodeLine{00346\ }
+\DoxyCodeLine{00347\ \textcolor{keyword}{struct\ }IterateFields\ :\ IterateFieldsHelper<IterateFields,\ 0>}
+\DoxyCodeLine{00348\ \{}
+\DoxyCodeLine{00349\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Arg1,\ \textcolor{keyword}{typename}\ Arg2,\ \textcolor{keyword}{typename}\ ParamList>}
+\DoxyCodeLine{00350\ \ \ \ \ \textcolor{keywordtype}{void}\ handleField(Arg1\&\&,\ Arg2\&\&,\ ParamList)}
+\DoxyCodeLine{00351\ \ \ \ \ \{}
+\DoxyCodeLine{00352\ \ \ \ \ \}}
+\DoxyCodeLine{00353\ \};}
+\DoxyCodeLine{00354\ }
+\DoxyCodeLine{00355\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Exception,\ \textcolor{keyword}{typename}\ Accessor>}
+\DoxyCodeLine{00356\ \textcolor{keyword}{struct\ }ClientException}
+\DoxyCodeLine{00357\ \{}
+\DoxyCodeLine{00358\ \ \ \ \ \textcolor{keyword}{struct\ }BuildParams\ :\ IterateFieldsHelper<BuildParams,\ 0>}
+\DoxyCodeLine{00359\ \ \ \ \ \{}
+\DoxyCodeLine{00360\ \ \ \ \ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Params,\ \textcolor{keyword}{typename}\ ParamList>}
+\DoxyCodeLine{00361\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ handleField(InvokeContext\&\ invoke\_context,\ Params\&\ params,\ ParamList)}
+\DoxyCodeLine{00362\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00363\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00364\ }
+\DoxyCodeLine{00365\ \ \ \ \ \ \ \ \ BuildParams(ClientException*\ client\_exception)\ :\ m\_client\_exception(client\_exception)\ \{\}}
+\DoxyCodeLine{00366\ \ \ \ \ \ \ \ \ ClientException*\ m\_client\_exception;}
+\DoxyCodeLine{00367\ \ \ \ \ \};}
+\DoxyCodeLine{00368\ }
+\DoxyCodeLine{00369\ \ \ \ \ \textcolor{keyword}{struct\ }ReadResults\ :\ IterateFieldsHelper<ReadResults,\ 0>}
+\DoxyCodeLine{00370\ \ \ \ \ \{}
+\DoxyCodeLine{00371\ \ \ \ \ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Results,\ \textcolor{keyword}{typename}\ ParamList>}
+\DoxyCodeLine{00372\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ handleField(InvokeContext\&\ invoke\_context,\ Results\&\ results,\ ParamList)}
+\DoxyCodeLine{00373\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00374\ \ \ \ \ \ \ \ \ \ \ \ \ StructField<Accessor,\ Results>\ input(results);}
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (input.has())\ \{}
+\DoxyCodeLine{00376\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ThrowField(TypeList<Exception>(),\ invoke\_context,\ input);}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00378\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00379\ }
+\DoxyCodeLine{00380\ \ \ \ \ \ \ \ \ ReadResults(ClientException*\ client\_exception)\ :\ m\_client\_exception(client\_exception)\ \{\}}
+\DoxyCodeLine{00381\ \ \ \ \ \ \ \ \ ClientException*\ m\_client\_exception;}
+\DoxyCodeLine{00382\ \ \ \ \ \};}
+\DoxyCodeLine{00383\ \};}
+\DoxyCodeLine{00384\ }
+\DoxyCodeLine{00385\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}...\ Types>}
+\DoxyCodeLine{00386\ \textcolor{keyword}{struct\ }ClientParam}
+\DoxyCodeLine{00387\ \{}
+\DoxyCodeLine{00388\ \ \ \ \ ClientParam(Types\&\&...\ values)\ :\ m\_values\{std::forward<Types>(values)...\}\ \{\}}
+\DoxyCodeLine{00389\ }
+\DoxyCodeLine{00390\ \ \ \ \ \textcolor{keyword}{struct\ }BuildParams\ :\ IterateFieldsHelper<BuildParams,\ sizeof...(Types)>}
+\DoxyCodeLine{00391\ \ \ \ \ \{}
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Params,\ \textcolor{keyword}{typename}\ ParamList>}
+\DoxyCodeLine{00393\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ handleField(ClientInvokeContext\&\ invoke\_context,\ Params\&\ params,\ ParamList)}
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00395\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ \textcolor{keyword}{const}\ fun\ =\ [\&]<\textcolor{keyword}{typename}...\ Values>(Values\&\&...\ values)\ \{}
+\DoxyCodeLine{00396\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MaybeSetWant(}
+\DoxyCodeLine{00397\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ParamList(),\ Priority<1>(),\ values...,\ Make<StructField,\ Accessor>(params));}
+\DoxyCodeLine{00398\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MaybeBuildField(std::integral\_constant<bool,\ Accessor::in>(),\ ParamList(),\ invoke\_context,}
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Make<StructField,\ Accessor>(params),\ std::forward<Values>(values)...);}
+\DoxyCodeLine{00400\ \ \ \ \ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00401\ }
+\DoxyCodeLine{00402\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Note:\ The\ m\_values\ tuple\ just\ consists\ of\ lvalue\ and\ rvalue}}
+\DoxyCodeLine{00403\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ references,\ so\ calling\ std::move\ doesn't\ change\ the\ tuple,\ it}}
+\DoxyCodeLine{00404\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ just\ causes\ std::apply\ to\ call\ the\ std::get\ overload\ that\ returns}}
+\DoxyCodeLine{00405\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \&\&\ instead\ of\ \&,\ so\ rvalue\ references\ are\ preserved\ and\ not}}
+\DoxyCodeLine{00406\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ turned\ into\ lvalue\ references.\ This\ allows\ the\ BuildField\ call\ to}}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ move\ from\ the\ argument\ if\ it\ is\ an\ rvalue\ reference\ or\ was\ passed}}
+\DoxyCodeLine{00408\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ by\ value.}}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ \ \ \ \ std::apply(fun,\ std::move(m\_client\_param-\/>m\_values));}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00411\ }
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ BuildParams(ClientParam*\ client\_param)\ :\ m\_client\_param(client\_param)\ \{\}}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ ClientParam*\ m\_client\_param;}
+\DoxyCodeLine{00414\ \ \ \ \ \};}
+\DoxyCodeLine{00415\ }
+\DoxyCodeLine{00416\ \ \ \ \ \textcolor{keyword}{struct\ }ReadResults\ :\ IterateFieldsHelper<ReadResults,\ sizeof...(Types)>}
+\DoxyCodeLine{00417\ \ \ \ \ \{}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Results,\ \textcolor{keyword}{typename}...\ Params>}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ handleField(ClientInvokeContext\&\ invoke\_context,\ Results\&\ results,\ TypeList<Params...>)}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00421\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ \textcolor{keyword}{const}\ fun\ =\ [\&]<\textcolor{keyword}{typename}...\ Values>(Values\&\&...\ values)\ \{}
+\DoxyCodeLine{00422\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MaybeReadField(std::integral\_constant<bool,\ Accessor::out>(),\ TypeList<Decay<Params>...>(),\ invoke\_context,}
+\DoxyCodeLine{00423\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Make<StructField,\ Accessor>(results),\ ReadDestUpdate(values)...);}
+\DoxyCodeLine{00424\ \ \ \ \ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00425\ }
+\DoxyCodeLine{00426\ \ \ \ \ \ \ \ \ \ \ \ \ std::apply(fun,\ m\_client\_param-\/>m\_values);}
+\DoxyCodeLine{00427\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00428\ }
+\DoxyCodeLine{00429\ \ \ \ \ \ \ \ \ ReadResults(ClientParam*\ client\_param)\ :\ m\_client\_param(client\_param)\ \{\}}
+\DoxyCodeLine{00430\ \ \ \ \ \ \ \ \ ClientParam*\ m\_client\_param;}
+\DoxyCodeLine{00431\ \ \ \ \ \};}
+\DoxyCodeLine{00432\ }
+\DoxyCodeLine{00433\ \ \ \ \ std::tuple<Types\&\&...>\ m\_values;}
+\DoxyCodeLine{00434\ \};}
+\DoxyCodeLine{00435\ }
+\DoxyCodeLine{00436\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}...\ Types>}
+\DoxyCodeLine{00437\ ClientParam<Accessor,\ Types...>\ MakeClientParam(Types\&\&...\ values)}
+\DoxyCodeLine{00438\ \{}
+\DoxyCodeLine{00439\ \ \ \ \ \textcolor{keywordflow}{return}\ \{std::forward<Types>(values)...\};}
+\DoxyCodeLine{00440\ \}}
+\DoxyCodeLine{00441\ }
+\DoxyCodeLine{00442\ \textcolor{keyword}{struct\ }ServerCall}
+\DoxyCodeLine{00443\ \{}
+\DoxyCodeLine{00444\ \ \ \ \ \textcolor{comment}{//\ FIXME:\ maybe\ call\ call\_context.releaseParams()}}
+\DoxyCodeLine{00445\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ ServerContext,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00446\ \ \ \ \ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ invoke(ServerContext\&\ server\_context,\ TypeList<>,\ Args\&\&...\ args)\ \textcolor{keyword}{const}}
+\DoxyCodeLine{00447\ \ \ \ \ \{}
+\DoxyCodeLine{00448\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ProxyServerMethodTraits<\textcolor{keyword}{typename}\ \textcolor{keyword}{decltype}(server\_context.call\_context.getParams())::Reads>::invoke(}
+\DoxyCodeLine{00449\ \ \ \ \ \ \ \ \ \ \ \ \ server\_context,}
+\DoxyCodeLine{00450\ \ \ \ \ \ \ \ \ \ \ \ \ std::forward<Args>(args)...);}
+\DoxyCodeLine{00451\ \ \ \ \ \}}
+\DoxyCodeLine{00452\ \};}
+\DoxyCodeLine{00453\ }
+\DoxyCodeLine{00454\ \textcolor{keyword}{struct\ }ServerDestroy}
+\DoxyCodeLine{00455\ \{}
+\DoxyCodeLine{00456\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ ServerContext,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00457\ \ \ \ \ \textcolor{keywordtype}{void}\ invoke(ServerContext\&\ server\_context,\ TypeList<>,\ Args\&\&...\ args)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00458\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ server\_context.proxy\_server.invokeDestroy(std::forward<Args>(args)...);}
+\DoxyCodeLine{00460\ \ \ \ \ \}}
+\DoxyCodeLine{00461\ \};}
+\DoxyCodeLine{00462\ }
+\DoxyCodeLine{00463\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}\ Parent>}
+\DoxyCodeLine{00464\ \textcolor{keyword}{struct\ }ServerRet\ :\ Parent}
+\DoxyCodeLine{00465\ \{}
+\DoxyCodeLine{00466\ \ \ \ \ ServerRet(Parent\ parent)\ :\ Parent(parent)\ \{\}}
+\DoxyCodeLine{00467\ }
+\DoxyCodeLine{00468\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ ServerContext,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00469\ \ \ \ \ \textcolor{keywordtype}{void}\ invoke(ServerContext\&\ server\_context,\ TypeList<>,\ Args\&\&...\ args)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00470\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00471\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\&\ result\ =\ Parent::invoke(server\_context,\ TypeList<>(),\ std::forward<Args>(args)...);}
+\DoxyCodeLine{00472\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\&\ results\ =\ server\_context.call\_context.getResults();}
+\DoxyCodeLine{00473\ \ \ \ \ \ \ \ \ InvokeContext\&\ invoke\_context\ =\ server\_context;}
+\DoxyCodeLine{00474\ \ \ \ \ \ \ \ \ BuildField(TypeList<\textcolor{keyword}{decltype}(result)>(),\ invoke\_context,\ Make<StructField,\ Accessor>(results),}
+\DoxyCodeLine{00475\ \ \ \ \ \ \ \ \ \ \ \ \ std::forward<\textcolor{keyword}{decltype}(result)>(result));}
+\DoxyCodeLine{00476\ \ \ \ \ \}}
+\DoxyCodeLine{00477\ \};}
+\DoxyCodeLine{00478\ }
+\DoxyCodeLine{00479\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Exception,\ \textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}\ Parent>}
+\DoxyCodeLine{00480\ \textcolor{keyword}{struct\ }ServerExcept\ :\ Parent}
+\DoxyCodeLine{00481\ \{}
+\DoxyCodeLine{00482\ \ \ \ \ ServerExcept(Parent\ parent)\ :\ Parent(parent)\ \{\}}
+\DoxyCodeLine{00483\ }
+\DoxyCodeLine{00484\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ ServerContext,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00485\ \ \ \ \ \textcolor{keywordtype}{void}\ invoke(ServerContext\&\ server\_context,\ TypeList<>,\ Args\&\&...\ args)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00486\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00487\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00488\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Parent::invoke(server\_context,\ TypeList<>(),\ std::forward<Args>(args)...);}
+\DoxyCodeLine{00489\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ Exception\&\ exception)\ \{}
+\DoxyCodeLine{00490\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\&\ results\ =\ server\_context.call\_context.getResults();}
+\DoxyCodeLine{00491\ \ \ \ \ \ \ \ \ \ \ \ \ BuildField(TypeList<Exception>(),\ server\_context,\ Make<StructField,\ Accessor>(results),\ exception);}
+\DoxyCodeLine{00492\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00493\ \ \ \ \ \}}
+\DoxyCodeLine{00494\ \};}
+\DoxyCodeLine{00495\ }
+\DoxyCodeLine{00498\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}\ Message>}
+\DoxyCodeLine{00499\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ MaybeGet(Message\&\&\ message,\ \textcolor{keyword}{decltype}(Accessor::get(message))*\ enable\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00500\ \{}
+\DoxyCodeLine{00501\ \ \ \ \ \textcolor{keywordflow}{return}\ Accessor::get(message);}
+\DoxyCodeLine{00502\ \}}
+\DoxyCodeLine{00503\ }
+\DoxyCodeLine{00504\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Accessor>}
+\DoxyCodeLine{00505\ ::capnp::Void\ MaybeGet(...)}
+\DoxyCodeLine{00506\ \{}
+\DoxyCodeLine{00507\ \ \ \ \ \textcolor{keywordflow}{return}\ \{\};}
+\DoxyCodeLine{00508\ \}}
+\DoxyCodeLine{00509\ }
+\DoxyCodeLine{00510\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ Accessor>}
+\DoxyCodeLine{00511\ \textcolor{keywordtype}{void}\ CustomPassField();}
+\DoxyCodeLine{00512\ }
+\DoxyCodeLine{00523\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00524\ \textcolor{keyword}{auto}\ PassField(Priority<2>,\ Args\&\&...\ args)\ -\/>\ \textcolor{keyword}{decltype}(CustomPassField<Accessor>(std::forward<Args>(args)...))}
+\DoxyCodeLine{00525\ \{}
+\DoxyCodeLine{00526\ \ \ \ \ \textcolor{keywordflow}{return}\ CustomPassField<Accessor>(std::forward<Args>(args)...);}
+\DoxyCodeLine{00527\ \};}
+\DoxyCodeLine{00528\ }
+\DoxyCodeLine{00529\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ argc,\ \textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}\ Parent>}
+\DoxyCodeLine{00530\ \textcolor{keyword}{struct\ }ServerField\ :\ Parent}
+\DoxyCodeLine{00531\ \{}
+\DoxyCodeLine{00532\ \ \ \ \ ServerField(Parent\ parent)\ :\ Parent(parent)\ \{\}}
+\DoxyCodeLine{00533\ }
+\DoxyCodeLine{00534\ \ \ \ \ \textcolor{keyword}{const}\ Parent\&\ parent()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00535\ }
+\DoxyCodeLine{00536\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ ServerContext,\ \textcolor{keyword}{typename}\ ArgTypes,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00537\ \ \ \ \ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ invoke(ServerContext\&\ server\_context,\ ArgTypes,\ Args\&\&...\ args)\ \textcolor{keyword}{const}}
+\DoxyCodeLine{00538\ \ \ \ \ \{}
+\DoxyCodeLine{00539\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ PassField<Accessor>(Priority<2>(),}
+\DoxyCodeLine{00540\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{typename}\ Split<argc,\ ArgTypes>::First(),}
+\DoxyCodeLine{00541\ \ \ \ \ \ \ \ \ \ \ \ \ server\_context,}
+\DoxyCodeLine{00542\ \ \ \ \ \ \ \ \ \ \ \ \ this-\/>parent(),}
+\DoxyCodeLine{00543\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{typename}\ Split<argc,\ ArgTypes>::Second(),}
+\DoxyCodeLine{00544\ \ \ \ \ \ \ \ \ \ \ \ \ std::forward<Args>(args)...);}
+\DoxyCodeLine{00545\ \ \ \ \ \}}
+\DoxyCodeLine{00546\ \};}
+\DoxyCodeLine{00547\ }
+\DoxyCodeLine{00548\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ argc,\ \textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}\ Parent>}
+\DoxyCodeLine{00549\ ServerField<argc,\ Accessor,\ Parent>\ MakeServerField(Parent\ parent)}
+\DoxyCodeLine{00550\ \{}
+\DoxyCodeLine{00551\ \ \ \ \ \textcolor{keywordflow}{return}\ \{parent\};}
+\DoxyCodeLine{00552\ \}}
+\DoxyCodeLine{00553\ }
+\DoxyCodeLine{00554\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Request>}
+\DoxyCodeLine{00555\ \textcolor{keyword}{struct\ }CapRequestTraits;}
+\DoxyCodeLine{00556\ }
+\DoxyCodeLine{00557\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ \_Params,\ \textcolor{keyword}{typename}\ \_Results>}
+\DoxyCodeLine{00558\ \textcolor{keyword}{struct\ }CapRequestTraits<::capnp::Request<\_Params,\ \_Results>>}
+\DoxyCodeLine{00559\ \{}
+\DoxyCodeLine{00560\ \ \ \ \ \textcolor{keyword}{using\ }Params\ =\ \_Params;}
+\DoxyCodeLine{00561\ \ \ \ \ \textcolor{keyword}{using\ }Results\ =\ \_Results;}
+\DoxyCodeLine{00562\ \};}
+\DoxyCodeLine{00563\ }
+\DoxyCodeLine{00567\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Client>}
+\DoxyCodeLine{00568\ \textcolor{keywordtype}{void}\ clientDestroy(Client\&\ client)}
+\DoxyCodeLine{00569\ \{}
+\DoxyCodeLine{00570\ \ \ \ \ \textcolor{keywordflow}{if}\ (client.m\_context.connection)\ \{}
+\DoxyCodeLine{00571\ \ \ \ \ \ \ \ \ MP\_LOG(*client.m\_context.loop,\ Log::Info)\ <<\ \textcolor{stringliteral}{"{}IPC\ client\ destroy\ "{}}\ <<\ \textcolor{keyword}{typeid}(client).name();}
+\DoxyCodeLine{00572\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00573\ \ \ \ \ \ \ \ \ KJ\_LOG(INFO,\ \textcolor{stringliteral}{"{}IPC\ interrupted\ client\ destroy"{}},\ \textcolor{keyword}{typeid}(client).name());}
+\DoxyCodeLine{00574\ \ \ \ \ \}}
+\DoxyCodeLine{00575\ \}}
+\DoxyCodeLine{00576\ }
+\DoxyCodeLine{00577\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Server>}
+\DoxyCodeLine{00578\ \textcolor{keywordtype}{void}\ serverDestroy(Server\&\ server)}
+\DoxyCodeLine{00579\ \{}
+\DoxyCodeLine{00580\ \ \ \ \ MP\_LOG(*server.m\_context.loop,\ Log::Info)\ <<\ \textcolor{stringliteral}{"{}IPC\ server\ destroy\ "{}}\ <<\ \textcolor{keyword}{typeid}(server).name();}
+\DoxyCodeLine{00581\ \}}
+\DoxyCodeLine{00582\ }
+\DoxyCodeLine{00592\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ ProxyClient,\ \textcolor{keyword}{typename}\ GetRequest,\ \textcolor{keyword}{typename}...\ FieldObjs>}
+\DoxyCodeLine{00593\ \textcolor{keywordtype}{void}\ clientInvoke(ProxyClient\&\ proxy\_client,\ \textcolor{keyword}{const}\ GetRequest\&\ get\_request,\ FieldObjs\&\&...\ fields)}
+\DoxyCodeLine{00594\ \{}
+\DoxyCodeLine{00595\ \ \ \ \ \textcolor{keywordflow}{if}\ (!g\_thread\_context.waiter)\ \{}
+\DoxyCodeLine{00596\ \ \ \ \ \ \ \ \ assert(g\_thread\_context.thread\_name.empty());}
+\DoxyCodeLine{00597\ \ \ \ \ \ \ \ \ g\_thread\_context.thread\_name\ =\ ThreadName(proxy\_client.m\_context.loop-\/>m\_exe\_name);}
+\DoxyCodeLine{00598\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ next\ assert\ triggers,\ it\ means\ clientInvoke\ is\ being\ called\ from}}
+\DoxyCodeLine{00599\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ capnp\ event\ loop\ thread.\ This\ can\ happen\ when\ a\ ProxyServer}}
+\DoxyCodeLine{00600\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ method\ implementation\ that\ runs\ synchronously\ on\ the\ event\ loop}}
+\DoxyCodeLine{00601\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ thread\ tries\ to\ make\ a\ blocking\ callback\ to\ the\ client.\ Any\ server}}
+\DoxyCodeLine{00602\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ method\ that\ makes\ a\ blocking\ callback\ or\ blocks\ in\ general\ needs\ to}}
+\DoxyCodeLine{00603\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ run\ asynchronously\ off\ the\ event\ loop\ thread.\ This\ is\ easy\ to\ fix\ by}}
+\DoxyCodeLine{00604\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ just\ adding\ a\ 'context\ :Proxy.Context'\ argument\ to\ the\ capnp\ method}}
+\DoxyCodeLine{00605\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ declaration\ so\ the\ server\ method\ runs\ in\ a\ dedicated\ thread.}}
+\DoxyCodeLine{00606\ \ \ \ \ \ \ \ \ assert(!g\_thread\_context.loop\_thread);}
+\DoxyCodeLine{00607\ \ \ \ \ \ \ \ \ g\_thread\_context.waiter\ =\ std::make\_unique<Waiter>();}
+\DoxyCodeLine{00608\ \ \ \ \ \ \ \ \ MP\_LOGPLAIN(*proxy\_client.m\_context.loop,\ Log::Info)}
+\DoxyCodeLine{00609\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\{"{}}\ <<\ g\_thread\_context.thread\_name}
+\DoxyCodeLine{00610\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\}\ IPC\ client\ first\ request\ from\ current\ thread,\ constructing\ waiter"{}};}
+\DoxyCodeLine{00611\ \ \ \ \ \}}
+\DoxyCodeLine{00612\ \ \ \ \ ThreadContext\&\ thread\_context\{g\_thread\_context\};}
+\DoxyCodeLine{00613\ \ \ \ \ std::optional<ClientInvokeContext>\ invoke\_context;\ \textcolor{comment}{//\ Must\ outlive\ waiter-\/>wait()\ call\ below}}
+\DoxyCodeLine{00614\ \ \ \ \ std::exception\_ptr\ exception;}
+\DoxyCodeLine{00615\ \ \ \ \ std::string\ kj\_exception;}
+\DoxyCodeLine{00616\ \ \ \ \ \textcolor{keywordtype}{bool}\ done\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00617\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ disconnected\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00618\ \ \ \ \ proxy\_client.m\_context.loop-\/>sync([\&]()\ \{}
+\DoxyCodeLine{00619\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!proxy\_client.m\_context.connection)\ \{}
+\DoxyCodeLine{00620\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Lock\ lock(thread\_context.waiter-\/>m\_mutex);}
+\DoxyCodeLine{00621\ \ \ \ \ \ \ \ \ \ \ \ \ done\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00622\ \ \ \ \ \ \ \ \ \ \ \ \ disconnected\ =\ \textcolor{stringliteral}{"{}IPC\ client\ method\ called\ after\ disconnect."{}};}
+\DoxyCodeLine{00623\ \ \ \ \ \ \ \ \ \ \ \ \ thread\_context.waiter-\/>m\_cv.notify\_all();}
+\DoxyCodeLine{00624\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00625\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00626\ }
+\DoxyCodeLine{00627\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ request\ =\ (proxy\_client.m\_client.*get\_request)(\textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00628\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }Request\ =\ CapRequestTraits<\textcolor{keyword}{decltype}(request)>;}
+\DoxyCodeLine{00629\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }FieldList\ =\ \textcolor{keyword}{typename}\ ProxyClientMethodTraits<typename\ Request::Params>::Fields;}
+\DoxyCodeLine{00630\ \ \ \ \ \ \ \ \ invoke\_context.emplace(*proxy\_client.m\_context.connection,\ thread\_context);}
+\DoxyCodeLine{00631\ \ \ \ \ \ \ \ \ IterateFields().handleChain(*invoke\_context,\ request,\ FieldList(),\ \textcolor{keyword}{typename}\ FieldObjs::BuildParams\{\&fields\}...);}
+\DoxyCodeLine{00632\ \ \ \ \ \ \ \ \ MP\_LOGPLAIN(*proxy\_client.m\_context.loop,\ Log::Debug)}
+\DoxyCodeLine{00633\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\{"{}}\ <<\ thread\_context.thread\_name\ <<\ \textcolor{stringliteral}{"{}\}\ IPC\ client\ send\ "{}}}
+\DoxyCodeLine{00634\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ TypeName<typename\ Request::Params>();}
+\DoxyCodeLine{00635\ \ \ \ \ \ \ \ \ MP\_LOGPLAIN(*proxy\_client.m\_context.loop,\ Log::Trace)}
+\DoxyCodeLine{00636\ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}send\ data:\ "{}}\ <<\ LogEscape(request.toString(),\ proxy\_client.m\_context.loop-\/>m\_log\_opts.max\_chars);}
+\DoxyCodeLine{00637\ }
+\DoxyCodeLine{00638\ \ \ \ \ \ \ \ \ proxy\_client.m\_context.loop-\/>m\_task\_set-\/>add(request.send().then(}
+\DoxyCodeLine{00639\ \ \ \ \ \ \ \ \ \ \ \ \ [\&](::capnp::Response<typename\ Request::Results>\&\&\ response)\ \{}
+\DoxyCodeLine{00640\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MP\_LOGPLAIN(*proxy\_client.m\_context.loop,\ Log::Debug)}
+\DoxyCodeLine{00641\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\{"{}}\ <<\ thread\_context.thread\_name\ <<\ \textcolor{stringliteral}{"{}\}\ IPC\ client\ recv\ "{}}}
+\DoxyCodeLine{00642\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ TypeName<typename\ Request::Results>();}
+\DoxyCodeLine{00643\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MP\_LOGPLAIN(*proxy\_client.m\_context.loop,\ Log::Trace)}
+\DoxyCodeLine{00644\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}recv\ data:\ "{}}\ <<\ LogEscape(response.toString(),\ proxy\_client.m\_context.loop-\/>m\_log\_opts.max\_chars);}
+\DoxyCodeLine{00645\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ try\ \{}
+\DoxyCodeLine{00646\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ IterateFields().handleChain(}
+\DoxyCodeLine{00647\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *invoke\_context,\ response,\ FieldList(),\ typename\ FieldObjs::ReadResults\{\&fields\}...);}
+\DoxyCodeLine{00648\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ catch\ (...)\ \{}
+\DoxyCodeLine{00649\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ exception\ =\ std::current\_exception();}
+\DoxyCodeLine{00650\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00651\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Lock\ lock(thread\_context.waiter-\/>m\_mutex);}
+\DoxyCodeLine{00652\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ done\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00653\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ thread\_context.waiter-\/>m\_cv.notify\_all();}
+\DoxyCodeLine{00654\ \ \ \ \ \ \ \ \ \ \ \ \ \},}
+\DoxyCodeLine{00655\ \ \ \ \ \ \ \ \ \ \ \ \ [\&](const\ ::kj::Exception\&\ e)\ \{}
+\DoxyCodeLine{00656\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (e.getType()\ ==\ ::kj::Exception::Type::DISCONNECTED)\ \{}
+\DoxyCodeLine{00657\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ disconnected\ =\ \textcolor{stringliteral}{"{}IPC\ client\ method\ call\ interrupted\ by\ disconnect."{}};}
+\DoxyCodeLine{00658\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00659\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ kj\_exception\ =\ kj::str(\textcolor{stringliteral}{"{}kj::Exception:\ "{}},\ e).cStr();}
+\DoxyCodeLine{00660\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MP\_LOGPLAIN(*proxy\_client.m\_context.loop,\ Log::Info)}
+\DoxyCodeLine{00661\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ \textcolor{stringliteral}{"{}\{"{}}\ <<\ thread\_context.thread\_name\ <<\ \textcolor{stringliteral}{"{}\}\ IPC\ client\ exception\ "{}}\ <<\ kj\_exception;}
+\DoxyCodeLine{00662\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00663\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Lock\ lock(thread\_context.waiter-\/>m\_mutex);}
+\DoxyCodeLine{00664\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ done\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00665\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ thread\_context.waiter-\/>m\_cv.notify\_all();}
+\DoxyCodeLine{00666\ \ \ \ \ \ \ \ \ \ \ \ \ \}));}
+\DoxyCodeLine{00667\ \ \ \ \ \});}
+\DoxyCodeLine{00668\ }
+\DoxyCodeLine{00669\ \ \ \ \ Lock\ lock(thread\_context.waiter-\/>m\_mutex);}
+\DoxyCodeLine{00670\ \ \ \ \ thread\_context.waiter-\/>wait(lock,\ [\&done]()\ \{\ \textcolor{keywordflow}{return}\ done;\ \});}
+\DoxyCodeLine{00671\ \ \ \ \ \textcolor{keywordflow}{if}\ (exception)\ std::rethrow\_exception(exception);}
+\DoxyCodeLine{00672\ \ \ \ \ \textcolor{keywordflow}{if}\ (!kj\_exception.empty())\ MP\_LOGPLAIN(*proxy\_client.m\_context.loop,\ Log::Raise)\ <<\ kj\_exception;}
+\DoxyCodeLine{00673\ \ \ \ \ \textcolor{keywordflow}{if}\ (disconnected)\ MP\_LOGPLAIN(*proxy\_client.m\_context.loop,\ Log::Raise)\ <<\ disconnected;}
+\DoxyCodeLine{00674\ \}}
+\DoxyCodeLine{00675\ }
+\DoxyCodeLine{00679\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Fn,\ \textcolor{keyword}{typename}\ Ret>}
+\DoxyCodeLine{00680\ \textcolor{keyword}{auto}\ ReplaceVoid(Fn\&\&\ fn,\ Ret\&\&\ ret)}
+\DoxyCodeLine{00681\ \{}
+\DoxyCodeLine{00682\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_same\_v<\textcolor{keyword}{decltype}(fn()),\ \textcolor{keywordtype}{void}>)\ \{}
+\DoxyCodeLine{00683\ \ \ \ \ \ \ \ \ fn();}
+\DoxyCodeLine{00684\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret();}
+\DoxyCodeLine{00685\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00686\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ fn();}
+\DoxyCodeLine{00687\ \ \ \ \ \}}
+\DoxyCodeLine{00688\ \}}
+\DoxyCodeLine{00689\ }
+\DoxyCodeLine{00690\ \textcolor{keyword}{extern}\ std::atomic<int>\ server\_reqs;}
+\DoxyCodeLine{00691\ }
+\DoxyCodeLine{00699\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Server,\ \textcolor{keyword}{typename}\ CallContext,\ \textcolor{keyword}{typename}\ Fn>}
+\DoxyCodeLine{00700\ kj::Promise<void>\ serverInvoke(Server\&\ server,\ CallContext\&\ call\_context,\ Fn\ fn)}
+\DoxyCodeLine{00701\ \{}
+\DoxyCodeLine{00702\ \ \ \ \ \textcolor{keyword}{auto}\ params\ =\ call\_context.getParams();}
+\DoxyCodeLine{00703\ \ \ \ \ \textcolor{keyword}{using\ }Params\ =\ \textcolor{keyword}{decltype}(params);}
+\DoxyCodeLine{00704\ \ \ \ \ \textcolor{keyword}{using\ }Results\ =\ \textcolor{keyword}{typename}\ \textcolor{keyword}{decltype}(call\_context.getResults())::Builds;}
+\DoxyCodeLine{00705\ }
+\DoxyCodeLine{00706\ \ \ \ \ \textcolor{keywordtype}{int}\ req\ =\ ++server\_reqs;}
+\DoxyCodeLine{00707\ \ \ \ \ MP\_LOG(*server.m\_context.loop,\ Log::Debug)\ <<\ \textcolor{stringliteral}{"{}IPC\ server\ recv\ request\ \ \#"{}}\ <<\ req\ <<\ \textcolor{stringliteral}{"{}\ "{}}}
+\DoxyCodeLine{00708\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ TypeName<typename\ Params::Reads>();}
+\DoxyCodeLine{00709\ \ \ \ \ MP\_LOG(*server.m\_context.loop,\ Log::Trace)\ <<\ \textcolor{stringliteral}{"{}request\ data:\ "{}}}
+\DoxyCodeLine{00710\ \ \ \ \ \ \ \ \ <<\ LogEscape(params.toString(),\ server.m\_context.loop-\/>m\_log\_opts.max\_chars);}
+\DoxyCodeLine{00711\ }
+\DoxyCodeLine{00712\ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00713\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }ServerContext\ =\ ServerInvokeContext<Server,\ CallContext>;}
+\DoxyCodeLine{00714\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }ArgList\ =\ \textcolor{keyword}{typename}\ ProxyClientMethodTraits<typename\ Params::Reads>::Params;}
+\DoxyCodeLine{00715\ \ \ \ \ \ \ \ \ ServerContext\ server\_context\{server,\ call\_context,\ req\};}
+\DoxyCodeLine{00716\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ ReplaceVoid\ is\ used\ to\ support\ fn.invoke\ implementations\ that}}
+\DoxyCodeLine{00717\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ execute\ asynchronously\ and\ return\ promises,\ as\ well\ as}}
+\DoxyCodeLine{00718\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ implementations\ that\ execute\ synchronously\ and\ return\ void.\ The}}
+\DoxyCodeLine{00719\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ invoke\ function\ will\ be\ synchronous\ by\ default,\ but\ asynchronous\ if}}
+\DoxyCodeLine{00720\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ an\ mp.Context\ argument\ is\ passed,\ and\ the\ mp.Context\ PassField}}
+\DoxyCodeLine{00721\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ overload\ returns\ a\ promise\ executing\ the\ request\ in\ a\ worker\ thread}}
+\DoxyCodeLine{00722\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ and\ waiting\ for\ it\ to\ complete.}}
+\DoxyCodeLine{00723\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ReplaceVoid([\&]()\ \{\ \textcolor{keywordflow}{return}\ fn.invoke(server\_context,\ ArgList());\ \},}
+\DoxyCodeLine{00724\ \ \ \ \ \ \ \ \ \ \ \ \ [\&]()\ \{\ \textcolor{keywordflow}{return}\ kj::Promise<CallContext>(kj::mv(call\_context));\ \})}
+\DoxyCodeLine{00725\ \ \ \ \ \ \ \ \ \ \ \ \ .then([\&server,\ req](CallContext\ call\_context)\ \{}
+\DoxyCodeLine{00726\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MP\_LOG(*server.m\_context.loop,\ Log::Debug)\ <<\ \textcolor{stringliteral}{"{}IPC\ server\ send\ response\ \#"{}}\ <<\ req\ <<\ \textcolor{stringliteral}{"{}\ "{}}\ <<\ TypeName<Results>();}
+\DoxyCodeLine{00727\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MP\_LOG(*server.m\_context.loop,\ Log::Trace)\ <<\ \textcolor{stringliteral}{"{}response\ data:\ "{}}}
+\DoxyCodeLine{00728\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <<\ LogEscape(call\_context.getResults().toString(),\ server.m\_context.loop-\/>m\_log\_opts.max\_chars);}
+\DoxyCodeLine{00729\ \ \ \ \ \ \ \ \ \ \ \ \ \});}
+\DoxyCodeLine{00730\ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::exception\&\ e)\ \{}
+\DoxyCodeLine{00731\ \ \ \ \ \ \ \ \ MP\_LOG(*server.m\_context.loop,\ Log::Error)\ <<\ \textcolor{stringliteral}{"{}IPC\ server\ unhandled\ exception:\ "{}}\ <<\ e.what();}
+\DoxyCodeLine{00732\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw};}
+\DoxyCodeLine{00733\ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (...)\ \{}
+\DoxyCodeLine{00734\ \ \ \ \ \ \ \ \ MP\_LOG(*server.m\_context.loop,\ Log::Error)\ <<\ \textcolor{stringliteral}{"{}IPC\ server\ unhandled\ exception"{}};}
+\DoxyCodeLine{00735\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw};}
+\DoxyCodeLine{00736\ \ \ \ \ \}}
+\DoxyCodeLine{00737\ \}}
+\DoxyCodeLine{00738\ }
+\DoxyCodeLine{00741\ \textcolor{keyword}{struct\ }ProxyTypeRegister\ \{}
+\DoxyCodeLine{00742\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Interface>}
+\DoxyCodeLine{00743\ \ \ \ \ ProxyTypeRegister(TypeList<Interface>)\ \{}
+\DoxyCodeLine{00744\ \ \ \ \ \ \ \ \ types().emplace(\textcolor{keyword}{typeid}(Interface),\ [](\textcolor{keywordtype}{void}*\ iface)\ -\/>\ ProxyContext\&\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}typename\ mp::ProxyType<Interface>::Client\&\textcolor{keyword}{>}(*\textcolor{keyword}{static\_cast<}Interface*\textcolor{keyword}{>}(iface)).m\_context;\ \});}
+\DoxyCodeLine{00745\ \ \ \ \ \}}
+\DoxyCodeLine{00746\ \ \ \ \ \textcolor{keyword}{using\ }Types\ =\ std::map<std::type\_index,\ ProxyContext\&(*)(\textcolor{keywordtype}{void}*)>;}
+\DoxyCodeLine{00747\ \ \ \ \ \textcolor{keyword}{static}\ Types\&\ types()\ \{\ \textcolor{keyword}{static}\ Types\ types;\ \textcolor{keywordflow}{return}\ types;\ \}}
+\DoxyCodeLine{00748\ \};}
+\DoxyCodeLine{00749\ }
+\DoxyCodeLine{00750\ \}\ \textcolor{comment}{//\ namespace\ mp}}
+\DoxyCodeLine{00751\ }
+\DoxyCodeLine{00752\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ MP\_PROXY\_TYPES\_H}}
+
+\end{DoxyCode}

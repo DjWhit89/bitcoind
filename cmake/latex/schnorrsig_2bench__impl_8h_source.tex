@@ -1,0 +1,110 @@
+\doxysection{bench\+\_\+impl.\+h}
+\label{schnorrsig_2bench__impl_8h_source}\index{src/secp256k1/src/modules/schnorrsig/bench\_impl.h@{src/secp256k1/src/modules/schnorrsig/bench\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2018-\/2020\ Andrew\ Poelstra,\ Jonas\ Nick\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_MODULE\_SCHNORRSIG\_BENCH\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_MODULE\_SCHNORRSIG\_BENCH\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1\_schnorrsig.h"{}}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#define\ MSGLEN\ 32}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }\{}
+\DoxyCodeLine{00015\ \ \ \ \ secp256k1\_context\ *ctx;}
+\DoxyCodeLine{00016\ \ \ \ \ \textcolor{keywordtype}{int}\ n;}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_keypair\ **keypairs;}
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ **pk;}
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ **sigs;}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ **msgs;}
+\DoxyCodeLine{00022\ \}\ bench\_schnorrsig\_data;}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ bench\_schnorrsig\_sign(\textcolor{keywordtype}{void}*\ arg,\ \textcolor{keywordtype}{int}\ iters)\ \{}
+\DoxyCodeLine{00025\ \ \ \ \ bench\_schnorrsig\_data\ *data\ =\ (bench\_schnorrsig\_data\ *)arg;}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[MSGLEN]\ =\ \{0\};}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64];}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ iters;\ i++)\ \{}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ msg[0]\ =\ i;}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ msg[1]\ =\ i\ >>\ 8;}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(data-\/>ctx,\ sig,\ msg,\ MSGLEN,\ data-\/>keypairs[i],\ NULL));}
+\DoxyCodeLine{00034\ \ \ \ \ \}}
+\DoxyCodeLine{00035\ \}}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ bench\_schnorrsig\_verify(\textcolor{keywordtype}{void}*\ arg,\ \textcolor{keywordtype}{int}\ iters)\ \{}
+\DoxyCodeLine{00038\ \ \ \ \ bench\_schnorrsig\_data\ *data\ =\ (bench\_schnorrsig\_data\ *)arg;}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ iters;\ i++)\ \{}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ secp256k1\_xonly\_pubkey\ pk;}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(data-\/>ctx,\ \&pk,\ data-\/>pk[i])\ ==\ 1);}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(data-\/>ctx,\ data-\/>sigs[i],\ data-\/>msgs[i],\ MSGLEN,\ \&pk));}
+\DoxyCodeLine{00045\ \ \ \ \ \}}
+\DoxyCodeLine{00046\ \}}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ run\_schnorrsig\_bench(\textcolor{keywordtype}{int}\ iters,\ \textcolor{keywordtype}{int}\ argc,\ \textcolor{keywordtype}{char}**\ argv)\ \{}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00050\ \ \ \ \ bench\_schnorrsig\_data\ data;}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keywordtype}{int}\ d\ =\ argc\ ==\ 1;}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \ \ \ \ data.ctx\ =\ secp256k1\_context\_create(SECP256K1\_CONTEXT\_NONE);}
+\DoxyCodeLine{00054\ \ \ \ \ data.keypairs\ =\ (\textcolor{keyword}{const}\ secp256k1\_keypair\ **)malloc(iters\ *\ \textcolor{keyword}{sizeof}(secp256k1\_keypair\ *));}
+\DoxyCodeLine{00055\ \ \ \ \ data.pk\ =\ (\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ **)malloc(iters\ *\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *));}
+\DoxyCodeLine{00056\ \ \ \ \ data.msgs\ =\ (\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ **)malloc(iters\ *\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *));}
+\DoxyCodeLine{00057\ \ \ \ \ data.sigs\ =\ (\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ **)malloc(iters\ *\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *));}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \ \ CHECK(MSGLEN\ >=\ 4);}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ iters;\ i++)\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32];}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg\ =\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *)malloc(MSGLEN);}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sig\ =\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *)malloc(64);}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ secp256k1\_keypair\ *keypair\ =\ (secp256k1\_keypair\ *)malloc(\textcolor{keyword}{sizeof}(*keypair));}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *pk\_char\ =\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *)malloc(32);}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ secp256k1\_xonly\_pubkey\ pk;}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ msg[0]\ =\ sk[0]\ =\ i;}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ msg[1]\ =\ sk[1]\ =\ i\ >>\ 8;}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ msg[2]\ =\ sk[2]\ =\ i\ >>\ 16;}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ msg[3]\ =\ sk[3]\ =\ i\ >>\ 24;}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ memset(\&msg[4],\ \textcolor{charliteral}{'m'},\ MSGLEN\ -\/\ 4);}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ memset(\&sk[4],\ \textcolor{charliteral}{'s'},\ 28);}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ data.keypairs[i]\ =\ keypair;}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ data.pk[i]\ =\ pk\_char;}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ data.msgs[i]\ =\ msg;}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ data.sigs[i]\ =\ sig;}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_create(data.ctx,\ keypair,\ sk));}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(data.ctx,\ sig,\ msg,\ MSGLEN,\ keypair,\ NULL));}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(data.ctx,\ \&pk,\ NULL,\ keypair));}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(data.ctx,\ pk\_char,\ \&pk)\ ==\ 1);}
+\DoxyCodeLine{00083\ \ \ \ \ \}}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordflow}{if}\ (d\ ||\ have\_flag(argc,\ argv,\ \textcolor{stringliteral}{"{}schnorrsig"{}})\ ||\ have\_flag(argc,\ argv,\ \textcolor{stringliteral}{"{}sign"{}})\ ||\ have\_flag(argc,\ argv,\ \textcolor{stringliteral}{"{}schnorrsig\_sign"{}}))\ run\_benchmark(\textcolor{stringliteral}{"{}schnorrsig\_sign"{}},\ bench\_schnorrsig\_sign,\ NULL,\ NULL,\ (\textcolor{keywordtype}{void}\ *)\ \&data,\ 10,\ iters);}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keywordflow}{if}\ (d\ ||\ have\_flag(argc,\ argv,\ \textcolor{stringliteral}{"{}schnorrsig"{}})\ ||\ have\_flag(argc,\ argv,\ \textcolor{stringliteral}{"{}verify"{}})\ ||\ have\_flag(argc,\ argv,\ \textcolor{stringliteral}{"{}schnorrsig\_verify"{}}))\ run\_benchmark(\textcolor{stringliteral}{"{}schnorrsig\_verify"{}},\ bench\_schnorrsig\_verify,\ NULL,\ NULL,\ (\textcolor{keywordtype}{void}\ *)\ \&data,\ 10,\ iters);}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ iters;\ i++)\ \{}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ free((\textcolor{keywordtype}{void}\ *)data.keypairs[i]);}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ free((\textcolor{keywordtype}{void}\ *)data.pk[i]);}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ free((\textcolor{keywordtype}{void}\ *)data.msgs[i]);}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ free((\textcolor{keywordtype}{void}\ *)data.sigs[i]);}
+\DoxyCodeLine{00093\ \ \ \ \ \}}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{comment}{/*\ Casting\ to\ (void\ *)\ avoids\ a\ stupid\ warning\ in\ MSVC.\ */}}
+\DoxyCodeLine{00096\ \ \ \ \ free((\textcolor{keywordtype}{void}\ *)data.keypairs);}
+\DoxyCodeLine{00097\ \ \ \ \ free((\textcolor{keywordtype}{void}\ *)data.pk);}
+\DoxyCodeLine{00098\ \ \ \ \ free((\textcolor{keywordtype}{void}\ *)data.msgs);}
+\DoxyCodeLine{00099\ \ \ \ \ free((\textcolor{keywordtype}{void}\ *)data.sigs);}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \ \ \ \ secp256k1\_context\_destroy(data.ctx);}
+\DoxyCodeLine{00102\ \}}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

@@ -1,0 +1,48 @@
+\doxysection{type-\/data.h}
+\label{type-data_8h_source}\index{src/ipc/libmultiprocess/include/mp/type-\/data.h@{src/ipc/libmultiprocess/include/mp/type-\/data.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ MP\_PROXY\_TYPE\_DATA\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ MP\_PROXY\_TYPE\_DATA\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <mp/util.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{keyword}{namespace\ }mp\ \{}
+\DoxyCodeLine{00011\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ U>}
+\DoxyCodeLine{00012\ \textcolor{keyword}{concept\ }IsSpanOf\ =}
+\DoxyCodeLine{00013\ \ \ \ \ std::convertible\_to<T,\ std::span<const\ U>>\ \&\&}
+\DoxyCodeLine{00014\ \ \ \ \ std::constructible\_from<T,\ const\ U*,\ const\ U*>;}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00017\ \textcolor{keyword}{concept\ }IsByteSpan\ =}
+\DoxyCodeLine{00018\ \ \ \ \ IsSpanOf<T,\ std::byte>\ ||}
+\DoxyCodeLine{00019\ \ \ \ \ IsSpanOf<T,\ char>\ ||}
+\DoxyCodeLine{00020\ \ \ \ \ IsSpanOf<T,\ unsigned\ char>\ ||}
+\DoxyCodeLine{00021\ \ \ \ \ IsSpanOf<T,\ signed\ char>;}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Value,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00028\ \textcolor{keywordtype}{void}\ CustomBuildField(TypeList<LocalType>,\ Priority<2>,\ InvokeContext\&\ invoke\_context,\ Value\&\&\ value,\ Output\&\&\ output)}
+\DoxyCodeLine{00029\ \textcolor{keyword}{requires}\ (std::is\_same\_v<\textcolor{keyword}{decltype}(output.get()),\ ::capnp::Data::Builder>\ \&\&\ IsByteSpan<LocalType>)}
+\DoxyCodeLine{00030\ \{}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keyword}{auto}\ data\ =\ std::span\{value\};}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keyword}{auto}\ result\ =\ output.init(data.size());}
+\DoxyCodeLine{00033\ \ \ \ \ memcpy(result.begin(),\ data.data(),\ data.size());}
+\DoxyCodeLine{00034\ \}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00037\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<LocalType>,\ Priority<2>,\ InvokeContext\&\ invoke\_context,\ Input\&\&\ input,\ ReadDest\&\&\ read\_dest)}
+\DoxyCodeLine{00038\ \textcolor{keyword}{requires}\ (std::is\_same\_v<\textcolor{keyword}{decltype}(input.get()),\ ::capnp::Data::Reader>\ \&\&\ IsByteSpan<LocalType>)}
+\DoxyCodeLine{00039\ \{}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{using\ }ByteType\ =\ \textcolor{keyword}{decltype}(std::span\{std::declval<LocalType>().begin(),\ std::declval<LocalType>().end()\})::element\_type;}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keyword}{const}\ kj::byte\ *begin\{input.get().begin()\},\ *end\{input.get().end()\};}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.construct(\textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }ByteType*\textcolor{keyword}{>}(begin),\ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }ByteType*\textcolor{keyword}{>}(end));}
+\DoxyCodeLine{00043\ \}}
+\DoxyCodeLine{00044\ \}\ \textcolor{comment}{//\ namespace\ mp}}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ MP\_PROXY\_TYPE\_DATA\_H}}
+
+\end{DoxyCode}

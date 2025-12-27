@@ -1,0 +1,342 @@
+\doxysection{util.\+h}
+\label{test_2fuzz_2util_8h_source}\index{src/test/fuzz/util.h@{src/test/fuzz/util.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_TEST\_FUZZ\_UTIL\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_TEST\_FUZZ\_UTIL\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <addresstype.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <arith\_uint256.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <coins.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <compat/compat.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <consensus/consensus.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <key.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <merkleblock.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <script/script.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <streams.h>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <test/fuzz/FuzzedDataProvider.h>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <test/fuzz/fuzz.h>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <cstdio>}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{class\ }PeerManager;}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Callables>}
+\DoxyCodeLine{00035\ \textcolor{keywordtype}{size\_t}\ CallOneOf(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ Callables...\ callables)}
+\DoxyCodeLine{00036\ \{}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ call\_size\{\textcolor{keyword}{sizeof}...(callables)\};}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keyword}{static\_assert}(call\_size\ >=\ 1);}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ call\_index\{fuzzed\_data\_provider.ConsumeIntegralInRange<\textcolor{keywordtype}{size\_t}>(0,\ call\_size\ -\/\ 1)\};}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i\{0\};}
+\DoxyCodeLine{00042\ \ \ \ \ ((i++\ ==\ call\_index\ ?\ callables()\ :\ void()),\ ...);}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keywordflow}{return}\ call\_size;}
+\DoxyCodeLine{00044\ \}}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Collection>}
+\DoxyCodeLine{00047\ \textcolor{keyword}{auto}\&\ PickValue(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ Collection\&\ col)}
+\DoxyCodeLine{00048\ \{}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keyword}{auto}\ sz\{col.size()\};}
+\DoxyCodeLine{00050\ \ \ \ \ assert(sz\ >=\ 1);}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keyword}{auto}\ it\ =\ col.begin();}
+\DoxyCodeLine{00052\ \ \ \ \ std::advance(it,\ fuzzed\_data\_provider.ConsumeIntegralInRange<\textcolor{keyword}{decltype}(sz)>(0,\ sz\ -\/\ 1));}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordflow}{return}\ *it;}
+\DoxyCodeLine{00054\ \}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ B\ =\ u\textcolor{keywordtype}{int}8\_t>}
+\DoxyCodeLine{00057\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::vector<B>\ ConsumeRandomLengthByteVector(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ std::optional<size\_t>\&\ max\_length\ =\ std::nullopt)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00058\ \{}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keyword}{static\_assert}(\textcolor{keyword}{sizeof}(B)\ ==\ 1);}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keyword}{const}\ std::string\ s\ =\ max\_length\ ?}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fuzzed\_data\_provider.ConsumeRandomLengthString(*max\_length)\ :}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fuzzed\_data\_provider.ConsumeRandomLengthString();}
+\DoxyCodeLine{00063\ \ \ \ \ std::vector<B>\ ret(s.size());}
+\DoxyCodeLine{00064\ \ \ \ \ std::copy(s.begin(),\ s.end(),\ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keywordtype}{char}*\textcolor{keyword}{>}(ret.data()));}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00066\ \}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::vector<bool>\ ConsumeRandomLengthBitVector(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ std::optional<size\_t>\&\ max\_length\ =\ std::nullopt)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00069\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keywordflow}{return}\ BytesToBits(ConsumeRandomLengthByteVector(fuzzed\_data\_provider,\ max\_length));}
+\DoxyCodeLine{00071\ \}}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ [[nodiscard]]\ \textcolor{keyword}{inline}\ DataStream\ ConsumeDataStream(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ std::optional<size\_t>\&\ max\_length\ =\ std::nullopt)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00074\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keywordflow}{return}\ DataStream\{ConsumeRandomLengthByteVector(fuzzed\_data\_provider,\ max\_length)\};}
+\DoxyCodeLine{00076\ \}}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::vector<std::string>\ ConsumeRandomLengthStringVector(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ max\_vector\_size\ =\ 16,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ max\_string\_length\ =\ 16)\ noexcept}
+\DoxyCodeLine{00079\ \{}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ n\_elements\ =\ fuzzed\_data\_provider.ConsumeIntegralInRange<\textcolor{keywordtype}{size\_t}>(0,\ max\_vector\_size);}
+\DoxyCodeLine{00081\ \ \ \ \ std::vector<std::string>\ r;}
+\DoxyCodeLine{00082\ \ \ \ \ r.reserve(n\_elements);}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ n\_elements;\ ++i)\ \{}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ r.push\_back(fuzzed\_data\_provider.ConsumeRandomLengthString(max\_string\_length));}
+\DoxyCodeLine{00085\ \ \ \ \ \}}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keywordflow}{return}\ r;}
+\DoxyCodeLine{00087\ \}}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00090\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::vector<T>\ ConsumeRandomLengthIntegralVector(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ max\_vector\_size\ =\ 16)\ noexcept}
+\DoxyCodeLine{00091\ \{}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ n\_elements\ =\ fuzzed\_data\_provider.ConsumeIntegralInRange<\textcolor{keywordtype}{size\_t}>(0,\ max\_vector\_size);}
+\DoxyCodeLine{00093\ \ \ \ \ std::vector<T>\ r;}
+\DoxyCodeLine{00094\ \ \ \ \ r.reserve(n\_elements);}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ n\_elements;\ ++i)\ \{}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ r.push\_back(fuzzed\_data\_provider.ConsumeIntegral<T>());}
+\DoxyCodeLine{00097\ \ \ \ \ \}}
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keywordflow}{return}\ r;}
+\DoxyCodeLine{00099\ \}}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ P>}
+\DoxyCodeLine{00102\ [[nodiscard]]\ P\ ConsumeDeserializationParams(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ P>}
+\DoxyCodeLine{00105\ [[nodiscard]]\ std::optional<T>\ ConsumeDeserializable(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ P\&\ params,\ \textcolor{keyword}{const}\ std::optional<size\_t>\&\ max\_length\ =\ std::nullopt)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00106\ \{}
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<uint8\_t>\ buffer\{ConsumeRandomLengthByteVector(fuzzed\_data\_provider,\ max\_length)\};}
+\DoxyCodeLine{00108\ \ \ \ \ DataStream\ ds\{buffer\};}
+\DoxyCodeLine{00109\ \ \ \ \ T\ obj;}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ ds\ >>\ params(obj);}
+\DoxyCodeLine{00112\ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::ios\_base::failure\&)\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00114\ \ \ \ \ \}}
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{keywordflow}{return}\ obj;}
+\DoxyCodeLine{00116\ \}}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00119\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::optional<T>\ ConsumeDeserializable(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ std::optional<size\_t>\&\ max\_length\ =\ std::nullopt)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00120\ \{}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<uint8\_t>\ buffer\ =\ ConsumeRandomLengthByteVector(fuzzed\_data\_provider,\ max\_length);}
+\DoxyCodeLine{00122\ \ \ \ \ DataStream\ ds\{buffer\};}
+\DoxyCodeLine{00123\ \ \ \ \ T\ obj;}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ ds\ >>\ obj;}
+\DoxyCodeLine{00126\ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::ios\_base::failure\&)\ \{}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00128\ \ \ \ \ \}}
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{keywordflow}{return}\ obj;}
+\DoxyCodeLine{00130\ \}}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ WeakEnumType,\ \textcolor{keywordtype}{size\_t}\ size>}
+\DoxyCodeLine{00133\ [[nodiscard]]\ WeakEnumType\ ConsumeWeakEnum(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ WeakEnumType\ (\&all\_types)[size])\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00134\ \{}
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{keywordflow}{return}\ fuzzed\_data\_provider.ConsumeBool()\ ?}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fuzzed\_data\_provider.PickValueInArray<WeakEnumType>(all\_types)\ :}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WeakEnumType(fuzzed\_data\_provider.ConsumeIntegral<std::underlying\_type\_t<WeakEnumType>>());}
+\DoxyCodeLine{00138\ \}}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00140\ [[nodiscard]]\ \textcolor{keyword}{inline}\ opcodetype\ ConsumeOpcodeType(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00141\ \{}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}opcodetype\textcolor{keyword}{>}(fuzzed\_data\_provider.ConsumeIntegralInRange<uint32\_t>(0,\ MAX\_OPCODE));}
+\DoxyCodeLine{00143\ \}}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ [[nodiscard]]\ CAmount\ ConsumeMoney(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ std::optional<CAmount>\&\ max\ =\ std::nullopt)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00147\ [[nodiscard]]\ int64\_t\ ConsumeTime(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ std::optional<int64\_t>\&\ min\ =\ std::nullopt,\ \textcolor{keyword}{const}\ std::optional<int64\_t>\&\ max\ =\ std::nullopt)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00149\ [[nodiscard]]\ CMutableTransaction\ ConsumeTransaction(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ std::optional<std::vector<Txid>>\&\ prevout\_txids,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ max\_num\_in\ =\ 10,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ max\_num\_out\ =\ 10)\ noexcept;}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00151\ [[nodiscard]]\ CScriptWitness\ ConsumeScriptWitness(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ const\ \textcolor{keywordtype}{size\_t}\ max\_stack\_elem\_size\ =\ 32)\ noexcept;}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00153\ [[nodiscard]]\ CScript\ ConsumeScript(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ const\ \textcolor{keywordtype}{bool}\ maybe\_p2wsh\ =\ false)\ noexcept;}
+\DoxyCodeLine{00154\ }
+\DoxyCodeLine{00155\ [[nodiscard]]\ uint32\_t\ ConsumeSequence(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ noexcept;}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ [[nodiscard]]\ inline\ CScriptNum\ ConsumeScriptNum(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ noexcept}
+\DoxyCodeLine{00158\ \{}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{keywordflow}{return}\ CScriptNum\{fuzzed\_data\_provider.ConsumeIntegral<int64\_t>()\};}
+\DoxyCodeLine{00160\ \}}
+\DoxyCodeLine{00161\ }
+\DoxyCodeLine{00162\ [[nodiscard]]\ \textcolor{keyword}{inline}\ uint160\ ConsumeUInt160(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00163\ \{}
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<uint8\_t>\ v160\ =\ fuzzed\_data\_provider.ConsumeBytes<uint8\_t>(160\ /\ 8);}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keywordflow}{if}\ (v160.size()\ !=\ 160\ /\ 8)\ \{}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{\};}
+\DoxyCodeLine{00167\ \ \ \ \ \}}
+\DoxyCodeLine{00168\ \ \ \ \ \textcolor{keywordflow}{return}\ uint160\{v160\};}
+\DoxyCodeLine{00169\ \}}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00171\ [[nodiscard]]\ \textcolor{keyword}{inline}\ uint256\ ConsumeUInt256(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00172\ \{}
+\DoxyCodeLine{00173\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<uint8\_t>\ v256\ =\ fuzzed\_data\_provider.ConsumeBytes<uint8\_t>(256\ /\ 8);}
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keywordflow}{if}\ (v256.size()\ !=\ 256\ /\ 8)\ \{}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{\};}
+\DoxyCodeLine{00176\ \ \ \ \ \}}
+\DoxyCodeLine{00177\ \ \ \ \ \textcolor{keywordflow}{return}\ uint256\{v256\};}
+\DoxyCodeLine{00178\ \}}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00180\ [[nodiscard]]\ \textcolor{keyword}{inline}\ arith\_uint256\ ConsumeArithUInt256(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00181\ \{}
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{keywordflow}{return}\ UintToArith256(ConsumeUInt256(fuzzed\_data\_provider));}
+\DoxyCodeLine{00183\ \}}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00185\ [[nodiscard]]\ \textcolor{keyword}{inline}\ arith\_uint256\ ConsumeArithUInt256InRange(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ arith\_uint256\&\ min,\ \textcolor{keyword}{const}\ arith\_uint256\&\ max)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00186\ \{}
+\DoxyCodeLine{00187\ \ \ \ \ assert(min\ <=\ max);}
+\DoxyCodeLine{00188\ \ \ \ \ \textcolor{keyword}{const}\ arith\_uint256\ range\ =\ max\ -\/\ min;}
+\DoxyCodeLine{00189\ \ \ \ \ \textcolor{keyword}{const}\ arith\_uint256\ value\ =\ ConsumeArithUInt256(fuzzed\_data\_provider);}
+\DoxyCodeLine{00190\ \ \ \ \ arith\_uint256\ result\ =\ value;}
+\DoxyCodeLine{00191\ \ \ \ \ \textcolor{comment}{//\ Avoid\ division\ by\ 0,\ in\ case\ range\ +\ 1\ results\ in\ overflow.}}
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{keywordflow}{if}\ (range\ !=\ \string~arith\_uint256(0))\ \{}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ arith\_uint256\ quotient\ =\ value\ /\ (range\ +\ 1);}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ result\ =\ value\ -\/\ (quotient\ *\ (range\ +\ 1));}
+\DoxyCodeLine{00195\ \ \ \ \ \}}
+\DoxyCodeLine{00196\ \ \ \ \ result\ +=\ min;}
+\DoxyCodeLine{00197\ \ \ \ \ assert(result\ >=\ min\ \&\&\ result\ <=\ max);}
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00199\ \}}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00201\ [[nodiscard]]\ std::map<COutPoint,\ Coin>\ ConsumeCoins(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00202\ }
+\DoxyCodeLine{00203\ [[nodiscard]]\ CTxDestination\ ConsumeTxDestination(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ [[nodiscard]]\ CKey\ ConsumePrivateKey(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ std::optional<bool>\ compressed\ =\ std::nullopt)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00206\ }
+\DoxyCodeLine{00207\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00208\ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ MultiplicationOverflow(\textcolor{keyword}{const}\ T\ i,\ \textcolor{keyword}{const}\ T\ j)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00209\ \{}
+\DoxyCodeLine{00210\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_integral\_v<T>,\ \textcolor{stringliteral}{"{}Integral\ required."{}});}
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{keywordflow}{if}\ (std::numeric\_limits<T>::is\_signed)\ \{}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ >\ 0)\ \{}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (j\ >\ 0)\ \{}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ i\ >\ (std::numeric\_limits<T>::max()\ /\ j);}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ j\ <\ (std::numeric\_limits<T>::min()\ /\ i);}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (j\ >\ 0)\ \{}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ i\ <\ (std::numeric\_limits<T>::min()\ /\ j);}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ i\ !=\ 0\ \&\&\ (j\ <\ (std::numeric\_limits<T>::max()\ /\ i));}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00225\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ j\ !=\ 0\ \&\&\ i\ >\ std::numeric\_limits<T>::max()\ /\ j;}
+\DoxyCodeLine{00227\ \ \ \ \ \}}
+\DoxyCodeLine{00228\ \}}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00230\ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ ContainsSpentInput(\textcolor{keyword}{const}\ CTransaction\&\ tx,\ \textcolor{keyword}{const}\ CCoinsViewCache\&\ inputs)\ \textcolor{keyword}{noexcept};}
+\DoxyCodeLine{00231\ }
+\DoxyCodeLine{00235\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T,\ \textcolor{keywordtype}{size\_t}\ size>}
+\DoxyCodeLine{00236\ \textcolor{keywordtype}{void}\ SetFuzzedErrNo(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ std::array<T,\ size>\&\ errnos)}
+\DoxyCodeLine{00237\ \{}
+\DoxyCodeLine{00238\ \ \ \ \ errno\ =\ fuzzed\_data\_provider.PickValueInArray(errnos);}
+\DoxyCodeLine{00239\ \}}
+\DoxyCodeLine{00240\ }
+\DoxyCodeLine{00241\ \textcolor{comment}{/*}}
+\DoxyCodeLine{00242\ \textcolor{comment}{\ *\ Sets\ a\ fuzzed\ errno\ in\ the\ range\ [0,\ 133\ (EHWPOISON)].\ Can\ be\ used\ from\ functions\ emulating}}
+\DoxyCodeLine{00243\ \textcolor{comment}{\ *\ standard\ library\ functions\ that\ set\ errno,\ or\ in\ other\ contexts\ where\ the\ value\ of\ errno}}
+\DoxyCodeLine{00244\ \textcolor{comment}{\ *\ might\ be\ relevant\ for\ the\ execution\ path\ that\ will\ be\ taken.}}
+\DoxyCodeLine{00245\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00246\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ SetFuzzedErrNo(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00247\ \{}
+\DoxyCodeLine{00248\ \ \ \ \ errno\ =\ fuzzed\_data\_provider.ConsumeIntegralInRange<\textcolor{keywordtype}{int}>(0,\ 133);}
+\DoxyCodeLine{00249\ \}}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00255\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ B\ =\ u\textcolor{keywordtype}{int}8\_t>}
+\DoxyCodeLine{00256\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::vector<B>\ ConsumeFixedLengthByteVector(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ length)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00257\ \{}
+\DoxyCodeLine{00258\ \ \ \ \ \textcolor{keyword}{static\_assert}(\textcolor{keyword}{sizeof}(B)\ ==\ 1);}
+\DoxyCodeLine{00259\ \ \ \ \ \textcolor{keyword}{auto}\ random\_bytes\ =\ fuzzed\_data\_provider.ConsumeBytes<B>(length);}
+\DoxyCodeLine{00260\ \ \ \ \ random\_bytes.resize(length);}
+\DoxyCodeLine{00261\ \ \ \ \ \textcolor{keywordflow}{return}\ random\_bytes;}
+\DoxyCodeLine{00262\ \}}
+\DoxyCodeLine{00263\ }
+\DoxyCodeLine{00264\ \textcolor{keyword}{class\ }FuzzedFileProvider}
+\DoxyCodeLine{00265\ \{}
+\DoxyCodeLine{00266\ \ \ \ \ FuzzedDataProvider\&\ m\_fuzzed\_data\_provider;}
+\DoxyCodeLine{00267\ \ \ \ \ int64\_t\ m\_offset\ =\ 0;}
+\DoxyCodeLine{00268\ }
+\DoxyCodeLine{00269\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00270\ \ \ \ \ FuzzedFileProvider(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ :\ m\_fuzzed\_data\_provider\{fuzzed\_data\_provider\}}
+\DoxyCodeLine{00271\ \ \ \ \ \{}
+\DoxyCodeLine{00272\ \ \ \ \ \}}
+\DoxyCodeLine{00273\ }
+\DoxyCodeLine{00274\ \ \ \ \ FILE*\ open();}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00276\ \ \ \ \ \textcolor{keyword}{static}\ ssize\_t\ read(\textcolor{keywordtype}{void}*\ cookie,\ \textcolor{keywordtype}{char}*\ buf,\ \textcolor{keywordtype}{size\_t}\ size);}
+\DoxyCodeLine{00277\ }
+\DoxyCodeLine{00278\ \ \ \ \ \textcolor{keyword}{static}\ ssize\_t\ write(\textcolor{keywordtype}{void}*\ cookie,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ buf,\ \textcolor{keywordtype}{size\_t}\ size);}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00280\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ seek(\textcolor{keywordtype}{void}*\ cookie,\ int64\_t*\ offset,\ \textcolor{keywordtype}{int}\ whence);}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00282\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ close(\textcolor{keywordtype}{void}*\ cookie);}
+\DoxyCodeLine{00283\ \};}
+\DoxyCodeLine{00284\ }
+\DoxyCodeLine{00285\ \textcolor{preprocessor}{\#define\ WRITE\_TO\_STREAM\_CASE(type,\ consume)\ \(\backslash\)}}
+\DoxyCodeLine{00286\ \textcolor{preprocessor}{\ \ \ \ [\&]\ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00287\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ type\ o\ =\ consume;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00288\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ stream\ <<\ o;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00289\ \textcolor{preprocessor}{\ \ \ \ \}}}
+\DoxyCodeLine{00290\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00291\ \textcolor{keywordtype}{void}\ WriteToStream(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ Stream\&\ stream)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00292\ \{}
+\DoxyCodeLine{00293\ \ \ \ \ \textcolor{keywordflow}{while}\ (fuzzed\_data\_provider.ConsumeBool())\ \{}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \ \ \ \ CallOneOf(}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fuzzed\_data\_provider,}
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRITE\_TO\_STREAM\_CASE(\textcolor{keywordtype}{bool},\ fuzzed\_data\_provider.ConsumeBool()),}
+\DoxyCodeLine{00298\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRITE\_TO\_STREAM\_CASE(int8\_t,\ fuzzed\_data\_provider.ConsumeIntegral<int8\_t>()),}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRITE\_TO\_STREAM\_CASE(uint8\_t,\ fuzzed\_data\_provider.ConsumeIntegral<uint8\_t>()),}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRITE\_TO\_STREAM\_CASE(int16\_t,\ fuzzed\_data\_provider.ConsumeIntegral<int16\_t>()),}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRITE\_TO\_STREAM\_CASE(uint16\_t,\ fuzzed\_data\_provider.ConsumeIntegral<uint16\_t>()),}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRITE\_TO\_STREAM\_CASE(int32\_t,\ fuzzed\_data\_provider.ConsumeIntegral<int32\_t>()),}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRITE\_TO\_STREAM\_CASE(uint32\_t,\ fuzzed\_data\_provider.ConsumeIntegral<uint32\_t>()),}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRITE\_TO\_STREAM\_CASE(int64\_t,\ fuzzed\_data\_provider.ConsumeIntegral<int64\_t>()),}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRITE\_TO\_STREAM\_CASE(uint64\_t,\ fuzzed\_data\_provider.ConsumeIntegral<uint64\_t>()),}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRITE\_TO\_STREAM\_CASE(std::string,\ fuzzed\_data\_provider.ConsumeRandomLengthString(32)),}
+\DoxyCodeLine{00307\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WRITE\_TO\_STREAM\_CASE(std::vector<uint8\_t>,\ ConsumeRandomLengthIntegralVector<uint8\_t>(fuzzed\_data\_provider)));}
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::ios\_base::failure\&)\ \{}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00311\ \ \ \ \ \}}
+\DoxyCodeLine{00312\ \}}
+\DoxyCodeLine{00313\ }
+\DoxyCodeLine{00314\ \textcolor{preprocessor}{\#define\ READ\_FROM\_STREAM\_CASE(type)\ \(\backslash\)}}
+\DoxyCodeLine{00315\ \textcolor{preprocessor}{\ \ \ \ [\&]\ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00316\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ type\ o;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00317\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ stream\ >>\ o;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00318\ \textcolor{preprocessor}{\ \ \ \ \}}}
+\DoxyCodeLine{00319\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00320\ \textcolor{keywordtype}{void}\ ReadFromStream(FuzzedDataProvider\&\ fuzzed\_data\_provider,\ Stream\&\ stream)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00321\ \{}
+\DoxyCodeLine{00322\ \ \ \ \ \textcolor{keywordflow}{while}\ (fuzzed\_data\_provider.ConsumeBool())\ \{}
+\DoxyCodeLine{00323\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00324\ \ \ \ \ \ \ \ \ \ \ \ \ CallOneOf(}
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fuzzed\_data\_provider,}
+\DoxyCodeLine{00326\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ READ\_FROM\_STREAM\_CASE(\textcolor{keywordtype}{bool}),}
+\DoxyCodeLine{00327\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ READ\_FROM\_STREAM\_CASE(int8\_t),}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ READ\_FROM\_STREAM\_CASE(uint8\_t),}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ READ\_FROM\_STREAM\_CASE(int16\_t),}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ READ\_FROM\_STREAM\_CASE(uint16\_t),}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ READ\_FROM\_STREAM\_CASE(int32\_t),}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ READ\_FROM\_STREAM\_CASE(uint32\_t),}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ READ\_FROM\_STREAM\_CASE(int64\_t),}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ READ\_FROM\_STREAM\_CASE(uint64\_t),}
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ READ\_FROM\_STREAM\_CASE(std::string),}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ READ\_FROM\_STREAM\_CASE(std::vector<uint8\_t>));}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::ios\_base::failure\&)\ \{}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00340\ \ \ \ \ \}}
+\DoxyCodeLine{00341\ \}}
+\DoxyCodeLine{00342\ }
+\DoxyCodeLine{00343\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_TEST\_FUZZ\_UTIL\_H}}
+
+\end{DoxyCode}

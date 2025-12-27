@@ -1,0 +1,243 @@
+.TH "src/test/kernel/test_kernel.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/test/kernel/test_kernel.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <kernel/bitcoinkernel\&.h>\fP
+.br
+\fR#include <kernel/bitcoinkernel_wrapper\&.h>\fP
+.br
+\fR#include <boost/test/included/unit_test\&.hpp>\fP
+.br
+\fR#include <test/kernel/block_data\&.h>\fP
+.br
+\fR#include <charconv>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include <cstdlib>\fP
+.br
+\fR#include <filesystem>\fP
+.br
+\fR#include <iostream>\fP
+.br
+\fR#include <memory>\fP
+.br
+\fR#include <optional>\fP
+.br
+\fR#include <random>\fP
+.br
+\fR#include <ranges>\fP
+.br
+\fR#include <span>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <string_view>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBTestLog\fP"
+.br
+.ti -1c
+.RI "struct \fBTestDirectory\fP"
+.br
+.ti -1c
+.RI "class \fBTestKernelNotifications\fP"
+.br
+.ti -1c
+.RI "class \fBTestValidationInterface\fP"
+.br
+.in -1c
+.SS "Concepts"
+
+.in +1c
+.ti -1c
+.RI "concept \fBHasToBytes\fP"
+.br
+.in -1c
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBBOOST_TEST_MODULE\fP   Bitcoin Kernel Test Suite"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "std::string \fBrandom_string\fP (uint32_t length)"
+.br
+.ti -1c
+.RI "std::vector< std::byte > \fBhex_string_to_byte_vec\fP (std::string_view hex)"
+.br
+.ti -1c
+.RI "std::string \fBbyte_span_to_hex_string_reversed\fP (std::span< const std::byte > bytes)"
+.br
+.ti -1c
+.RI "void \fBcheck_equal\fP (std::span< const std::byte > _actual, std::span< const std::byte > _expected, bool equal=true)"
+.br
+.ti -1c
+.RI "void \fBrun_verify_test\fP (const \fBScriptPubkey\fP &spent_script_pubkey, const \fBTransaction\fP &spending_tx, std::span< \fBTransactionOutput\fP > spent_outputs, int64_t amount, unsigned int input_index, bool taproot)"
+.br
+.ti -1c
+.RI "template<typename \fBT\fP> void \fBCheckHandle\fP (\fBT\fP object, \fBT\fP distinct_object)"
+.br
+.ti -1c
+.RI "template<typename RangeType> 
+.br
+requires std::ranges::random_access_range<RangeType>void \fBCheckRange\fP (const RangeType &range, size_t expected_size)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_transaction_tests)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_script_pubkey)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_transaction_output)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_transaction_input)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_script_verify_tests)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (logging_tests)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_context_tests)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_block)"
+.br
+.ti -1c
+.RI "\fBContext\fP \fBcreate_context\fP (std::shared_ptr< \fBTestKernelNotifications\fP > notifications, \fBChainType\fP chain_type, std::shared_ptr< \fBTestValidationInterface\fP > validation_interface=nullptr)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_chainman_tests)"
+.br
+.ti -1c
+.RI "std::unique_ptr< \fBChainMan\fP > \fBcreate_chainman\fP (\fBTestDirectory\fP &test_directory, bool reindex, bool wipe_chainstate, bool block_tree_db_in_memory, bool chainstate_db_in_memory, \fBContext\fP &context)"
+.br
+.ti -1c
+.RI "void \fBchainman_reindex_test\fP (\fBTestDirectory\fP &test_directory)"
+.br
+.ti -1c
+.RI "void \fBchainman_reindex_chainstate_test\fP (\fBTestDirectory\fP &test_directory)"
+.br
+.ti -1c
+.RI "void \fBchainman_mainnet_validation_test\fP (\fBTestDirectory\fP &test_directory)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_chainman_mainnet_tests)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_block_hash_tests)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_block_tree_entry_tests)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_chainman_in_memory_tests)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (btck_chainman_regtest_tests)"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "constexpr auto \fBVERIFY_ALL_PRE_SEGWIT\fP"
+.br
+.ti -1c
+.RI "constexpr auto \fBVERIFY_ALL_PRE_TAPROOT\fP {\fBVERIFY_ALL_PRE_SEGWIT\fP | ScriptVerificationFlags::WITNESS}"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define BOOST_TEST_MODULE   Bitcoin Kernel Test Suite"
+
+.SH "Function Documentation"
+.PP 
+.SS "BOOST_AUTO_TEST_CASE (btck_block )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_block_hash_tests )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_block_tree_entry_tests )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_chainman_in_memory_tests )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_chainman_mainnet_tests )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_chainman_regtest_tests )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_chainman_tests )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_context_tests )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_script_pubkey )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_script_verify_tests )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_transaction_input )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_transaction_output )"
+
+.SS "BOOST_AUTO_TEST_CASE (btck_transaction_tests )"
+
+.SS "BOOST_AUTO_TEST_CASE (logging_tests )"
+
+.SS "std::string byte_span_to_hex_string_reversed (std::span< const std::byte > bytes)"
+
+.SS "void chainman_mainnet_validation_test (\fBTestDirectory\fP & test_directory)"
+
+.SS "void chainman_reindex_chainstate_test (\fBTestDirectory\fP & test_directory)"
+
+.SS "void chainman_reindex_test (\fBTestDirectory\fP & test_directory)"
+
+.SS "void check_equal (std::span< const std::byte > _actual, std::span< const std::byte > _expected, bool equal = \fRtrue\fP)"
+
+.SS "template<typename \fBT\fP> void CheckHandle (\fBT\fP object, \fBT\fP distinct_object)"
+
+.SS "template<typename RangeType> 
+.br
+requires std::ranges::random_access_range<RangeType>void CheckRange (const RangeType & range, size_t expected_size)"
+
+.SS "std::unique_ptr< \fBChainMan\fP > create_chainman (\fBTestDirectory\fP & test_directory, bool reindex, bool wipe_chainstate, bool block_tree_db_in_memory, bool chainstate_db_in_memory, Context & context)"
+
+.SS "\fBContext\fP create_context (std::shared_ptr< \fBTestKernelNotifications\fP > notifications, \fBChainType\fP chain_type, std::shared_ptr< \fBTestValidationInterface\fP > validation_interface = \fRnullptr\fP)"
+
+.SS "std::vector< std::byte > hex_string_to_byte_vec (std::string_view hex)"
+
+.SS "std::string random_string (uint32_t length)"
+
+.SS "void run_verify_test (const \fBScriptPubkey\fP & spent_script_pubkey, const \fBTransaction\fP & spending_tx, std::span< \fBTransactionOutput\fP > spent_outputs, int64_t amount, unsigned int input_index, bool taproot)"
+
+.SH "Variable Documentation"
+.PP 
+.SS "auto VERIFY_ALL_PRE_SEGWIT\fR [constexpr]\fP"
+\fBInitial value:\fP
+.nf
+{ScriptVerificationFlags::P2SH | ScriptVerificationFlags::DERSIG |
+                                     ScriptVerificationFlags::NULLDUMMY | ScriptVerificationFlags::CHECKLOCKTIMEVERIFY |
+                                     ScriptVerificationFlags::CHECKSEQUENCEVERIFY}
+.PP
+.fi
+
+.SS "auto VERIFY_ALL_PRE_TAPROOT {\fBVERIFY_ALL_PRE_SEGWIT\fP | ScriptVerificationFlags::WITNESS}\fR [constexpr]\fP"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

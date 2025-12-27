@@ -1,0 +1,137 @@
+\doxysection{src/policy/policy.cpp File Reference}
+\label{policy_8cpp}\index{src/policy/policy.cpp@{src/policy/policy.cpp}}
+{\ttfamily \#include $<$policy/policy.\+h$>$}\newline
+{\ttfamily \#include $<$coins.\+h$>$}\newline
+{\ttfamily \#include $<$consensus/amount.\+h$>$}\newline
+{\ttfamily \#include $<$consensus/consensus.\+h$>$}\newline
+{\ttfamily \#include $<$consensus/validation.\+h$>$}\newline
+{\ttfamily \#include $<$policy/feerate.\+h$>$}\newline
+{\ttfamily \#include $<$primitives/transaction.\+h$>$}\newline
+{\ttfamily \#include $<$script/interpreter.\+h$>$}\newline
+{\ttfamily \#include $<$script/script.\+h$>$}\newline
+{\ttfamily \#include $<$script/solver.\+h$>$}\newline
+{\ttfamily \#include $<$serialize.\+h$>$}\newline
+{\ttfamily \#include $<$span.\+h$>$}\newline
+{\ttfamily \#include $<$algorithm$>$}\newline
+{\ttfamily \#include $<$cstddef$>$}\newline
+{\ttfamily \#include $<$vector$>$}\newline
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ CAmount} \textbf{ Get\+Dust\+Threshold} (const \textbf{ CTx\+Out} \&txout, const \textbf{ CFee\+Rate} \&dust\+Relay\+Fee\+In)
+\item 
+bool \textbf{ Is\+Dust} (const \textbf{ CTx\+Out} \&txout, const \textbf{ CFee\+Rate} \&dust\+Relay\+Fee\+In)
+\item 
+std\+::vector$<$ uint32\+\_\+t $>$ \textbf{ Get\+Dust} (const \textbf{ CTransaction} \&tx, \textbf{ CFee\+Rate} dust\+\_\+relay\+\_\+rate)
+\item 
+bool \textbf{ Is\+Standard} (const \textbf{ CScript} \&script\+Pub\+Key, \textbf{ Txout\+Type} \&which\+Type)
+\item 
+bool \textbf{ Is\+Standard\+Tx} (const \textbf{ CTransaction} \&tx, const std\+::optional$<$ unsigned $>$ \&max\+\_\+datacarrier\+\_\+bytes, bool permit\+\_\+bare\+\_\+multisig, const \textbf{ CFee\+Rate} \&dust\+\_\+relay\+\_\+fee, std\+::string \&reason)
+\item 
+bool \textbf{ Are\+Inputs\+Standard} (const \textbf{ CTransaction} \&tx, const \textbf{ CCoins\+View\+Cache} \&map\+Inputs)
+\item 
+bool \textbf{ Is\+Witness\+Standard} (const \textbf{ CTransaction} \&tx, const \textbf{ CCoins\+View\+Cache} \&map\+Inputs)
+\item 
+bool \textbf{ Spends\+Non\+Anchor\+Witness\+Prog} (const \textbf{ CTransaction} \&tx, const \textbf{ CCoins\+View\+Cache} \&prevouts)
+\item 
+int64\+\_\+t \textbf{ Get\+Sig\+Ops\+Adjusted\+Weight} (int64\+\_\+t weight, int64\+\_\+t sigop\+\_\+cost, unsigned int bytes\+\_\+per\+\_\+sigop)
+\item 
+int64\+\_\+t \textbf{ Get\+Virtual\+Transaction\+Size} (int64\+\_\+t n\+Weight, int64\+\_\+t n\+Sig\+Op\+Cost, unsigned int bytes\+\_\+per\+\_\+sigop)
+\item 
+int64\+\_\+t \textbf{ Get\+Virtual\+Transaction\+Size} (const \textbf{ CTransaction} \&tx, int64\+\_\+t n\+Sig\+Op\+Cost, unsigned int bytes\+\_\+per\+\_\+sigop)
+\item 
+int64\+\_\+t \textbf{ Get\+Virtual\+Transaction\+Input\+Size} (const \textbf{ CTx\+In} \&txin, int64\+\_\+t n\+Sig\+Op\+Cost, unsigned int bytes\+\_\+per\+\_\+sigop)
+\end{DoxyCompactItemize}
+
+
+\label{doc-func-members}
+\doxysubsection{Function Documentation}
+\index{policy.cpp@{policy.cpp}!AreInputsStandard@{AreInputsStandard}}
+\index{AreInputsStandard@{AreInputsStandard}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{AreInputsStandard()}
+{\footnotesize\ttfamily \label{policy_8cpp_a791e33e18bea9861e449e6ebcfce8890} 
+bool Are\+Inputs\+Standard (\begin{DoxyParamCaption}\item[{const \textbf{ CTransaction} \&}]{tx}{, }\item[{const \textbf{ CCoins\+View\+Cache} \&}]{map\+Inputs}{}\end{DoxyParamCaption})}
+
+Check transaction inputs.
+
+This does three things\+:
+\begin{DoxyItemize}
+\item Prevents mempool acceptance of spends of future segwit versions we don\textquotesingle{}t know how to validate
+\item Mitigates a potential denial-\/of-\/service attack with P2\+SH scripts with a crazy number of expensive CHECKSIG/\+CHECKMULTISIG operations.
+\item Prevents spends of unknown/irregular script\+Pub\+Keys, which mitigates potential denial-\/of-\/service attacks involving expensive scripts and helps reserve them as potential new upgrade hooks.
+\end{DoxyItemize}
+
+Note that only the non-\/witness portion of the transaction is checked here.
+
+We also check the total number of non-\/witness sigops across the whole transaction, as per BIP54. \index{policy.cpp@{policy.cpp}!GetDust@{GetDust}}
+\index{GetDust@{GetDust}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{GetDust()}
+{\footnotesize\ttfamily \label{policy_8cpp_ab2f63d37a5bd44b01b655c2ed855cb68} 
+std\+::vector$<$ uint32\+\_\+t $>$ Get\+Dust (\begin{DoxyParamCaption}\item[{const \textbf{ CTransaction} \&}]{tx}{, }\item[{\textbf{ CFee\+Rate}}]{dust\+\_\+relay\+\_\+rate}{}\end{DoxyParamCaption})}
+
+Get the vout index numbers of all dust outputs \index{policy.cpp@{policy.cpp}!GetDustThreshold@{GetDustThreshold}}
+\index{GetDustThreshold@{GetDustThreshold}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{GetDustThreshold()}
+{\footnotesize\ttfamily \label{policy_8cpp_a7b1001b4a41a02d9469e3b6985587300} 
+\textbf{ CAmount} Get\+Dust\+Threshold (\begin{DoxyParamCaption}\item[{const \textbf{ CTx\+Out} \&}]{txout}{, }\item[{const \textbf{ CFee\+Rate} \&}]{dust\+Relay\+Fee\+In}{}\end{DoxyParamCaption})}
+
+\index{policy.cpp@{policy.cpp}!GetSigOpsAdjustedWeight@{GetSigOpsAdjustedWeight}}
+\index{GetSigOpsAdjustedWeight@{GetSigOpsAdjustedWeight}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{GetSigOpsAdjustedWeight()}
+{\footnotesize\ttfamily \label{policy_8cpp_aca3174d03510603f888f4431b59901ab} 
+int64\+\_\+t Get\+Sig\+Ops\+Adjusted\+Weight (\begin{DoxyParamCaption}\item[{int64\+\_\+t}]{weight}{, }\item[{int64\+\_\+t}]{sigop\+\_\+cost}{, }\item[{unsigned int}]{bytes\+\_\+per\+\_\+sigop}{}\end{DoxyParamCaption})}
+
+\index{policy.cpp@{policy.cpp}!GetVirtualTransactionInputSize@{GetVirtualTransactionInputSize}}
+\index{GetVirtualTransactionInputSize@{GetVirtualTransactionInputSize}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{GetVirtualTransactionInputSize()}
+{\footnotesize\ttfamily \label{policy_8cpp_a84e0a858e353ffb27cb3e445a5074022} 
+int64\+\_\+t Get\+Virtual\+Transaction\+Input\+Size (\begin{DoxyParamCaption}\item[{const \textbf{ CTx\+In} \&}]{txin}{, }\item[{int64\+\_\+t}]{n\+Sig\+Op\+Cost}{, }\item[{unsigned int}]{bytes\+\_\+per\+\_\+sigop}{}\end{DoxyParamCaption})}
+
+\index{policy.cpp@{policy.cpp}!GetVirtualTransactionSize@{GetVirtualTransactionSize}}
+\index{GetVirtualTransactionSize@{GetVirtualTransactionSize}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{GetVirtualTransactionSize()\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily \label{policy_8cpp_a2cf1d55ed18bbb55661b77bc03a81dbd} 
+int64\+\_\+t Get\+Virtual\+Transaction\+Size (\begin{DoxyParamCaption}\item[{const \textbf{ CTransaction} \&}]{tx}{, }\item[{int64\+\_\+t}]{n\+Sig\+Op\+Cost}{, }\item[{unsigned int}]{bytes\+\_\+per\+\_\+sigop}{}\end{DoxyParamCaption})}
+
+\index{policy.cpp@{policy.cpp}!GetVirtualTransactionSize@{GetVirtualTransactionSize}}
+\index{GetVirtualTransactionSize@{GetVirtualTransactionSize}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{GetVirtualTransactionSize()\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily \label{policy_8cpp_a7cf1495f52acbb4320a50bbb831af44a} 
+int64\+\_\+t Get\+Virtual\+Transaction\+Size (\begin{DoxyParamCaption}\item[{int64\+\_\+t}]{n\+Weight}{, }\item[{int64\+\_\+t}]{n\+Sig\+Op\+Cost}{, }\item[{unsigned int}]{bytes\+\_\+per\+\_\+sigop}{}\end{DoxyParamCaption})}
+
+Compute the virtual transaction size (weight reinterpreted as bytes). \index{policy.cpp@{policy.cpp}!IsDust@{IsDust}}
+\index{IsDust@{IsDust}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{IsDust()}
+{\footnotesize\ttfamily \label{policy_8cpp_ab18c1023518f2920e34e05ca324d0ebb} 
+bool Is\+Dust (\begin{DoxyParamCaption}\item[{const \textbf{ CTx\+Out} \&}]{txout}{, }\item[{const \textbf{ CFee\+Rate} \&}]{dust\+Relay\+Fee\+In}{}\end{DoxyParamCaption})}
+
+\index{policy.cpp@{policy.cpp}!IsStandard@{IsStandard}}
+\index{IsStandard@{IsStandard}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{IsStandard()}
+{\footnotesize\ttfamily \label{policy_8cpp_aacaab3b92ac5b2240e05723c7ff31e25} 
+bool Is\+Standard (\begin{DoxyParamCaption}\item[{const \textbf{ CScript} \&}]{script\+Pub\+Key}{, }\item[{\textbf{ Txout\+Type} \&}]{which\+Type}{}\end{DoxyParamCaption})}
+
+\index{policy.cpp@{policy.cpp}!IsStandardTx@{IsStandardTx}}
+\index{IsStandardTx@{IsStandardTx}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{IsStandardTx()}
+{\footnotesize\ttfamily \label{policy_8cpp_aadd0007b1969edf72c35e598fdadc4de} 
+bool Is\+Standard\+Tx (\begin{DoxyParamCaption}\item[{const \textbf{ CTransaction} \&}]{tx}{, }\item[{const std\+::optional$<$ unsigned $>$ \&}]{max\+\_\+datacarrier\+\_\+bytes}{, }\item[{bool}]{permit\+\_\+bare\+\_\+multisig}{, }\item[{const \textbf{ CFee\+Rate} \&}]{dust\+\_\+relay\+\_\+fee}{, }\item[{std\+::string \&}]{reason}{}\end{DoxyParamCaption})}
+
+Check for standard transaction types \begin{DoxyReturn}{Returns}
+True if all outputs (script\+Pub\+Keys) use only standard transaction forms 
+\end{DoxyReturn}
+\index{policy.cpp@{policy.cpp}!IsWitnessStandard@{IsWitnessStandard}}
+\index{IsWitnessStandard@{IsWitnessStandard}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{IsWitnessStandard()}
+{\footnotesize\ttfamily \label{policy_8cpp_a8a73d04fc7e2d36b2acc4d6eb0cc2993} 
+bool Is\+Witness\+Standard (\begin{DoxyParamCaption}\item[{const \textbf{ CTransaction} \&}]{tx}{, }\item[{const \textbf{ CCoins\+View\+Cache} \&}]{map\+Inputs}{}\end{DoxyParamCaption})}
+
+Check if the transaction is over standard P2\+WSH resources limit\+: 3600bytes witness\+Script size, 80bytes per witness stack element, 100 witness stack elements These limits are adequate for multisignatures up to n-\/of-\/100 using OP\+\_\+\+CHECKSIG, OP\+\_\+\+ADD, and OP\+\_\+\+EQUAL.
+
+Also enforce a maximum stack item size limit and no annexes for tapscript spends. \index{policy.cpp@{policy.cpp}!SpendsNonAnchorWitnessProg@{SpendsNonAnchorWitnessProg}}
+\index{SpendsNonAnchorWitnessProg@{SpendsNonAnchorWitnessProg}!policy.cpp@{policy.cpp}}
+\doxysubsubsection{SpendsNonAnchorWitnessProg()}
+{\footnotesize\ttfamily \label{policy_8cpp_a63d1c42b964069822fdc1687465a6a15} 
+bool Spends\+Non\+Anchor\+Witness\+Prog (\begin{DoxyParamCaption}\item[{const \textbf{ CTransaction} \&}]{tx}{, }\item[{const \textbf{ CCoins\+View\+Cache} \&}]{prevouts}{}\end{DoxyParamCaption})}
+
+Check whether this transaction spends any witness program but P2A, including not-\/yet-\/defined ones. May return {\ttfamily false} early for consensus-\/invalid transactions. 

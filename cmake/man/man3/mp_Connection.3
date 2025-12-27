@@ -1,0 +1,109 @@
+.TH "Connection" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+Connection
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <proxy\-io\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBConnection\fP (\fBEventLoop\fP &loop, kj::Own< kj::AsyncIoStream > &&stream_)"
+.br
+.ti -1c
+.RI "\fBConnection\fP (\fBEventLoop\fP &loop, kj::Own< kj::AsyncIoStream > &&stream_, const std::function<::capnp::Capability::Client(Connection &)> &make_client)"
+.br
+.ti -1c
+.RI "\fB~Connection\fP ()"
+.br
+.ti -1c
+.RI "\fBCleanupIt\fP \fBaddSyncCleanup\fP (std::function< void()> fn)"
+.br
+.ti -1c
+.RI "void \fBremoveSyncCleanup\fP (\fBCleanupIt\fP it)"
+.br
+.ti -1c
+.RI "template<typename F> void \fBonDisconnect\fP (F &&f)"
+.br
+.RI "Add disconnect handler\&. "
+.in -1c
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "\fBEventLoopRef\fP \fBm_loop\fP"
+.br
+.ti -1c
+.RI "kj::Own< kj::AsyncIoStream > \fBm_stream\fP"
+.br
+.ti -1c
+.RI "\fBLoggingErrorHandler\fP \fBm_error_handler\fP {*\fBm_loop\fP}"
+.br
+.ti -1c
+.RI "kj::TaskSet \fBm_on_disconnect\fP {\fBm_error_handler\fP}"
+.br
+.ti -1c
+.RI "::capnp::TwoPartyVatNetwork \fBm_network\fP"
+.br
+.ti -1c
+.RI "std::optional<::capnp::RpcSystem<::capnp::rpc::twoparty::VatId > > \fBm_rpc_system\fP"
+.br
+.ti -1c
+.RI "ThreadMap::Client \fBm_thread_map\fP {nullptr}"
+.br
+.ti -1c
+.RI "::capnp::CapabilityServerSet< Thread > \fBm_threads\fP"
+.br
+.ti -1c
+.RI "\fBCleanupList\fP \fBm_sync_cleanup_fns\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Object holding network & rpc state associated with either an incoming server connection, or an outgoing client connection\&. It must be created and destroyed on the event loop thread\&. In addition to Cap'n Proto state, it also holds lists of callbacks to run when the connection is closed\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "Connection (\fBEventLoop\fP & loop, kj::Own< kj::AsyncIoStream > && stream_)\fR [inline]\fP"
+
+.SS "Connection (\fBEventLoop\fP & loop, kj::Own< kj::AsyncIoStream > && stream_, const std::function<::capnp::Capability::Client(Connection &)> & make_client)\fR [inline]\fP"
+
+.SS "~\fBConnection\fP ()"
+Run cleanup functions\&. Must be called from the event loop thread\&. First calls synchronous cleanup functions while blocked (to free capnp Capability::Client handles owned by \fBProxyClient\fP objects), then schedules asynchronous cleanup functions to run in a worker thread (to run destructors of m_impl instances owned by \fBProxyServer\fP objects)\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "\fBCleanupIt\fP addSyncCleanup (std::function< void()> fn)"
+Register synchronous cleanup function to run on event loop thread (with access to capnp thread local variables) when disconnect() is called\&. any new i/o\&. 
+.SS "template<typename F> void onDisconnect (F && f)\fR [inline]\fP"
+
+.PP
+Add disconnect handler\&. 
+.SS "void removeSyncCleanup (\fBCleanupIt\fP it)"
+
+.SH "Field Documentation"
+.PP 
+.SS "\fBLoggingErrorHandler\fP m_error_handler {*\fBm_loop\fP}"
+
+.SS "\fBEventLoopRef\fP m_loop"
+
+.SS "::capnp::TwoPartyVatNetwork m_network"
+
+.SS "kj::TaskSet m_on_disconnect {\fBm_error_handler\fP}"
+
+.SS "std::optional<::capnp::RpcSystem<::capnp::rpc::twoparty::VatId> > m_rpc_system"
+
+.SS "kj::Own<kj::AsyncIoStream> m_stream"
+
+.SS "\fBCleanupList\fP m_sync_cleanup_fns"
+Cleanup functions to run if connection is broken unexpectedly\&. List will be empty if all \fBProxyClient\fP are destroyed cleanly before the connection is destroyed\&. 
+.SS "ThreadMap::Client m_thread_map {nullptr}"
+
+.SS "::capnp::CapabilityServerSet<Thread> m_threads"
+Collection of server-side IPC worker threads (\fBProxyServer<Thread>\fP objects previously returned by ThreadMap\&.makeThread) used to service requests to clients\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

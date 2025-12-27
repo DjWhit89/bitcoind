@@ -1,0 +1,95 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="md_src_2secp256k1_2doc_2release-process" kind="page">
+    <compoundname>md_src_2secp256k1_2doc_2release-process</compoundname>
+    <title>Release process</title>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><anchor id="md_src_2secp256k1_2doc_2release-process_1autotoc_md198"/></para>
+<para>This document outlines the process for releasing versions of the form <computeroutput>$MAJOR.$MINOR.$PATCH</computeroutput>.</para>
+<para>We distinguish between two types of releases: <emphasis>regular</emphasis> and <emphasis>maintenance</emphasis> releases. Regular releases are releases of a new major or minor version as well as patches of the most recent release. Maintenance releases, on the other hand, are required for patches of older releases.</para>
+<para>You should coordinate with the other maintainers on the release date, if possible. This date will be part of the release entry in <ref refid="md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g" kindref="compound">CHANGELOG.md</ref> and it should match the dates of the remaining steps in the release process (including the date of the tag and the GitHub release). It is best if the maintainers are present during the release, so they can help ensure that the process is followed correctly and, in the case of a regular release, they are aware that they should not modify the master branch between merging the PR in step 1 and the PR in step 3.</para>
+<para>This process also assumes that there will be no minor releases for old major releases.</para>
+<para>We aim to cut a regular release every 3-4 months, approximately twice as frequent as major Bitcoin Core releases. Every second release should be published one month before the feature freeze of the next major Bitcoin Core release, allowing sufficient time to update the library in Core.</para>
+<sect1 id="md_src_2secp256k1_2doc_2release-process_1autotoc_md199">
+<title>Sanity checks</title><para>Perform these checks when reviewing the release PR (see below):</para>
+<para><orderedlist>
+<listitem><para>Ensure <computeroutput>make distcheck</computeroutput> doesn&apos;t fail. <programlisting filename=".shell"><codeline><highlight class="normal">./autogen.sh<sp/>&amp;&amp;<sp/>./configure<sp/>--enable-dev-mode<sp/>&amp;&amp;<sp/>make<sp/>distcheck</highlight></codeline>
+</programlisting></para>
+</listitem><listitem><para>Check installation with autotools: <programlisting filename=".shell"><codeline><highlight class="normal">dir=$(mktemp<sp/>-d)</highlight></codeline>
+<codeline><highlight class="normal">./autogen.sh<sp/>&amp;&amp;<sp/>./configure<sp/>--prefix=$dir<sp/>&amp;&amp;<sp/>make<sp/>clean<sp/>&amp;&amp;<sp/>make<sp/>install<sp/>&amp;&amp;<sp/>ls<sp/>-RlAh<sp/>$dir</highlight></codeline>
+<codeline><highlight class="normal">gcc<sp/>-o<sp/>ecdsa<sp/>examples/ecdsa.c<sp/>$(PKG_CONFIG_PATH=$dir/lib/pkgconfig<sp/>pkg-config<sp/>--cflags<sp/>--libs<sp/>libsecp256k1)<sp/>-Wl,-rpath,&quot;$dir/lib&quot;<sp/>&amp;&amp;<sp/>./ecdsa</highlight></codeline>
+</programlisting></para>
+</listitem><listitem><para>Check installation with CMake: <programlisting filename=".shell"><codeline><highlight class="normal">dir=$(mktemp<sp/>-d)</highlight></codeline>
+<codeline><highlight class="normal">build=$(mktemp<sp/>-d)</highlight></codeline>
+<codeline><highlight class="normal">cmake<sp/>-B<sp/>$build<sp/>-DCMAKE_INSTALL_PREFIX=$dir<sp/>&amp;&amp;<sp/>cmake<sp/>--build<sp/>$build<sp/>&amp;&amp;<sp/>cmake<sp/>--install<sp/>$build<sp/>&amp;&amp;<sp/>ls<sp/>-RlAh<sp/>$dir</highlight></codeline>
+<codeline><highlight class="normal">gcc<sp/>-o<sp/>ecdsa<sp/>examples/ecdsa.c<sp/>-I<sp/>$dir/include<sp/>-L<sp/>$dir/lib*/<sp/>-l<sp/>secp256k1<sp/>-Wl,-rpath,&quot;$dir/lib&quot;,-rpath,&quot;$dir/lib64&quot;<sp/>&amp;&amp;<sp/>./ecdsa</highlight></codeline>
+</programlisting></para>
+</listitem><listitem><para>Use the <ulink url="/tools/check-abi.sh"><computeroutput>check-abi.sh</computeroutput></ulink> tool to verify that there are no unexpected ABI incompatibilities and that the version number and the release notes accurately reflect all potential ABI changes. To run this tool, the <computeroutput>abi-dumper</computeroutput> and <computeroutput>abi-compliance-checker</computeroutput> packages are required. <programlisting filename=".shell"><codeline><highlight class="normal">tools/check-abi.sh</highlight></codeline>
+</programlisting></para>
+</listitem></orderedlist>
+</para>
+</sect1>
+<sect1 id="md_src_2secp256k1_2doc_2release-process_1autotoc_md200">
+<title>Regular release</title><para><orderedlist>
+<listitem><para>Open a PR to the master branch with a commit (using message <computeroutput>"release: prepare <ref refid="arith__uint256__tests_8cpp_1aec8e239ec13a0a2253be548812b40c53" kindref="member">for</ref> $MAJOR.$MINOR.$PATCH"</computeroutput>, for example) that<itemizedlist>
+<listitem><para>finalizes the release notes in <ref refid="md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g" kindref="compound">CHANGELOG.md</ref> by<itemizedlist>
+<listitem><para>adding a section for the release (make sure that the version number is a link to a diff between the previous and new version),</para>
+</listitem><listitem><para>removing the <computeroutput>[Unreleased]</computeroutput> section header,</para>
+</listitem><listitem><para>ensuring that the release notes are not missing entries (check the <computeroutput>needs-changelog</computeroutput> label on github), and</para>
+</listitem><listitem><para>including an entry for <computeroutput>### ABI Compatibility</computeroutput> if it doesn&apos;t exist,</para>
+</listitem></itemizedlist>
+</para>
+</listitem><listitem><para>sets <computeroutput>_PKG_VERSION_IS_RELEASE</computeroutput> to <computeroutput>true</computeroutput> in <computeroutput>configure.ac</computeroutput>, and,</para>
+</listitem><listitem><para>if this is not a patch release,<itemizedlist>
+<listitem><para>updates <computeroutput>_PKG_VERSION_*</computeroutput> and <computeroutput>_LIB_VERSION_*</computeroutput> in <computeroutput>configure.ac</computeroutput>, and</para>
+</listitem><listitem><para>updates <computeroutput>project(libsecp256k1 VERSION ...)</computeroutput> and <computeroutput>${PROJECT_NAME}_LIB_VERSION_*</computeroutput> in <computeroutput>CMakeLists.txt</computeroutput>.</para>
+</listitem></itemizedlist>
+</para>
+</listitem></itemizedlist>
+</para>
+</listitem><listitem><para>Perform the sanity checks on the PR branch.</para>
+</listitem><listitem><para>After the PR is merged, tag the commit, and push the tag: <programlisting><codeline><highlight class="normal">RELEASE_COMMIT=&lt;merge<sp/>commit<sp/>of<sp/>step<sp/>1&gt;</highlight></codeline>
+<codeline><highlight class="normal">git<sp/>tag<sp/>-s<sp/>v$MAJOR.$MINOR.$PATCH<sp/>-m<sp/>&quot;libsecp256k1<sp/>$MAJOR.$MINOR.$PATCH&quot;<sp/>$RELEASE_COMMIT</highlight></codeline>
+<codeline><highlight class="normal">git<sp/>push<sp/>git@github.com:bitcoin-core/secp256k1.git<sp/>v$MAJOR.$MINOR.$PATCH</highlight></codeline>
+</programlisting></para>
+</listitem><listitem><para>Open a PR to the master branch with a commit (using message <computeroutput>"release cleanup: bump version after $MAJOR.$MINOR.$PATCH"</computeroutput>, for example) that<itemizedlist>
+<listitem><para>sets <computeroutput>_PKG_VERSION_IS_RELEASE</computeroutput> to <computeroutput>false</computeroutput> and increments <computeroutput>_PKG_VERSION_PATCH</computeroutput> and <computeroutput>_LIB_VERSION_REVISION</computeroutput> in <computeroutput>configure.ac</computeroutput>,</para>
+</listitem><listitem><para>increments the <computeroutput>$PATCH</computeroutput> component of <computeroutput>project(libsecp256k1 VERSION ...)</computeroutput> and <computeroutput>${PROJECT_NAME}_LIB_VERSION_REVISION</computeroutput> in <computeroutput>CMakeLists.txt</computeroutput>, and</para>
+</listitem><listitem><para>adds an <computeroutput>[Unreleased]</computeroutput> section header to the <ref refid="md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g" kindref="compound">CHANGELOG.md</ref>.</para>
+</listitem></itemizedlist>
+</para>
+<para>If other maintainers are not present to approve the PR, it can be merged without ACKs.</para>
+</listitem><listitem><para>Create a new GitHub release with a link to the corresponding entry in <ref refid="md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g" kindref="compound">CHANGELOG.md</ref>.</para>
+</listitem><listitem><para>Send an announcement email to the bitcoin-dev mailing list.</para>
+</listitem></orderedlist>
+</para>
+</sect1>
+<sect1 id="md_src_2secp256k1_2doc_2release-process_1autotoc_md201">
+<title>Maintenance release</title><para>Note that bug fixes need to be backported only to releases for which no compatible release without the bug exists.</para>
+<para><orderedlist>
+<listitem><para>If there&apos;s no maintenance branch <computeroutput>$MAJOR.$MINOR</computeroutput>, create one: <programlisting><codeline><highlight class="normal">git<sp/>checkout<sp/>-b<sp/>$MAJOR.$MINOR<sp/>v$MAJOR.$MINOR.$((PATCH<sp/>-<sp/>1))</highlight></codeline>
+<codeline><highlight class="normal">git<sp/>push<sp/>git@github.com:bitcoin-core/secp256k1.git<sp/>$MAJOR.$MINOR</highlight></codeline>
+</programlisting></para>
+</listitem><listitem><para>Open a pull request to the <computeroutput>$MAJOR.$MINOR</computeroutput> branch that<itemizedlist>
+<listitem><para>includes the bug fixes,</para>
+</listitem><listitem><para>finalizes the release notes similar to a regular release,</para>
+</listitem><listitem><para>increments <computeroutput>_PKG_VERSION_PATCH</computeroutput> and <computeroutput>_LIB_VERSION_REVISION</computeroutput> in <computeroutput>configure.ac</computeroutput> and the <computeroutput>$PATCH</computeroutput> component of <computeroutput>project(libsecp256k1 VERSION ...)</computeroutput> and <computeroutput>${PROJECT_NAME}_LIB_VERSION_REVISION</computeroutput> in <computeroutput>CMakeLists.txt</computeroutput> (with commit message <computeroutput>"release: bump versions <ref refid="arith__uint256__tests_8cpp_1aec8e239ec13a0a2253be548812b40c53" kindref="member">for</ref> $MAJOR.$MINOR.$PATCH"</computeroutput>, for example).</para>
+</listitem></itemizedlist>
+</para>
+</listitem><listitem><para>Perform the sanity checks on the PR branch.</para>
+</listitem><listitem><para>After the PRs are merged, update the release branch, tag the commit, and push the tag: <programlisting><codeline><highlight class="normal">git<sp/>checkout<sp/>$MAJOR.$MINOR<sp/>&amp;&amp;<sp/>git<sp/>pull</highlight></codeline>
+<codeline><highlight class="normal">git<sp/>tag<sp/>-s<sp/>v$MAJOR.$MINOR.$PATCH<sp/>-m<sp/>&quot;libsecp256k1<sp/>$MAJOR.$MINOR.$PATCH&quot;</highlight></codeline>
+<codeline><highlight class="normal">git<sp/>push<sp/>git@github.com:bitcoin-core/secp256k1.git<sp/>v$MAJOR.$MINOR.$PATCH</highlight></codeline>
+</programlisting></para>
+</listitem><listitem><para>Create a new GitHub release with a link to the corresponding entry in <ref refid="md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g" kindref="compound">CHANGELOG.md</ref>.</para>
+</listitem><listitem><para>Send an announcement email to the bitcoin-dev mailing list.</para>
+</listitem><listitem><para>Open PR to the master branch that includes a commit (with commit message <computeroutput>"release notes: add $MAJOR.$MINOR.$PATCH"</computeroutput>, for example) that adds release notes to <ref refid="md_src_2secp256k1_2_c_h_a_n_g_e_l_o_g" kindref="compound">CHANGELOG.md</ref>. </para>
+</listitem></orderedlist>
+</para>
+</sect1>
+    </detaileddescription>
+    <location file="src/secp256k1/doc/release-process.md"/>
+  </compounddef>
+</doxygen>

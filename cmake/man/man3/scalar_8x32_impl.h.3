@@ -1,0 +1,233 @@
+.TH "src/secp256k1/src/scalar_8x32_impl.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/secp256k1/src/scalar_8x32_impl.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include 'checkmem\&.h'\fP
+.br
+\fR#include 'modinv32_impl\&.h'\fP
+.br
+\fR#include 'util\&.h'\fP
+.br
+
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBSECP256K1_N_0\fP   ((uint32_t)0xD0364141UL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_1\fP   ((uint32_t)0xBFD25E8CUL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_2\fP   ((uint32_t)0xAF48A03BUL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_3\fP   ((uint32_t)0xBAAEDCE6UL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_4\fP   ((uint32_t)0xFFFFFFFEUL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_5\fP   ((uint32_t)0xFFFFFFFFUL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_6\fP   ((uint32_t)0xFFFFFFFFUL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_7\fP   ((uint32_t)0xFFFFFFFFUL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_C_0\fP   (~\fBSECP256K1_N_0\fP + 1)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_C_1\fP   (~\fBSECP256K1_N_1\fP)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_C_2\fP   (~\fBSECP256K1_N_2\fP)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_C_3\fP   (~\fBSECP256K1_N_3\fP)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_C_4\fP   (1)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_0\fP   ((uint32_t)0x681B20A0UL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_1\fP   ((uint32_t)0xDFE92F46UL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_2\fP   ((uint32_t)0x57A4501DUL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_3\fP   ((uint32_t)0x5D576E73UL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_4\fP   ((uint32_t)0xFFFFFFFFUL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_5\fP   ((uint32_t)0xFFFFFFFFUL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_6\fP   ((uint32_t)0xFFFFFFFFUL)"
+.br
+.ti -1c
+.RI "#define \fBSECP256K1_N_H_7\fP   ((uint32_t)0x7FFFFFFFUL)"
+.br
+.ti -1c
+.RI "#define \fBmuladd\fP(a,  b)"
+.br
+.ti -1c
+.RI "#define \fBmuladd_fast\fP(a,  b)"
+.br
+.ti -1c
+.RI "#define \fBsumadd\fP(a)"
+.br
+.ti -1c
+.RI "#define \fBsumadd_fast\fP(a)"
+.br
+.ti -1c
+.RI "#define \fBextract\fP(n)"
+.br
+.ti -1c
+.RI "#define \fBextract_fast\fP(n)"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define extract( n)"
+\fBValue:\fP
+.nf
+    { \\
+    (n) = c0; \\
+    c0 = c1; \\
+    c1 = c2; \\
+    c2 = 0; \\
+}
+.PP
+.fi
+Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits\&. 
+.SS "#define extract_fast( n)"
+\fBValue:\fP
+.nf
+    { \\
+    (n) = c0; \\
+    c0 = c1; \\
+    c1 = 0; \\
+    VERIFY_CHECK(c2 == 0); \\
+}
+.PP
+.fi
+Extract the lowest 32 bits of (c0,c1,c2) into n, and left shift the number 32 bits\&. c2 is required to be zero\&. 
+.SS "#define muladd( a,  b)"
+\fBValue:\fP
+.nf
+    { \\
+    uint32_t tl, th; \\
+    { \\
+        uint64_t t = (uint64_t)a * b; \\
+        th = t >> 32;         /* at most 0xFFFFFFFE */ \\
+        tl = t; \\
+    } \\
+    c0 += tl;                 /* overflow is handled on the next line */ \\
+    th += (c0 < tl);          /* at most 0xFFFFFFFF */ \\
+    c1 += th;                 /* overflow is handled on the next line */ \\
+    c2 += (c1 < th);          /* never overflows by contract (verified in the next line) */ \\
+    VERIFY_CHECK((c1 >= th) || (c2 != 0)); \\
+}
+.PP
+.fi
+Add a*b to the number defined by (c0,c1,c2)\&. c2 must never overflow\&. 
+.SS "#define muladd_fast( a,  b)"
+\fBValue:\fP
+.nf
+    { \\
+    uint32_t tl, th; \\
+    { \\
+        uint64_t t = (uint64_t)a * b; \\
+        th = t >> 32;         /* at most 0xFFFFFFFE */ \\
+        tl = t; \\
+    } \\
+    c0 += tl;                 /* overflow is handled on the next line */ \\
+    th += (c0 < tl);          /* at most 0xFFFFFFFF */ \\
+    c1 += th;                 /* never overflows by contract (verified in the next line) */ \\
+    VERIFY_CHECK(c1 >= th); \\
+}
+.PP
+.fi
+Add a*b to the number defined by (c0,c1)\&. c1 must never overflow\&. 
+.SS "#define SECP256K1_N_0   ((uint32_t)0xD0364141UL)"
+
+.SS "#define SECP256K1_N_1   ((uint32_t)0xBFD25E8CUL)"
+
+.SS "#define SECP256K1_N_2   ((uint32_t)0xAF48A03BUL)"
+
+.SS "#define SECP256K1_N_3   ((uint32_t)0xBAAEDCE6UL)"
+
+.SS "#define SECP256K1_N_4   ((uint32_t)0xFFFFFFFEUL)"
+
+.SS "#define SECP256K1_N_5   ((uint32_t)0xFFFFFFFFUL)"
+
+.SS "#define SECP256K1_N_6   ((uint32_t)0xFFFFFFFFUL)"
+
+.SS "#define SECP256K1_N_7   ((uint32_t)0xFFFFFFFFUL)"
+
+.SS "#define SECP256K1_N_C_0   (~\fBSECP256K1_N_0\fP + 1)"
+
+.SS "#define SECP256K1_N_C_1   (~\fBSECP256K1_N_1\fP)"
+
+.SS "#define SECP256K1_N_C_2   (~\fBSECP256K1_N_2\fP)"
+
+.SS "#define SECP256K1_N_C_3   (~\fBSECP256K1_N_3\fP)"
+
+.SS "#define SECP256K1_N_C_4   (1)"
+
+.SS "#define SECP256K1_N_H_0   ((uint32_t)0x681B20A0UL)"
+
+.SS "#define SECP256K1_N_H_1   ((uint32_t)0xDFE92F46UL)"
+
+.SS "#define SECP256K1_N_H_2   ((uint32_t)0x57A4501DUL)"
+
+.SS "#define SECP256K1_N_H_3   ((uint32_t)0x5D576E73UL)"
+
+.SS "#define SECP256K1_N_H_4   ((uint32_t)0xFFFFFFFFUL)"
+
+.SS "#define SECP256K1_N_H_5   ((uint32_t)0xFFFFFFFFUL)"
+
+.SS "#define SECP256K1_N_H_6   ((uint32_t)0xFFFFFFFFUL)"
+
+.SS "#define SECP256K1_N_H_7   ((uint32_t)0x7FFFFFFFUL)"
+
+.SS "#define sumadd( a)"
+\fBValue:\fP
+.nf
+    { \\
+    unsigned int over; \\
+    c0 += (a);                  /* overflow is handled on the next line */ \\
+    over = (c0 < (a)); \\
+    c1 += over;                 /* overflow is handled on the next line */ \\
+    c2 += (c1 < over);          /* never overflows by contract */ \\
+}
+.PP
+.fi
+Add a to the number defined by (c0,c1,c2)\&. c2 must never overflow\&. 
+.SS "#define sumadd_fast( a)"
+\fBValue:\fP
+.nf
+    { \\
+    c0 += (a);                 /* overflow is handled on the next line */ \\
+    c1 += (c0 < (a));          /* never overflows by contract (verified the next line) */ \\
+    VERIFY_CHECK((c1 != 0) | (c0 >= (a))); \\
+    VERIFY_CHECK(c2 == 0); \\
+}
+.PP
+.fi
+Add a to the number defined by (c0,c1)\&. c1 must never overflow, c2 must be zero\&. 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

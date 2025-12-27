@@ -1,0 +1,106 @@
+.TH "src/secp256k1/src/modules/musig/keyagg_impl.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/secp256k1/src/modules/musig/keyagg_impl.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <string\&.h>\fP
+.br
+\fR#include 'keyagg\&.h'\fP
+.br
+\fR#include '\&.\&./\&.\&./eckey\&.h'\fP
+.br
+\fR#include '\&.\&./\&.\&./ecmult\&.h'\fP
+.br
+\fR#include '\&.\&./\&.\&./field\&.h'\fP
+.br
+\fR#include '\&.\&./\&.\&./group\&.h'\fP
+.br
+\fR#include '\&.\&./\&.\&./hash\&.h'\fP
+.br
+\fR#include '\&.\&./\&.\&./util\&.h'\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBsecp256k1_musig_pubkey_agg_ecmult_data\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "int \fBsecp256k1_musig_pubkey_agg\fP (const \fBsecp256k1_context\fP *ctx, \fBsecp256k1_xonly_pubkey\fP *agg_pk, \fBsecp256k1_musig_keyagg_cache\fP *keyagg_cache, const \fBsecp256k1_pubkey\fP *const *pubkeys, size_t n_pubkeys)"
+.br
+.ti -1c
+.RI "int \fBsecp256k1_musig_pubkey_get\fP (const \fBsecp256k1_context\fP *ctx, \fBsecp256k1_pubkey\fP *agg_pk, const \fBsecp256k1_musig_keyagg_cache\fP *keyagg_cache)"
+.br
+.ti -1c
+.RI "int \fBsecp256k1_musig_pubkey_ec_tweak_add\fP (const \fBsecp256k1_context\fP *ctx, \fBsecp256k1_pubkey\fP *output_pubkey, \fBsecp256k1_musig_keyagg_cache\fP *keyagg_cache, const unsigned char *tweak32)"
+.br
+.ti -1c
+.RI "int \fBsecp256k1_musig_pubkey_xonly_tweak_add\fP (const \fBsecp256k1_context\fP *ctx, \fBsecp256k1_pubkey\fP *output_pubkey, \fBsecp256k1_musig_keyagg_cache\fP *keyagg_cache, const unsigned char *tweak32)"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "int secp256k1_musig_pubkey_agg (const \fBsecp256k1_context\fP * ctx, \fBsecp256k1_xonly_pubkey\fP * agg_pk, \fBsecp256k1_musig_keyagg_cache\fP * keyagg_cache, const \fBsecp256k1_pubkey\fP *const * pubkeys, size_t n_pubkeys)"
+Computes an aggregate public key and uses it to initialize a keyagg_cache
+
+.PP
+Different orders of \fRpubkeys\fP result in different \fRagg_pk\fPs\&.
+
+.PP
+Before aggregating, the pubkeys can be sorted with \fR\fBsecp256k1_ec_pubkey_sort\fP\fP which ensures the same \fRagg_pk\fP result for the same multiset of pubkeys\&. This is useful to do before \fRpubkey_agg\fP, such that the order of pubkeys does not affect the aggregate public key\&.
+
+.PP
+Returns: 0 if the arguments are invalid, 1 otherwise Args: ctx: pointer to a context object Out: agg_pk: the MuSig-aggregated x-only public key\&. If you do not need it, this arg can be NULL\&. keyagg_cache: if non-NULL, pointer to a musig_keyagg_cache struct that is required for signing (or observing the signing session and verifying partial signatures)\&. In: pubkeys: input array of pointers to public keys to aggregate\&. The order is important; a different order will result in a different aggregate public key\&. n_pubkeys: length of pubkeys array\&. Must be greater than 0\&. 
+.SS "int secp256k1_musig_pubkey_ec_tweak_add (const \fBsecp256k1_context\fP * ctx, \fBsecp256k1_pubkey\fP * output_pubkey, \fBsecp256k1_musig_keyagg_cache\fP * keyagg_cache, const unsigned char * tweak32)"
+Apply plain "EC" tweaking to a public key in a given keyagg_cache by adding the generator multiplied with \fRtweak32\fP to it\&. This is useful for deriving child keys from an aggregate public key via BIP 32 where \fRtweak32\fP is set to a hash as defined in BIP 32\&.
+
+.PP
+Callers are responsible for deriving \fRtweak32\fP in a way that does not reduce the security of MuSig (for example, by following BIP 32)\&.
+
+.PP
+The tweaking method is the same as \fR\fBsecp256k1_ec_pubkey_tweak_add\fP\fP\&. So after the following pseudocode buf and buf2 have identical contents (absent earlier failures)\&.
+
+.PP
+secp256k1_musig_pubkey_agg(\&.\&.\&., keyagg_cache, pubkeys, \&.\&.\&.) secp256k1_musig_pubkey_get(\&.\&.\&., agg_pk, keyagg_cache) secp256k1_musig_pubkey_ec_tweak_add(\&.\&.\&., output_pk, tweak32, keyagg_cache) secp256k1_ec_pubkey_serialize(\&.\&.\&., buf, \&.\&.\&., output_pk, \&.\&.\&.) secp256k1_ec_pubkey_tweak_add(\&.\&.\&., agg_pk, tweak32) secp256k1_ec_pubkey_serialize(\&.\&.\&., buf2, \&.\&.\&., agg_pk, \&.\&.\&.)
+
+.PP
+This function is required if you want to \fIsign\fP for a tweaked aggregate key\&. If you are only computing a public key but not intending to create a signature for it, use \fR\fBsecp256k1_ec_pubkey_tweak_add\fP\fP instead\&.
+
+.PP
+Returns: 0 if the arguments are invalid, 1 otherwise Args: ctx: pointer to a context object Out: output_pubkey: pointer to a public key to store the result\&. Will be set to an invalid value if this function returns 0\&. If you do not need it, this arg can be NULL\&. In/Out: keyagg_cache: pointer to a \fRmusig_keyagg_cache\fP struct initialized by \fRmusig_pubkey_agg\fP In: tweak32: pointer to a 32-byte tweak\&. The tweak is valid if it passes \fR\fBsecp256k1_ec_seckey_verify\fP\fP and is not equal to the secret key corresponding to the public key represented by keyagg_cache or its negation\&. For uniformly random 32-byte arrays the chance of being invalid is negligible (around 1 in 2^128)\&. 
+.SS "int secp256k1_musig_pubkey_get (const \fBsecp256k1_context\fP * ctx, \fBsecp256k1_pubkey\fP * agg_pk, const \fBsecp256k1_musig_keyagg_cache\fP * keyagg_cache)"
+Obtain the aggregate public key from a keyagg_cache\&.
+
+.PP
+This is only useful if you need the non-xonly public key, in particular for plain (non-xonly) tweaking or batch-verifying multiple key aggregations (not implemented)\&.
+
+.PP
+Returns: 0 if the arguments are invalid, 1 otherwise Args: ctx: pointer to a context object Out: agg_pk: the MuSig-aggregated public key\&. In: keyagg_cache: pointer to a \fRmusig_keyagg_cache\fP struct initialized by \fRmusig_pubkey_agg\fP 
+.SS "int secp256k1_musig_pubkey_xonly_tweak_add (const \fBsecp256k1_context\fP * ctx, \fBsecp256k1_pubkey\fP * output_pubkey, \fBsecp256k1_musig_keyagg_cache\fP * keyagg_cache, const unsigned char * tweak32)"
+Apply x-only tweaking to a public key in a given keyagg_cache by adding the generator multiplied with \fRtweak32\fP to it\&. This is useful for creating Taproot outputs where \fRtweak32\fP is set to a TapTweak hash as defined in BIP 341\&.
+
+.PP
+Callers are responsible for deriving \fRtweak32\fP in a way that does not reduce the security of MuSig (for example, by following Taproot BIP 341)\&.
+
+.PP
+The tweaking method is the same as \fR\fBsecp256k1_xonly_pubkey_tweak_add\fP\fP\&. So in the following pseudocode xonly_pubkey_tweak_add_check (absent earlier failures) returns 1\&.
+
+.PP
+secp256k1_musig_pubkey_agg(\&.\&.\&., agg_pk, keyagg_cache, pubkeys, \&.\&.\&.) secp256k1_musig_pubkey_xonly_tweak_add(\&.\&.\&., output_pk, keyagg_cache, tweak32) secp256k1_xonly_pubkey_serialize(\&.\&.\&., buf, output_pk) secp256k1_xonly_pubkey_tweak_add_check(\&.\&.\&., buf, \&.\&.\&., agg_pk, tweak32)
+
+.PP
+This function is required if you want to \fIsign\fP for a tweaked aggregate key\&. If you are only computing a public key but not intending to create a signature for it, use \fR\fBsecp256k1_xonly_pubkey_tweak_add\fP\fP instead\&.
+
+.PP
+Returns: 0 if the arguments are invalid, 1 otherwise Args: ctx: pointer to a context object Out: output_pubkey: pointer to a public key to store the result\&. Will be set to an invalid value if this function returns 0\&. If you do not need it, this arg can be NULL\&. In/Out: keyagg_cache: pointer to a \fRmusig_keyagg_cache\fP struct initialized by \fRmusig_pubkey_agg\fP In: tweak32: pointer to a 32-byte tweak\&. The tweak is valid if it passes \fR\fBsecp256k1_ec_seckey_verify\fP\fP and is not equal to the secret key corresponding to the public key represented by keyagg_cache or its negation\&. For uniformly random 32-byte arrays the chance of being invalid is negligible (around 1 in 2^128)\&. 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

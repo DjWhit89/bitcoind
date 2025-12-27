@@ -1,0 +1,1184 @@
+.TH "CWallet" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+CWallet
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <wallet\&.h>\fP
+.PP
+Inherits \fBWalletStorage\fP, and \fBChain::Notifications\fP\&.
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBScanResult\fP"
+.br
+.ti -1c
+.RI "struct \fBAddrBookFilter\fP"
+.br
+.in -1c
+.SS "Public Types"
+
+.in +1c
+.ti -1c
+.RI "typedef std::map< unsigned int, \fBCMasterKey\fP > \fBMasterKeyMap\fP"
+.br
+.ti -1c
+.RI "typedef std::multimap< int64_t, \fBCWalletTx\fP * > \fBTxItems\fP"
+.br
+.ti -1c
+.RI "using \fBUpdateWalletTxFn\fP = std::function<bool(\fBCWalletTx\fP& wtx, bool new_tx)>"
+.br
+.ti -1c
+.RI "using \fBListAddrBookFunc\fP = std::function<void(const \fBCTxDestination\fP& dest, const std::string& label, bool is_change, const std::optional<\fBAddressPurpose\fP> purpose)>"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBWalletDatabase\fP & \fBGetDatabase\fP () const override"
+.br
+.ti -1c
+.RI "const std::string & \fBGetName\fP () const"
+.br
+.ti -1c
+.RI "\fBCWallet\fP (\fBinterfaces::Chain\fP *\fBchain\fP, const std::string &\fBname\fP, std::unique_ptr< \fBWalletDatabase\fP > database)"
+.br
+.ti -1c
+.RI "\fB~CWallet\fP ()"
+.br
+.ti -1c
+.RI "bool \fBIsCrypted\fP () const"
+.br
+.ti -1c
+.RI "bool \fBIsLocked\fP () const override"
+.br
+.ti -1c
+.RI "bool \fBLock\fP ()"
+.br
+.ti -1c
+.RI "bool \fBHaveChain\fP () const"
+.br
+.ti -1c
+.RI "std::unordered_map< \fBTxid\fP, \fBCWalletTx\fP, \fBSaltedTxidHasher\fP > mapWallet \fBGUARDED_BY\fP (\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "int64_t nOrderPosNext \fBGUARDED_BY\fP (\fBcs_wallet\fP)=0"
+.br
+.ti -1c
+.RI "std::map< \fBCTxDestination\fP, \fBCAddressBookData\fP > m_address_book \fBGUARDED_BY\fP (\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "const \fBCAddressBookData\fP * \fBFindAddressBookEntry\fP (const \fBCTxDestination\fP &, bool allow_change=false) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "std::map< \fBCOutPoint\fP, bool > m_locked_coins \fBGUARDED_BY\fP (\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "\fBinterfaces::Chain\fP & \fBchain\fP () const"
+.br
+.ti -1c
+.RI "const \fBCWalletTx\fP * \fBGetWalletTx\fP (const \fBTxid\fP &hash) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "std::set< \fBTxid\fP > \fBGetTxConflicts\fP (const \fBCWalletTx\fP &wtx) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "const std::unordered_map< \fBCOutPoint\fP, \fBWalletTXO\fP, \fBSaltedOutpointHasher\fP > & \fBGetTXOs\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "std::optional< \fBWalletTXO\fP > \fBGetTXO\fP (const \fBCOutPoint\fP &outpoint) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBRefreshTXOsFromTx\fP (const \fBCWalletTx\fP &wtx) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBRefreshAllTXOs\fP () \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "int \fBGetTxDepthInMainChain\fP (const \fBCWalletTx\fP &wtx) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "int \fBGetTxBlocksToMaturity\fP (const \fBCWalletTx\fP &wtx) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBIsTxImmatureCoinBase\fP (const \fBCWalletTx\fP &wtx) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBIsSpent\fP (const \fBCOutPoint\fP &outpoint) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBIsSpentKey\fP (const \fBCScript\fP &scriptPubKey) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBSetSpentKeyState\fP (\fBWalletBatch\fP &batch, const \fBTxid\fP &hash, unsigned int n, bool used, std::set< \fBCTxDestination\fP > &tx_destinations) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "\fButil::Result\fP< void > \fBDisplayAddress\fP (const \fBCTxDestination\fP &dest) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBIsLockedCoin\fP (const \fBCOutPoint\fP &output) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBLoadLockedCoin\fP (const \fBCOutPoint\fP &coin, bool persistent) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBLockCoin\fP (const \fBCOutPoint\fP &output, bool persist) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBUnlockCoin\fP (const \fBCOutPoint\fP &output) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBUnlockAllCoins\fP () \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBListLockedCoins\fP (std::vector< \fBCOutPoint\fP > &vOutpts) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBAbortRescan\fP ()"
+.br
+.ti -1c
+.RI "bool \fBIsAbortingRescan\fP () const"
+.br
+.ti -1c
+.RI "bool \fBIsScanning\fP () const"
+.br
+.ti -1c
+.RI "bool \fBIsScanningWithPassphrase\fP () const"
+.br
+.ti -1c
+.RI "SteadyClock::duration \fBScanningDuration\fP () const"
+.br
+.ti -1c
+.RI "double \fBScanningProgress\fP () const"
+.br
+.ti -1c
+.RI "void \fBUpgradeDescriptorCache\fP () \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.RI "Upgrade DescriptorCaches\&. "
+.ti -1c
+.RI "void \fBLoadAddressPreviouslySpent\fP (const \fBCTxDestination\fP &dest) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.RI "Marks destination as previously spent\&. "
+.ti -1c
+.RI "void \fBLoadAddressReceiveRequest\fP (const \fBCTxDestination\fP &dest, const std::string &id, const std::string &request) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.RI "Appends payment request to destination\&. "
+.ti -1c
+.RI "int64_t nRelockTime \fBGUARDED_BY\fP (\fBcs_wallet\fP)"
+.br
+.RI "Holds a timestamp at which point the wallet is scheduled (externally) to be relocked\&. Caller must arrange for actual relocking to occur via \fBLock()\fP\&. "
+.ti -1c
+.RI "bool \fBUnlock\fP (const \fBSecureString\fP &strWalletPassphrase)"
+.br
+.ti -1c
+.RI "bool \fBChangeWalletPassphrase\fP (const \fBSecureString\fP &strOldWalletPassphrase, const \fBSecureString\fP &strNewWalletPassphrase)"
+.br
+.ti -1c
+.RI "bool \fBEncryptWallet\fP (const \fBSecureString\fP &strWalletPassphrase)"
+.br
+.ti -1c
+.RI "unsigned int \fBComputeTimeSmart\fP (const \fBCWalletTx\fP &wtx, bool rescanning_old_block) const"
+.br
+.ti -1c
+.RI "int64_t \fBIncOrderPosNext\fP (\fBWalletBatch\fP *batch=nullptr) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "\fBDBErrors\fP \fBReorderTransactions\fP ()"
+.br
+.ti -1c
+.RI "void \fBMarkDirty\fP ()"
+.br
+.ti -1c
+.RI "\fBCWalletTx\fP * \fBAddToWallet\fP (\fBCTransactionRef\fP tx, const \fBTxState\fP &state, const \fBUpdateWalletTxFn\fP &update_wtx=nullptr, bool rescanning_old_block=false)"
+.br
+.ti -1c
+.RI "bool \fBLoadToWallet\fP (const \fBTxid\fP &hash, const \fBUpdateWalletTxFn\fP &fill_wtx) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBtransactionAddedToMempool\fP (const \fBCTransactionRef\fP &tx) override"
+.br
+.ti -1c
+.RI "void \fBblockConnected\fP (const \fBkernel::ChainstateRole\fP &role, const \fBinterfaces::BlockInfo\fP &block) override"
+.br
+.ti -1c
+.RI "void \fBblockDisconnected\fP (const \fBinterfaces::BlockInfo\fP &block) override"
+.br
+.ti -1c
+.RI "void \fBupdatedBlockTip\fP () override"
+.br
+.ti -1c
+.RI "int64_t \fBRescanFromTime\fP (int64_t startTime, const \fBWalletRescanReserver\fP &reserver, bool update)"
+.br
+.ti -1c
+.RI "\fBScanResult\fP \fBScanForWalletTransactions\fP (const \fBuint256\fP &start_block, int start_height, std::optional< int > max_height, const \fBWalletRescanReserver\fP &reserver, bool fUpdate, const bool save_progress)"
+.br
+.ti -1c
+.RI "void \fBtransactionRemovedFromMempool\fP (const \fBCTransactionRef\fP &tx, \fBMemPoolRemovalReason\fP reason) override"
+.br
+.ti -1c
+.RI "void \fBSetNextResend\fP ()"
+.br
+.ti -1c
+.RI "bool \fBShouldResend\fP () const"
+.br
+.ti -1c
+.RI "void \fBResubmitWalletTransactions\fP (\fBnode::TxBroadcast\fP broadcast_method, bool force)"
+.br
+.ti -1c
+.RI "\fBOutputType\fP \fBTransactionChangeType\fP (const std::optional< \fBOutputType\fP > &change_type, const std::vector< \fBCRecipient\fP > &vecSend) const"
+.br
+.ti -1c
+.RI "bool \fBSignTransaction\fP (\fBCMutableTransaction\fP &tx) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBSignTransaction\fP (\fBCMutableTransaction\fP &tx, const std::map< \fBCOutPoint\fP, \fBCoin\fP > &coins, int sighash, std::map< int, \fBbilingual_str\fP > &input_errors) const"
+.br
+.ti -1c
+.RI "\fBSigningResult\fP \fBSignMessage\fP (const std::string &message, const \fBPKHash\fP &pkhash, std::string &str_sig) const"
+.br
+.ti -1c
+.RI "std::optional< \fBcommon::PSBTError\fP > \fBFillPSBT\fP (\fBPartiallySignedTransaction\fP &psbtx, bool &complete, std::optional< int > sighash_type=std::nullopt, bool sign=true, bool bip32derivs=true, size_t *n_signed=nullptr, bool finalize=true) const"
+.br
+.ti -1c
+.RI "void \fBCommitTransaction\fP (\fBCTransactionRef\fP tx, \fBmapValue_t\fP mapValue, std::vector< std::pair< std::string, std::string > > orderForm)"
+.br
+.ti -1c
+.RI "bool \fBSubmitTxMemoryPoolAndRelay\fP (\fBCWalletTx\fP &wtx, std::string &err_string, \fBnode::TxBroadcast\fP broadcast_method) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBMaybeUpdateBirthTime\fP (int64_t time)"
+.br
+.ti -1c
+.RI "size_t \fBKeypoolCountExternalKeys\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBTopUpKeyPool\fP (unsigned int kpSize=0)"
+.br
+.ti -1c
+.RI "std::vector< \fBCTxDestination\fP > \fBListAddrBookAddresses\fP (const std::optional< \fBAddrBookFilter\fP > &filter) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "std::set< std::string > \fBListAddrBookLabels\fP (const std::optional< \fBAddressPurpose\fP > purpose) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBForEachAddrBookEntry\fP (const \fBListAddrBookFunc\fP &func) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBMarkDestinationsDirty\fP (const std::set< \fBCTxDestination\fP > &destinations) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "\fButil::Result\fP< \fBCTxDestination\fP > \fBGetNewDestination\fP (const \fBOutputType\fP type, const std::string label)"
+.br
+.ti -1c
+.RI "\fButil::Result\fP< \fBCTxDestination\fP > \fBGetNewChangeDestination\fP (const \fBOutputType\fP type)"
+.br
+.ti -1c
+.RI "bool \fBIsMine\fP (const \fBCTxDestination\fP &dest) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBIsMine\fP (const \fBCScript\fP &\fBscript\fP) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "\fBCAmount\fP \fBGetDebit\fP (const \fBCTxIn\fP &txin) const"
+.br
+.ti -1c
+.RI "bool \fBIsMine\fP (const \fBCTxOut\fP &txout) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBIsMine\fP (const \fBCTransaction\fP &tx) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBIsMine\fP (const \fBCOutPoint\fP &outpoint) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBIsFromMe\fP (const \fBCTransaction\fP &tx) const"
+.br
+.ti -1c
+.RI "\fBCAmount\fP \fBGetDebit\fP (const \fBCTransaction\fP &tx) const"
+.br
+.ti -1c
+.RI "\fBDBErrors\fP \fBLoadWallet\fP ()"
+.br
+.ti -1c
+.RI "\fButil::Result\fP< void > \fBRemoveTxs\fP (std::vector< \fBTxid\fP > &txs_to_remove) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "\fButil::Result\fP< void > \fBRemoveTxs\fP (\fBWalletBatch\fP &batch, std::vector< \fBTxid\fP > &txs_to_remove) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBSetAddressBook\fP (const \fBCTxDestination\fP &address, const std::string &strName, const std::optional< \fBAddressPurpose\fP > &purpose)"
+.br
+.ti -1c
+.RI "bool \fBDelAddressBook\fP (const \fBCTxDestination\fP &address)"
+.br
+.ti -1c
+.RI "bool \fBDelAddressBookWithDB\fP (\fBWalletBatch\fP &batch, const \fBCTxDestination\fP &address)"
+.br
+.ti -1c
+.RI "bool \fBIsAddressPreviouslySpent\fP (const \fBCTxDestination\fP &dest) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBSetAddressPreviouslySpent\fP (\fBWalletBatch\fP &batch, const \fBCTxDestination\fP &dest, bool used) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "std::vector< std::string > \fBGetAddressReceiveRequests\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBSetAddressReceiveRequest\fP (\fBWalletBatch\fP &batch, const \fBCTxDestination\fP &dest, const std::string &id, const std::string &value) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBEraseAddressReceiveRequest\fP (\fBWalletBatch\fP &batch, const \fBCTxDestination\fP &dest, const std::string &id) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "unsigned int \fBGetKeyPoolSize\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "std::set< \fBTxid\fP > \fBGetConflicts\fP (const \fBTxid\fP &txid) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.RI "Get wallet transactions that conflict with given transaction (spend same outputs)\&. "
+.ti -1c
+.RI "bool \fBHasWalletSpend\fP (const \fBCTransactionRef\fP &tx) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.RI "Check if a given transaction has any of its outputs spent by another transaction in the wallet\&. "
+.ti -1c
+.RI "void \fBClose\fP ()"
+.br
+.RI "Close wallet database\&. "
+.ti -1c
+.RI "bool \fBGetBroadcastTransactions\fP () const"
+.br
+.ti -1c
+.RI "void \fBSetBroadcastTransactions\fP (bool broadcast)"
+.br
+.ti -1c
+.RI "bool \fBTransactionCanBeAbandoned\fP (const \fBTxid\fP &hashTx) const"
+.br
+.ti -1c
+.RI "bool \fBAbandonTransaction\fP (const \fBTxid\fP &hashTx)"
+.br
+.ti -1c
+.RI "bool \fBAbandonTransaction\fP (\fBCWalletTx\fP &tx) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBMarkReplaced\fP (const \fBTxid\fP &originalHash, const \fBTxid\fP &newHash)"
+.br
+.ti -1c
+.RI "void \fBpostInitProcess\fP ()"
+.br
+.ti -1c
+.RI "bool \fBBackupWallet\fP (const std::string &strDest) const"
+.br
+.ti -1c
+.RI "bool \fBIsHDEnabled\fP () const"
+.br
+.ti -1c
+.RI "bool \fBCanGetAddresses\fP (bool internal=false) const"
+.br
+.ti -1c
+.RI "int64_t \fBGetBirthTime\fP () const"
+.br
+.ti -1c
+.RI "void BlockUntilSyncedToCurrentChain() const \fBLOCKS_EXCLUDED\fP(void \fBSetWalletFlag\fP (uint64_t \fBflags\fP)"
+.br
+.ti -1c
+.RI "void \fBUnsetWalletFlag\fP (uint64_t flag)"
+.br
+.ti -1c
+.RI "bool \fBIsWalletFlagSet\fP (uint64_t flag) const override"
+.br
+.ti -1c
+.RI "void \fBInitWalletFlags\fP (uint64_t \fBflags\fP)"
+.br
+.ti -1c
+.RI "bool \fBLoadWalletFlags\fP (uint64_t \fBflags\fP)"
+.br
+.ti -1c
+.RI "uint64_t \fBGetWalletFlags\fP () const"
+.br
+.RI "Retrieve all of the wallet's flags\&. "
+.ti -1c
+.RI "std::string \fBLogName\fP () const override"
+.br
+.ti -1c
+.RI "std::string \fBDisplayName\fP () const"
+.br
+.ti -1c
+.RI "template<typename\&.\&.\&. Params> void \fBWalletLogPrintf\fP (\fButil::ConstevalFormatString\fP< sizeof\&.\&.\&.(\fBParams\fP)> wallet_fmt, const \fBParams\fP &\&.\&.\&. params) const"
+.br
+.ti -1c
+.RI "std::set< \fBScriptPubKeyMan\fP * > \fBGetActiveScriptPubKeyMans\fP () const"
+.br
+.RI "Returns all unique ScriptPubKeyMans in m_internal_spk_managers and m_external_spk_managers\&. "
+.ti -1c
+.RI "bool \fBIsActiveScriptPubKeyMan\fP (const \fBScriptPubKeyMan\fP &spkm) const"
+.br
+.ti -1c
+.RI "std::set< \fBScriptPubKeyMan\fP * > \fBGetAllScriptPubKeyMans\fP () const"
+.br
+.RI "Returns all unique ScriptPubKeyMans\&. "
+.ti -1c
+.RI "\fBScriptPubKeyMan\fP * \fBGetScriptPubKeyMan\fP (const \fBOutputType\fP &type, bool internal) const"
+.br
+.RI "Get the \fBScriptPubKeyMan\fP for the given \fBOutputType\fP and internal/external chain\&. "
+.ti -1c
+.RI "std::set< \fBScriptPubKeyMan\fP * > \fBGetScriptPubKeyMans\fP (const \fBCScript\fP &\fBscript\fP) const"
+.br
+.RI "Get all the ScriptPubKeyMans for a script\&. "
+.ti -1c
+.RI "\fBScriptPubKeyMan\fP * \fBGetScriptPubKeyMan\fP (const \fBuint256\fP &id) const"
+.br
+.RI "Get the \fBScriptPubKeyMan\fP by id\&. "
+.ti -1c
+.RI "std::unique_ptr< \fBSigningProvider\fP > \fBGetSolvingProvider\fP (const \fBCScript\fP &\fBscript\fP) const"
+.br
+.RI "Get the \fBSigningProvider\fP for a script\&. "
+.ti -1c
+.RI "std::unique_ptr< \fBSigningProvider\fP > \fBGetSolvingProvider\fP (const \fBCScript\fP &\fBscript\fP, \fBSignatureData\fP &sigdata) const"
+.br
+.ti -1c
+.RI "std::vector< \fBWalletDescriptor\fP > \fBGetWalletDescriptors\fP (const \fBCScript\fP &\fBscript\fP) const"
+.br
+.RI "Get the wallet descriptors for a script\&. "
+.ti -1c
+.RI "\fBLegacyDataSPKM\fP * \fBGetLegacyDataSPKM\fP () const"
+.br
+.RI "Get the LegacyScriptPubKeyMan which is used for all types, internal, and external\&. "
+.ti -1c
+.RI "\fBLegacyDataSPKM\fP * \fBGetOrCreateLegacyDataSPKM\fP ()"
+.br
+.ti -1c
+.RI "void \fBSetupLegacyScriptPubKeyMan\fP ()"
+.br
+.RI "Make a Legacy(Data)SPKM and set it for all types, internal, and external\&. "
+.ti -1c
+.RI "bool \fBWithEncryptionKey\fP (std::function< bool(const \fBCKeyingMaterial\fP &)> cb) const override"
+.br
+.RI "Pass the encryption key to cb()\&. "
+.ti -1c
+.RI "bool \fBHasEncryptionKeys\fP () const override"
+.br
+.ti -1c
+.RI "bool \fBHaveCryptedKeys\fP () const"
+.br
+.ti -1c
+.RI "int \fBGetLastBlockHeight\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "\fBuint256\fP \fBGetLastBlockHash\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBSetLastBlockProcessed\fP (int block_height, \fBuint256\fP block_hash) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBWriteBestBlock\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBConnectScriptPubKeyManNotifiers\fP ()"
+.br
+.RI "Connect the signals from ScriptPubKeyMans to the signals in \fBCWallet\fP\&. "
+.ti -1c
+.RI "\fBDescriptorScriptPubKeyMan\fP & \fBLoadDescriptorScriptPubKeyMan\fP (\fBuint256\fP id, \fBWalletDescriptor\fP &desc)"
+.br
+.RI "Instantiate a descriptor \fBScriptPubKeyMan\fP from the \fBWalletDescriptor\fP and load it\&. "
+.ti -1c
+.RI "void \fBAddActiveScriptPubKeyMan\fP (\fBuint256\fP id, \fBOutputType\fP type, bool internal)"
+.br
+.ti -1c
+.RI "void \fBLoadActiveScriptPubKeyMan\fP (\fBuint256\fP id, \fBOutputType\fP type, bool internal)"
+.br
+.ti -1c
+.RI "void \fBDeactivateScriptPubKeyMan\fP (\fBuint256\fP id, \fBOutputType\fP type, bool internal)"
+.br
+.ti -1c
+.RI "\fBDescriptorScriptPubKeyMan\fP & \fBSetupDescriptorScriptPubKeyMan\fP (\fBWalletBatch\fP &batch, const \fBCExtKey\fP &master_key, const \fBOutputType\fP &output_type, bool internal) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.RI "Create new \fBDescriptorScriptPubKeyMan\fP and add it to the wallet\&. "
+.ti -1c
+.RI "void \fBSetupDescriptorScriptPubKeyMans\fP (\fBWalletBatch\fP &batch, const \fBCExtKey\fP &master_key) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.RI "Create new DescriptorScriptPubKeyMans and add them to the wallet\&. "
+.ti -1c
+.RI "void \fBSetupDescriptorScriptPubKeyMans\fP () \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "void \fBSetupOwnDescriptorScriptPubKeyMans\fP (\fBWalletBatch\fP &batch) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.RI "Create new seed and default DescriptorScriptPubKeyMans for this wallet\&. "
+.ti -1c
+.RI "\fBDescriptorScriptPubKeyMan\fP * \fBGetDescriptorScriptPubKeyMan\fP (const \fBWalletDescriptor\fP &desc) const"
+.br
+.RI "Return the \fBDescriptorScriptPubKeyMan\fP for a \fBWalletDescriptor\fP if it is already in the wallet\&. "
+.ti -1c
+.RI "std::optional< bool > \fBIsInternalScriptPubKeyMan\fP (\fBScriptPubKeyMan\fP *spk_man) const"
+.br
+.ti -1c
+.RI "\fButil::Result\fP< std::reference_wrapper< \fBDescriptorScriptPubKeyMan\fP > > \fBAddWalletDescriptor\fP (\fBWalletDescriptor\fP &desc, const \fBFlatSigningProvider\fP &signing_provider, const std::string &label, bool internal) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.RI "Add a descriptor to the wallet, return a \fBScriptPubKeyMan\fP & associated output type\&. "
+.ti -1c
+.RI "bool \fBMigrateToSQLite\fP (\fBbilingual_str\fP &error) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "std::optional< \fBMigrationData\fP > \fBGetDescriptorsForLegacy\fP (\fBbilingual_str\fP &error) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.RI "Get all of the descriptors from a legacy wallet\&. "
+.ti -1c
+.RI "\fButil::Result\fP< void > \fBApplyMigrationData\fP (\fBWalletBatch\fP &local_wallet_batch, \fBMigrationData\fP &data) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.ti -1c
+.RI "bool \fBCanGrindR\fP () const"
+.br
+.RI "Whether the (external) signer performs R-value signature grinding\&. "
+.ti -1c
+.RI "void \fBCacheNewScriptPubKeys\fP (const std::set< \fBCScript\fP > &spks, \fBScriptPubKeyMan\fP *spkm)"
+.br
+.RI "Add scriptPubKeys for this \fBScriptPubKeyMan\fP into the scriptPubKey cache\&. "
+.ti -1c
+.RI "void \fBTopUpCallback\fP (const std::set< \fBCScript\fP > &spks, \fBScriptPubKeyMan\fP *spkm) override"
+.br
+.RI "Callback function for after TopUp completes containing any scripts that were added by a SPKMan\&. "
+.ti -1c
+.RI "std::set< \fBCExtPubKey\fP > \fBGetActiveHDPubKeys\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_wallet\fP)"
+.br
+.RI "Retrieve the xpubs in use by the active descriptors\&. "
+.ti -1c
+.RI "std::optional< \fBCKey\fP > \fBGetKey\fP (const \fBCKeyID\fP &keyid) const"
+.br
+.in -1c
+
+Public Member Functions inherited from \fBWalletStorage\fP
+.in +1c
+.ti -1c
+.RI "virtual \fB~WalletStorage\fP ()=default"
+.br
+.in -1c
+
+Public Member Functions inherited from \fBChain::Notifications\fP
+.in +1c
+.ti -1c
+.RI "virtual \fB~Notifications\fP ()=default"
+.br
+.ti -1c
+.RI "virtual void \fBchainStateFlushed\fP (const \fBkernel::ChainstateRole\fP &role, const \fBCBlockLocator\fP &locator)"
+.br
+.in -1c
+.SS "Static Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "static std::shared_ptr< \fBCWallet\fP > \fBCreate\fP (\fBWalletContext\fP &context, const std::string &\fBname\fP, std::unique_ptr< \fBWalletDatabase\fP > database, uint64_t wallet_creation_flags, \fBbilingual_str\fP &error, std::vector< \fBbilingual_str\fP > &warnings)"
+.br
+.in -1c
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "\fBRecursiveMutex\fP \fBcs_wallet\fP"
+.br
+.ti -1c
+.RI "\fBMasterKeyMap\fP \fBmapMasterKeys\fP"
+.br
+.ti -1c
+.RI "unsigned int \fBnMasterKeyMaxID\fP = 0"
+.br
+.ti -1c
+.RI "\fBTxItems\fP \fBwtxOrdered\fP"
+.br
+.ti -1c
+.RI "std::unique_ptr< \fBinterfaces::Handler\fP > \fBm_chain_notifications_handler\fP"
+.br
+.ti -1c
+.RI "\fBMutex\fP \fBm_unlock_mutex\fP"
+.br
+.ti -1c
+.RI "\fBRecursiveMutex\fP \fBm_relock_mutex\fP"
+.br
+.ti -1c
+.RI "\fBCFeeRate\fP \fBm_pay_tx_fee\fP {\fBDEFAULT_PAY_TX_FEE\fP}"
+.br
+.ti -1c
+.RI "unsigned int \fBm_confirm_target\fP {DEFAULT_TX_CONFIRM_TARGET}"
+.br
+.ti -1c
+.RI "bool \fBm_spend_zero_conf_change\fP {DEFAULT_SPEND_ZEROCONF_CHANGE}"
+.br
+.ti -1c
+.RI "bool \fBm_signal_rbf\fP {DEFAULT_WALLET_RBF}"
+.br
+.ti -1c
+.RI "bool \fBm_allow_fallback_fee\fP {true}"
+.br
+.RI "will be false if -fallbackfee=0 "
+.ti -1c
+.RI "\fBCFeeRate\fP \fBm_min_fee\fP {DEFAULT_TRANSACTION_MINFEE}"
+.br
+.RI "Override with -mintxfee\&. "
+.ti -1c
+.RI "\fBCFeeRate\fP \fBm_fallback_fee\fP {DEFAULT_FALLBACK_FEE}"
+.br
+.ti -1c
+.RI "\fBCFeeRate\fP \fBm_discard_rate\fP {DEFAULT_DISCARD_FEE}"
+.br
+.ti -1c
+.RI "\fBCFeeRate\fP \fBm_consolidate_feerate\fP {DEFAULT_CONSOLIDATE_FEERATE}"
+.br
+.ti -1c
+.RI "\fBCAmount\fP \fBm_max_aps_fee\fP {DEFAULT_MAX_AVOIDPARTIALSPEND_FEE}"
+.br
+.RI "note: this is absolute fee, not fee rate "
+.ti -1c
+.RI "\fBOutputType\fP \fBm_default_address_type\fP {\fBDEFAULT_ADDRESS_TYPE\fP}"
+.br
+.ti -1c
+.RI "std::optional< \fBOutputType\fP > \fBm_default_change_type\fP {}"
+.br
+.ti -1c
+.RI "\fBCAmount\fP \fBm_default_max_tx_fee\fP {\fBDEFAULT_TRANSACTION_MAXFEE\fP}"
+.br
+.ti -1c
+.RI "int64_t \fBm_keypool_size\fP {DEFAULT_KEYPOOL_SIZE}"
+.br
+.ti -1c
+.RI "std::string \fBm_notify_tx_changed_script\fP"
+.br
+.ti -1c
+.RI "boost::signals2::signal< void()> \fBNotifyUnload\fP"
+.br
+.ti -1c
+.RI "boost::signals2::signal< void(const \fBCTxDestination\fP &address, const std::string &label, bool isMine, \fBAddressPurpose\fP purpose, \fBChangeType\fP status)> \fBNotifyAddressBookChanged\fP"
+.br
+.ti -1c
+.RI "boost::signals2::signal< void(const \fBTxid\fP &hashTx, \fBChangeType\fP status)> \fBNotifyTransactionChanged\fP"
+.br
+.ti -1c
+.RI "boost::signals2::signal< void(const std::string &title, int nProgress)> \fBShowProgress\fP"
+.br
+.ti -1c
+.RI "boost::signals2::signal< void()> \fBNotifyCanGetAddressesChanged\fP"
+.br
+.ti -1c
+.RI "boost::signals2::signal< void(\fBCWallet\fP *\fBwallet\fP)> \fBNotifyStatusChanged\fP"
+.br
+.in -1c
+.SS "Friends"
+
+.in +1c
+.ti -1c
+.RI "class \fBWalletRescanReserver\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+A \fBCWallet\fP maintains a set of transactions and balances, and provides the ability to create new transactions\&. 
+.SH "Member Typedef Documentation"
+.PP 
+.SS "using \fBListAddrBookFunc\fP = std::function<void(const \fBCTxDestination\fP& dest, const std::string& label, bool is_change, const std::optional<\fBAddressPurpose\fP> purpose)>"
+Walk-through the address book entries\&. Stops when the provided '\fBListAddrBookFunc\fP' returns false\&. 
+.SS "typedef std::map<unsigned int, \fBCMasterKey\fP> \fBMasterKeyMap\fP"
+
+.SS "typedef std::multimap<int64_t, \fBCWalletTx\fP*> \fBTxItems\fP"
+
+.SS "using \fBUpdateWalletTxFn\fP = std::function<bool(\fBCWalletTx\fP& wtx, bool new_tx)>"
+Callback for updating transaction metadata in mapWallet\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIwtx\fP - reference to mapWallet transaction to update 
+.br
+\fInew_tx\fP - true if wtx is newly inserted, false if it previously existed
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+true if wtx is changed and needs to be saved to disk, otherwise false 
+.RE
+.PP
+
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBCWallet\fP (\fBinterfaces::Chain\fP * chain, const std::string & name, std::unique_ptr< \fBWalletDatabase\fP > database)\fR [inline]\fP"
+Construct wallet with specified name and database implementation\&. 
+.SS "~\fBCWallet\fP ()\fR [inline]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "void AbortRescan ()\fR [inline]\fP"
+
+.SS "void AddActiveScriptPubKeyMan (\fBuint256\fP id, \fBOutputType\fP type, bool internal)"
+Adds the active \fBScriptPubKeyMan\fP for the specified type and internal\&. Writes it to the wallet file 
+.PP
+\fBParameters\fP
+.RS 4
+\fIid\fP The unique id for the \fBScriptPubKeyMan\fP 
+.br
+\fItype\fP The \fBOutputType\fP this \fBScriptPubKeyMan\fP provides addresses for 
+.br
+\fIinternal\fP Whether this \fBScriptPubKeyMan\fP provides change addresses 
+.RE
+.PP
+
+.SS "\fButil::Result\fP< std::reference_wrapper< \fBDescriptorScriptPubKeyMan\fP > > AddWalletDescriptor (\fBWalletDescriptor\fP & desc, const \fBFlatSigningProvider\fP & signing_provider, const std::string & label, bool internal)"
+
+.PP
+Add a descriptor to the wallet, return a \fBScriptPubKeyMan\fP & associated output type\&. 
+.SS "\fButil::Result\fP< void > ApplyMigrationData (\fBWalletBatch\fP & local_wallet_batch, \fBMigrationData\fP & data)"
+Adds the ScriptPubKeyMans given in \fBMigrationData\fP to this wallet, removes LegacyScriptPubKeyMan, and where needed, moves tx and address book entries to watchonly_wallet or solvable_wallet 
+.SS "bool BackupWallet (const std::string & strDest) const"
+
+.SS "void CacheNewScriptPubKeys (const std::set< \fBCScript\fP > & spks, \fBScriptPubKeyMan\fP * spkm)"
+
+.PP
+Add scriptPubKeys for this \fBScriptPubKeyMan\fP into the scriptPubKey cache\&. 
+.SS "bool CanGrindR () const"
+
+.PP
+Whether the (external) signer performs R-value signature grinding\&. 
+.SS "\fBinterfaces::Chain\fP & chain () const\fR [inline]\fP"
+Interface for accessing chain state\&. 
+.SS "void CommitTransaction (\fBCTransactionRef\fP tx, \fBmapValue_t\fP mapValue, std::vector< std::pair< std::string, std::string > > orderForm)"
+Submit the transaction to the node's mempool and then relay to peers\&. Should be called after CreateTransaction unless you want to abort broadcasting the transaction\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fItx\fP The transaction to be broadcast\&. 
+.br
+\fImapValue\fP key-values to be set on the transaction\&. 
+.br
+\fIorderForm\fP BIP 70 / BIP 21 order form details to be set on the transaction\&. 
+.RE
+.PP
+
+.SS "unsigned int ComputeTimeSmart (const \fBCWalletTx\fP & wtx, bool rescanning_old_block) const"
+Compute smart timestamp for a transaction being added to the wallet\&.
+
+.PP
+Logic:
+.IP "\(bu" 2
+If sending a transaction, assign its timestamp to the current time\&.
+.IP "\(bu" 2
+If receiving a transaction outside a block, assign its timestamp to the current time\&.
+.IP "\(bu" 2
+If receiving a transaction during a rescanning process, assign all its (not already known) transactions' timestamps to the block time\&.
+.IP "\(bu" 2
+If receiving a block with a future timestamp, assign all its (not already known) transactions' timestamps to the current time\&.
+.IP "\(bu" 2
+If receiving a block with a past timestamp, before the most recent known transaction (that we care about), assign all its (not already known) transactions' timestamps to the same timestamp as that most-recent-known transaction\&.
+.IP "\(bu" 2
+If receiving a block with a past timestamp, but after the most recent known transaction, assign all its (not already known) transactions' timestamps to the block time\&.
+.PP
+
+.PP
+For more information see \fBCWalletTx::nTimeSmart\fP, https://bitcointalk.org/?topic=54527, or https://github.com/bitcoin/bitcoin/pull/1393\&. 
+.SS "void ConnectScriptPubKeyManNotifiers ()"
+
+.PP
+Connect the signals from ScriptPubKeyMans to the signals in \fBCWallet\fP\&. 
+.SS "std::shared_ptr< \fBCWallet\fP > Create (\fBWalletContext\fP & context, const std::string & name, std::unique_ptr< \fBWalletDatabase\fP > database, uint64_t wallet_creation_flags, \fBbilingual_str\fP & error, std::vector< \fBbilingual_str\fP > & warnings)\fR [static]\fP"
+
+.SS "void DeactivateScriptPubKeyMan (\fBuint256\fP id, \fBOutputType\fP type, bool internal)"
+Remove specified \fBScriptPubKeyMan\fP from set of active SPK managers\&. Writes the change to the wallet file\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIid\fP The unique id for the \fBScriptPubKeyMan\fP 
+.br
+\fItype\fP The \fBOutputType\fP this \fBScriptPubKeyMan\fP provides addresses for 
+.br
+\fIinternal\fP Whether this \fBScriptPubKeyMan\fP provides change addresses 
+.RE
+.PP
+
+.SS "bool DelAddressBook (const \fBCTxDestination\fP & address)"
+
+.SS "bool DelAddressBookWithDB (\fBWalletBatch\fP & batch, const \fBCTxDestination\fP & address)"
+
+.SS "\fButil::Result\fP< void > DisplayAddress (const \fBCTxDestination\fP & dest)"
+Display address on an external signer\&. 
+.SS "std::string DisplayName () const\fR [inline]\fP"
+Return wallet name for display, like \fBLogName()\fP but translates "default wallet" string\&. 
+.SS "bool EraseAddressReceiveRequest (\fBWalletBatch\fP & batch, const \fBCTxDestination\fP & dest, const std::string & id)"
+
+.SS "std::optional< \fBPSBTError\fP > FillPSBT (\fBPartiallySignedTransaction\fP & psbtx, bool & complete, std::optional< int > sighash_type = \fRstd::nullopt\fP, bool sign = \fRtrue\fP, bool bip32derivs = \fRtrue\fP, size_t * n_signed = \fRnullptr\fP, bool finalize = \fRtrue\fP) const"
+Fills out a PSBT with information from the wallet\&. Fills in UTXOs if we have them\&. Tries to sign if sign=true\&. Sets \fRcomplete\fP if the PSBT is now complete (i\&.e\&. has all required signatures or signature-parts, and is ready to finalize\&.) Sets \fRerror\fP and returns false if something goes wrong\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIpsbtx\fP \fBPartiallySignedTransaction\fP to fill in 
+.br
+\fIcomplete\fP indicates whether the PSBT is now complete 
+.br
+\fIsighash_type\fP the sighash type to use when signing (if PSBT does not specify) 
+.br
+\fIsign\fP whether to sign or not 
+.br
+\fIbip32derivs\fP whether to fill in bip32 derivation information if available 
+.br
+\fIn_signed\fP the number of inputs signed by this wallet 
+.br
+\fIfinalize\fP whether to create the final scriptSig or scriptWitness if possible return error 
+.RE
+.PP
+
+.SS "const \fBCAddressBookData\fP * FindAddressBookEntry (const \fBCTxDestination\fP & dest, bool allow_change = \fRfalse\fP) const"
+
+.SS "void ForEachAddrBookEntry (const \fBListAddrBookFunc\fP & func) const"
+
+.SS "std::set< \fBCExtPubKey\fP > GetActiveHDPubKeys () const"
+
+.PP
+Retrieve the xpubs in use by the active descriptors\&. 
+.SS "std::set< \fBScriptPubKeyMan\fP * > GetActiveScriptPubKeyMans () const"
+
+.PP
+Returns all unique ScriptPubKeyMans in m_internal_spk_managers and m_external_spk_managers\&. 
+.SS "std::vector< std::string > GetAddressReceiveRequests () const"
+
+.SS "std::set< \fBScriptPubKeyMan\fP * > GetAllScriptPubKeyMans () const"
+
+.PP
+Returns all unique ScriptPubKeyMans\&. 
+.SS "int64_t GetBirthTime () const\fR [inline]\fP"
+
+.SS "bool GetBroadcastTransactions () const\fR [inline]\fP"
+Inquire whether this wallet broadcasts transactions\&. 
+.SS "\fBWalletDatabase\fP & GetDatabase () const\fR [inline]\fP, \fR [override]\fP, \fR [virtual]\fP"
+
+.PP
+Implements \fBWalletStorage\fP\&.
+.SS "\fBDescriptorScriptPubKeyMan\fP * GetDescriptorScriptPubKeyMan (const \fBWalletDescriptor\fP & desc) const"
+
+.PP
+Return the \fBDescriptorScriptPubKeyMan\fP for a \fBWalletDescriptor\fP if it is already in the wallet\&. 
+.SS "std::optional< \fBMigrationData\fP > GetDescriptorsForLegacy (\fBbilingual_str\fP & error) const"
+
+.PP
+Get all of the descriptors from a legacy wallet\&. 
+.SS "std::optional< \fBCKey\fP > GetKey (const \fBCKeyID\fP & keyid) const"
+Find the private key for the given key id from the wallet's descriptors, if available Returns nullopt when no descriptor has the key or if the wallet is locked\&. 
+.SS "unsigned int GetKeyPoolSize () const"
+
+.SS "\fBuint256\fP GetLastBlockHash () const\fR [inline]\fP"
+
+.SS "int GetLastBlockHeight () const\fR [inline]\fP"
+Get last block processed height 
+.SS "\fBLegacyDataSPKM\fP * GetLegacyDataSPKM () const"
+
+.PP
+Get the LegacyScriptPubKeyMan which is used for all types, internal, and external\&. 
+.SS "const std::string & GetName () const\fR [inline]\fP"
+Get a name for this wallet for logging/debugging purposes\&. 
+.SS "\fButil::Result\fP< \fBCTxDestination\fP > GetNewChangeDestination (const \fBOutputType\fP type)"
+
+.SS "\fButil::Result\fP< \fBCTxDestination\fP > GetNewDestination (const \fBOutputType\fP type, const std::string label)"
+
+.SS "\fBLegacyDataSPKM\fP * GetOrCreateLegacyDataSPKM ()"
+
+.SS "\fBScriptPubKeyMan\fP * GetScriptPubKeyMan (const \fBOutputType\fP & type, bool internal) const"
+
+.PP
+Get the \fBScriptPubKeyMan\fP for the given \fBOutputType\fP and internal/external chain\&. 
+.SS "\fBScriptPubKeyMan\fP * GetScriptPubKeyMan (const \fBuint256\fP & id) const"
+
+.PP
+Get the \fBScriptPubKeyMan\fP by id\&. 
+.SS "std::set< \fBScriptPubKeyMan\fP * > GetScriptPubKeyMans (const \fBCScript\fP & script) const"
+
+.PP
+Get all the ScriptPubKeyMans for a script\&. 
+.SS "std::unique_ptr< \fBSigningProvider\fP > GetSolvingProvider (const \fBCScript\fP & script) const"
+
+.PP
+Get the \fBSigningProvider\fP for a script\&. 
+.SS "std::unique_ptr< \fBSigningProvider\fP > GetSolvingProvider (const \fBCScript\fP & script, \fBSignatureData\fP & sigdata) const"
+
+.SS "int GetTxBlocksToMaturity (const \fBCWalletTx\fP & wtx) const"
+
+.PP
+\fBReturns\fP
+.RS 4
+number of blocks to maturity for this transaction: 0 : is not a coinbase transaction, or is a mature coinbase transaction >0 : is a coinbase transaction which matures in this many blocks 
+.RE
+.PP
+
+.SS "int GetTxDepthInMainChain (const \fBCWalletTx\fP & wtx) const"
+Return depth of transaction in blockchain: <0 : conflicts with a transaction this deep in the blockchain 0 : in memory pool, waiting to be included in a block >=1 : this many blocks deep in the main chain
+
+.PP
+Preconditions: it is only valid to call this function when the wallet is online and the block index is loaded\&. So this cannot be called by bitcoin-wallet tool code or by wallet migration code\&. If this is called without the wallet being online, it won't be able able to determine the the height of the last block processed, or the heights of blocks referenced in transaction, and might cause assert failures\&. 
+.SS "std::optional< \fBWalletTXO\fP > GetTXO (const \fBCOutPoint\fP & outpoint) const"
+
+.SS "const std::unordered_map< \fBCOutPoint\fP, \fBWalletTXO\fP, \fBSaltedOutpointHasher\fP > & GetTXOs () const\fR [inline]\fP"
+
+.SS "std::vector< \fBWalletDescriptor\fP > GetWalletDescriptors (const \fBCScript\fP & script) const"
+
+.PP
+Get the wallet descriptors for a script\&. 
+.SS "int64_t nRelockTime GUARDED_BY (\fBcs_wallet\fP )\fR [inline]\fP"
+
+.PP
+Holds a timestamp at which point the wallet is scheduled (externally) to be relocked\&. Caller must arrange for actual relocking to occur via \fBLock()\fP\&. 
+.SS "std::map< \fBCOutPoint\fP, bool > m_locked_coins GUARDED_BY (\fBcs_wallet\fP )"
+Set of Coins owned by this wallet that we won't try to spend from\&. A \fBCoin\fP may be locked if it has already been used to fund a transaction that hasn't confirmed yet\&. We wouldn't consider the \fBCoin\fP spent already, but also shouldn't try to use it again\&. bool to track whether this locked coin is persisted to disk\&. 
+.SS "std::map< \fBCTxDestination\fP, \fBCAddressBookData\fP > m_address_book GUARDED_BY (\fBcs_wallet\fP )"
+
+.SS "std::unordered_map< \fBTxid\fP, \fBCWalletTx\fP, \fBSaltedTxidHasher\fP > mapWallet GUARDED_BY (\fBcs_wallet\fP )"
+Map from txid to \fBCWalletTx\fP for all transactions this wallet is interested in, including received and sent transactions\&. 
+.SS "int64_t nOrderPosNext GUARDED_BY (\fBcs_wallet\fP )\fR [pure virtual]\fP"
+
+.SS "bool HasEncryptionKeys () const\fR [override]\fP, \fR [virtual]\fP"
+
+.PP
+Implements \fBWalletStorage\fP\&.
+.SS "bool HaveChain () const\fR [inline]\fP"
+Interface to assert chain access 
+.SS "bool HaveCryptedKeys () const"
+
+.SS "bool IsAbortingRescan () const\fR [inline]\fP"
+
+.SS "bool IsActiveScriptPubKeyMan (const \fBScriptPubKeyMan\fP & spkm) const"
+
+.SS "bool IsAddressPreviouslySpent (const \fBCTxDestination\fP & dest) const"
+
+.SS "bool IsCrypted () const"
+
+.SS "std::optional< bool > IsInternalScriptPubKeyMan (\fBScriptPubKeyMan\fP * spk_man) const"
+Returns whether the provided \fBScriptPubKeyMan\fP is internal 
+.PP
+\fBParameters\fP
+.RS 4
+\fIspk_man\fP The \fBScriptPubKeyMan\fP to test 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+contains value only for active \fBDescriptorScriptPubKeyMan\fP, otherwise undefined 
+.RE
+.PP
+
+.SS "bool IsLocked () const\fR [override]\fP, \fR [virtual]\fP"
+
+.PP
+Implements \fBWalletStorage\fP\&.
+.SS "bool IsLockedCoin (const \fBCOutPoint\fP & output) const"
+
+.SS "bool IsScanning () const\fR [inline]\fP"
+
+.SS "bool IsScanningWithPassphrase () const\fR [inline]\fP"
+
+.SS "bool IsTxImmatureCoinBase (const \fBCWalletTx\fP & wtx) const"
+
+.SS "size_t KeypoolCountExternalKeys () const"
+
+.SS "std::vector< \fBCTxDestination\fP > ListAddrBookAddresses (const std::optional< \fBAddrBookFilter\fP > & filter) const"
+Filter and retrieve destinations stored in the addressbook 
+.SS "std::set< std::string > ListAddrBookLabels (const std::optional< \fBAddressPurpose\fP > purpose) const"
+Retrieve all the known labels in the address book 
+.SS "void ListLockedCoins (std::vector< \fBCOutPoint\fP > & vOutpts) const"
+
+.SS "void LoadActiveScriptPubKeyMan (\fBuint256\fP id, \fBOutputType\fP type, bool internal)"
+Loads an active \fBScriptPubKeyMan\fP for the specified type and internal\&. (used by LoadWallet) 
+.PP
+\fBParameters\fP
+.RS 4
+\fIid\fP The unique id for the \fBScriptPubKeyMan\fP 
+.br
+\fItype\fP The \fBOutputType\fP this \fBScriptPubKeyMan\fP provides addresses for 
+.br
+\fIinternal\fP Whether this \fBScriptPubKeyMan\fP provides change addresses 
+.RE
+.PP
+
+.SS "void LoadAddressPreviouslySpent (const \fBCTxDestination\fP & dest)"
+
+.PP
+Marks destination as previously spent\&. 
+.SS "void LoadAddressReceiveRequest (const \fBCTxDestination\fP & dest, const std::string & id, const std::string & request)"
+
+.PP
+Appends payment request to destination\&. 
+.SS "\fBDescriptorScriptPubKeyMan\fP & LoadDescriptorScriptPubKeyMan (\fBuint256\fP id, \fBWalletDescriptor\fP & desc)"
+
+.PP
+Instantiate a descriptor \fBScriptPubKeyMan\fP from the \fBWalletDescriptor\fP and load it\&. 
+.SS "void LoadLockedCoin (const \fBCOutPoint\fP & coin, bool persistent)"
+
+.SS "\fBDBErrors\fP LoadWallet ()"
+
+.SS "bool Lock ()"
+
+.SS "bool LockCoin (const \fBCOutPoint\fP & output, bool persist)"
+
+.SS "std::string LogName () const\fR [inline]\fP, \fR [override]\fP, \fR [virtual]\fP"
+Return wallet name for use in logs, will return "default wallet" if the wallet has no name\&. 
+.PP
+Implements \fBWalletStorage\fP\&.
+.SS "void MarkDestinationsDirty (const std::set< \fBCTxDestination\fP > & destinations)"
+Marks all outputs in each one of the destinations dirty, so their cache is reset and does not return outdated information\&. 
+.SS "bool MigrateToSQLite (\fBbilingual_str\fP & error)"
+Move all records from the BDB database to a new SQLite database for storage\&. The original BDB file will be deleted and replaced with a new SQLite file\&. A backup is not created\&. May crash if something unexpected happens in the filesystem\&. 
+.SS "void postInitProcess ()"
+\fBWallet\fP post-init setup Gives the wallet a chance to register repetitive tasks and complete post-init tasks 
+.SS "void RefreshAllTXOs ()"
+\fBCache\fP outputs that belong to the wallet for all transactions in the wallet 
+.SS "void RefreshTXOsFromTx (const \fBCWalletTx\fP & wtx)"
+\fBCache\fP outputs that belong to the wallet from a single transaction 
+.SS "\fButil::Result\fP< void > RemoveTxs (std::vector< \fBTxid\fP > & txs_to_remove)"
+Erases the provided transactions from the wallet\&. 
+.SS "\fButil::Result\fP< void > RemoveTxs (\fBWalletBatch\fP & batch, std::vector< \fBTxid\fP > & txs_to_remove)"
+
+.SS "SteadyClock::duration ScanningDuration () const\fR [inline]\fP"
+
+.SS "double ScanningProgress () const\fR [inline]\fP"
+
+.SS "bool SetAddressBook (const \fBCTxDestination\fP & address, const std::string & strName, const std::optional< \fBAddressPurpose\fP > & purpose)"
+
+.SS "bool SetAddressPreviouslySpent (\fBWalletBatch\fP & batch, const \fBCTxDestination\fP & dest, bool used)"
+
+.SS "bool SetAddressReceiveRequest (\fBWalletBatch\fP & batch, const \fBCTxDestination\fP & dest, const std::string & id, const std::string & value)"
+
+.SS "void SetBroadcastTransactions (bool broadcast)\fR [inline]\fP"
+Set whether this wallet broadcasts transactions\&. 
+.SS "void SetNextResend ()\fR [inline]\fP"
+Set the next time this wallet should resend transactions to 12-36 hours from now, ~1 day on average\&. 
+.SS "\fBDescriptorScriptPubKeyMan\fP & SetupDescriptorScriptPubKeyMan (\fBWalletBatch\fP & batch, const \fBCExtKey\fP & master_key, const \fBOutputType\fP & output_type, bool internal)"
+
+.PP
+Create new \fBDescriptorScriptPubKeyMan\fP and add it to the wallet\&. 
+.SS "void SetupDescriptorScriptPubKeyMans ()"
+
+.SS "void SetupDescriptorScriptPubKeyMans (\fBWalletBatch\fP & batch, const \fBCExtKey\fP & master_key)"
+
+.PP
+Create new DescriptorScriptPubKeyMans and add them to the wallet\&. 
+.SS "void SetupLegacyScriptPubKeyMan ()"
+
+.PP
+Make a Legacy(Data)SPKM and set it for all types, internal, and external\&. 
+.SS "void SetupOwnDescriptorScriptPubKeyMans (\fBWalletBatch\fP & batch)"
+
+.PP
+Create new seed and default DescriptorScriptPubKeyMans for this wallet\&. 
+.SS "\fBSigningResult\fP SignMessage (const std::string & message, const \fBPKHash\fP & pkhash, std::string & str_sig) const"
+
+.SS "bool SignTransaction (\fBCMutableTransaction\fP & tx) const"
+Fetch the inputs and sign with SIGHASH_ALL\&. 
+.SS "bool SignTransaction (\fBCMutableTransaction\fP & tx, const std::map< \fBCOutPoint\fP, \fBCoin\fP > & coins, int sighash, std::map< int, \fBbilingual_str\fP > & input_errors) const"
+Sign the tx given the input coins and sighash\&. 
+.SS "void TopUpCallback (const std::set< \fBCScript\fP > & , \fBScriptPubKeyMan\fP * )\fR [override]\fP, \fR [virtual]\fP"
+
+.PP
+Callback function for after TopUp completes containing any scripts that were added by a SPKMan\&. 
+.PP
+Implements \fBWalletStorage\fP\&.
+.SS "bool TopUpKeyPool (unsigned int kpSize = \fR0\fP)"
+
+.SS "\fBOutputType\fP TransactionChangeType (const std::optional< \fBOutputType\fP > & change_type, const std::vector< \fBCRecipient\fP > & vecSend) const"
+
+.SS "bool UnlockAllCoins ()"
+
+.SS "bool UnlockCoin (const \fBCOutPoint\fP & output)"
+
+.SS "template<typename\&.\&.\&. Params> void WalletLogPrintf (\fButil::ConstevalFormatString\fP< sizeof\&.\&.\&.(\fBParams\fP)> wallet_fmt, const \fBParams\fP &\&.\&.\&. params) const\fR [inline]\fP"
+Prepends the wallet name in logging output to ease debugging in multi-wallet use cases 
+.SS "bool WithEncryptionKey (std::function< bool(const \fBCKeyingMaterial\fP &)> cb) const\fR [override]\fP, \fR [virtual]\fP"
+
+.PP
+Pass the encryption key to cb()\&. 
+.PP
+Implements \fBWalletStorage\fP\&.
+.SS "void WriteBestBlock () const"
+Write the current best block to database 
+.SH "Friends And Related Symbol Documentation"
+.PP 
+.SS "friend class \fBWalletRescanReserver\fP\fR [friend]\fP"
+
+.SH "Field Documentation"
+.PP 
+.SS "\fBRecursiveMutex\fP cs_wallet\fR [mutable]\fP"
+Main wallet lock\&. This lock protects all the fields added by \fBCWallet\fP\&. 
+.SS "bool m_allow_fallback_fee {true}"
+
+.PP
+will be false if -fallbackfee=0 
+.SS "std::unique_ptr<\fBinterfaces::Handler\fP> m_chain_notifications_handler"
+Registered \fBinterfaces::Chain::Notifications\fP handler\&. 
+.SS "unsigned int m_confirm_target {DEFAULT_TX_CONFIRM_TARGET}"
+
+.SS "\fBCFeeRate\fP m_consolidate_feerate {DEFAULT_CONSOLIDATE_FEERATE}"
+When the actual feerate is less than the consolidate feerate, we will tend to make transactions which consolidate inputs\&. When the actual feerate is greater than the consolidate feerate, we will tend to make transactions which have the lowest fees\&. 
+.SS "\fBOutputType\fP m_default_address_type {\fBDEFAULT_ADDRESS_TYPE\fP}"
+
+.SS "std::optional<\fBOutputType\fP> m_default_change_type {}"
+Default output type for change outputs\&. When unset, automatically choose type based on address type setting and the types other of non-change outputs (see -changetype option documentation and implementation in \fBCWallet::TransactionChangeType\fP for details)\&. 
+.SS "\fBCAmount\fP m_default_max_tx_fee {\fBDEFAULT_TRANSACTION_MAXFEE\fP}"
+Absolute maximum transaction fee (in satoshis) used by default for the wallet 
+.SS "\fBCFeeRate\fP m_discard_rate {DEFAULT_DISCARD_FEE}"
+If the cost to spend a change output at this feerate is greater than the value of the output itself, just drop it to fees\&. 
+.SS "\fBCFeeRate\fP m_fallback_fee {DEFAULT_FALLBACK_FEE}"
+If fee estimation does not have enough data to provide estimates, use this fee instead\&. Has no effect if not using fee estimation Override with -fallbackfee 
+.SS "int64_t m_keypool_size {DEFAULT_KEYPOOL_SIZE}"
+Number of pre-generated keys/scripts by each spkm (part of the look-ahead process, used to detect payments) 
+.SS "\fBCAmount\fP m_max_aps_fee {DEFAULT_MAX_AVOIDPARTIALSPEND_FEE}"
+
+.PP
+note: this is absolute fee, not fee rate The maximum fee amount we're willing to pay to prioritize partial spend avoidance\&. 
+.SS "\fBCFeeRate\fP m_min_fee {DEFAULT_TRANSACTION_MINFEE}"
+
+.PP
+Override with -mintxfee\&. 
+.SS "std::string m_notify_tx_changed_script"
+Notify external script when a wallet transaction comes in or is updated (handled by -walletnotify) 
+.SS "\fBCFeeRate\fP m_pay_tx_fee {\fBDEFAULT_PAY_TX_FEE\fP}"
+
+.SS "\fBRecursiveMutex\fP m_relock_mutex"
+
+.SS "bool m_signal_rbf {DEFAULT_WALLET_RBF}"
+
+.SS "bool m_spend_zero_conf_change {DEFAULT_SPEND_ZEROCONF_CHANGE}"
+Allow \fBCoin\fP Selection to pick unconfirmed UTXOs that were sent from our own wallet if it cannot fund the transaction otherwise\&. 
+.SS "\fBMutex\fP m_unlock_mutex"
+
+.SS "\fBMasterKeyMap\fP mapMasterKeys"
+
+.SS "unsigned int nMasterKeyMaxID = 0"
+
+.SS "boost::signals2::signal<void(const \fBCTxDestination\fP& address, const std::string& label, bool isMine, \fBAddressPurpose\fP purpose, \fBChangeType\fP status)> NotifyAddressBookChanged"
+Address book entry changed\&. 
+.PP
+\fBNote\fP
+.RS 4
+called without lock cs_wallet held\&. 
+.RE
+.PP
+
+.SS "boost::signals2::signal<void ()> NotifyCanGetAddressesChanged"
+Keypool has new keys 
+.SS "boost::signals2::signal<void (\fBCWallet\fP* \fBwallet\fP)> NotifyStatusChanged"
+\fBWallet\fP status (encrypted, locked) changed\&. Note: Called without locks held\&. 
+.SS "boost::signals2::signal<void(const \fBTxid\fP& hashTx, \fBChangeType\fP status)> NotifyTransactionChanged"
+\fBWallet\fP transaction added, removed or updated\&. 
+.PP
+\fBNote\fP
+.RS 4
+called with lock cs_wallet held\&. 
+.RE
+.PP
+
+.SS "boost::signals2::signal<void ()> NotifyUnload"
+\fBWallet\fP is about to be unloaded 
+.SS "boost::signals2::signal<void (const std::string &title, int nProgress)> ShowProgress"
+Show progress e\&.g\&. for rescan 
+.SS "\fBTxItems\fP wtxOrdered"
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

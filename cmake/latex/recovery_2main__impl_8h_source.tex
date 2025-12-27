@@ -1,0 +1,165 @@
+\doxysection{main\+\_\+impl.\+h}
+\label{recovery_2main__impl_8h_source}\index{src/secp256k1/src/modules/recovery/main\_impl.h@{src/secp256k1/src/modules/recovery/main\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2013-\/2015\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_MODULE\_RECOVERY\_MAIN\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_MODULE\_RECOVERY\_MAIN\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1\_recovery.h"{}}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecdsa\_recoverable\_signature\_load(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ secp256k1\_scalar*\ r,\ secp256k1\_scalar*\ s,\ \textcolor{keywordtype}{int}*\ recid,\ \textcolor{keyword}{const}\ secp256k1\_ecdsa\_recoverable\_signature*\ sig)\ \{}
+\DoxyCodeLine{00013\ \ \ \ \ (void)ctx;}
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{sizeof}(secp256k1\_scalar)\ ==\ 32)\ \{}
+\DoxyCodeLine{00015\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ When\ the\ secp256k1\_scalar\ type\ is\ exactly\ 32\ byte,\ use\ its}}
+\DoxyCodeLine{00016\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ representation\ inside\ secp256k1\_ecdsa\_signature,\ as\ conversion\ is\ very\ fast.}}
+\DoxyCodeLine{00017\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ Note\ that\ secp256k1\_ecdsa\_signature\_save\ must\ use\ the\ same\ representation.\ */}}
+\DoxyCodeLine{00018\ \ \ \ \ \ \ \ \ memcpy(r,\ \&sig-\/>data[0],\ 32);}
+\DoxyCodeLine{00019\ \ \ \ \ \ \ \ \ memcpy(s,\ \&sig-\/>data[32],\ 32);}
+\DoxyCodeLine{00020\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00021\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_b32(r,\ \&sig-\/>data[0],\ NULL);}
+\DoxyCodeLine{00022\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_b32(s,\ \&sig-\/>data[32],\ NULL);}
+\DoxyCodeLine{00023\ \ \ \ \ \}}
+\DoxyCodeLine{00024\ \ \ \ \ *recid\ =\ sig-\/>data[64];}
+\DoxyCodeLine{00025\ \}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecdsa\_recoverable\_signature\_save(secp256k1\_ecdsa\_recoverable\_signature*\ sig,\ \textcolor{keyword}{const}\ secp256k1\_scalar*\ r,\ \textcolor{keyword}{const}\ secp256k1\_scalar*\ s,\ \textcolor{keywordtype}{int}\ recid)\ \{}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{sizeof}(secp256k1\_scalar)\ ==\ 32)\ \{}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ memcpy(\&sig-\/>data[0],\ r,\ 32);}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ memcpy(\&sig-\/>data[32],\ s,\ 32);}
+\DoxyCodeLine{00031\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_get\_b32(\&sig-\/>data[0],\ r);}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_get\_b32(\&sig-\/>data[32],\ s);}
+\DoxyCodeLine{00034\ \ \ \ \ \}}
+\DoxyCodeLine{00035\ \ \ \ \ sig-\/>data[64]\ =\ recid;}
+\DoxyCodeLine{00036\ \}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{keywordtype}{int}\ secp256k1\_ecdsa\_recoverable\_signature\_parse\_compact(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ secp256k1\_ecdsa\_recoverable\_signature*\ sig,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *input64,\ \textcolor{keywordtype}{int}\ recid)\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ secp256k1\_scalar\ r,\ s;}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordtype}{int}\ ret\ =\ 1;}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordtype}{int}\ overflow\ =\ 0;}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00044\ \ \ \ \ ARG\_CHECK(sig\ !=\ NULL);}
+\DoxyCodeLine{00045\ \ \ \ \ ARG\_CHECK(input64\ !=\ NULL);}
+\DoxyCodeLine{00046\ \ \ \ \ ARG\_CHECK(recid\ >=\ 0\ \&\&\ recid\ <=\ 3);}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \ \ secp256k1\_scalar\_set\_b32(\&r,\ \&input64[0],\ \&overflow);}
+\DoxyCodeLine{00049\ \ \ \ \ ret\ \&=\ !overflow;}
+\DoxyCodeLine{00050\ \ \ \ \ secp256k1\_scalar\_set\_b32(\&s,\ \&input64[32],\ \&overflow);}
+\DoxyCodeLine{00051\ \ \ \ \ ret\ \&=\ !overflow;}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keywordflow}{if}\ (ret)\ \{}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ secp256k1\_ecdsa\_recoverable\_signature\_save(sig,\ \&r,\ \&s,\ recid);}
+\DoxyCodeLine{00054\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ memset(sig,\ 0,\ \textcolor{keyword}{sizeof}(*sig));}
+\DoxyCodeLine{00056\ \ \ \ \ \}}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00058\ \}}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \textcolor{keywordtype}{int}\ secp256k1\_ecdsa\_recoverable\_signature\_serialize\_compact(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *output64,\ \textcolor{keywordtype}{int}\ *recid,\ \textcolor{keyword}{const}\ secp256k1\_ecdsa\_recoverable\_signature*\ sig)\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ secp256k1\_scalar\ r,\ s;}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00064\ \ \ \ \ ARG\_CHECK(output64\ !=\ NULL);}
+\DoxyCodeLine{00065\ \ \ \ \ ARG\_CHECK(sig\ !=\ NULL);}
+\DoxyCodeLine{00066\ \ \ \ \ ARG\_CHECK(recid\ !=\ NULL);}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ secp256k1\_ecdsa\_recoverable\_signature\_load(ctx,\ \&r,\ \&s,\ recid,\ sig);}
+\DoxyCodeLine{00069\ \ \ \ \ secp256k1\_scalar\_get\_b32(\&output64[0],\ \&r);}
+\DoxyCodeLine{00070\ \ \ \ \ secp256k1\_scalar\_get\_b32(\&output64[32],\ \&s);}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00072\ \}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \textcolor{keywordtype}{int}\ secp256k1\_ecdsa\_recoverable\_signature\_convert(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ secp256k1\_ecdsa\_signature*\ sig,\ \textcolor{keyword}{const}\ secp256k1\_ecdsa\_recoverable\_signature*\ sigin)\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ secp256k1\_scalar\ r,\ s;}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keywordtype}{int}\ recid;}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00079\ \ \ \ \ ARG\_CHECK(sig\ !=\ NULL);}
+\DoxyCodeLine{00080\ \ \ \ \ ARG\_CHECK(sigin\ !=\ NULL);}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \ \ \ \ secp256k1\_ecdsa\_recoverable\_signature\_load(ctx,\ \&r,\ \&s,\ \&recid,\ sigin);}
+\DoxyCodeLine{00083\ \ \ \ \ secp256k1\_ecdsa\_signature\_save(sig,\ \&r,\ \&s);}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00085\ \}}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecdsa\_sig\_recover(\textcolor{keyword}{const}\ secp256k1\_scalar\ *sigr,\ \textcolor{keyword}{const}\ secp256k1\_scalar*\ sigs,\ secp256k1\_ge\ *pubkey,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *message,\ \textcolor{keywordtype}{int}\ recid)\ \{}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ brx[32];}
+\DoxyCodeLine{00089\ \ \ \ \ secp256k1\_fe\ fx;}
+\DoxyCodeLine{00090\ \ \ \ \ secp256k1\_ge\ x;}
+\DoxyCodeLine{00091\ \ \ \ \ secp256k1\_gej\ xj;}
+\DoxyCodeLine{00092\ \ \ \ \ secp256k1\_scalar\ rn,\ u1,\ u2;}
+\DoxyCodeLine{00093\ \ \ \ \ secp256k1\_gej\ qj;}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keywordtype}{int}\ r;}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_scalar\_is\_zero(sigr)\ ||\ secp256k1\_scalar\_is\_zero(sigs))\ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00098\ \ \ \ \ \}}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ secp256k1\_scalar\_get\_b32(brx,\ sigr);}
+\DoxyCodeLine{00101\ \ \ \ \ r\ =\ secp256k1\_fe\_set\_b32\_limit(\&fx,\ brx);}
+\DoxyCodeLine{00102\ \ \ \ \ (void)r;}
+\DoxyCodeLine{00103\ \ \ \ \ VERIFY\_CHECK(r);\ \textcolor{comment}{/*\ brx\ comes\ from\ a\ scalar,\ so\ is\ less\ than\ the\ order;\ certainly\ less\ than\ p\ */}}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keywordflow}{if}\ (recid\ \&\ 2)\ \{}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_fe\_cmp\_var(\&fx,\ \&secp256k1\_ecdsa\_const\_p\_minus\_order)\ >=\ 0)\ \{}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ secp256k1\_fe\_add(\&fx,\ \&secp256k1\_ecdsa\_const\_order\_as\_fe);}
+\DoxyCodeLine{00109\ \ \ \ \ \}}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_ge\_set\_xo\_var(\&x,\ \&fx,\ recid\ \&\ 1))\ \{}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00112\ \ \ \ \ \}}
+\DoxyCodeLine{00113\ \ \ \ \ secp256k1\_gej\_set\_ge(\&xj,\ \&x);}
+\DoxyCodeLine{00114\ \ \ \ \ secp256k1\_scalar\_inverse\_var(\&rn,\ sigr);}
+\DoxyCodeLine{00115\ \ \ \ \ secp256k1\_scalar\_mul(\&u1,\ \&rn,\ message);}
+\DoxyCodeLine{00116\ \ \ \ \ secp256k1\_scalar\_negate(\&u1,\ \&u1);}
+\DoxyCodeLine{00117\ \ \ \ \ secp256k1\_scalar\_mul(\&u2,\ \&rn,\ sigs);}
+\DoxyCodeLine{00118\ \ \ \ \ secp256k1\_ecmult(\&qj,\ \&xj,\ \&u2,\ \&u1);}
+\DoxyCodeLine{00119\ \ \ \ \ secp256k1\_ge\_set\_gej\_var(pubkey,\ \&qj);}
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keywordflow}{return}\ !secp256k1\_gej\_is\_infinity(\&qj);}
+\DoxyCodeLine{00121\ \}}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \textcolor{keywordtype}{int}\ secp256k1\_ecdsa\_sign\_recoverable(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ secp256k1\_ecdsa\_recoverable\_signature\ *signature,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msghash32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *seckey,\ secp256k1\_nonce\_function\ noncefp,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{void}*\ noncedata)\ \{}
+\DoxyCodeLine{00124\ \ \ \ \ secp256k1\_scalar\ r,\ s;}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keywordtype}{int}\ ret,\ recid;}
+\DoxyCodeLine{00126\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00127\ \ \ \ \ ARG\_CHECK(secp256k1\_ecmult\_gen\_context\_is\_built(\&ctx-\/>ecmult\_gen\_ctx));}
+\DoxyCodeLine{00128\ \ \ \ \ ARG\_CHECK(msghash32\ !=\ NULL);}
+\DoxyCodeLine{00129\ \ \ \ \ ARG\_CHECK(signature\ !=\ NULL);}
+\DoxyCodeLine{00130\ \ \ \ \ ARG\_CHECK(seckey\ !=\ NULL);}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \ \ \ \ ret\ =\ secp256k1\_ecdsa\_sign\_inner(ctx,\ \&r,\ \&s,\ \&recid,\ msghash32,\ seckey,\ noncefp,\ noncedata);}
+\DoxyCodeLine{00133\ \ \ \ \ secp256k1\_ecdsa\_recoverable\_signature\_save(signature,\ \&r,\ \&s,\ recid);}
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00135\ \}}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \textcolor{keywordtype}{int}\ secp256k1\_ecdsa\_recover(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ secp256k1\_pubkey\ *pubkey,\ \textcolor{keyword}{const}\ secp256k1\_ecdsa\_recoverable\_signature\ *signature,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msghash32)\ \{}
+\DoxyCodeLine{00138\ \ \ \ \ secp256k1\_ge\ q;}
+\DoxyCodeLine{00139\ \ \ \ \ secp256k1\_scalar\ r,\ s;}
+\DoxyCodeLine{00140\ \ \ \ \ secp256k1\_scalar\ m;}
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{keywordtype}{int}\ recid;}
+\DoxyCodeLine{00142\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00143\ \ \ \ \ ARG\_CHECK(msghash32\ !=\ NULL);}
+\DoxyCodeLine{00144\ \ \ \ \ ARG\_CHECK(signature\ !=\ NULL);}
+\DoxyCodeLine{00145\ \ \ \ \ ARG\_CHECK(pubkey\ !=\ NULL);}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00147\ \ \ \ \ secp256k1\_ecdsa\_recoverable\_signature\_load(ctx,\ \&r,\ \&s,\ \&recid,\ signature);}
+\DoxyCodeLine{00148\ \ \ \ \ VERIFY\_CHECK(recid\ >=\ 0\ \&\&\ recid\ <\ 4);\ \ \textcolor{comment}{/*\ should\ have\ been\ caught\ in\ parse\_compact\ */}}
+\DoxyCodeLine{00149\ \ \ \ \ secp256k1\_scalar\_set\_b32(\&m,\ msghash32,\ NULL);}
+\DoxyCodeLine{00150\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_ecdsa\_sig\_recover(\&r,\ \&s,\ \&q,\ \&m,\ recid))\ \{}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ secp256k1\_pubkey\_save(pubkey,\ \&q);}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00153\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ memset(pubkey,\ 0,\ \textcolor{keyword}{sizeof}(*pubkey));}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00156\ \ \ \ \ \}}
+\DoxyCodeLine{00157\ \}}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00159\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_MODULE\_RECOVERY\_MAIN\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

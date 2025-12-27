@@ -1,0 +1,112 @@
+\doxysection{compat.\+h}
+\label{compat_8h_source}\index{src/compat/compat.h@{src/compat/compat.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_COMPAT\_COMPAT\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_COMPAT\_COMPAT\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{comment}{//\ Windows\ defines\ FD\_SETSIZE\ to\ 64\ (see\ \_fd\_types.h\ in\ mingw-\/w64),}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//\ which\ is\ too\ small\ for\ our\ usage,\ but\ allows\ us\ to\ redefine\ it\ safely.}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//\ We\ redefine\ it\ to\ be\ 1024,\ to\ match\ glibc,\ see\ typesizes.h.}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#ifdef\ WIN32}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#ifdef\ FD\_SETSIZE}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#undef\ FD\_SETSIZE}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#define\ FD\_SETSIZE\ 1024}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <winsock2.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <ws2tcpip.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <arpa/inet.h>}\ \ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <fcntl.h>}\ \ \ \ \ \ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <net/if.h>}\ \ \ \ \ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <netdb.h>}\ \ \ \ \ \ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <netinet/in.h>}\ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <netinet/tcp.h>}\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <sys/mman.h>}\ \ \ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <sys/select.h>}\ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ <sys/socket.h>}\ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ <sys/types.h>}\ \ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <unistd.h>}\ \ \ \ \ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \textcolor{comment}{//\ Windows\ does\ not\ have\ \`{}sa\_family\_t`\ -\/\ it\ defines\ \`{}sockaddr::sa\_family`\ as\ \`{}u\_short`.}}
+\DoxyCodeLine{00035\ \textcolor{comment}{//\ Thus\ define\ \`{}sa\_family\_t`\ on\ Windows\ too\ so\ that\ the\ rest\ of\ the\ code\ can\ use\ \`{}sa\_family\_t`.}}
+\DoxyCodeLine{00036\ \textcolor{comment}{//\ See\ https://learn.microsoft.com/en-\/us/windows/win32/api/winsock/ns-\/winsock-\/sockaddr\#syntax}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#ifdef\ WIN32}}
+\DoxyCodeLine{00038\ \textcolor{keyword}{typedef}\ u\_short\ sa\_family\_t;}
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \textcolor{comment}{//\ We\ map\ Linux\ /\ BSD\ error\ functions\ and\ codes,\ to\ the\ equivalent}}
+\DoxyCodeLine{00042\ \textcolor{comment}{//\ Windows\ definitions,\ and\ use\ the\ WSA*\ names\ throughout\ our\ code.}}
+\DoxyCodeLine{00043\ \textcolor{comment}{//\ Note\ that\ glibc\ defines\ EWOULDBLOCK\ as\ EAGAIN\ (see\ errno.h).}}
+\DoxyCodeLine{00044\ \textcolor{preprocessor}{\#ifndef\ WIN32}}
+\DoxyCodeLine{00045\ \textcolor{keyword}{typedef}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ SOCKET;}
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\#include\ <cerrno>}}
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\#define\ WSAGetLastError()\ \ \ errno}}
+\DoxyCodeLine{00048\ \textcolor{preprocessor}{\#define\ WSAEINVAL\ \ \ \ \ \ \ \ \ \ \ EINVAL}}
+\DoxyCodeLine{00049\ \textcolor{preprocessor}{\#define\ WSAEWOULDBLOCK\ \ \ \ \ \ EWOULDBLOCK}}
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\#define\ WSAEAGAIN\ \ \ \ \ \ \ \ \ \ \ EAGAIN}}
+\DoxyCodeLine{00051\ \textcolor{preprocessor}{\#define\ WSAEMSGSIZE\ \ \ \ \ \ \ \ \ EMSGSIZE}}
+\DoxyCodeLine{00052\ \textcolor{preprocessor}{\#define\ WSAEINTR\ \ \ \ \ \ \ \ \ \ \ \ EINTR}}
+\DoxyCodeLine{00053\ \textcolor{preprocessor}{\#define\ WSAEINPROGRESS\ \ \ \ \ \ EINPROGRESS}}
+\DoxyCodeLine{00054\ \textcolor{preprocessor}{\#define\ WSAEADDRINUSE\ \ \ \ \ \ \ EADDRINUSE}}
+\DoxyCodeLine{00055\ \textcolor{preprocessor}{\#define\ INVALID\_SOCKET\ \ \ \ \ \ (SOCKET)(\string~0)}}
+\DoxyCodeLine{00056\ \textcolor{preprocessor}{\#define\ SOCKET\_ERROR\ \ \ \ \ \ \ \ -\/1}}
+\DoxyCodeLine{00057\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00058\ \textcolor{comment}{//\ WSAEAGAIN\ doesn't\ exist\ on\ Windows}}
+\DoxyCodeLine{00059\ \textcolor{preprocessor}{\#ifdef\ EAGAIN}}
+\DoxyCodeLine{00060\ \textcolor{preprocessor}{\#define\ WSAEAGAIN\ EAGAIN}}
+\DoxyCodeLine{00061\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00062\ \textcolor{preprocessor}{\#define\ WSAEAGAIN\ WSAEWOULDBLOCK}}
+\DoxyCodeLine{00063\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00064\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \textcolor{comment}{//\ Windows\ defines\ MAX\_PATH\ as\ it's\ maximum\ path\ length.}}
+\DoxyCodeLine{00067\ \textcolor{comment}{//\ We\ define\ MAX\_PATH\ for\ use\ on\ non-\/Windows\ systems.}}
+\DoxyCodeLine{00068\ \textcolor{preprocessor}{\#ifndef\ WIN32}}
+\DoxyCodeLine{00069\ \textcolor{preprocessor}{\#define\ MAX\_PATH\ \ \ \ \ \ \ \ \ \ \ \ 1024}}
+\DoxyCodeLine{00070\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \textcolor{comment}{//\ ssize\_t\ is\ POSIX,\ and\ not\ present\ when\ using\ MSVC.}}
+\DoxyCodeLine{00073\ \textcolor{preprocessor}{\#ifdef\ \_MSC\_VER}}
+\DoxyCodeLine{00074\ \textcolor{preprocessor}{\#include\ <BaseTsd.h>}}
+\DoxyCodeLine{00075\ \textcolor{keyword}{typedef}\ SSIZE\_T\ ssize\_t;}
+\DoxyCodeLine{00076\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \textcolor{preprocessor}{\#ifdef\ WIN32}}
+\DoxyCodeLine{00079\ \textcolor{comment}{//\ Export\ main()\ and\ ensure\ working\ ASLR\ when\ using\ mingw-\/w64.}}
+\DoxyCodeLine{00080\ \textcolor{comment}{//\ Exporting\ a\ symbol\ will\ prevent\ the\ linker\ from\ stripping}}
+\DoxyCodeLine{00081\ \textcolor{comment}{//\ the\ .reloc\ section\ from\ the\ binary,\ which\ is\ a\ requirement}}
+\DoxyCodeLine{00082\ \textcolor{comment}{//\ for\ ASLR.\ While\ release\ builds\ are\ not\ affected,\ anyone}}
+\DoxyCodeLine{00083\ \textcolor{comment}{//\ building\ with\ a\ binutils\ <\ 2.36\ is\ subject\ to\ this\ ld\ bug.}}
+\DoxyCodeLine{00084\ \textcolor{preprocessor}{\#define\ MAIN\_FUNCTION\ \_\_declspec(dllexport)\ int\ main(int\ argc,\ char*\ argv[])}}
+\DoxyCodeLine{00085\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00086\ \textcolor{preprocessor}{\#define\ MAIN\_FUNCTION\ int\ main(int\ argc,\ char*\ argv[])}}
+\DoxyCodeLine{00087\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \textcolor{comment}{//\ Note\ these\ both\ should\ work\ with\ the\ current\ usage\ of\ poll,\ but\ best\ to\ be\ safe}}
+\DoxyCodeLine{00090\ \textcolor{comment}{//\ WIN32\ poll\ is\ broken\ https://daniel.haxx.se/blog/2012/10/10/wsapoll-\/is-\/broken/}}
+\DoxyCodeLine{00091\ \textcolor{comment}{//\ \_\_APPLE\_\_\ poll\ is\ broke\ https://github.com/bitcoin/bitcoin/pull/14336\#issuecomment-\/437384408}}
+\DoxyCodeLine{00092\ \textcolor{preprocessor}{\#if\ defined(\_\_linux\_\_)}}
+\DoxyCodeLine{00093\ \textcolor{preprocessor}{\#define\ USE\_POLL}}
+\DoxyCodeLine{00094\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \textcolor{comment}{//\ MSG\_NOSIGNAL\ is\ not\ available\ on\ some\ platforms,\ if\ it\ doesn't\ exist\ define\ it\ as\ 0}}
+\DoxyCodeLine{00097\ \textcolor{preprocessor}{\#if\ !defined(MSG\_NOSIGNAL)}}
+\DoxyCodeLine{00098\ \textcolor{preprocessor}{\#define\ MSG\_NOSIGNAL\ 0}}
+\DoxyCodeLine{00099\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \textcolor{comment}{//\ MSG\_DONTWAIT\ is\ not\ available\ on\ some\ platforms,\ if\ it\ doesn't\ exist\ define\ it\ as\ 0}}
+\DoxyCodeLine{00102\ \textcolor{preprocessor}{\#if\ !defined(MSG\_DONTWAIT)}}
+\DoxyCodeLine{00103\ \textcolor{preprocessor}{\#define\ MSG\_DONTWAIT\ 0}}
+\DoxyCodeLine{00104\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_COMPAT\_COMPAT\_H}}
+
+\end{DoxyCode}

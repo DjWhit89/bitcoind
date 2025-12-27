@@ -1,0 +1,485 @@
+\doxysection{unit\+\_\+test.\+c}
+\label{unit__test_8c_source}\index{src/secp256k1/src/unit\_test.c@{src/secp256k1/src/unit\_test.c}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <stdio.h>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <stdlib.h>}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <string.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#if\ defined(SUPPORTS\_CONCURRENCY)}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <sys/types.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <sys/wait.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <unistd.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ "{}unit\_test.h"{}}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ "{}testrand.h"{}}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ "{}tests\_common.h"{}}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#define\ UNUSED(x)\ (void)(x)}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{comment}{/*\ Number\ of\ times\ certain\ tests\ will\ run\ */}}
+\DoxyCodeLine{00023\ \textcolor{keywordtype}{int}\ COUNT\ =\ 16;}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ parse\_jobs\_count(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf);}
+\DoxyCodeLine{00026\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ parse\_iterations(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf);}
+\DoxyCodeLine{00027\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ parse\_seed(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf);}
+\DoxyCodeLine{00028\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ parse\_target(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf);}
+\DoxyCodeLine{00029\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ parse\_logging(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf);}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{comment}{/*\ Mapping\ table:\ key\ -\/>\ handler\ */}}
+\DoxyCodeLine{00032\ \textcolor{keyword}{typedef}\ int\ (*ArgHandler)(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct\ }tf\_framework*\ tf);}
+\DoxyCodeLine{00033\ \textcolor{keyword}{struct\ }ArgMap\ \{}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key;}
+\DoxyCodeLine{00035\ \ \ \ \ ArgHandler\ handler;}
+\DoxyCodeLine{00036\ \};}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{comment}{/*}}
+\DoxyCodeLine{00039\ \textcolor{comment}{\ *\ \ \ Main\ entry\ point\ for\ handling\ command-\/line\ arguments.}}
+\DoxyCodeLine{00040\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00041\ \textcolor{comment}{\ *\ \ \ Developers\ should\ extend\ this\ map\ whenever\ new\ command-\/line}}
+\DoxyCodeLine{00042\ \textcolor{comment}{\ *\ \ \ options\ are\ introduced.\ Each\ new\ argument\ should\ be\ validated,}}
+\DoxyCodeLine{00043\ \textcolor{comment}{\ *\ \ \ converted\ to\ the\ appropriate\ type,\ and\ stored\ in\ 'tf-\/>args'\ struct.}}
+\DoxyCodeLine{00044\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00045\ \textcolor{keyword}{static}\ \textcolor{keyword}{struct\ }ArgMap\ arg\_map[]\ =\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \{\ \textcolor{stringliteral}{"{}t"{}},\ parse\_target\ \},\ \{\ \textcolor{stringliteral}{"{}target"{}},\ parse\_target\ \},}
+\DoxyCodeLine{00047\ \ \ \ \ \{\ \textcolor{stringliteral}{"{}j"{}},\ parse\_jobs\_count\ \},\ \{\ \textcolor{stringliteral}{"{}jobs"{}},\ parse\_jobs\_count\ \},}
+\DoxyCodeLine{00048\ \ \ \ \ \{\ \textcolor{stringliteral}{"{}i"{}},\ parse\_iterations\ \},\ \{\ \textcolor{stringliteral}{"{}iterations"{}},\ parse\_iterations\ \},}
+\DoxyCodeLine{00049\ \ \ \ \ \{\ \textcolor{stringliteral}{"{}seed"{}},\ parse\_seed\ \},}
+\DoxyCodeLine{00050\ \ \ \ \ \{\ \textcolor{stringliteral}{"{}log"{}},\ parse\_logging\ \},}
+\DoxyCodeLine{00051\ \ \ \ \ \{\ NULL,\ NULL\ \}\ \textcolor{comment}{/*\ sentinel\ */}}
+\DoxyCodeLine{00052\ \};}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \textcolor{comment}{/*\ Display\ options\ that\ are\ not\ printed\ elsewhere\ */}}
+\DoxyCodeLine{00055\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ print\_args(\textcolor{keyword}{const}\ \textcolor{keyword}{struct}\ tf\_args*\ args)\ \{}
+\DoxyCodeLine{00056\ \ \ \ \ printf(\textcolor{stringliteral}{"{}iterations\ =\ \%d\(\backslash\)n"{}},\ COUNT);}
+\DoxyCodeLine{00057\ \ \ \ \ printf(\textcolor{stringliteral}{"{}jobs\ =\ \%d.\ \%s\ execution.\(\backslash\)n"{}},\ args-\/>num\_processes,\ args-\/>num\_processes\ >\ 1\ ?\ \textcolor{stringliteral}{"{}Parallel"{}}\ :\ \textcolor{stringliteral}{"{}Sequential"{}});}
+\DoxyCodeLine{00058\ \}}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \textcolor{comment}{/*\ Main\ entry\ point\ for\ reading\ environment\ variables\ */}}
+\DoxyCodeLine{00061\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ read\_env(\textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ env\_iter\ =\ getenv(\textcolor{stringliteral}{"{}SECP256K1\_TEST\_ITERS"{}});}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keywordflow}{if}\ (env\_iter\ \&\&\ strlen(env\_iter)\ >\ 0)\ \{}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ parse\_iterations(\textcolor{stringliteral}{"{}i"{}},\ env\_iter,\ tf);}
+\DoxyCodeLine{00065\ \ \ \ \ \}}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00067\ \}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ parse\_arg(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ arg\_map[i].key\ !=\ NULL;\ i++)\ \{}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (strcmp(key,\ arg\_map[i].key)\ ==\ 0)\ \{}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ arg\_map[i].handler(key,\ value,\ tf);}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00075\ \ \ \ \ \}}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{comment}{/*\ Unknown\ key:\ report\ just\ so\ typos\ don't\ silently\ pass.\ */}}
+\DoxyCodeLine{00077\ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Unknown\ argument\ '-\/\%s=\%s'\(\backslash\)n"{}},\ key,\ value);}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00079\ \}}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ help(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00082\ \ \ \ \ printf(\textcolor{stringliteral}{"{}Usage:\ ./tests\ [options]\(\backslash\)n\(\backslash\)n"{}});}
+\DoxyCodeLine{00083\ \ \ \ \ printf(\textcolor{stringliteral}{"{}Run\ the\ test\ suite\ for\ the\ project\ with\ optional\ configuration.\(\backslash\)n\(\backslash\)n"{}});}
+\DoxyCodeLine{00084\ \ \ \ \ printf(\textcolor{stringliteral}{"{}Options:\(\backslash\)n"{}});}
+\DoxyCodeLine{00085\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/-\/help,\ -\/h\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Show\ this\ help\ message\(\backslash\)n"{}});}
+\DoxyCodeLine{00086\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/-\/list\_tests,\ -\/l\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Display\ list\ of\ all\ available\ tests\ and\ modules\(\backslash\)n"{}});}
+\DoxyCodeLine{00087\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/-\/jobs=<num>,\ -\/j=<num>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Number\ of\ parallel\ worker\ processes\ (default:\ 0\ =\ sequential)\(\backslash\)n"{}});}
+\DoxyCodeLine{00088\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/-\/iterations=<num>,\ -\/i=<num>\ \ \ \ \ \ \ \ \ Number\ of\ iterations\ for\ each\ test\ (default:\ 16)\(\backslash\)n"{}});}
+\DoxyCodeLine{00089\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/-\/seed=<hex>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Set\ a\ specific\ RNG\ seed\ (default:\ random)\(\backslash\)n"{}});}
+\DoxyCodeLine{00090\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/-\/target=<test\ name>,\ -\/t=<name>\ \ \ \ \ \ Run\ a\ specific\ test\ (can\ be\ provided\ multiple\ times)\(\backslash\)n"{}});}
+\DoxyCodeLine{00091\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/-\/target=<module\ name>,\ -\/t=<module>\ \ Run\ all\ tests\ within\ a\ specific\ module\ (can\ be\ provided\ multiple\ times)\(\backslash\)n"{}});}
+\DoxyCodeLine{00092\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/-\/log=<0|1>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Enable\ or\ disable\ test\ execution\ logging\ (default:\ 0\ =\ disabled)\(\backslash\)n"{}});}
+\DoxyCodeLine{00093\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\(\backslash\)n"{}});}
+\DoxyCodeLine{00094\ \ \ \ \ printf(\textcolor{stringliteral}{"{}Notes:\(\backslash\)n"{}});}
+\DoxyCodeLine{00095\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/\ All\ arguments\ must\ be\ provided\ in\ the\ form\ '-\/-\/key=value',\ '-\/key=value'\ or\ '-\/k=value'.\(\backslash\)n"{}});}
+\DoxyCodeLine{00096\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/\ Single\ or\ double\ dashes\ are\ allowed\ for\ multi\ character\ options.\(\backslash\)n"{}});}
+\DoxyCodeLine{00097\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/\ Unknown\ arguments\ are\ reported\ but\ ignored.\(\backslash\)n"{}});}
+\DoxyCodeLine{00098\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/\ Sequential\ execution\ occurs\ if\ -\/jobs=0\ or\ unspecified.\(\backslash\)n"{}});}
+\DoxyCodeLine{00099\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ \ -\/\ Iterations\ and\ seed\ can\ also\ be\ passed\ as\ positional\ arguments\ before\ any\ other\ argument\ for\ backward\ compatibility.\(\backslash\)n"{}});}
+\DoxyCodeLine{00100\ \}}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \textcolor{comment}{/*\ Print\ all\ tests\ in\ registry\ */}}
+\DoxyCodeLine{00103\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ print\_test\_list(\textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keywordtype}{int}\ m,\ t,\ total\ =\ 0;}
+\DoxyCodeLine{00105\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\(\backslash\)nAvailable\ tests\ (\%d\ modules):\(\backslash\)n"{}},\ tf-\/>num\_modules);}
+\DoxyCodeLine{00106\ \ \ \ \ printf(\textcolor{stringliteral}{"{}========================================\(\backslash\)n"{}});}
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keywordflow}{for}\ (m\ =\ 0;\ m\ <\ tf-\/>num\_modules;\ m++)\ \{}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }tf\_test\_module*\ mod\ =\ \&tf-\/>registry\_modules[m];}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ printf(\textcolor{stringliteral}{"{}Module:\ \%s\ (\%d\ tests)\(\backslash\)n"{}},\ mod-\/>name,\ mod-\/>size);}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (t\ =\ 0;\ t\ <\ mod-\/>size;\ t++)\ \{}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \ \ \ \ printf(\textcolor{stringliteral}{"{}\(\backslash\)t[\%3d]\ \%s\(\backslash\)n"{}},\ total\ +\ 1,\ mod-\/>data[t].name);}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \ \ \ \ total++;}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ printf(\textcolor{stringliteral}{"{}-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/\(\backslash\)n"{}});}
+\DoxyCodeLine{00115\ \ \ \ \ \}}
+\DoxyCodeLine{00116\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\(\backslash\)nRun\ specific\ module:\ ./tests\ -\/t=<module\_name>\(\backslash\)n"{}});}
+\DoxyCodeLine{00117\ \ \ \ \ printf(\textcolor{stringliteral}{"{}Run\ specific\ test:\ ./tests\ -\/t=<test\_name>\(\backslash\)n\(\backslash\)n"{}});}
+\DoxyCodeLine{00118\ \}}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00120\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ parse\_jobs\_count(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keywordtype}{char}*\ ptr\_val;}
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{keywordtype}{long}\ val\ =\ strtol(value,\ \&ptr\_val,\ 10);\ \textcolor{comment}{/*\ base\ 10\ */}}
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{keywordflow}{if}\ (*ptr\_val\ !=\ \textcolor{charliteral}{'\(\backslash\)0'})\ \{}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Invalid\ number\ for\ -\/\%s=\%s\(\backslash\)n"{}},\ key,\ value);}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00126\ \ \ \ \ \}}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keywordflow}{if}\ (val\ <\ 0\ ||\ val\ >\ MAX\_SUBPROCESSES)\ \{}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Arg\ '-\/\%s'\ out\ of\ range:\ '\%ld'.\ Range:\ 0..\%d\(\backslash\)n"{}},\ key,\ val,\ MAX\_SUBPROCESSES);}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00130\ \ \ \ \ \}}
+\DoxyCodeLine{00131\ \ \ \ \ tf-\/>args.num\_processes\ =\ (int)\ val;}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00133\ \}}
+\DoxyCodeLine{00134\ }
+\DoxyCodeLine{00135\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ parse\_iterations(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00136\ \ \ \ \ UNUSED(key);\ UNUSED(tf);}
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keywordflow}{if}\ (!value)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00138\ \ \ \ \ COUNT\ =\ (int)\ strtol(value,\ NULL,\ 0);}
+\DoxyCodeLine{00139\ \ \ \ \ \textcolor{keywordflow}{if}\ (COUNT\ <=\ 0)\ \{}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ fputs(\textcolor{stringliteral}{"{}An\ iteration\ count\ of\ 0\ or\ less\ is\ not\ allowed.\(\backslash\)n"{}},\ stderr);}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00142\ \ \ \ \ \}}
+\DoxyCodeLine{00143\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00144\ \}}
+\DoxyCodeLine{00145\ }
+\DoxyCodeLine{00146\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ parse\_seed(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00147\ \ \ \ \ UNUSED(key);}
+\DoxyCodeLine{00148\ \ \ \ \ tf-\/>args.custom\_seed\ =\ (!value\ ||\ strcmp(value,\ \textcolor{stringliteral}{"{}NULL"{}})\ ==\ 0)\ ?\ NULL\ :\ value;}
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00150\ \}}
+\DoxyCodeLine{00151\ }
+\DoxyCodeLine{00152\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ parse\_logging(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00153\ \ \ \ \ UNUSED(key);}
+\DoxyCodeLine{00154\ \ \ \ \ tf-\/>args.logging\ =\ value\ \&\&\ strcmp(value,\ \textcolor{stringliteral}{"{}1"{}})\ ==\ 0;}
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00156\ \}}
+\DoxyCodeLine{00157\ }
+\DoxyCodeLine{00158\ \textcolor{comment}{/*\ Strip\ up\ to\ two\ leading\ dashes\ */}}
+\DoxyCodeLine{00159\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ normalize\_key(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ arg,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}**\ err\_msg)\ \{}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key;}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordflow}{if}\ (!arg\ ||\ arg[0]\ !=\ \textcolor{charliteral}{'-\/'})\ \{}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ *err\_msg\ =\ \textcolor{stringliteral}{"{}missing\ initial\ dash"{}};}
+\DoxyCodeLine{00163\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ NULL;}
+\DoxyCodeLine{00164\ \ \ \ \ \}}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{comment}{/*\ single-\/dash\ short\ option\ */}}
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{keywordflow}{if}\ (arg[1]\ !=\ \textcolor{charliteral}{'-\/'})\ \textcolor{keywordflow}{return}\ arg\ +\ 1;}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ \ \ \ \ \textcolor{comment}{/*\ double-\/dash\ checks\ now\ */}}
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{keywordflow}{if}\ (arg[2]\ ==\ \textcolor{charliteral}{'\(\backslash\)0'})\ \{}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ *err\_msg\ =\ \textcolor{stringliteral}{"{}missing\ option\ name\ after\ double\ dash"{}};}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ NULL;}
+\DoxyCodeLine{00172\ \ \ \ \ \}}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keywordflow}{if}\ (arg[2]\ ==\ \textcolor{charliteral}{'-\/'})\ \{}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ *err\_msg\ =\ \textcolor{stringliteral}{"{}too\ many\ leading\ dashes"{}};}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ NULL;}
+\DoxyCodeLine{00177\ \ \ \ \ \}}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00179\ \ \ \ \ key\ =\ arg\ +\ 2;}
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keywordflow}{if}\ (key[1]\ ==\ \textcolor{charliteral}{'\(\backslash\)0'})\ \{}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ *err\_msg\ =\ \textcolor{stringliteral}{"{}short\ option\ cannot\ use\ double\ dash"{}};}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ NULL;}
+\DoxyCodeLine{00183\ \ \ \ \ \}}
+\DoxyCodeLine{00184\ \ \ \ \ \textcolor{keywordflow}{return}\ key;}
+\DoxyCodeLine{00185\ \}}
+\DoxyCodeLine{00186\ }
+\DoxyCodeLine{00187\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ parse\_target(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00188\ \ \ \ \ \textcolor{keywordtype}{int}\ group,\ idx;}
+\DoxyCodeLine{00189\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }tf\_test\_entry*\ entry;}
+\DoxyCodeLine{00190\ \ \ \ \ UNUSED(key);}
+\DoxyCodeLine{00191\ \ \ \ \ \textcolor{comment}{/*\ Find\ test\ index\ in\ the\ registry\ */}}
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{keywordflow}{for}\ (group\ =\ 0;\ group\ <\ tf-\/>num\_modules;\ group++)\ \{}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }tf\_test\_module*\ module\ =\ \&tf-\/>registry\_modules[group];}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ add\_all\ =\ strcmp(value,\ module-\/>name)\ ==\ 0;\ \textcolor{comment}{/*\ select\ all\ from\ module\ */}}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (idx\ =\ 0;\ idx\ <\ module-\/>size;\ idx++)\ \{}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ \ \ \ \ entry\ =\ \&\textcolor{keyword}{module}-\/>data[idx];}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (add\_all\ ||\ strcmp(value,\ entry-\/>name)\ ==\ 0)\ \{}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (tf-\/>args.targets.size\ >=\ MAX\_ARGS)\ \{}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Too\ many\ -\/target\ args\ (max:\ \%d)\(\backslash\)n"{}},\ MAX\_ARGS);}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tf-\/>args.targets.slots[tf-\/>args.targets.size++]\ =\ entry;}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Matched\ a\ single\ test,\ we're\ done\ */}}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!add\_all)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ add\_all\ was\ true,\ we\ added\ all\ tests\ in\ the\ module,\ so\ return\ */}}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (add\_all)\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00209\ \ \ \ \ \}}
+\DoxyCodeLine{00210\ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Error:\ target\ '\%s'\ not\ found\ (missing\ or\ module\ disabled).\(\backslash\)n"{}}}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}Run\ program\ with\ -\/list\_tests\ option\ to\ display\ available\ tests\ and\ modules.\(\backslash\)n"{}},\ value);}
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00213\ \}}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00215\ \textcolor{comment}{/*\ Read\ args:\ all\ must\ be\ in\ the\ form\ -\/key=value,\ -\/-\/key=value\ or\ -\/key=value\ */}}
+\DoxyCodeLine{00216\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ read\_args(\textcolor{keywordtype}{int}\ argc,\ \textcolor{keywordtype}{char}**\ argv,\ \textcolor{keywordtype}{int}\ start,\ \textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00217\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00218\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key;}
+\DoxyCodeLine{00219\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ value;}
+\DoxyCodeLine{00220\ \ \ \ \ \textcolor{keywordtype}{char}*\ eq;}
+\DoxyCodeLine{00221\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ err\_msg\ =\ \textcolor{stringliteral}{"{}unknown\ error"{}};}
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ start;\ i\ <\ argc;\ i++)\ \{}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{char}*\ raw\_arg\ =\ argv[i];}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!raw\_arg\ ||\ raw\_arg[0]\ !=\ \textcolor{charliteral}{'-\/'})\ \{}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Invalid\ arg\ '\%s':\ must\ start\ with\ '-\/'\(\backslash\)n"{}},\ raw\_arg\ ?\ raw\_arg\ :\ \textcolor{stringliteral}{"{}(null)"{}});}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00228\ }
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ key\ =\ normalize\_key(raw\_arg,\ \&err\_msg);}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!key\ ||\ *key\ ==\ \textcolor{charliteral}{'\(\backslash\)0'})\ \{}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Invalid\ arg\ '\%s':\ \%s.\ Must\ be\ -\/k=value\ or\ -\/-\/key=value\(\backslash\)n"{}},\ raw\_arg,\ err\_msg);}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00234\ }
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ eq\ =\ strchr(raw\_arg,\ \textcolor{charliteral}{'='});}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!eq\ ||\ eq\ ==\ raw\_arg\ +\ 1)\ \{}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Allowed\ options\ without\ value\ */}}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (strcmp(key,\ \textcolor{stringliteral}{"{}h"{}})\ ==\ 0\ ||\ strcmp(key,\ \textcolor{stringliteral}{"{}help"{}})\ ==\ 0)\ \{}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tf-\/>args.help\ =\ 1;}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (strcmp(key,\ \textcolor{stringliteral}{"{}l"{}})\ ==\ 0\ ||\ strcmp(key,\ \textcolor{stringliteral}{"{}list\_tests"{}})\ ==\ 0)\ \{}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tf-\/>args.list\_tests\ =\ 1;}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Invalid\ arg\ '\%s':\ must\ be\ -\/k=value\ or\ -\/-\/key=value\(\backslash\)n"{}},\ raw\_arg);}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00249\ }
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ *eq\ =\ \textcolor{charliteral}{'\(\backslash\)0'};\ \textcolor{comment}{/*\ split\ key\ and\ value\ */}}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ value\ =\ eq\ +\ 1;}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!value\ ||\ *value\ ==\ \textcolor{charliteral}{'\(\backslash\)0'})\ \{\ \textcolor{comment}{/*\ value\ is\ empty\ */}}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Invalid\ arg\ '\%s':\ value\ cannot\ be\ empty\(\backslash\)n"{}},\ raw\_arg);}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00256\ }
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (parse\_arg(key,\ value,\ tf)\ !=\ 0)\ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00258\ \ \ \ \ \}}
+\DoxyCodeLine{00259\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00260\ \}}
+\DoxyCodeLine{00261\ }
+\DoxyCodeLine{00262\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ run\_test\_log(\textcolor{keyword}{const}\ \textcolor{keyword}{struct}\ tf\_test\_entry*\ t)\ \{}
+\DoxyCodeLine{00263\ \ \ \ \ int64\_t\ start\_time\ =\ gettime\_i64();}
+\DoxyCodeLine{00264\ \ \ \ \ printf(\textcolor{stringliteral}{"{}Running\ \%s..\(\backslash\)n"{}},\ t-\/>name);}
+\DoxyCodeLine{00265\ \ \ \ \ t-\/>func();}
+\DoxyCodeLine{00266\ \ \ \ \ printf(\textcolor{stringliteral}{"{}Test\ \%s\ PASSED\ (\%.3f\ sec)\(\backslash\)n"{}},\ t-\/>name,\ (\textcolor{keywordtype}{double})(gettime\_i64()\ -\/\ start\_time)\ /\ 1000000);}
+\DoxyCodeLine{00267\ \}}
+\DoxyCodeLine{00268\ }
+\DoxyCodeLine{00269\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ run\_test(\textcolor{keyword}{const}\ \textcolor{keyword}{struct}\ tf\_test\_entry*\ t)\ \{\ t-\/>func();\ \}}
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00271\ \textcolor{comment}{/*\ Process\ tests\ in\ sequential\ order\ */}}
+\DoxyCodeLine{00272\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ run\_sequential(\textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00273\ \ \ \ \ \textcolor{keywordtype}{int}\ it;}
+\DoxyCodeLine{00274\ \ \ \ \ \textcolor{keywordflow}{for}\ (it\ =\ 0;\ it\ <\ tf-\/>args.targets.size;\ it++)\ \{}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ tf-\/>fn\_run\_test(tf-\/>args.targets.slots[it]);}
+\DoxyCodeLine{00276\ \ \ \ \ \}}
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{keywordflow}{return}\ EXIT\_SUCCESS;}
+\DoxyCodeLine{00278\ \}}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00280\ \textcolor{preprocessor}{\#if\ defined(SUPPORTS\_CONCURRENCY)}}
+\DoxyCodeLine{00281\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ MAX\_TARGETS\ =\ 255;}
+\DoxyCodeLine{00282\ }
+\DoxyCodeLine{00283\ \textcolor{comment}{/*\ Process\ tests\ in\ parallel\ */}}
+\DoxyCodeLine{00284\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ run\_concurrent(\textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00285\ \ \ \ \ \textcolor{comment}{/*\ Sub-\/processes\ info\ */}}
+\DoxyCodeLine{00286\ \ \ \ \ pid\_t\ workers[MAX\_SUBPROCESSES];}
+\DoxyCodeLine{00287\ \ \ \ \ \textcolor{keywordtype}{int}\ pipefd[2];}
+\DoxyCodeLine{00288\ \ \ \ \ \textcolor{keywordtype}{int}\ status\ =\ EXIT\_SUCCESS;}
+\DoxyCodeLine{00289\ \ \ \ \ \textcolor{keywordtype}{int}\ it;\ \textcolor{comment}{/*\ loop\ iterator\ */}}
+\DoxyCodeLine{00290\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ idx;\ \textcolor{comment}{/*\ test\ index\ */}}
+\DoxyCodeLine{00291\ }
+\DoxyCodeLine{00292\ \ \ \ \ \textcolor{keywordflow}{if}\ (tf-\/>args.targets.size\ >\ MAX\_TARGETS)\ \{}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Internal\ Error:\ the\ number\ of\ targets\ (\%d)\ exceeds\ the\ maximum\ supported\ (\%d).\ "{}}}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}If\ you\ need\ more,\ extend\ 'run\_concurrent()'\ to\ handle\ additional\ targets.\(\backslash\)n"{}},}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tf-\/>args.targets.size,\ MAX\_TARGETS);}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ exit(EXIT\_FAILURE);}
+\DoxyCodeLine{00297\ \ \ \ \ \}}
+\DoxyCodeLine{00298\ }
+\DoxyCodeLine{00299\ }
+\DoxyCodeLine{00300\ \ \ \ \ \textcolor{keywordflow}{if}\ (pipe(pipefd)\ !=\ 0)\ \{}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ perror(\textcolor{stringliteral}{"{}Error\ during\ pipe\ setup"{}});}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00303\ \ \ \ \ \}}
+\DoxyCodeLine{00304\ }
+\DoxyCodeLine{00305\ \ \ \ \ \textcolor{comment}{/*\ Launch\ worker\ processes\ */}}
+\DoxyCodeLine{00306\ \ \ \ \ \textcolor{keywordflow}{for}\ (it\ =\ 0;\ it\ <\ tf-\/>args.num\_processes;\ it++)\ \{}
+\DoxyCodeLine{00307\ \ \ \ \ \ \ \ \ pid\_t\ pid\ =\ fork();}
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pid\ <\ 0)\ \{}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ \ \ \ \ perror(\textcolor{stringliteral}{"{}Error\ during\ process\ fork"{}});}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pid\ ==\ 0)\ \{}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Child\ worker:\ read\ jobs\ from\ the\ shared\ pipe\ */}}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \ \ \ \ close(pipefd[1]);\ \textcolor{comment}{/*\ children\ never\ write\ */}}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (read(pipefd[0],\ \&idx,\ \textcolor{keyword}{sizeof}(idx))\ ==\ \textcolor{keyword}{sizeof}(idx))\ \{}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tf-\/>fn\_run\_test(tf-\/>args.targets.slots[(\textcolor{keywordtype}{int})idx]);}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ \ \ \ \ \_exit(EXIT\_SUCCESS);\ \textcolor{comment}{/*\ finish\ child\ process\ */}}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Parent:\ save\ worker\ pid\ */}}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \ \ \ \ workers[it]\ =\ pid;}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00323\ \ \ \ \ \}}
+\DoxyCodeLine{00324\ }
+\DoxyCodeLine{00325\ \ \ \ \ \textcolor{comment}{/*\ Parent:\ write\ all\ tasks\ into\ the\ pipe\ */}}
+\DoxyCodeLine{00326\ \ \ \ \ close(pipefd[0]);\ \textcolor{comment}{/*\ close\ read\ end\ */}}
+\DoxyCodeLine{00327\ \ \ \ \ \textcolor{keywordflow}{for}\ (it\ =\ 0;\ it\ <\ tf-\/>args.targets.size;\ it++)\ \{}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ idx\ =\ (\textcolor{keywordtype}{unsigned}\ char)it;}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (write(pipefd[1],\ \&idx,\ \textcolor{keyword}{sizeof}(idx))\ ==\ -\/1)\ \{}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \ \ \ \ perror(\textcolor{stringliteral}{"{}Error\ during\ workload\ distribution"{}});}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ close(pipefd[1]);}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00334\ \ \ \ \ \}}
+\DoxyCodeLine{00335\ \ \ \ \ \textcolor{comment}{/*\ Close\ write\ end\ to\ signal\ EOF\ */}}
+\DoxyCodeLine{00336\ \ \ \ \ close(pipefd[1]);}
+\DoxyCodeLine{00337\ \ \ \ \ \textcolor{comment}{/*\ Wait\ for\ all\ workers\ */}}
+\DoxyCodeLine{00338\ \ \ \ \ \textcolor{keywordflow}{for}\ (it\ =\ 0;\ it\ <\ tf-\/>args.num\_processes;\ it++)\ \{}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ ret\ =\ 0;}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (waitpid(workers[it],\ \&ret,\ 0)\ ==\ -\/1\ ||\ ret\ !=\ 0)\ \{}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ \ \ \ \ status\ =\ EXIT\_FAILURE;}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00343\ \ \ \ \ \}}
+\DoxyCodeLine{00344\ }
+\DoxyCodeLine{00345\ \ \ \ \ \textcolor{keywordflow}{return}\ status;}
+\DoxyCodeLine{00346\ \}}
+\DoxyCodeLine{00347\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00348\ }
+\DoxyCodeLine{00349\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ tf\_init(\textcolor{keyword}{struct}\ tf\_framework*\ tf,\ \textcolor{keywordtype}{int}\ argc,\ \textcolor{keywordtype}{char}**\ argv)}
+\DoxyCodeLine{00350\ \{}
+\DoxyCodeLine{00351\ \ \ \ \ \textcolor{comment}{/*\ Caller\ must\ set\ the\ registry\ and\ its\ size\ before\ calling\ tf\_init\ */}}
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{keywordflow}{if}\ (tf-\/>registry\_modules\ ==\ NULL\ ||\ tf-\/>num\_modules\ <=\ 0)\ \{}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Error:\ tests\ registry\ not\ provided\ or\ empty\(\backslash\)n"{}});}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00355\ \ \ \ \ \}}
+\DoxyCodeLine{00356\ }
+\DoxyCodeLine{00357\ \ \ \ \ \textcolor{comment}{/*\ Initialize\ command-\/line\ options\ */}}
+\DoxyCodeLine{00358\ \ \ \ \ tf-\/>args.num\_processes\ =\ 0;}
+\DoxyCodeLine{00359\ \ \ \ \ tf-\/>args.custom\_seed\ =\ NULL;}
+\DoxyCodeLine{00360\ \ \ \ \ tf-\/>args.help\ =\ 0;}
+\DoxyCodeLine{00361\ \ \ \ \ tf-\/>args.targets.size\ =\ 0;}
+\DoxyCodeLine{00362\ \ \ \ \ tf-\/>args.list\_tests\ =\ 0;}
+\DoxyCodeLine{00363\ \ \ \ \ tf-\/>args.logging\ =\ 0;}
+\DoxyCodeLine{00364\ }
+\DoxyCodeLine{00365\ \ \ \ \ \textcolor{comment}{/*\ Disable\ buffering\ for\ stdout\ to\ improve\ reliability\ of\ getting}}
+\DoxyCodeLine{00366\ \textcolor{comment}{\ \ \ \ \ *\ diagnostic\ information.\ Happens\ right\ at\ the\ start\ of\ main\ because}}
+\DoxyCodeLine{00367\ \textcolor{comment}{\ \ \ \ \ *\ setbuf\ must\ be\ used\ before\ any\ other\ operation\ on\ the\ stream.\ */}}
+\DoxyCodeLine{00368\ \ \ \ \ setbuf(stdout,\ NULL);}
+\DoxyCodeLine{00369\ \ \ \ \ \textcolor{comment}{/*\ Also\ disable\ buffering\ for\ stderr\ because\ it's\ not\ guaranteed\ that\ it's}}
+\DoxyCodeLine{00370\ \textcolor{comment}{\ \ \ \ \ *\ unbuffered\ on\ all\ systems.\ */}}
+\DoxyCodeLine{00371\ \ \ \ \ setbuf(stderr,\ NULL);}
+\DoxyCodeLine{00372\ }
+\DoxyCodeLine{00373\ \ \ \ \ \textcolor{comment}{/*\ Parse\ env\ args\ */}}
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keywordflow}{if}\ (read\_env(tf)\ !=\ 0)\ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00375\ }
+\DoxyCodeLine{00376\ \ \ \ \ \textcolor{comment}{/*\ Parse\ command-\/line\ args\ */}}
+\DoxyCodeLine{00377\ \ \ \ \ \textcolor{keywordflow}{if}\ (argc\ >\ 1)\ \{}
+\DoxyCodeLine{00378\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ named\_arg\_start\ =\ 1;\ \textcolor{comment}{/*\ index\ to\ begin\ processing\ named\ arguments\ */}}
+\DoxyCodeLine{00379\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (argc\ -\/\ 1\ >\ MAX\_ARGS)\ \{\ \textcolor{comment}{/*\ first\ arg\ is\ always\ the\ binary\ path\ */}}
+\DoxyCodeLine{00380\ \ \ \ \ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Too\ many\ command-\/line\ arguments\ (max:\ \%d)\(\backslash\)n"{}},\ MAX\_ARGS);}
+\DoxyCodeLine{00381\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00383\ }
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Compatibility\ Note:\ The\ first\ two\ args\ were\ the\ number\ of\ iterations\ and\ the\ seed.\ */}}
+\DoxyCodeLine{00385\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ provided,\ parse\ them\ and\ adjust\ the\ starting\ index\ for\ named\ arguments\ accordingly.\ */}}
+\DoxyCodeLine{00386\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (argv[1][0]\ !=\ \textcolor{charliteral}{'-\/'})\ \{}
+\DoxyCodeLine{00387\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ has\_seed\ =\ argc\ >\ 2\ \&\&\ argv[2][0]\ !=\ \textcolor{charliteral}{'-\/'};}
+\DoxyCodeLine{00388\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (parse\_iterations(\textcolor{stringliteral}{"{}i"{}},\ argv[1],\ tf)\ !=\ 0)\ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00389\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (has\_seed)\ parse\_seed(\textcolor{stringliteral}{"{}seed"{}},\ argv[2],\ tf);}
+\DoxyCodeLine{00390\ \ \ \ \ \ \ \ \ \ \ \ \ named\_arg\_start\ =\ has\_seed\ ?\ 3\ :\ 2;}
+\DoxyCodeLine{00391\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (read\_args(argc,\ argv,\ named\_arg\_start,\ tf)\ !=\ 0)\ \{}
+\DoxyCodeLine{00393\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00395\ }
+\DoxyCodeLine{00396\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (tf-\/>args.help)\ \{}
+\DoxyCodeLine{00397\ \ \ \ \ \ \ \ \ \ \ \ \ help();}
+\DoxyCodeLine{00398\ \ \ \ \ \ \ \ \ \ \ \ \ exit(EXIT\_SUCCESS);}
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00400\ }
+\DoxyCodeLine{00401\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (tf-\/>args.list\_tests)\ \{}
+\DoxyCodeLine{00402\ \ \ \ \ \ \ \ \ \ \ \ \ print\_test\_list(tf);}
+\DoxyCodeLine{00403\ \ \ \ \ \ \ \ \ \ \ \ \ exit(EXIT\_SUCCESS);}
+\DoxyCodeLine{00404\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00405\ \ \ \ \ \}}
+\DoxyCodeLine{00406\ }
+\DoxyCodeLine{00407\ \ \ \ \ tf-\/>fn\_run\_test\ =\ tf-\/>args.logging\ ?\ run\_test\_log\ :\ run\_test;}
+\DoxyCodeLine{00408\ \ \ \ \ \textcolor{keywordflow}{return}\ EXIT\_SUCCESS;}
+\DoxyCodeLine{00409\ \}}
+\DoxyCodeLine{00410\ }
+\DoxyCodeLine{00411\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ tf\_run(\textcolor{keyword}{struct}\ tf\_framework*\ tf)\ \{}
+\DoxyCodeLine{00412\ \ \ \ \ \textcolor{comment}{/*\ Process\ exit\ status\ */}}
+\DoxyCodeLine{00413\ \ \ \ \ \textcolor{keywordtype}{int}\ status;}
+\DoxyCodeLine{00414\ \ \ \ \ \textcolor{comment}{/*\ Whether\ to\ run\ all\ tests\ */}}
+\DoxyCodeLine{00415\ \ \ \ \ \textcolor{keywordtype}{int}\ run\_all;}
+\DoxyCodeLine{00416\ \ \ \ \ \textcolor{comment}{/*\ Loop\ iterator\ */}}
+\DoxyCodeLine{00417\ \ \ \ \ \textcolor{keywordtype}{int}\ it;}
+\DoxyCodeLine{00418\ \ \ \ \ \textcolor{comment}{/*\ Initial\ test\ time\ */}}
+\DoxyCodeLine{00419\ \ \ \ \ int64\_t\ start\_time\ =\ gettime\_i64();}
+\DoxyCodeLine{00420\ \ \ \ \ \textcolor{comment}{/*\ Verify\ 'tf\_init'\ has\ been\ called\ */}}
+\DoxyCodeLine{00421\ \ \ \ \ \textcolor{keywordflow}{if}\ (!tf-\/>fn\_run\_test)\ \{}
+\DoxyCodeLine{00422\ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Error:\ No\ test\ runner\ set.\ You\ must\ call\ 'tf\_init'\ first\ to\ initialize\ the\ framework\ "{}}}
+\DoxyCodeLine{00423\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}or\ manually\ assign\ 'fn\_run\_test'\ before\ calling\ 'tf\_run'.\(\backslash\)n"{}});}
+\DoxyCodeLine{00424\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00425\ \ \ \ \ \}}
+\DoxyCodeLine{00426\ }
+\DoxyCodeLine{00427\ \ \ \ \ \textcolor{comment}{/*\ Populate\ targets\ with\ all\ tests\ if\ none\ were\ explicitly\ specified\ */}}
+\DoxyCodeLine{00428\ \ \ \ \ run\_all\ =\ tf-\/>args.targets.size\ ==\ 0;}
+\DoxyCodeLine{00429\ \ \ \ \ \textcolor{keywordflow}{if}\ (run\_all)\ \{}
+\DoxyCodeLine{00430\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ group,\ idx;}
+\DoxyCodeLine{00431\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (group\ =\ 0;\ group\ <\ tf-\/>num\_modules;\ group++)\ \{}
+\DoxyCodeLine{00432\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }tf\_test\_module*\ module\ =\ \&tf-\/>registry\_modules[group];}
+\DoxyCodeLine{00433\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (idx\ =\ 0;\ idx\ <\ module-\/>size;\ idx++)\ \{}
+\DoxyCodeLine{00434\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (tf-\/>args.targets.size\ >=\ MAX\_ARGS)\ \{}
+\DoxyCodeLine{00435\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fprintf(stderr,\ \textcolor{stringliteral}{"{}Internal\ Error:\ Number\ of\ tests\ (\%d)\ exceeds\ MAX\_ARGS\ (\%d).\ "{}}}
+\DoxyCodeLine{00436\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}Increase\ MAX\_ARGS\ to\ accommodate\ all\ tests.\(\backslash\)n"{}},\ tf-\/>args.targets.size,\ MAX\_ARGS);}
+\DoxyCodeLine{00437\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00438\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00439\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tf-\/>args.targets.slots[tf-\/>args.targets.size++]\ =\ \&\textcolor{keyword}{module}-\/>data[idx];}
+\DoxyCodeLine{00440\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00441\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00442\ \ \ \ \ \}}
+\DoxyCodeLine{00443\ }
+\DoxyCodeLine{00444\ \ \ \ \ \textcolor{keywordflow}{if}\ (!tf-\/>args.logging)\ printf(\textcolor{stringliteral}{"{}Tests\ running\ silently.\ Use\ '-\/log=1'\ to\ enable\ detailed\ logging\(\backslash\)n"{}});}
+\DoxyCodeLine{00445\ }
+\DoxyCodeLine{00446\ \ \ \ \ \textcolor{comment}{/*\ Log\ configuration\ */}}
+\DoxyCodeLine{00447\ \ \ \ \ print\_args(\&tf-\/>args);}
+\DoxyCodeLine{00448\ }
+\DoxyCodeLine{00449\ \ \ \ \ \textcolor{comment}{/*\ Run\ test\ RNG\ tests\ (must\ run\ before\ we\ really\ initialize\ the\ test\ RNG)\ */}}
+\DoxyCodeLine{00450\ \ \ \ \ \textcolor{comment}{/*\ Note:\ currently,\ these\ tests\ are\ executed\ sequentially\ because\ there\ */}}
+\DoxyCodeLine{00451\ \ \ \ \ \textcolor{comment}{/*\ is\ really\ only\ one\ test.\ */}}
+\DoxyCodeLine{00452\ \ \ \ \ \textcolor{keywordflow}{for}\ (it\ =\ 0;\ tf-\/>registry\_no\_rng\ \&\&\ it\ <\ tf-\/>registry\_no\_rng-\/>size;\ it++)\ \{}
+\DoxyCodeLine{00453\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (run\_all)\ \{\ \textcolor{comment}{/*\ future:\ support\ filtering\ */}}
+\DoxyCodeLine{00454\ \ \ \ \ \ \ \ \ \ \ \ \ tf-\/>fn\_run\_test(\&tf-\/>registry\_no\_rng-\/>data[it]);}
+\DoxyCodeLine{00455\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00456\ \ \ \ \ \}}
+\DoxyCodeLine{00457\ }
+\DoxyCodeLine{00458\ \ \ \ \ \textcolor{comment}{/*\ Initialize\ test\ RNG\ and\ library\ contexts\ */}}
+\DoxyCodeLine{00459\ \ \ \ \ testrand\_init(tf-\/>args.custom\_seed);}
+\DoxyCodeLine{00460\ \ \ \ \ \textcolor{keywordflow}{if}\ (tf-\/>fn\_setup\ \&\&\ tf-\/>fn\_setup()\ !=\ 0)\ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00461\ }
+\DoxyCodeLine{00462\ \ \ \ \ \textcolor{comment}{/*\ Check\ whether\ to\ process\ tests\ sequentially\ or\ concurrently\ */}}
+\DoxyCodeLine{00463\ \ \ \ \ \textcolor{keywordflow}{if}\ (tf-\/>args.num\_processes\ <=\ 1)\ \{}
+\DoxyCodeLine{00464\ \ \ \ \ \ \ \ \ status\ =\ run\_sequential(tf);}
+\DoxyCodeLine{00465\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00466\ \textcolor{preprocessor}{\#if\ defined(SUPPORTS\_CONCURRENCY)}}
+\DoxyCodeLine{00467\ \ \ \ \ \ \ \ \ status\ =\ run\_concurrent(tf);}
+\DoxyCodeLine{00468\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00469\ \ \ \ \ \ \ \ \ fputs(\textcolor{stringliteral}{"{}Parallel\ execution\ not\ supported\ on\ your\ system.\ Running\ sequentially...\(\backslash\)n"{}},\ stderr);}
+\DoxyCodeLine{00470\ \ \ \ \ \ \ \ \ status\ =\ run\_sequential(tf);}
+\DoxyCodeLine{00471\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00472\ \ \ \ \ \}}
+\DoxyCodeLine{00473\ }
+\DoxyCodeLine{00474\ \ \ \ \ \textcolor{comment}{/*\ Print\ accumulated\ time\ */}}
+\DoxyCodeLine{00475\ \ \ \ \ printf(\textcolor{stringliteral}{"{}Total\ execution\ time:\ \%.3f\ seconds\(\backslash\)n"{}},\ (\textcolor{keywordtype}{double})(gettime\_i64()\ -\/\ start\_time)\ /\ 1000000);}
+\DoxyCodeLine{00476\ \ \ \ \ \textcolor{keywordflow}{if}\ (tf-\/>fn\_teardown\ \&\&\ tf-\/>fn\_teardown()\ !=\ 0)\ \textcolor{keywordflow}{return}\ EXIT\_FAILURE;}
+\DoxyCodeLine{00477\ }
+\DoxyCodeLine{00478\ \ \ \ \ \textcolor{keywordflow}{return}\ status;}
+\DoxyCodeLine{00479\ \}}
+
+\end{DoxyCode}

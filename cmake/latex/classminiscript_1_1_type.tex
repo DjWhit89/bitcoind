@@ -1,0 +1,225 @@
+\doxysection{Type Class Reference}
+\label{classminiscript_1_1_type}\index{Type@{Type}}
+
+
+{\ttfamily \#include $<$miniscript.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+constexpr Type \textbf{ operator$\vert$} (Type x) const
+\begin{DoxyCompactList}\small\item\em Compute the type with the union of properties. \end{DoxyCompactList}\item 
+constexpr Type \textbf{ operator\&} (Type x) const
+\begin{DoxyCompactList}\small\item\em Compute the type with the intersection of properties. \end{DoxyCompactList}\item 
+constexpr bool \textbf{ operator$<$$<$} (Type x) const
+\begin{DoxyCompactList}\small\item\em Check whether the left hand\textquotesingle{}s properties are superset of the right\textquotesingle{}s (= left is a subtype of right). \end{DoxyCompactList}\item 
+constexpr bool \textbf{ operator$<$} (Type x) const
+\begin{DoxyCompactList}\small\item\em Comparison operator to enable use in sets/maps (total ordering incompatible with $<$$<$). \end{DoxyCompactList}\item 
+constexpr bool \textbf{ operator==} (Type x) const
+\begin{DoxyCompactList}\small\item\em Equality operator. \end{DoxyCompactList}\item 
+constexpr Type \textbf{ If} (bool x) const
+\begin{DoxyCompactList}\small\item\em The empty type if x is false, itself otherwise. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+consteval Type \textbf{ operator"{}"{}\+\_\+mst} (const char $\ast$c, size\+\_\+t l)
+\begin{DoxyCompactList}\small\item\em The only way to publicly construct a \doxyref{Type}{p.}{classminiscript_1_1_type} is using this literal operator. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+This type encapsulates the miniscript type system properties.
+
+Every miniscript expression is one of 4 basic types, and additionally has a number of boolean type properties.
+
+The basic types are\+:
+\begin{DoxyItemize}
+\item "{}\+B"{} \doxyref{Base}{p.}{class_base}\+:
+\begin{DoxyItemize}
+\item Takes its inputs from the top of the stack.
+\item When satisfied, pushes a nonzero value of up to 4 bytes onto the stack.
+\item When dissatisfied, pushes a 0 onto the stack.
+\item This is used for most expressions, and required for the top level one.
+\item For example\+: older(n) = $<$n$>$ OP\+\_\+\+CHECKSEQUENCEVERIFY.
+\end{DoxyItemize}
+\item "{}\+V"{} Verify\+:
+\begin{DoxyItemize}
+\item Takes its inputs from the top of the stack.
+\item When satisfied, pushes nothing.
+\item Cannot be dissatisfied.
+\item This can be obtained by adding an OP\+\_\+\+VERIFY to a B, modifying the last opcode of a B to its -\/VERIFY version (only for OP\+\_\+\+CHECKSIG, OP\+\_\+\+CHECKSIGVERIFY, OP\+\_\+\+NUMEQUAL and OP\+\_\+\+EQUAL), or by combining a V fragment under some conditions.
+\item For example vc\+:pk\+\_\+k(key) = $<$key$>$ OP\+\_\+\+CHECKSIGVERIFY
+\end{DoxyItemize}
+\item "{}\+K"{} Key\+:
+\begin{DoxyItemize}
+\item Takes its inputs from the top of the stack.
+\item Becomes a B when followed by OP\+\_\+\+CHECKSIG.
+\item Always pushes a public key onto the stack, for which a signature is to be provided to satisfy the expression.
+\item For example pk\+\_\+h(key) = OP\+\_\+\+DUP OP\+\_\+\+HASH160 $<$Hash160(key)$>$ OP\+\_\+\+EQUALVERIFY
+\end{DoxyItemize}
+\item "{}\+W"{} Wrapped\+:
+\begin{DoxyItemize}
+\item Takes its input from one below the top of the stack.
+\item When satisfied, pushes a nonzero value (like B) on top of the stack, or one below.
+\item When dissatisfied, pushes 0 op top of the stack or one below.
+\item Is always "{}\+OP\+\_\+\+SWAP [\+B]"{} or "{}\+OP\+\_\+\+TOALTSTACK [\+B] OP\+\_\+\+FROMALTSTACK"{}.
+\item For example sc\+:pk\+\_\+k(key) = OP\+\_\+\+SWAP $<$key$>$ OP\+\_\+\+CHECKSIG
+\end{DoxyItemize}
+\end{DoxyItemize}
+
+There are type properties that help reasoning about correctness\+:
+\begin{DoxyItemize}
+\item "{}z"{} Zero-\/arg\+:
+\begin{DoxyItemize}
+\item Is known to always consume exactly 0 stack elements.
+\item For example after(n) = $<$n$>$ OP\+\_\+\+CHECKLOCKTIMEVERIFY
+\end{DoxyItemize}
+\item "{}o"{} One-\/arg\+:
+\begin{DoxyItemize}
+\item Is known to always consume exactly 1 stack element.
+\item Conflicts with property \textquotesingle{}z\textquotesingle{}
+\item For example \doxyref{sha256(hash)}{p.}{namespacesha256} = OP\+\_\+\+SIZE 32 OP\+\_\+\+EQUALVERIFY OP\+\_\+\+SHA256 $<$hash$>$ OP\+\_\+\+EQUAL
+\end{DoxyItemize}
+\item "{}n"{} Nonzero\+:
+\begin{DoxyItemize}
+\item For every way this expression can be satisfied, a satisfaction exists that never needs a zero top stack element.
+\item Conflicts with property \textquotesingle{}z\textquotesingle{} and with type \textquotesingle{}W\textquotesingle{}.
+\end{DoxyItemize}
+\item "{}d"{} Dissatisfiable\+:
+\begin{DoxyItemize}
+\item There is an easy way to construct a dissatisfaction for this expression.
+\item Conflicts with type \textquotesingle{}V\textquotesingle{}.
+\end{DoxyItemize}
+\item "{}u"{} Unit\+:
+\begin{DoxyItemize}
+\item In case of satisfaction, an exact 1 is put on the stack (rather than just nonzero).
+\item Conflicts with type \textquotesingle{}V\textquotesingle{}.
+\end{DoxyItemize}
+\end{DoxyItemize}
+
+Additional type properties help reasoning about nonmalleability\+:
+\begin{DoxyItemize}
+\item "{}e"{} Expression\+:
+\begin{DoxyItemize}
+\item This implies property \textquotesingle{}d\textquotesingle{}, but the dissatisfaction is nonmalleable.
+\item This generally requires \textquotesingle{}e\textquotesingle{} for all subexpressions which are invoked for that dissatisfaction, and property \textquotesingle{}f\textquotesingle{} for the unexecuted subexpressions in that case.
+\item Conflicts with type \textquotesingle{}V\textquotesingle{}.
+\end{DoxyItemize}
+\item "{}f"{} Forced\+:
+\begin{DoxyItemize}
+\item Dissatisfactions (if any) for this expression always involve at least one signature.
+\item Is always true for type \textquotesingle{}V\textquotesingle{}.
+\end{DoxyItemize}
+\item "{}s"{} Safe\+:
+\begin{DoxyItemize}
+\item Satisfactions for this expression always involve at least one signature.
+\end{DoxyItemize}
+\item "{}m"{} Nonmalleable\+:
+\begin{DoxyItemize}
+\item For every way this expression can be satisfied (which may be none), a nonmalleable satisfaction exists.
+\item This generally requires \textquotesingle{}m\textquotesingle{} for all subexpressions, and \textquotesingle{}e\textquotesingle{} for all subexpressions which are dissatisfied when satisfying the parent.
+\end{DoxyItemize}
+\end{DoxyItemize}
+
+One type property is an implementation detail\+:
+\begin{DoxyItemize}
+\item "{}x"{} Expensive verify\+:
+\begin{DoxyItemize}
+\item Expressions with this property have a script whose last opcode is not EQUAL, CHECKSIG, or CHECKMULTISIG.
+\item Not having this property means that it can be converted to a V at no cost (by switching to the -\/VERIFY version of the last opcode).
+\end{DoxyItemize}
+\end{DoxyItemize}
+
+Five more type properties for representing timelock information. Spend paths in miniscripts containing conflicting timelocks and heightlocks cannot be spent together. This helps users detect if miniscript does not match the semantic behaviour the user expects.
+\begin{DoxyItemize}
+\item "{}g"{} Whether the branch contains a relative time timelock
+\item "{}h"{} Whether the branch contains a relative height timelock
+\item "{}i"{} Whether the branch contains an absolute time timelock
+\item "{}j"{} Whether the branch contains an absolute height timelock
+\item "{}k"{}
+\begin{DoxyItemize}
+\item Whether all satisfactions of this expression don\textquotesingle{}t contain a mix of heightlock and timelock of the same type.
+\item If the miniscript does not have the "{}k"{} property, the miniscript template will not match the user expectation of the corresponding spending policy. For each of these properties the subset rule holds\+: an expression with properties X, Y, and Z, is also valid in places where an X, a Y, a Z, an XY, ... is expected. 
+\end{DoxyItemize}
+\end{DoxyItemize}
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{Type@{Type}!If@{If}}
+\index{If@{If}!Type@{Type}}
+\doxysubsubsection{If()}
+{\footnotesize\ttfamily \label{classminiscript_1_1_type_ae263399c804447fedd628d3b3698b858} 
+Type If (\begin{DoxyParamCaption}\item[{bool}]{x}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [constexpr]}}
+
+
+
+The empty type if x is false, itself otherwise. 
+
+\index{Type@{Type}!operator\&@{operator\&}}
+\index{operator\&@{operator\&}!Type@{Type}}
+\doxysubsubsection{operator\&()}
+{\footnotesize\ttfamily \label{classminiscript_1_1_type_ac509dfc3e180f1d2aa512af53908c969} 
+Type operator\& (\begin{DoxyParamCaption}\item[{Type}]{x}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [constexpr]}}
+
+
+
+Compute the type with the intersection of properties. 
+
+\index{Type@{Type}!operator$<$@{operator$<$}}
+\index{operator$<$@{operator$<$}!Type@{Type}}
+\doxysubsubsection{operator$<$()}
+{\footnotesize\ttfamily \label{classminiscript_1_1_type_a2bce9880c3beb4640853608a0ef156f6} 
+bool operator$<$ (\begin{DoxyParamCaption}\item[{Type}]{x}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [constexpr]}}
+
+
+
+Comparison operator to enable use in sets/maps (total ordering incompatible with $<$$<$). 
+
+\index{Type@{Type}!operator$<$$<$@{operator$<$$<$}}
+\index{operator$<$$<$@{operator$<$$<$}!Type@{Type}}
+\doxysubsubsection{operator$<$$<$()}
+{\footnotesize\ttfamily \label{classminiscript_1_1_type_a5fee719ce71eb863297aae67217ac617} 
+bool operator$<$$<$ (\begin{DoxyParamCaption}\item[{Type}]{x}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [constexpr]}}
+
+
+
+Check whether the left hand\textquotesingle{}s properties are superset of the right\textquotesingle{}s (= left is a subtype of right). 
+
+\index{Type@{Type}!operator==@{operator==}}
+\index{operator==@{operator==}!Type@{Type}}
+\doxysubsubsection{operator==()}
+{\footnotesize\ttfamily \label{classminiscript_1_1_type_a3a1d5901e2080b0e618344205105437f} 
+bool operator== (\begin{DoxyParamCaption}\item[{Type}]{x}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [constexpr]}}
+
+
+
+Equality operator. 
+
+\index{Type@{Type}!operator\texttt{"|}@{operator\texttt{"|}}}
+\index{operator\texttt{"|}@{operator\texttt{"|}}!Type@{Type}}
+\doxysubsubsection{operator\texttt{"|}()}
+{\footnotesize\ttfamily \label{classminiscript_1_1_type_aa58345ef655940616bd03f35d4c79b6b} 
+Type operator$\vert$ (\begin{DoxyParamCaption}\item[{Type}]{x}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [constexpr]}}
+
+
+
+Compute the type with the union of properties. 
+
+
+
+\label{doc-related-members}
+\doxysubsection{Friends And Related Symbol Documentation}
+\index{Type@{Type}!operator"{}"{}\_mst@{operator""""\_mst}}
+\index{operator"{}"{}\_mst@{operator""""\_mst}!Type@{Type}}
+\doxysubsubsection{operator""""\_mst}
+{\footnotesize\ttfamily \label{classminiscript_1_1_type_aa18c69f8bbcd4b37faa9d96250ffad7f} 
+Type operator"{}"{}\+\_\+mst (\begin{DoxyParamCaption}\item[{const char $\ast$}]{c}{, }\item[{size\+\_\+t}]{l}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+
+
+The only way to publicly construct a \doxyref{Type}{p.}{classminiscript_1_1_type} is using this literal operator. 
+
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/script/\textbf{ miniscript.\+h}\end{DoxyCompactItemize}

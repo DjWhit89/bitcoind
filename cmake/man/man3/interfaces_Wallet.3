@@ -1,0 +1,579 @@
+.TH "Wallet" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+Wallet \- Interface for accessing a wallet\&.  
+
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <wallet\&.h>\fP
+.SS "Public Types"
+
+.in +1c
+.ti -1c
+.RI "using \fBCoinsList\fP = std::map<\fBCTxDestination\fP, std::vector<std::tuple<\fBCOutPoint\fP, \fBWalletTxOut\fP>>>"
+.br
+.ti -1c
+.RI "using \fBUnloadFn\fP = std::function<void()>"
+.br
+.RI "Register handler for unload message\&. "
+.ti -1c
+.RI "using \fBShowProgressFn\fP = std::function<void(const std::string& title, int progress)>"
+.br
+.RI "Register handler for show progress messages\&. "
+.ti -1c
+.RI "using \fBStatusChangedFn\fP = std::function<void()>"
+.br
+.RI "Register handler for status changed messages\&. "
+.ti -1c
+.RI "using \fBAddressBookChangedFn\fP"
+.br
+.RI "Register handler for address book changed messages\&. "
+.ti -1c
+.RI "using \fBTransactionChangedFn\fP = std::function<void(const \fBTxid\fP& txid, \fBChangeType\fP status)>"
+.br
+.RI "Register handler for transaction changed messages\&. "
+.ti -1c
+.RI "using \fBCanGetAddressesChangedFn\fP = std::function<void()>"
+.br
+.RI "Register handler for keypool changed messages\&. "
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "virtual \fB~Wallet\fP ()=default"
+.br
+.ti -1c
+.RI "virtual bool \fBencryptWallet\fP (const \fBSecureString\fP &wallet_passphrase)=0"
+.br
+.RI "Encrypt wallet\&. "
+.ti -1c
+.RI "virtual bool \fBisCrypted\fP ()=0"
+.br
+.RI "Return whether wallet is encrypted\&. "
+.ti -1c
+.RI "virtual bool \fBlock\fP ()=0"
+.br
+.RI "Lock wallet\&. "
+.ti -1c
+.RI "virtual bool \fBunlock\fP (const \fBSecureString\fP &wallet_passphrase)=0"
+.br
+.RI "Unlock wallet\&. "
+.ti -1c
+.RI "virtual bool \fBisLocked\fP ()=0"
+.br
+.RI "Return whether wallet is locked\&. "
+.ti -1c
+.RI "virtual bool \fBchangeWalletPassphrase\fP (const \fBSecureString\fP &old_wallet_passphrase, const \fBSecureString\fP &new_wallet_passphrase)=0"
+.br
+.RI "Change wallet passphrase\&. "
+.ti -1c
+.RI "virtual void \fBabortRescan\fP ()=0"
+.br
+.RI "Abort a rescan\&. "
+.ti -1c
+.RI "virtual bool \fBbackupWallet\fP (const std::string &filename)=0"
+.br
+.RI "Back up wallet\&. "
+.ti -1c
+.RI "virtual std::string \fBgetWalletName\fP ()=0"
+.br
+.RI "Get wallet name\&. "
+.ti -1c
+.RI "virtual \fButil::Result\fP< \fBCTxDestination\fP > \fBgetNewDestination\fP (const \fBOutputType\fP type, const std::string &label)=0"
+.br
+.ti -1c
+.RI "virtual bool \fBgetPubKey\fP (const \fBCScript\fP &\fBscript\fP, const \fBCKeyID\fP &address, \fBCPubKey\fP &pub_key)=0"
+.br
+.RI "Get public key\&. "
+.ti -1c
+.RI "virtual \fBSigningResult\fP \fBsignMessage\fP (const std::string &message, const \fBPKHash\fP &pkhash, std::string &str_sig)=0"
+.br
+.RI "Sign message\&. "
+.ti -1c
+.RI "virtual bool \fBisSpendable\fP (const \fBCTxDestination\fP &dest)=0"
+.br
+.RI "Return whether wallet has private key\&. "
+.ti -1c
+.RI "virtual bool \fBsetAddressBook\fP (const \fBCTxDestination\fP &dest, const std::string &\fBname\fP, const std::optional< \fBwallet::AddressPurpose\fP > &purpose)=0"
+.br
+.RI "Add or update address\&. "
+.ti -1c
+.RI "virtual bool \fBdelAddressBook\fP (const \fBCTxDestination\fP &dest)=0"
+.br
+.ti -1c
+.RI "virtual bool \fBgetAddress\fP (const \fBCTxDestination\fP &dest, std::string *\fBname\fP, \fBwallet::AddressPurpose\fP *purpose)=0"
+.br
+.RI "Look up address in wallet, return whether exists\&. "
+.ti -1c
+.RI "virtual std::vector< \fBWalletAddress\fP > \fBgetAddresses\fP ()=0"
+.br
+.RI "Get wallet address list\&. "
+.ti -1c
+.RI "virtual std::vector< std::string > \fBgetAddressReceiveRequests\fP ()=0"
+.br
+.RI "Get receive requests\&. "
+.ti -1c
+.RI "virtual bool \fBsetAddressReceiveRequest\fP (const \fBCTxDestination\fP &dest, const std::string &id, const std::string &value)=0"
+.br
+.RI "Save or remove receive request\&. "
+.ti -1c
+.RI "virtual \fButil::Result\fP< void > \fBdisplayAddress\fP (const \fBCTxDestination\fP &dest)=0"
+.br
+.RI "Display address on external signer\&. "
+.ti -1c
+.RI "virtual bool \fBlockCoin\fP (const \fBCOutPoint\fP &output, const bool write_to_db)=0"
+.br
+.RI "Lock coin\&. "
+.ti -1c
+.RI "virtual bool \fBunlockCoin\fP (const \fBCOutPoint\fP &output)=0"
+.br
+.RI "Unlock coin\&. "
+.ti -1c
+.RI "virtual bool \fBisLockedCoin\fP (const \fBCOutPoint\fP &output)=0"
+.br
+.RI "Return whether coin is locked\&. "
+.ti -1c
+.RI "virtual void \fBlistLockedCoins\fP (std::vector< \fBCOutPoint\fP > &outputs)=0"
+.br
+.RI "List locked coins\&. "
+.ti -1c
+.RI "virtual \fButil::Result\fP< \fBCTransactionRef\fP > \fBcreateTransaction\fP (const std::vector< \fBwallet::CRecipient\fP > &recipients, const \fBwallet::CCoinControl\fP &coin_control, bool sign, int &change_pos, \fBCAmount\fP &\fBfee\fP)=0"
+.br
+.RI "Create transaction\&. "
+.ti -1c
+.RI "virtual void \fBcommitTransaction\fP (\fBCTransactionRef\fP tx, \fBWalletValueMap\fP value_map, \fBWalletOrderForm\fP order_form)=0"
+.br
+.RI "Commit transaction\&. "
+.ti -1c
+.RI "virtual bool \fBtransactionCanBeAbandoned\fP (const \fBTxid\fP &txid)=0"
+.br
+.RI "Return whether transaction can be abandoned\&. "
+.ti -1c
+.RI "virtual bool \fBabandonTransaction\fP (const \fBTxid\fP &txid)=0"
+.br
+.RI "Abandon transaction\&. "
+.ti -1c
+.RI "virtual bool \fBtransactionCanBeBumped\fP (const \fBTxid\fP &txid)=0"
+.br
+.RI "Return whether transaction can be bumped\&. "
+.ti -1c
+.RI "virtual bool \fBcreateBumpTransaction\fP (const \fBTxid\fP &txid, const \fBwallet::CCoinControl\fP &coin_control, std::vector< \fBbilingual_str\fP > &errors, \fBCAmount\fP &old_fee, \fBCAmount\fP &new_fee, \fBCMutableTransaction\fP &mtx)=0"
+.br
+.RI "Create bump transaction\&. "
+.ti -1c
+.RI "virtual bool \fBsignBumpTransaction\fP (\fBCMutableTransaction\fP &mtx)=0"
+.br
+.RI "Sign bump transaction\&. "
+.ti -1c
+.RI "virtual bool \fBcommitBumpTransaction\fP (const \fBTxid\fP &txid, \fBCMutableTransaction\fP &&mtx, std::vector< \fBbilingual_str\fP > &errors, \fBTxid\fP &bumped_txid)=0"
+.br
+.RI "Commit bump transaction\&. "
+.ti -1c
+.RI "virtual \fBCTransactionRef\fP \fBgetTx\fP (const \fBTxid\fP &txid)=0"
+.br
+.RI "Get a transaction\&. "
+.ti -1c
+.RI "virtual \fBWalletTx\fP \fBgetWalletTx\fP (const \fBTxid\fP &txid)=0"
+.br
+.RI "Get transaction information\&. "
+.ti -1c
+.RI "virtual std::set< \fBWalletTx\fP > \fBgetWalletTxs\fP ()=0"
+.br
+.RI "Get list of all wallet transactions\&. "
+.ti -1c
+.RI "virtual bool \fBtryGetTxStatus\fP (const \fBTxid\fP &txid, \fBWalletTxStatus\fP &tx_status, int &num_blocks, int64_t &block_time)=0"
+.br
+.RI "Try to get updated status for a particular transaction, if possible without blocking\&. "
+.ti -1c
+.RI "virtual \fBWalletTx\fP \fBgetWalletTxDetails\fP (const \fBTxid\fP &txid, \fBWalletTxStatus\fP &tx_status, \fBWalletOrderForm\fP &order_form, bool &in_mempool, int &num_blocks)=0"
+.br
+.RI "Get transaction details\&. "
+.ti -1c
+.RI "virtual std::optional< \fBcommon::PSBTError\fP > \fBfillPSBT\fP (std::optional< int > sighash_type, bool sign, bool bip32derivs, size_t *n_signed, \fBPartiallySignedTransaction\fP &psbtx, bool &complete)=0"
+.br
+.RI "Fill PSBT\&. "
+.ti -1c
+.RI "virtual \fBWalletBalances\fP \fBgetBalances\fP ()=0"
+.br
+.RI "Get balances\&. "
+.ti -1c
+.RI "virtual bool \fBtryGetBalances\fP (\fBWalletBalances\fP &balances, \fBuint256\fP &block_hash)=0"
+.br
+.RI "Get balances if possible without blocking\&. "
+.ti -1c
+.RI "virtual \fBCAmount\fP \fBgetBalance\fP ()=0"
+.br
+.RI "Get balance\&. "
+.ti -1c
+.RI "virtual \fBCAmount\fP \fBgetAvailableBalance\fP (const \fBwallet::CCoinControl\fP &coin_control)=0"
+.br
+.RI "Get available balance\&. "
+.ti -1c
+.RI "virtual bool \fBtxinIsMine\fP (const \fBCTxIn\fP &txin)=0"
+.br
+.RI "Return whether transaction input belongs to wallet\&. "
+.ti -1c
+.RI "virtual bool \fBtxoutIsMine\fP (const \fBCTxOut\fP &txout)=0"
+.br
+.RI "Return whether transaction output belongs to wallet\&. "
+.ti -1c
+.RI "virtual \fBCAmount\fP \fBgetDebit\fP (const \fBCTxIn\fP &txin)=0"
+.br
+.RI "Return debit amount if transaction input belongs to wallet\&. "
+.ti -1c
+.RI "virtual \fBCAmount\fP \fBgetCredit\fP (const \fBCTxOut\fP &txout)=0"
+.br
+.RI "Return credit amount if transaction input belongs to wallet\&. "
+.ti -1c
+.RI "virtual \fBCoinsList\fP \fBlistCoins\fP ()=0"
+.br
+.ti -1c
+.RI "virtual std::vector< \fBWalletTxOut\fP > \fBgetCoins\fP (const std::vector< \fBCOutPoint\fP > &outputs)=0"
+.br
+.RI "Return wallet transaction output information\&. "
+.ti -1c
+.RI "virtual \fBCAmount\fP \fBgetRequiredFee\fP (unsigned int tx_bytes)=0"
+.br
+.RI "Get required fee\&. "
+.ti -1c
+.RI "virtual \fBCAmount\fP \fBgetMinimumFee\fP (unsigned int tx_bytes, const \fBwallet::CCoinControl\fP &coin_control, int *returned_target, \fBFeeReason\fP *reason)=0"
+.br
+.RI "Get minimum fee\&. "
+.ti -1c
+.RI "virtual unsigned int \fBgetConfirmTarget\fP ()=0"
+.br
+.RI "Get tx confirm target\&. "
+.ti -1c
+.RI "virtual bool \fBhdEnabled\fP ()=0"
+.br
+.ti -1c
+.RI "virtual bool \fBcanGetAddresses\fP ()=0"
+.br
+.ti -1c
+.RI "virtual bool \fBprivateKeysDisabled\fP ()=0"
+.br
+.ti -1c
+.RI "virtual bool \fBtaprootEnabled\fP ()=0"
+.br
+.ti -1c
+.RI "virtual bool \fBhasExternalSigner\fP ()=0"
+.br
+.ti -1c
+.RI "virtual \fBOutputType\fP \fBgetDefaultAddressType\fP ()=0"
+.br
+.ti -1c
+.RI "virtual \fBCAmount\fP \fBgetDefaultMaxTxFee\fP ()=0"
+.br
+.RI "Get max tx fee\&. "
+.ti -1c
+.RI "virtual void \fBremove\fP ()=0"
+.br
+.ti -1c
+.RI "virtual std::unique_ptr< \fBHandler\fP > \fBhandleUnload\fP (\fBUnloadFn\fP fn)=0"
+.br
+.ti -1c
+.RI "virtual std::unique_ptr< \fBHandler\fP > \fBhandleShowProgress\fP (\fBShowProgressFn\fP fn)=0"
+.br
+.ti -1c
+.RI "virtual std::unique_ptr< \fBHandler\fP > \fBhandleStatusChanged\fP (\fBStatusChangedFn\fP fn)=0"
+.br
+.ti -1c
+.RI "virtual std::unique_ptr< \fBHandler\fP > \fBhandleAddressBookChanged\fP (\fBAddressBookChangedFn\fP fn)=0"
+.br
+.ti -1c
+.RI "virtual std::unique_ptr< \fBHandler\fP > \fBhandleTransactionChanged\fP (\fBTransactionChangedFn\fP fn)=0"
+.br
+.ti -1c
+.RI "virtual std::unique_ptr< \fBHandler\fP > \fBhandleCanGetAddressesChanged\fP (\fBCanGetAddressesChangedFn\fP fn)=0"
+.br
+.ti -1c
+.RI "virtual \fBwallet::CWallet\fP * \fBwallet\fP ()"
+.br
+.RI "Return pointer to internal wallet class, useful for testing\&. "
+.in -1c
+.SH "Detailed Description"
+.PP 
+Interface for accessing a wallet\&. 
+.SH "Member Typedef Documentation"
+.PP 
+.SS "using \fBAddressBookChangedFn\fP"
+\fBInitial value:\fP
+.nf
+ std::function<void(const CTxDestination& address,
+        const std::string& label,
+        bool is_mine,
+        wallet::AddressPurpose purpose,
+        ChangeType status)>
+.PP
+.fi
+
+.PP
+Register handler for address book changed messages\&. 
+.SS "using \fBCanGetAddressesChangedFn\fP = std::function<void()>"
+
+.PP
+Register handler for keypool changed messages\&. 
+.SS "using \fBCoinsList\fP = std::map<\fBCTxDestination\fP, std::vector<std::tuple<\fBCOutPoint\fP, \fBWalletTxOut\fP>>>"
+Return AvailableCoins + LockedCoins grouped by wallet address\&. (put change in one group with wallet address) 
+.SS "using \fBShowProgressFn\fP = std::function<void(const std::string& title, int progress)>"
+
+.PP
+Register handler for show progress messages\&. 
+.SS "using \fBStatusChangedFn\fP = std::function<void()>"
+
+.PP
+Register handler for status changed messages\&. 
+.SS "using \fBTransactionChangedFn\fP = std::function<void(const \fBTxid\fP& txid, \fBChangeType\fP status)>"
+
+.PP
+Register handler for transaction changed messages\&. 
+.SS "using \fBUnloadFn\fP = std::function<void()>"
+
+.PP
+Register handler for unload message\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "virtual ~\fBWallet\fP ()\fR [virtual]\fP, \fR [default]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "virtual bool abandonTransaction (const \fBTxid\fP & txid)\fR [pure virtual]\fP"
+
+.PP
+Abandon transaction\&. 
+.SS "virtual void abortRescan ()\fR [pure virtual]\fP"
+
+.PP
+Abort a rescan\&. 
+.SS "virtual bool backupWallet (const std::string & filename)\fR [pure virtual]\fP"
+
+.PP
+Back up wallet\&. 
+.SS "virtual bool canGetAddresses ()\fR [pure virtual]\fP"
+
+.SS "virtual bool changeWalletPassphrase (const \fBSecureString\fP & old_wallet_passphrase, const \fBSecureString\fP & new_wallet_passphrase)\fR [pure virtual]\fP"
+
+.PP
+Change wallet passphrase\&. 
+.SS "virtual bool commitBumpTransaction (const \fBTxid\fP & txid, \fBCMutableTransaction\fP && mtx, std::vector< \fBbilingual_str\fP > & errors, \fBTxid\fP & bumped_txid)\fR [pure virtual]\fP"
+
+.PP
+Commit bump transaction\&. 
+.SS "virtual void commitTransaction (\fBCTransactionRef\fP tx, \fBWalletValueMap\fP value_map, \fBWalletOrderForm\fP order_form)\fR [pure virtual]\fP"
+
+.PP
+Commit transaction\&. 
+.SS "virtual bool createBumpTransaction (const \fBTxid\fP & txid, const \fBwallet::CCoinControl\fP & coin_control, std::vector< \fBbilingual_str\fP > & errors, \fBCAmount\fP & old_fee, \fBCAmount\fP & new_fee, \fBCMutableTransaction\fP & mtx)\fR [pure virtual]\fP"
+
+.PP
+Create bump transaction\&. 
+.SS "virtual \fButil::Result\fP< \fBCTransactionRef\fP > createTransaction (const std::vector< \fBwallet::CRecipient\fP > & recipients, const \fBwallet::CCoinControl\fP & coin_control, bool sign, int & change_pos, \fBCAmount\fP & fee)\fR [pure virtual]\fP"
+
+.PP
+Create transaction\&. 
+.SS "virtual bool delAddressBook (const \fBCTxDestination\fP & dest)\fR [pure virtual]\fP"
+
+.SS "virtual \fButil::Result\fP< void > displayAddress (const \fBCTxDestination\fP & dest)\fR [pure virtual]\fP"
+
+.PP
+Display address on external signer\&. 
+.SS "virtual bool encryptWallet (const \fBSecureString\fP & wallet_passphrase)\fR [pure virtual]\fP"
+
+.PP
+Encrypt wallet\&. 
+.SS "virtual std::optional< \fBcommon::PSBTError\fP > fillPSBT (std::optional< int > sighash_type, bool sign, bool bip32derivs, size_t * n_signed, \fBPartiallySignedTransaction\fP & psbtx, bool & complete)\fR [pure virtual]\fP"
+
+.PP
+Fill PSBT\&. 
+.SS "virtual bool getAddress (const \fBCTxDestination\fP & dest, std::string * name, \fBwallet::AddressPurpose\fP * purpose)\fR [pure virtual]\fP"
+
+.PP
+Look up address in wallet, return whether exists\&. 
+.SS "virtual std::vector< \fBWalletAddress\fP > getAddresses ()\fR [pure virtual]\fP"
+
+.PP
+Get wallet address list\&. 
+.SS "virtual std::vector< std::string > getAddressReceiveRequests ()\fR [pure virtual]\fP"
+
+.PP
+Get receive requests\&. 
+.SS "virtual \fBCAmount\fP getAvailableBalance (const \fBwallet::CCoinControl\fP & coin_control)\fR [pure virtual]\fP"
+
+.PP
+Get available balance\&. 
+.SS "virtual \fBCAmount\fP getBalance ()\fR [pure virtual]\fP"
+
+.PP
+Get balance\&. 
+.SS "virtual \fBWalletBalances\fP getBalances ()\fR [pure virtual]\fP"
+
+.PP
+Get balances\&. 
+.SS "virtual std::vector< \fBWalletTxOut\fP > getCoins (const std::vector< \fBCOutPoint\fP > & outputs)\fR [pure virtual]\fP"
+
+.PP
+Return wallet transaction output information\&. 
+.SS "virtual unsigned int getConfirmTarget ()\fR [pure virtual]\fP"
+
+.PP
+Get tx confirm target\&. 
+.SS "virtual \fBCAmount\fP getCredit (const \fBCTxOut\fP & txout)\fR [pure virtual]\fP"
+
+.PP
+Return credit amount if transaction input belongs to wallet\&. 
+.SS "virtual \fBCAmount\fP getDebit (const \fBCTxIn\fP & txin)\fR [pure virtual]\fP"
+
+.PP
+Return debit amount if transaction input belongs to wallet\&. 
+.SS "virtual \fBOutputType\fP getDefaultAddressType ()\fR [pure virtual]\fP"
+
+.SS "virtual \fBCAmount\fP getDefaultMaxTxFee ()\fR [pure virtual]\fP"
+
+.PP
+Get max tx fee\&. 
+.SS "virtual \fBCAmount\fP getMinimumFee (unsigned int tx_bytes, const \fBwallet::CCoinControl\fP & coin_control, int * returned_target, \fBFeeReason\fP * reason)\fR [pure virtual]\fP"
+
+.PP
+Get minimum fee\&. 
+.SS "virtual \fButil::Result\fP< \fBCTxDestination\fP > getNewDestination (const \fBOutputType\fP type, const std::string & label)\fR [pure virtual]\fP"
+
+.SS "virtual bool getPubKey (const \fBCScript\fP & script, const \fBCKeyID\fP & address, \fBCPubKey\fP & pub_key)\fR [pure virtual]\fP"
+
+.PP
+Get public key\&. 
+.SS "virtual \fBCAmount\fP getRequiredFee (unsigned int tx_bytes)\fR [pure virtual]\fP"
+
+.PP
+Get required fee\&. 
+.SS "virtual \fBCTransactionRef\fP getTx (const \fBTxid\fP & txid)\fR [pure virtual]\fP"
+
+.PP
+Get a transaction\&. 
+.SS "virtual std::string getWalletName ()\fR [pure virtual]\fP"
+
+.PP
+Get wallet name\&. 
+.SS "virtual \fBWalletTx\fP getWalletTx (const \fBTxid\fP & txid)\fR [pure virtual]\fP"
+
+.PP
+Get transaction information\&. 
+.SS "virtual \fBWalletTx\fP getWalletTxDetails (const \fBTxid\fP & txid, \fBWalletTxStatus\fP & tx_status, \fBWalletOrderForm\fP & order_form, bool & in_mempool, int & num_blocks)\fR [pure virtual]\fP"
+
+.PP
+Get transaction details\&. 
+.SS "virtual std::set< \fBWalletTx\fP > getWalletTxs ()\fR [pure virtual]\fP"
+
+.PP
+Get list of all wallet transactions\&. 
+.SS "virtual std::unique_ptr< \fBHandler\fP > handleAddressBookChanged (\fBAddressBookChangedFn\fP fn)\fR [pure virtual]\fP"
+
+.SS "virtual std::unique_ptr< \fBHandler\fP > handleCanGetAddressesChanged (\fBCanGetAddressesChangedFn\fP fn)\fR [pure virtual]\fP"
+
+.SS "virtual std::unique_ptr< \fBHandler\fP > handleShowProgress (\fBShowProgressFn\fP fn)\fR [pure virtual]\fP"
+
+.SS "virtual std::unique_ptr< \fBHandler\fP > handleStatusChanged (\fBStatusChangedFn\fP fn)\fR [pure virtual]\fP"
+
+.SS "virtual std::unique_ptr< \fBHandler\fP > handleTransactionChanged (\fBTransactionChangedFn\fP fn)\fR [pure virtual]\fP"
+
+.SS "virtual std::unique_ptr< \fBHandler\fP > handleUnload (\fBUnloadFn\fP fn)\fR [pure virtual]\fP"
+
+.SS "virtual bool hasExternalSigner ()\fR [pure virtual]\fP"
+
+.SS "virtual bool hdEnabled ()\fR [pure virtual]\fP"
+
+.SS "virtual bool isCrypted ()\fR [pure virtual]\fP"
+
+.PP
+Return whether wallet is encrypted\&. 
+.SS "virtual bool isLocked ()\fR [pure virtual]\fP"
+
+.PP
+Return whether wallet is locked\&. 
+.SS "virtual bool isLockedCoin (const \fBCOutPoint\fP & output)\fR [pure virtual]\fP"
+
+.PP
+Return whether coin is locked\&. 
+.SS "virtual bool isSpendable (const \fBCTxDestination\fP & dest)\fR [pure virtual]\fP"
+
+.PP
+Return whether wallet has private key\&. 
+.SS "virtual \fBCoinsList\fP listCoins ()\fR [pure virtual]\fP"
+
+.SS "virtual void listLockedCoins (std::vector< \fBCOutPoint\fP > & outputs)\fR [pure virtual]\fP"
+
+.PP
+List locked coins\&. 
+.SS "virtual bool lock ()\fR [pure virtual]\fP"
+
+.PP
+Lock wallet\&. 
+.SS "virtual bool lockCoin (const \fBCOutPoint\fP & output, const bool write_to_db)\fR [pure virtual]\fP"
+
+.PP
+Lock coin\&. 
+.SS "virtual bool privateKeysDisabled ()\fR [pure virtual]\fP"
+
+.SS "virtual void remove ()\fR [pure virtual]\fP"
+
+.SS "virtual bool setAddressBook (const \fBCTxDestination\fP & dest, const std::string & name, const std::optional< \fBwallet::AddressPurpose\fP > & purpose)\fR [pure virtual]\fP"
+
+.PP
+Add or update address\&. 
+.SS "virtual bool setAddressReceiveRequest (const \fBCTxDestination\fP & dest, const std::string & id, const std::string & value)\fR [pure virtual]\fP"
+
+.PP
+Save or remove receive request\&. 
+.SS "virtual bool signBumpTransaction (\fBCMutableTransaction\fP & mtx)\fR [pure virtual]\fP"
+
+.PP
+Sign bump transaction\&. 
+.SS "virtual \fBSigningResult\fP signMessage (const std::string & message, const \fBPKHash\fP & pkhash, std::string & str_sig)\fR [pure virtual]\fP"
+
+.PP
+Sign message\&. 
+.SS "virtual bool taprootEnabled ()\fR [pure virtual]\fP"
+
+.SS "virtual bool transactionCanBeAbandoned (const \fBTxid\fP & txid)\fR [pure virtual]\fP"
+
+.PP
+Return whether transaction can be abandoned\&. 
+.SS "virtual bool transactionCanBeBumped (const \fBTxid\fP & txid)\fR [pure virtual]\fP"
+
+.PP
+Return whether transaction can be bumped\&. 
+.SS "virtual bool tryGetBalances (\fBWalletBalances\fP & balances, \fBuint256\fP & block_hash)\fR [pure virtual]\fP"
+
+.PP
+Get balances if possible without blocking\&. 
+.SS "virtual bool tryGetTxStatus (const \fBTxid\fP & txid, \fBWalletTxStatus\fP & tx_status, int & num_blocks, int64_t & block_time)\fR [pure virtual]\fP"
+
+.PP
+Try to get updated status for a particular transaction, if possible without blocking\&. 
+.SS "virtual bool txinIsMine (const \fBCTxIn\fP & txin)\fR [pure virtual]\fP"
+
+.PP
+Return whether transaction input belongs to wallet\&. 
+.SS "virtual bool txoutIsMine (const \fBCTxOut\fP & txout)\fR [pure virtual]\fP"
+
+.PP
+Return whether transaction output belongs to wallet\&. 
+.SS "virtual bool unlock (const \fBSecureString\fP & wallet_passphrase)\fR [pure virtual]\fP"
+
+.PP
+Unlock wallet\&. 
+.SS "virtual bool unlockCoin (const \fBCOutPoint\fP & output)\fR [pure virtual]\fP"
+
+.PP
+Unlock coin\&. 
+.SS "virtual \fBwallet::CWallet\fP * wallet ()\fR [inline]\fP, \fR [virtual]\fP"
+
+.PP
+Return pointer to internal wallet class, useful for testing\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

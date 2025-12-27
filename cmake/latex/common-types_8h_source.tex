@@ -1,0 +1,113 @@
+\doxysection{common-\/types.h}
+\label{common-types_8h_source}\index{src/ipc/capnp/common-\/types.h@{src/ipc/capnp/common-\/types.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2023-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_IPC\_CAPNP\_COMMON\_TYPES\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_IPC\_CAPNP\_COMMON\_TYPES\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <clientversion.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <interfaces/types.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <streams.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <univalue.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <mp/proxy-\/types.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <mp/type-\/chrono.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <mp/type-\/context.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <mp/type-\/data.h>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <mp/type-\/decay.h>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <mp/type-\/interface.h>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <mp/type-\/message.h>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <mp/type-\/number.h>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <mp/type-\/optional.h>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <mp/type-\/pointer.h>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <mp/type-\/string.h>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <mp/type-\/struct.h>}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <mp/type-\/threadmap.h>}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ <mp/type-\/vector.h>}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{namespace\ }ipc\ \{}
+\DoxyCodeLine{00034\ \textcolor{keyword}{namespace\ }capnp\ \{}
+\DoxyCodeLine{00042\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ S>}
+\DoxyCodeLine{00043\ \textcolor{keyword}{auto}\ Wrap(S\&\ s)}
+\DoxyCodeLine{00044\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keywordflow}{return}\ ParamsStream\{s,\ TX\_WITH\_WITNESS\};}
+\DoxyCodeLine{00046\ \}}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00051\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00052\ \textcolor{keyword}{concept\ }Deserializable\ =\ std::is\_constructible\_v<T,\ ::deserialize\_type,\ ::DataStream\&>;}
+\DoxyCodeLine{00053\ \}\ \textcolor{comment}{//\ namespace\ capnp}}
+\DoxyCodeLine{00054\ \}\ \textcolor{comment}{//\ namespace\ ipc}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00057\ \textcolor{keyword}{namespace\ }mp\ \{}
+\DoxyCodeLine{00062\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Value,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00063\ \textcolor{keywordtype}{void}\ CustomBuildField(TypeList<LocalType>,\ Priority<1>,\ InvokeContext\&\ invoke\_context,\ Value\&\&\ value,\ Output\&\&\ output)}
+\DoxyCodeLine{00064\ \textcolor{comment}{//\ Enable\ if\ serializeable\ and\ if\ LocalType\ is\ not\ cv\ or\ reference\ qualified.\ If}}
+\DoxyCodeLine{00065\ \textcolor{comment}{//\ LocalType\ is\ cv\ or\ reference\ qualified,\ it\ is\ important\ to\ fall\ back\ to}}
+\DoxyCodeLine{00066\ \textcolor{comment}{//\ lower-\/priority\ Priority<0>\ implementation\ of\ this\ function\ that\ strips\ cv}}
+\DoxyCodeLine{00067\ \textcolor{comment}{//\ references,\ to\ prevent\ this\ CustomBuildField\ overload\ from\ taking\ precedence}}
+\DoxyCodeLine{00068\ \textcolor{comment}{//\ over\ more\ narrow\ overloads\ for\ specific\ LocalTypes.}}
+\DoxyCodeLine{00069\ \textcolor{keyword}{requires}\ Serializable<LocalType,\ DataStream>\ \&\&\ std::is\_same\_v<LocalType,\ std::remove\_cv\_t<std::remove\_reference\_t<LocalType>>>}
+\DoxyCodeLine{00070\ \{}
+\DoxyCodeLine{00071\ \ \ \ \ DataStream\ stream;}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keyword}{auto}\ wrapper\{ipc::capnp::Wrap(stream)\};}
+\DoxyCodeLine{00073\ \ \ \ \ value.Serialize(wrapper);}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keyword}{auto}\ result\ =\ output.init(stream.size());}
+\DoxyCodeLine{00075\ \ \ \ \ memcpy(result.begin(),\ stream.data(),\ stream.size());}
+\DoxyCodeLine{00076\ \}}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00082\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00083\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<LocalType>,\ Priority<1>,\ InvokeContext\&\ invoke\_context,\ Input\&\&\ input,\ ReadDest\&\&\ read\_dest)}
+\DoxyCodeLine{00084\ \textcolor{keyword}{requires}\ Unserializable<LocalType,\ DataStream>\ \&\&\ (!ipc::capnp::Deserializable<LocalType>)}
+\DoxyCodeLine{00085\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.update([\&](\textcolor{keyword}{auto}\&\ value)\ \{}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!input.has())\ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ data\ =\ input.get();}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ SpanReader\ stream(\{data.begin(),\ data.end()\});}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ wrapper\{ipc::capnp::Wrap(stream)\};}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ value.Unserialize(wrapper);}
+\DoxyCodeLine{00092\ \ \ \ \ \});}
+\DoxyCodeLine{00093\ \}}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00099\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00100\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<LocalType>,\ Priority<1>,\ InvokeContext\&\ invoke\_context,\ Input\&\&\ input,\ ReadDest\&\&\ read\_dest)}
+\DoxyCodeLine{00101\ \textcolor{keyword}{requires}\ ipc::capnp::Deserializable<LocalType>}
+\DoxyCodeLine{00102\ \{}
+\DoxyCodeLine{00103\ \ \ \ \ assert(input.has());}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keyword}{auto}\ data\ =\ input.get();}
+\DoxyCodeLine{00105\ \ \ \ \ SpanReader\ stream(\{data.begin(),\ data.end()\});}
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{keyword}{auto}\ wrapper\{ipc::capnp::Wrap(stream)\};}
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.construct(::deserialize,\ wrapper);}
+\DoxyCodeLine{00108\ \}}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00112\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Value,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00113\ \textcolor{keywordtype}{void}\ CustomBuildField(TypeList<UniValue>,\ Priority<1>,\ InvokeContext\&\ invoke\_context,\ Value\&\&\ value,\ Output\&\&\ output)}
+\DoxyCodeLine{00114\ \{}
+\DoxyCodeLine{00115\ \ \ \ \ std::string\ str\ =\ value.write();}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keyword}{auto}\ result\ =\ output.init(str.size());}
+\DoxyCodeLine{00117\ \ \ \ \ memcpy(result.begin(),\ str.data(),\ str.size());}
+\DoxyCodeLine{00118\ \}}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00120\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00121\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<UniValue>,\ Priority<1>,\ InvokeContext\&\ invoke\_context,\ Input\&\&\ input,}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ReadDest\&\&\ read\_dest)}
+\DoxyCodeLine{00123\ \{}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.update([\&](\textcolor{keyword}{auto}\&\ value)\ \{}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ data\ =\ input.get();}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ value.read(std::string\_view\{data.begin(),\ data.size()\});}
+\DoxyCodeLine{00127\ \ \ \ \ \});}
+\DoxyCodeLine{00128\ \}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \}\ \textcolor{comment}{//\ namespace\ mp}}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_IPC\_CAPNP\_COMMON\_TYPES\_H}}
+
+\end{DoxyCode}

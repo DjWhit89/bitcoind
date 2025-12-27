@@ -1,0 +1,317 @@
+\doxysection{Event\+Loop Class Reference}
+\label{classmp_1_1_event_loop}\index{EventLoop@{EventLoop}}
+
+
+{\ttfamily \#include $<$proxy-\/io.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ Event\+Loop} (const char $\ast$exe\+\_\+name, \textbf{ Log\+Fn} log\+\_\+fn, void $\ast$context=nullptr)
+\begin{DoxyCompactList}\small\item\em Construct event loop object with default logging options. \end{DoxyCompactList}\item 
+\textbf{ Event\+Loop} (const char $\ast$exe\+\_\+name, \textbf{ Log\+Options} log\+\_\+opts, void $\ast$context=nullptr)
+\begin{DoxyCompactList}\small\item\em Construct event loop object with specified logging options. \end{DoxyCompactList}\item 
+\textbf{ Event\+Loop} (const char $\ast$exe\+\_\+name, std\+::function$<$ void(bool, std\+::string)$>$ old\+\_\+callback, void $\ast$context=nullptr)
+\begin{DoxyCompactList}\small\item\em Backwards-\/compatible constructor for previous (deprecated) logging callback signature. \end{DoxyCompactList}\item 
+\textbf{ $\sim$\+Event\+Loop} ()
+\item 
+void \textbf{ loop} ()
+\item 
+void \textbf{ post} (kj\+::\+Function$<$ void()$>$ fn)
+\item 
+{\footnotesize template$<$typename Callable$>$ }\\void \textbf{ sync} (Callable \&\&callable)
+\item 
+void \textbf{ add\+Async\+Cleanup} (std\+::function$<$ void()$>$ fn)
+\item 
+void \textbf{ start\+Async\+Thread} () \textbf{ MP\+\_\+\+REQUIRES}(\textbf{ m\+\_\+mutex})
+\item 
+bool \textbf{ done} () const \textbf{ MP\+\_\+\+REQUIRES}(\textbf{ m\+\_\+mutex})
+\begin{DoxyCompactList}\small\item\em Check if loop should exit. \end{DoxyCompactList}\item 
+kj\+::\+Function$<$ void()$>$ $\ast$m\+\_\+post\+\_\+fn \textbf{ MP\+\_\+\+GUARDED\+\_\+\+BY} (\textbf{ m\+\_\+mutex})
+\begin{DoxyCompactList}\small\item\em Callback function to run on event loop thread during \doxyref{post()}{p.}{classmp_1_1_event_loop_a4e6f3fba72d4c182f3e7474a2fd76667} or \doxyref{sync()}{p.}{classmp_1_1_event_loop_ad322c973d237a8efe56f3c4ffbb3cb0c} call. \end{DoxyCompactList}\item 
+std\+::optional$<$ \textbf{ Cleanup\+List} $>$ m\+\_\+async\+\_\+fns \textbf{ MP\+\_\+\+GUARDED\+\_\+\+BY} (\textbf{ m\+\_\+mutex})
+\begin{DoxyCompactList}\small\item\em Callback functions to run on async thread. \end{DoxyCompactList}\item 
+int m\+\_\+num\+\_\+clients \textbf{ MP\+\_\+\+GUARDED\+\_\+\+BY} (\textbf{ m\+\_\+mutex})=0
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+const char $\ast$ \textbf{ m\+\_\+exe\+\_\+name}
+\item 
+std\+::thread\+::id \textbf{ m\+\_\+thread\+\_\+id} = std\+::this\+\_\+thread\+::get\+\_\+id()
+\begin{DoxyCompactList}\small\item\em ID of the event loop thread. \end{DoxyCompactList}\item 
+std\+::thread \textbf{ m\+\_\+async\+\_\+thread}
+\item 
+int \textbf{ m\+\_\+wait\+\_\+fd} = -\/1
+\begin{DoxyCompactList}\small\item\em Pipe read handle used to wake up the event loop thread. \end{DoxyCompactList}\item 
+int \textbf{ m\+\_\+post\+\_\+fd} = -\/1
+\begin{DoxyCompactList}\small\item\em Pipe write handle used to wake up the event loop thread. \end{DoxyCompactList}\item 
+\textbf{ Mutex} \textbf{ m\+\_\+mutex}
+\item 
+std\+::condition\+\_\+variable \textbf{ m\+\_\+cv}
+\item 
+kj\+::\+Async\+Io\+Context \textbf{ m\+\_\+io\+\_\+context}
+\begin{DoxyCompactList}\small\item\em Capnp IO context. \end{DoxyCompactList}\item 
+\textbf{ Logging\+Error\+Handler} \textbf{ m\+\_\+error\+\_\+handler} \{$\ast$this\}
+\begin{DoxyCompactList}\small\item\em Capnp error handler. Needs to outlive m\+\_\+task\+\_\+set. \end{DoxyCompactList}\item 
+std\+::unique\+\_\+ptr$<$ kj\+::\+Task\+Set $>$ \textbf{ m\+\_\+task\+\_\+set}
+\begin{DoxyCompactList}\small\item\em Capnp list of pending promises. \end{DoxyCompactList}\item 
+std\+::list$<$ \textbf{ Connection} $>$ \textbf{ m\+\_\+incoming\+\_\+connections}
+\begin{DoxyCompactList}\small\item\em List of connections. \end{DoxyCompactList}\item 
+\textbf{ Log\+Options} \textbf{ m\+\_\+log\+\_\+opts}
+\begin{DoxyCompactList}\small\item\em Logging options. \end{DoxyCompactList}\item 
+void $\ast$ \textbf{ m\+\_\+context}
+\begin{DoxyCompactList}\small\item\em External context pointer. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Event loop implementation.
+
+Cap\textquotesingle{}n Proto threading model is very simple\+: all I/O operations are asynchronous and must be performed on a single thread. This includes\+:
+
+
+\begin{DoxyItemize}
+\item Code starting an asynchronous operation (calling a function that returns a promise object)
+\item Code notifying that an asynchronous operation is complete (code using a fulfiller object)
+\item Code handling a completed operation (code chaining or waiting for a promise)
+\end{DoxyItemize}
+
+All of this code needs to access shared state, and there is no mutex that can be acquired to lock this state because Cap\textquotesingle{}n Proto assumes it will only be accessed from one thread. So all this code needs to actually run on one thread, and the \doxyref{Event\+Loop\+::loop()}{p.}{classmp_1_1_event_loop_afe461d27b9c48d5921c00d521181f12f} method is the entry point for this thread. \doxyref{Proxy\+Client}{p.}{structmp_1_1_proxy_client} and \doxyref{Proxy\+Server}{p.}{structmp_1_1_proxy_server} objects that use other threads and need to perform I/O operations post to this thread using \doxyref{Event\+Loop\+::post()}{p.}{classmp_1_1_event_loop_a4e6f3fba72d4c182f3e7474a2fd76667} and \doxyref{Event\+Loop\+::sync()}{p.}{classmp_1_1_event_loop_ad322c973d237a8efe56f3c4ffbb3cb0c} methods.
+
+Specifically, because \doxyref{Proxy\+Client}{p.}{structmp_1_1_proxy_client} methods can be called from arbitrary threads, and \doxyref{Proxy\+Server}{p.}{structmp_1_1_proxy_server} methods can run on arbitrary threads, \doxyref{Proxy\+Client}{p.}{structmp_1_1_proxy_client} methods use the \doxyref{Event\+Loop}{p.}{classmp_1_1_event_loop} thread to send requests, and \doxyref{Proxy\+Server}{p.}{structmp_1_1_proxy_server} methods use the thread to return results.
+
+Based on {\texttt{https\+://groups.\+google.\+com/d/msg/capnproto/\+Tu\+QFF1e\+H2-\/\+M/g81s\+Ha\+TAAQAJ}} 
+
+\label{doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{EventLoop@{EventLoop}!EventLoop@{EventLoop}}
+\index{EventLoop@{EventLoop}!EventLoop@{EventLoop}}
+\doxysubsubsection{EventLoop()\hspace{0.1cm}{\footnotesize\ttfamily [1/3]}}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_af4e2d623f57fae116fc13c423109871b} 
+Event\+Loop (\begin{DoxyParamCaption}\item[{const char $\ast$}]{exe\+\_\+name}{, }\item[{\textbf{ Log\+Fn}}]{log\+\_\+fn}{, }\item[{void $\ast$}]{context}{ = {\ttfamily nullptr}}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Construct event loop object with default logging options. 
+
+\index{EventLoop@{EventLoop}!EventLoop@{EventLoop}}
+\index{EventLoop@{EventLoop}!EventLoop@{EventLoop}}
+\doxysubsubsection{EventLoop()\hspace{0.1cm}{\footnotesize\ttfamily [2/3]}}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_adedf492d5d51065481b58d3020c40840} 
+Event\+Loop (\begin{DoxyParamCaption}\item[{const char $\ast$}]{exe\+\_\+name}{, }\item[{\textbf{ Log\+Options}}]{log\+\_\+opts}{, }\item[{void $\ast$}]{context}{ = {\ttfamily nullptr}}\end{DoxyParamCaption})}
+
+
+
+Construct event loop object with specified logging options. 
+
+\index{EventLoop@{EventLoop}!EventLoop@{EventLoop}}
+\index{EventLoop@{EventLoop}!EventLoop@{EventLoop}}
+\doxysubsubsection{EventLoop()\hspace{0.1cm}{\footnotesize\ttfamily [3/3]}}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a97dc677b923c4253bb089b99a4e24e4c} 
+Event\+Loop (\begin{DoxyParamCaption}\item[{const char $\ast$}]{exe\+\_\+name}{, }\item[{std\+::function$<$ void(bool, std\+::string)$>$}]{old\+\_\+callback}{, }\item[{void $\ast$}]{context}{ = {\ttfamily nullptr}}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Backwards-\/compatible constructor for previous (deprecated) logging callback signature. 
+
+\index{EventLoop@{EventLoop}!````~EventLoop@{$\sim$EventLoop}}
+\index{````~EventLoop@{$\sim$EventLoop}!EventLoop@{EventLoop}}
+\doxysubsubsection{$\sim$EventLoop()}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_ad39d140230e71b90198d0ed03e0c21f2} 
+$\sim$\textbf{ Event\+Loop} (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{EventLoop@{EventLoop}!addAsyncCleanup@{addAsyncCleanup}}
+\index{addAsyncCleanup@{addAsyncCleanup}!EventLoop@{EventLoop}}
+\doxysubsubsection{addAsyncCleanup()}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_ae50c7c1f98f078876e3241d909d36da9} 
+void add\+Async\+Cleanup (\begin{DoxyParamCaption}\item[{std\+::function$<$ void()$>$}]{fn}{}\end{DoxyParamCaption})}
+
+Register cleanup function to run on asynchronous worker thread without blocking the event loop thread. \index{EventLoop@{EventLoop}!done@{done}}
+\index{done@{done}!EventLoop@{EventLoop}}
+\doxysubsubsection{done()}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_af0c4e1593f96387b1fc05c902f72a509} 
+bool done (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const}
+
+
+
+Check if loop should exit. 
+
+\index{EventLoop@{EventLoop}!loop@{loop}}
+\index{loop@{loop}!EventLoop@{EventLoop}}
+\doxysubsubsection{loop()}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_afe461d27b9c48d5921c00d521181f12f} 
+void loop (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Run event loop. Does not return until shutdown. This should only be called once from the m\+\_\+thread\+\_\+id thread. This will block until the m\+\_\+num\+\_\+clients reference count is 0. \index{EventLoop@{EventLoop}!MP\_GUARDED\_BY@{MP\_GUARDED\_BY}}
+\index{MP\_GUARDED\_BY@{MP\_GUARDED\_BY}!EventLoop@{EventLoop}}
+\doxysubsubsection{MP\_GUARDED\_BY()\hspace{0.1cm}{\footnotesize\ttfamily [1/3]}}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_aaac2885ebd590ea8287845814c6a5b49} 
+std\+::optional$<$ \textbf{ Cleanup\+List} $>$ m\+\_\+async\+\_\+fns MP\+\_\+\+GUARDED\+\_\+\+BY (\begin{DoxyParamCaption}\item[{\textbf{ m\+\_\+mutex}}]{}{}\end{DoxyParamCaption})}
+
+
+
+Callback functions to run on async thread. 
+
+\index{EventLoop@{EventLoop}!MP\_GUARDED\_BY@{MP\_GUARDED\_BY}}
+\index{MP\_GUARDED\_BY@{MP\_GUARDED\_BY}!EventLoop@{EventLoop}}
+\doxysubsubsection{MP\_GUARDED\_BY()\hspace{0.1cm}{\footnotesize\ttfamily [2/3]}}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a18e06ab543770b1d48dd06243faa75eb} 
+kj\+::\+Function$<$ void()$>$ $\ast$m\+\_\+post\+\_\+fn MP\+\_\+\+GUARDED\+\_\+\+BY (\begin{DoxyParamCaption}\item[{\textbf{ m\+\_\+mutex}}]{}{}\end{DoxyParamCaption})}
+
+
+
+Callback function to run on event loop thread during \doxyref{post()}{p.}{classmp_1_1_event_loop_a4e6f3fba72d4c182f3e7474a2fd76667} or \doxyref{sync()}{p.}{classmp_1_1_event_loop_ad322c973d237a8efe56f3c4ffbb3cb0c} call. 
+
+\index{EventLoop@{EventLoop}!MP\_GUARDED\_BY@{MP\_GUARDED\_BY}}
+\index{MP\_GUARDED\_BY@{MP\_GUARDED\_BY}!EventLoop@{EventLoop}}
+\doxysubsubsection{MP\_GUARDED\_BY()\hspace{0.1cm}{\footnotesize\ttfamily [3/3]}}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a75d54c4047fd429274c790929f4dc23e} 
+int m\+\_\+num\+\_\+clients MP\+\_\+\+GUARDED\+\_\+\+BY (\begin{DoxyParamCaption}\item[{\textbf{ m\+\_\+mutex}}]{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Number of clients holding references to \doxyref{Proxy\+Server\+Base}{p.}{structmp_1_1_proxy_server_base} objects that reference this event loop. \index{EventLoop@{EventLoop}!post@{post}}
+\index{post@{post}!EventLoop@{EventLoop}}
+\doxysubsubsection{post()}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a4e6f3fba72d4c182f3e7474a2fd76667} 
+void post (\begin{DoxyParamCaption}\item[{kj\+::\+Function$<$ void()$>$}]{fn}{}\end{DoxyParamCaption})}
+
+Run function on event loop thread. Does not return until function completes. Must be called while the \doxyref{loop()}{p.}{classmp_1_1_event_loop_afe461d27b9c48d5921c00d521181f12f} function is active. \index{EventLoop@{EventLoop}!startAsyncThread@{startAsyncThread}}
+\index{startAsyncThread@{startAsyncThread}!EventLoop@{EventLoop}}
+\doxysubsubsection{startAsyncThread()}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a97b4cd12dc18c9198ee6657c936e9fdd} 
+void start\+Async\+Thread (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Start asynchronous worker thread if necessary. This is only done if there are \doxyref{Proxy\+Server\+Base\+::m\+\_\+impl}{p.}{structmp_1_1_proxy_server_base_a47b0d7e7413d0c7eb592ccf544a24f13} objects that need to be destroyed asynchronously, without tying up the event loop thread. This can happen when an interface does not declare a destroy() method that would allow the client to wait for the destructor to finish and run it on a dedicated thread. It can also happen whenever this is a broken connection and the client is no longer around to call the destructors and the server objects need to be garbage collected. In both cases, it is important that Proxy\+Server\+::m\+\_\+impl destructors do not run on the eventloop thread because they may need it to do I/O if they perform other IPC calls. \index{EventLoop@{EventLoop}!sync@{sync}}
+\index{sync@{sync}!EventLoop@{EventLoop}}
+\doxysubsubsection{sync()}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_ad322c973d237a8efe56f3c4ffbb3cb0c} 
+template$<$typename Callable$>$ \\
+void sync (\begin{DoxyParamCaption}\item[{Callable \&\&}]{callable}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\doxyref{Wrapper}{p.}{class_wrapper} around \doxyref{Event\+Loop\+::post}{p.}{classmp_1_1_event_loop_a4e6f3fba72d4c182f3e7474a2fd76667} that takes advantage of the fact that callable will not go out of scope to avoid requirement that it be copyable. 
+
+\label{doc-variable-members}
+\doxysubsection{Field Documentation}
+\index{EventLoop@{EventLoop}!m\_async\_thread@{m\_async\_thread}}
+\index{m\_async\_thread@{m\_async\_thread}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_async\_thread}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a7ff706a17a3571c9b28db11e81dc7585} 
+std\+::thread m\+\_\+async\+\_\+thread}
+
+Handle of an async worker thread. Joined on destruction. Unset if async method has not been called. \index{EventLoop@{EventLoop}!m\_context@{m\_context}}
+\index{m\_context@{m\_context}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_context}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a92efa486d18e81bd893ff18bc8a22926} 
+void$\ast$ m\+\_\+context}
+
+
+
+External context pointer. 
+
+\index{EventLoop@{EventLoop}!m\_cv@{m\_cv}}
+\index{m\_cv@{m\_cv}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_cv}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_accca0ab294feb9061406ae9c73a3ceb5} 
+std\+::condition\+\_\+variable m\+\_\+cv}
+
+\index{EventLoop@{EventLoop}!m\_error\_handler@{m\_error\_handler}}
+\index{m\_error\_handler@{m\_error\_handler}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_error\_handler}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_aa3a0b29328e0fc0ec8b26132feb0fcc5} 
+\textbf{ Logging\+Error\+Handler} m\+\_\+error\+\_\+handler \{$\ast$this\}}
+
+
+
+Capnp error handler. Needs to outlive m\+\_\+task\+\_\+set. 
+
+\index{EventLoop@{EventLoop}!m\_exe\_name@{m\_exe\_name}}
+\index{m\_exe\_name@{m\_exe\_name}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_exe\_name}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a2a779802443c51d72db5bd158c31c964} 
+const char$\ast$ m\+\_\+exe\+\_\+name}
+
+Process name included in thread names so combined debug output from multiple processes is easier to understand. \index{EventLoop@{EventLoop}!m\_incoming\_connections@{m\_incoming\_connections}}
+\index{m\_incoming\_connections@{m\_incoming\_connections}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_incoming\_connections}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_ace117e2546e02ad25eb0044315aa4ac9} 
+std\+::list$<$\textbf{ Connection}$>$ m\+\_\+incoming\+\_\+connections}
+
+
+
+List of connections. 
+
+\index{EventLoop@{EventLoop}!m\_io\_context@{m\_io\_context}}
+\index{m\_io\_context@{m\_io\_context}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_io\_context}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_ae9ed3a7b20562f71d91760034e7100f1} 
+kj\+::\+Async\+Io\+Context m\+\_\+io\+\_\+context}
+
+
+
+Capnp IO context. 
+
+\index{EventLoop@{EventLoop}!m\_log\_opts@{m\_log\_opts}}
+\index{m\_log\_opts@{m\_log\_opts}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_log\_opts}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_ab1f44d16de891fa65b054ee4ead90294} 
+\textbf{ Log\+Options} m\+\_\+log\+\_\+opts}
+
+
+
+Logging options. 
+
+\index{EventLoop@{EventLoop}!m\_mutex@{m\_mutex}}
+\index{m\_mutex@{m\_mutex}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_mutex}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a71aaf23d91d7b7a5611738c4f06e3577} 
+\textbf{ Mutex} m\+\_\+mutex}
+
+\doxyref{Mutex}{p.}{sync_8h_a326d1d46ce05b5316d8ebe2694a10a6e} and condition variable used to post tasks to event loop and async thread. \index{EventLoop@{EventLoop}!m\_post\_fd@{m\_post\_fd}}
+\index{m\_post\_fd@{m\_post\_fd}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_post\_fd}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a59f59d4a0735009e1d98f835eeccdb87} 
+int m\+\_\+post\+\_\+fd = -\/1}
+
+
+
+Pipe write handle used to wake up the event loop thread. 
+
+\index{EventLoop@{EventLoop}!m\_task\_set@{m\_task\_set}}
+\index{m\_task\_set@{m\_task\_set}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_task\_set}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a4867e4e832e2d05e777ed32a795214ad} 
+std\+::unique\+\_\+ptr$<$kj\+::\+Task\+Set$>$ m\+\_\+task\+\_\+set}
+
+
+
+Capnp list of pending promises. 
+
+\index{EventLoop@{EventLoop}!m\_thread\_id@{m\_thread\_id}}
+\index{m\_thread\_id@{m\_thread\_id}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_thread\_id}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_aaee8fe6bf715daa70d55a732218dcfe5} 
+std\+::thread\+::id m\+\_\+thread\+\_\+id = std\+::this\+\_\+thread\+::get\+\_\+id()}
+
+
+
+ID of the event loop thread. 
+
+\index{EventLoop@{EventLoop}!m\_wait\_fd@{m\_wait\_fd}}
+\index{m\_wait\_fd@{m\_wait\_fd}!EventLoop@{EventLoop}}
+\doxysubsubsection{m\_wait\_fd}
+{\footnotesize\ttfamily \label{classmp_1_1_event_loop_a5ca6d7b6e9cca718db8c78de06dde777} 
+int m\+\_\+wait\+\_\+fd = -\/1}
+
+
+
+Pipe read handle used to wake up the event loop thread. 
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+src/ipc/libmultiprocess/include/mp/\textbf{ proxy-\/io.\+h}\item 
+src/ipc/libmultiprocess/src/mp/\textbf{ proxy.\+cpp}\end{DoxyCompactItemize}

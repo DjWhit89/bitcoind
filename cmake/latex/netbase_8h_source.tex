@@ -1,0 +1,209 @@
+\doxysection{netbase.\+h}
+\label{netbase_8h_source}\index{src/netbase.h@{src/netbase.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_NETBASE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_NETBASE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <compat/compat.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <netaddress.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <util/sock.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <util/threadinterrupt.h>}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <unordered\_set>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{int}\ nConnectTimeout;}
+\DoxyCodeLine{00023\ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{bool}\ fNameLookup;}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00026\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ DEFAULT\_CONNECT\_TIMEOUT\ =\ 5000;}
+\DoxyCodeLine{00028\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ DEFAULT\_NAME\_LOOKUP\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00031\ \textcolor{keyword}{const}\ std::string\ ADDR\_PREFIX\_UNIX\ =\ \textcolor{stringliteral}{"{}unix:"{}};}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{enum\ class}\ ConnectionDirection\ \{}
+\DoxyCodeLine{00034\ \ \ \ \ None\ =\ 0,}
+\DoxyCodeLine{00035\ \ \ \ \ In\ =\ (1U\ <<\ 0),}
+\DoxyCodeLine{00036\ \ \ \ \ Out\ =\ (1U\ <<\ 1),}
+\DoxyCodeLine{00037\ \ \ \ \ Both\ =\ (In\ |\ Out),}
+\DoxyCodeLine{00038\ \};}
+\DoxyCodeLine{00039\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ ConnectionDirection\&\ operator|=(ConnectionDirection\&\ a,\ ConnectionDirection\ b)\ \{}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{using\ }underlying\ =\ std::underlying\_type\_t<ConnectionDirection>;}
+\DoxyCodeLine{00041\ \ \ \ \ a\ =\ ConnectionDirection(underlying(a)\ |\ underlying(b));}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordflow}{return}\ a;}
+\DoxyCodeLine{00043\ \}}
+\DoxyCodeLine{00044\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ operator\&(ConnectionDirection\ a,\ ConnectionDirection\ b)\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keyword}{using\ }underlying\ =\ std::underlying\_type\_t<ConnectionDirection>;}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordflow}{return}\ (underlying(a)\ \&\ underlying(b));}
+\DoxyCodeLine{00047\ \}}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00056\ \textcolor{keywordtype}{bool}\ IsUnixSocketPath(\textcolor{keyword}{const}\ std::string\&\ name);}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \textcolor{keyword}{class\ }Proxy}
+\DoxyCodeLine{00059\ \{}
+\DoxyCodeLine{00060\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00061\ \ \ \ \ Proxy()\ :\ m\_is\_unix\_socket(false),\ m\_tor\_stream\_isolation(false)\ \{\}}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keyword}{explicit}\ Proxy(\textcolor{keyword}{const}\ CService\&\ \_proxy,\ \textcolor{keywordtype}{bool}\ tor\_stream\_isolation\ =\ \textcolor{keyword}{false})\ :\ proxy(\_proxy),\ m\_is\_unix\_socket(false),\ m\_tor\_stream\_isolation(tor\_stream\_isolation)\ \{\}}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keyword}{explicit}\ Proxy(\textcolor{keyword}{const}\ std::string\ path,\ \textcolor{keywordtype}{bool}\ tor\_stream\_isolation\ =\ \textcolor{keyword}{false})\ :\ m\_unix\_socket\_path(path),\ m\_is\_unix\_socket(true),\ m\_tor\_stream\_isolation(tor\_stream\_isolation)\ \{\}}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \ \ CService\ proxy;}
+\DoxyCodeLine{00066\ \ \ \ \ std::string\ m\_unix\_socket\_path;}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_is\_unix\_socket;}
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_tor\_stream\_isolation;}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsValid()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00071\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_is\_unix\_socket)\ \textcolor{keywordflow}{return}\ IsUnixSocketPath(m\_unix\_socket\_path);}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ proxy.IsValid();}
+\DoxyCodeLine{00074\ \ \ \ \ \}}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \ \ \ \ sa\_family\_t\ GetFamily()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00077\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_is\_unix\_socket)\ \textcolor{keywordflow}{return}\ AF\_UNIX;}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ proxy.GetSAFamily();}
+\DoxyCodeLine{00080\ \ \ \ \ \}}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \ \ \ \ std::string\ ToString()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00083\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_is\_unix\_socket)\ \textcolor{keywordflow}{return}\ m\_unix\_socket\_path;}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ proxy.ToStringAddrPort();}
+\DoxyCodeLine{00086\ \ \ \ \ \}}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ \ \ std::unique\_ptr<Sock>\ Connect()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00089\ \};}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00092\ \textcolor{keyword}{struct\ }ProxyCredentials}
+\DoxyCodeLine{00093\ \{}
+\DoxyCodeLine{00094\ \ \ \ \ std::string\ username;}
+\DoxyCodeLine{00095\ \ \ \ \ std::string\ password;}
+\DoxyCodeLine{00096\ \};}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00101\ \textcolor{keyword}{class\ }ReachableNets\ \{}
+\DoxyCodeLine{00102\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keywordtype}{void}\ Add(Network\ net)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00104\ \ \ \ \ \{}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ AssertLockNotHeld(m\_mutex);}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ LOCK(m\_mutex);}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ m\_reachable.insert(net);}
+\DoxyCodeLine{00108\ \ \ \ \ \}}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordtype}{void}\ Remove(Network\ net)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00111\ \ \ \ \ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ AssertLockNotHeld(m\_mutex);}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ LOCK(m\_mutex);}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ m\_reachable.erase(net);}
+\DoxyCodeLine{00115\ \ \ \ \ \}}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{keywordtype}{void}\ RemoveAll()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00118\ \ \ \ \ \{}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ AssertLockNotHeld(m\_mutex);}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ LOCK(m\_mutex);}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ m\_reachable.clear();}
+\DoxyCodeLine{00122\ \ \ \ \ \}}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{keywordtype}{void}\ Reset()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00125\ \ \ \ \ \{}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ AssertLockNotHeld(m\_mutex);}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ LOCK(m\_mutex);}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ m\_reachable\ =\ DefaultNets();}
+\DoxyCodeLine{00129\ \ \ \ \ \}}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00131\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ Contains(Network\ net)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00132\ \ \ \ \ \{}
+\DoxyCodeLine{00133\ \ \ \ \ \ \ \ \ AssertLockNotHeld(m\_mutex);}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ LOCK(m\_mutex);}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_reachable.contains(net);}
+\DoxyCodeLine{00136\ \ \ \ \ \}}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ Contains(\textcolor{keyword}{const}\ CNetAddr\&\ addr)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00139\ \ \ \ \ \{}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ AssertLockNotHeld(m\_mutex);}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Contains(addr.GetNetwork());}
+\DoxyCodeLine{00142\ \ \ \ \ \}}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00144\ \ \ \ \ [[nodiscard]]\ std::unordered\_set<Network>\ All()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00145\ \ \ \ \ \{}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ AssertLockNotHeld(m\_mutex);}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ LOCK(m\_mutex);}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_reachable;}
+\DoxyCodeLine{00149\ \ \ \ \ \}}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00151\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00152\ \ \ \ \ \textcolor{keyword}{static}\ std::unordered\_set<Network>\ DefaultNets()}
+\DoxyCodeLine{00153\ \ \ \ \ \{}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \ \ \ \ NET\_UNROUTABLE,}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ \ \ \ \ NET\_IPV4,}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \ \ \ \ NET\_IPV6,}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ \ \ \ \ NET\_ONION,}
+\DoxyCodeLine{00159\ \ \ \ \ \ \ \ \ \ \ \ \ NET\_I2P,}
+\DoxyCodeLine{00160\ \ \ \ \ \ \ \ \ \ \ \ \ NET\_CJDNS,}
+\DoxyCodeLine{00161\ \ \ \ \ \ \ \ \ \ \ \ \ NET\_INTERNAL}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00163\ \ \ \ \ \};}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keyword}{mutable}\ Mutex\ m\_mutex;}
+\DoxyCodeLine{00166\ \ \ \ \ std::unordered\_set<Network>\ m\_reachable\ GUARDED\_BY(m\_mutex)\{DefaultNets()\};}
+\DoxyCodeLine{00167\ \};}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00169\ \textcolor{keyword}{extern}\ ReachableNets\ g\_reachable\_nets;}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00174\ std::vector<CNetAddr>\ WrappedGetAddrInfo(\textcolor{keyword}{const}\ std::string\&\ name,\ \textcolor{keywordtype}{bool}\ allow\_lookup);}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ \textcolor{keyword}{enum}\ Network\ ParseNetwork(\textcolor{keyword}{const}\ std::string\&\ net);}
+\DoxyCodeLine{00177\ std::string\ GetNetworkName(\textcolor{keyword}{enum}\ Network\ net);}
+\DoxyCodeLine{00179\ std::vector<std::string>\ GetNetworkNames(\textcolor{keywordtype}{bool}\ append\_unroutable\ =\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00180\ \textcolor{keywordtype}{bool}\ SetProxy(\textcolor{keyword}{enum}\ Network\ net,\ \textcolor{keyword}{const}\ Proxy\ \&addrProxy);}
+\DoxyCodeLine{00181\ \textcolor{keywordtype}{bool}\ GetProxy(\textcolor{keyword}{enum}\ Network\ net,\ Proxy\ \&proxyInfoOut);}
+\DoxyCodeLine{00182\ \textcolor{keywordtype}{bool}\ IsProxy(\textcolor{keyword}{const}\ CNetAddr\ \&addr);}
+\DoxyCodeLine{00199\ \textcolor{keywordtype}{bool}\ SetNameProxy(\textcolor{keyword}{const}\ Proxy\ \&addrProxy);}
+\DoxyCodeLine{00200\ \textcolor{keywordtype}{bool}\ HaveNameProxy();}
+\DoxyCodeLine{00201\ \textcolor{keywordtype}{bool}\ GetNameProxy(Proxy\ \&nameProxyOut);}
+\DoxyCodeLine{00202\ }
+\DoxyCodeLine{00203\ \textcolor{keyword}{using\ }DNSLookupFn\ =\ std::function<std::vector<CNetAddr>(\textcolor{keyword}{const}\ std::string\&,\ \textcolor{keywordtype}{bool})>;}
+\DoxyCodeLine{00204\ \textcolor{keyword}{extern}\ DNSLookupFn\ g\_dns\_lookup;}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00219\ std::vector<CNetAddr>\ LookupHost(\textcolor{keyword}{const}\ std::string\&\ name,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nMaxSolutions,\ \textcolor{keywordtype}{bool}\ fAllowLookup,\ DNSLookupFn\ dns\_lookup\_function\ =\ g\_dns\_lookup);}
+\DoxyCodeLine{00220\ }
+\DoxyCodeLine{00230\ std::optional<CNetAddr>\ LookupHost(\textcolor{keyword}{const}\ std::string\&\ name,\ \textcolor{keywordtype}{bool}\ fAllowLookup,\ DNSLookupFn\ dns\_lookup\_function\ =\ g\_dns\_lookup);}
+\DoxyCodeLine{00231\ }
+\DoxyCodeLine{00250\ std::vector<CService>\ Lookup(\textcolor{keyword}{const}\ std::string\&\ name,\ uint16\_t\ portDefault,\ \textcolor{keywordtype}{bool}\ fAllowLookup,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nMaxSolutions,\ DNSLookupFn\ dns\_lookup\_function\ =\ g\_dns\_lookup);}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00258\ std::optional<CService>\ Lookup(\textcolor{keyword}{const}\ std::string\&\ name,\ uint16\_t\ portDefault,\ \textcolor{keywordtype}{bool}\ fAllowLookup,\ DNSLookupFn\ dns\_lookup\_function\ =\ g\_dns\_lookup);}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00269\ CService\ LookupNumeric(\textcolor{keyword}{const}\ std::string\&\ name,\ uint16\_t\ portDefault\ =\ 0,\ DNSLookupFn\ dns\_lookup\_function\ =\ g\_dns\_lookup);}
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00280\ CSubNet\ LookupSubNet(\textcolor{keyword}{const}\ std::string\&\ subnet\_str);}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00289\ std::unique\_ptr<Sock>\ CreateSockOS(\textcolor{keywordtype}{int}\ domain,\ \textcolor{keywordtype}{int}\ type,\ \textcolor{keywordtype}{int}\ protocol);}
+\DoxyCodeLine{00290\ }
+\DoxyCodeLine{00294\ \textcolor{keyword}{extern}\ std::function<std::unique\_ptr<Sock>(\textcolor{keywordtype}{int},\ \textcolor{keywordtype}{int},\ \textcolor{keywordtype}{int})>\ CreateSock;}
+\DoxyCodeLine{00295\ }
+\DoxyCodeLine{00304\ std::unique\_ptr<Sock>\ ConnectDirectly(\textcolor{keyword}{const}\ CService\&\ dest,\ \textcolor{keywordtype}{bool}\ manual\_connection);}
+\DoxyCodeLine{00305\ }
+\DoxyCodeLine{00317\ std::unique\_ptr<Sock>\ ConnectThroughProxy(\textcolor{keyword}{const}\ Proxy\&\ proxy,}
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ dest,}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint16\_t\ port,}
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\&\ proxy\_connection\_failed);}
+\DoxyCodeLine{00321\ }
+\DoxyCodeLine{00325\ \textcolor{keyword}{extern}\ CThreadInterrupt\ g\_socks5\_interrupt;}
+\DoxyCodeLine{00326\ }
+\DoxyCodeLine{00345\ \textcolor{keywordtype}{bool}\ Socks5(\textcolor{keyword}{const}\ std::string\&\ strDest,\ uint16\_t\ port,\ \textcolor{keyword}{const}\ ProxyCredentials*\ auth,\ \textcolor{keyword}{const}\ Sock\&\ socket);}
+\DoxyCodeLine{00346\ }
+\DoxyCodeLine{00354\ \textcolor{keywordtype}{bool}\ IsBadPort(uint16\_t\ port);}
+\DoxyCodeLine{00355\ }
+\DoxyCodeLine{00363\ CService\ MaybeFlipIPv6toCJDNS(\textcolor{keyword}{const}\ CService\&\ service);}
+\DoxyCodeLine{00364\ }
+\DoxyCodeLine{00365\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_NETBASE\_H}}
+
+\end{DoxyCode}

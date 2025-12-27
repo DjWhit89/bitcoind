@@ -1,0 +1,185 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="impl_8md" kind="file" language="Markdown">
+    <compoundname>impl.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">##<sp/>Files</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>implementation<sp/>of<sp/>leveldb<sp/>is<sp/>similar<sp/>in<sp/>spirit<sp/>to<sp/>the<sp/>representation<sp/>of<sp/>a</highlight></codeline>
+<codeline><highlight class="normal">single<sp/>[Bigtable<sp/>tablet<sp/>(section<sp/>5.3)](http://research.google.com/archive/bigtable.html).</highlight></codeline>
+<codeline><highlight class="normal">However<sp/>the<sp/>organization<sp/>of<sp/>the<sp/>files<sp/>that<sp/>make<sp/>up<sp/>the<sp/>representation<sp/>is</highlight></codeline>
+<codeline><highlight class="normal">somewhat<sp/>different<sp/>and<sp/>is<sp/>explained<sp/>below.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Each<sp/>database<sp/>is<sp/>represented<sp/>by<sp/>a<sp/>set<sp/>of<sp/>files<sp/>stored<sp/>in<sp/>a<sp/>directory.<sp/>There<sp/>are</highlight></codeline>
+<codeline><highlight class="normal">several<sp/>different<sp/>types<sp/>of<sp/>files<sp/>as<sp/>documented<sp/>below:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Log<sp/>files</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>log<sp/>file<sp/>(*.log)<sp/>stores<sp/>a<sp/>sequence<sp/>of<sp/>recent<sp/>updates.<sp/>Each<sp/>update<sp/>is<sp/>appended</highlight></codeline>
+<codeline><highlight class="normal">to<sp/>the<sp/>current<sp/>log<sp/>file.<sp/>When<sp/>the<sp/>log<sp/>file<sp/>reaches<sp/>a<sp/>pre-determined<sp/>size</highlight></codeline>
+<codeline><highlight class="normal">(approximately<sp/>4MB<sp/>by<sp/>default),<sp/>it<sp/>is<sp/>converted<sp/>to<sp/>a<sp/>sorted<sp/>table<sp/>(see<sp/>below)</highlight></codeline>
+<codeline><highlight class="normal">and<sp/>a<sp/>new<sp/>log<sp/>file<sp/>is<sp/>created<sp/>for<sp/>future<sp/>updates.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>copy<sp/>of<sp/>the<sp/>current<sp/>log<sp/>file<sp/>is<sp/>kept<sp/>in<sp/>an<sp/>in-memory<sp/>structure<sp/>(the</highlight></codeline>
+<codeline><highlight class="normal">`memtable`).<sp/>This<sp/>copy<sp/>is<sp/>consulted<sp/>on<sp/>every<sp/>read<sp/>so<sp/>that<sp/>read<sp/>operations</highlight></codeline>
+<codeline><highlight class="normal">reflect<sp/>all<sp/>logged<sp/>updates.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Sorted<sp/>tables</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>sorted<sp/>table<sp/>(*.ldb)<sp/>stores<sp/>a<sp/>sequence<sp/>of<sp/>entries<sp/>sorted<sp/>by<sp/>key.<sp/>Each<sp/>entry<sp/>is</highlight></codeline>
+<codeline><highlight class="normal">either<sp/>a<sp/>value<sp/>for<sp/>the<sp/>key,<sp/>or<sp/>a<sp/>deletion<sp/>marker<sp/>for<sp/>the<sp/>key.<sp/>(Deletion<sp/>markers</highlight></codeline>
+<codeline><highlight class="normal">are<sp/>kept<sp/>around<sp/>to<sp/>hide<sp/>obsolete<sp/>values<sp/>present<sp/>in<sp/>older<sp/>sorted<sp/>tables).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>set<sp/>of<sp/>sorted<sp/>tables<sp/>are<sp/>organized<sp/>into<sp/>a<sp/>sequence<sp/>of<sp/>levels.<sp/>The<sp/>sorted</highlight></codeline>
+<codeline><highlight class="normal">table<sp/>generated<sp/>from<sp/>a<sp/>log<sp/>file<sp/>is<sp/>placed<sp/>in<sp/>a<sp/>special<sp/>**young**<sp/>level<sp/>(also</highlight></codeline>
+<codeline><highlight class="normal">called<sp/>level-0).<sp/>When<sp/>the<sp/>number<sp/>of<sp/>young<sp/>files<sp/>exceeds<sp/>a<sp/>certain<sp/>threshold</highlight></codeline>
+<codeline><highlight class="normal">(currently<sp/>four),<sp/>all<sp/>of<sp/>the<sp/>young<sp/>files<sp/>are<sp/>merged<sp/>together<sp/>with<sp/>all<sp/>of<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">overlapping<sp/>level-1<sp/>files<sp/>to<sp/>produce<sp/>a<sp/>sequence<sp/>of<sp/>new<sp/>level-1<sp/>files<sp/>(we<sp/>create</highlight></codeline>
+<codeline><highlight class="normal">a<sp/>new<sp/>level-1<sp/>file<sp/>for<sp/>every<sp/>2MB<sp/>of<sp/>data.)</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Files<sp/>in<sp/>the<sp/>young<sp/>level<sp/>may<sp/>contain<sp/>overlapping<sp/>keys.<sp/>However<sp/>files<sp/>in<sp/>other</highlight></codeline>
+<codeline><highlight class="normal">levels<sp/>have<sp/>distinct<sp/>non-overlapping<sp/>key<sp/>ranges.<sp/>Consider<sp/>level<sp/>number<sp/>L<sp/>where</highlight></codeline>
+<codeline><highlight class="normal">L<sp/>&gt;=<sp/>1.<sp/>When<sp/>the<sp/>combined<sp/>size<sp/>of<sp/>files<sp/>in<sp/>level-L<sp/>exceeds<sp/>(10^L)<sp/>MB<sp/>(i.e.,<sp/>10MB</highlight></codeline>
+<codeline><highlight class="normal">for<sp/>level-1,<sp/>100MB<sp/>for<sp/>level-2,<sp/>...),<sp/>one<sp/>file<sp/>in<sp/>level-L,<sp/>and<sp/>all<sp/>of<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">overlapping<sp/>files<sp/>in<sp/>level-(L+1)<sp/>are<sp/>merged<sp/>to<sp/>form<sp/>a<sp/>set<sp/>of<sp/>new<sp/>files<sp/>for</highlight></codeline>
+<codeline><highlight class="normal">level-(L+1).<sp/>These<sp/>merges<sp/>have<sp/>the<sp/>effect<sp/>of<sp/>gradually<sp/>migrating<sp/>new<sp/>updates</highlight></codeline>
+<codeline><highlight class="normal">from<sp/>the<sp/>young<sp/>level<sp/>to<sp/>the<sp/>largest<sp/>level<sp/>using<sp/>only<sp/>bulk<sp/>reads<sp/>and<sp/>writes</highlight></codeline>
+<codeline><highlight class="normal">(i.e.,<sp/>minimizing<sp/>expensive<sp/>seeks).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Manifest</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>MANIFEST<sp/>file<sp/>lists<sp/>the<sp/>set<sp/>of<sp/>sorted<sp/>tables<sp/>that<sp/>make<sp/>up<sp/>each<sp/>level,<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">corresponding<sp/>key<sp/>ranges,<sp/>and<sp/>other<sp/>important<sp/>metadata.<sp/>A<sp/>new<sp/>MANIFEST<sp/>file</highlight></codeline>
+<codeline><highlight class="normal">(with<sp/>a<sp/>new<sp/>number<sp/>embedded<sp/>in<sp/>the<sp/>file<sp/>name)<sp/>is<sp/>created<sp/>whenever<sp/>the<sp/>database</highlight></codeline>
+<codeline><highlight class="normal">is<sp/>reopened.<sp/>The<sp/>MANIFEST<sp/>file<sp/>is<sp/>formatted<sp/>as<sp/>a<sp/>log,<sp/>and<sp/>changes<sp/>made<sp/>to<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">serving<sp/>state<sp/>(as<sp/>files<sp/>are<sp/>added<sp/>or<sp/>removed)<sp/>are<sp/>appended<sp/>to<sp/>this<sp/>log.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Current</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">CURRENT<sp/>is<sp/>a<sp/>simple<sp/>text<sp/>file<sp/>that<sp/>contains<sp/>the<sp/>name<sp/>of<sp/>the<sp/>latest<sp/>MANIFEST</highlight></codeline>
+<codeline><highlight class="normal">file.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Info<sp/>logs</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Informational<sp/>messages<sp/>are<sp/>printed<sp/>to<sp/>files<sp/>named<sp/>LOG<sp/>and<sp/>LOG.old.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Others</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Other<sp/>files<sp/>used<sp/>for<sp/>miscellaneous<sp/>purposes<sp/>may<sp/>also<sp/>be<sp/>present<sp/>(LOCK,<sp/>*.dbtmp).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Level<sp/>0</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">When<sp/>the<sp/>log<sp/>file<sp/>grows<sp/>above<sp/>a<sp/>certain<sp/>size<sp/>(4MB<sp/>by<sp/>default):</highlight></codeline>
+<codeline><highlight class="normal">Create<sp/>a<sp/>brand<sp/>new<sp/>memtable<sp/>and<sp/>log<sp/>file<sp/>and<sp/>direct<sp/>future<sp/>updates<sp/>here.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">In<sp/>the<sp/>background:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">1.<sp/>Write<sp/>the<sp/>contents<sp/>of<sp/>the<sp/>previous<sp/>memtable<sp/>to<sp/>an<sp/>sstable.</highlight></codeline>
+<codeline><highlight class="normal">2.<sp/>Discard<sp/>the<sp/>memtable.</highlight></codeline>
+<codeline><highlight class="normal">3.<sp/>Delete<sp/>the<sp/>old<sp/>log<sp/>file<sp/>and<sp/>the<sp/>old<sp/>memtable.</highlight></codeline>
+<codeline><highlight class="normal">4.<sp/>Add<sp/>the<sp/>new<sp/>sstable<sp/>to<sp/>the<sp/>young<sp/>(level-0)<sp/>level.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Compactions</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">When<sp/>the<sp/>size<sp/>of<sp/>level<sp/>L<sp/>exceeds<sp/>its<sp/>limit,<sp/>we<sp/>compact<sp/>it<sp/>in<sp/>a<sp/>background</highlight></codeline>
+<codeline><highlight class="normal">thread.<sp/>The<sp/>compaction<sp/>picks<sp/>a<sp/>file<sp/>from<sp/>level<sp/>L<sp/>and<sp/>all<sp/>overlapping<sp/>files<sp/>from</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>next<sp/>level<sp/>L+1.<sp/>Note<sp/>that<sp/>if<sp/>a<sp/>level-L<sp/>file<sp/>overlaps<sp/>only<sp/>part<sp/>of<sp/>a</highlight></codeline>
+<codeline><highlight class="normal">level-(L+1)<sp/>file,<sp/>the<sp/>entire<sp/>file<sp/>at<sp/>level-(L+1)<sp/>is<sp/>used<sp/>as<sp/>an<sp/>input<sp/>to<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">compaction<sp/>and<sp/>will<sp/>be<sp/>discarded<sp/>after<sp/>the<sp/>compaction.<sp/><sp/>Aside:<sp/>because<sp/>level-0</highlight></codeline>
+<codeline><highlight class="normal">is<sp/>special<sp/>(files<sp/>in<sp/>it<sp/>may<sp/>overlap<sp/>each<sp/>other),<sp/>we<sp/>treat<sp/>compactions<sp/>from</highlight></codeline>
+<codeline><highlight class="normal">level-0<sp/>to<sp/>level-1<sp/>specially:<sp/>a<sp/>level-0<sp/>compaction<sp/>may<sp/>pick<sp/>more<sp/>than<sp/>one</highlight></codeline>
+<codeline><highlight class="normal">level-0<sp/>file<sp/>in<sp/>case<sp/>some<sp/>of<sp/>these<sp/>files<sp/>overlap<sp/>each<sp/>other.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>compaction<sp/>merges<sp/>the<sp/>contents<sp/>of<sp/>the<sp/>picked<sp/>files<sp/>to<sp/>produce<sp/>a<sp/>sequence<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">level-(L+1)<sp/>files.<sp/>We<sp/>switch<sp/>to<sp/>producing<sp/>a<sp/>new<sp/>level-(L+1)<sp/>file<sp/>after<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">current<sp/>output<sp/>file<sp/>has<sp/>reached<sp/>the<sp/>target<sp/>file<sp/>size<sp/>(2MB).<sp/>We<sp/>also<sp/>switch<sp/>to<sp/>a</highlight></codeline>
+<codeline><highlight class="normal">new<sp/>output<sp/>file<sp/>when<sp/>the<sp/>key<sp/>range<sp/>of<sp/>the<sp/>current<sp/>output<sp/>file<sp/>has<sp/>grown<sp/>enough</highlight></codeline>
+<codeline><highlight class="normal">to<sp/>overlap<sp/>more<sp/>than<sp/>ten<sp/>level-(L+2)<sp/>files.<sp/><sp/>This<sp/>last<sp/>rule<sp/>ensures<sp/>that<sp/>a<sp/>later</highlight></codeline>
+<codeline><highlight class="normal">compaction<sp/>of<sp/>a<sp/>level-(L+1)<sp/>file<sp/>will<sp/>not<sp/>pick<sp/>up<sp/>too<sp/>much<sp/>data<sp/>from</highlight></codeline>
+<codeline><highlight class="normal">level-(L+2).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>old<sp/>files<sp/>are<sp/>discarded<sp/>and<sp/>the<sp/>new<sp/>files<sp/>are<sp/>added<sp/>to<sp/>the<sp/>serving<sp/>state.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Compactions<sp/>for<sp/>a<sp/>particular<sp/>level<sp/>rotate<sp/>through<sp/>the<sp/>key<sp/>space.<sp/>In<sp/>more<sp/>detail,</highlight></codeline>
+<codeline><highlight class="normal">for<sp/>each<sp/>level<sp/>L,<sp/>we<sp/>remember<sp/>the<sp/>ending<sp/>key<sp/>of<sp/>the<sp/>last<sp/>compaction<sp/>at<sp/>level<sp/>L.</highlight></codeline>
+<codeline><highlight class="normal">The<sp/>next<sp/>compaction<sp/>for<sp/>level<sp/>L<sp/>will<sp/>pick<sp/>the<sp/>first<sp/>file<sp/>that<sp/>starts<sp/>after<sp/>this</highlight></codeline>
+<codeline><highlight class="normal">key<sp/>(wrapping<sp/>around<sp/>to<sp/>the<sp/>beginning<sp/>of<sp/>the<sp/>key<sp/>space<sp/>if<sp/>there<sp/>is<sp/>no<sp/>such</highlight></codeline>
+<codeline><highlight class="normal">file).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Compactions<sp/>drop<sp/>overwritten<sp/>values.<sp/>They<sp/>also<sp/>drop<sp/>deletion<sp/>markers<sp/>if<sp/>there</highlight></codeline>
+<codeline><highlight class="normal">are<sp/>no<sp/>higher<sp/>numbered<sp/>levels<sp/>that<sp/>contain<sp/>a<sp/>file<sp/>whose<sp/>range<sp/>overlaps<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">current<sp/>key.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Timing</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Level-0<sp/>compactions<sp/>will<sp/>read<sp/>up<sp/>to<sp/>four<sp/>1MB<sp/>files<sp/>from<sp/>level-0,<sp/>and<sp/>at<sp/>worst</highlight></codeline>
+<codeline><highlight class="normal">all<sp/>the<sp/>level-1<sp/>files<sp/>(10MB).<sp/>I.e.,<sp/>we<sp/>will<sp/>read<sp/>14MB<sp/>and<sp/>write<sp/>14MB.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Other<sp/>than<sp/>the<sp/>special<sp/>level-0<sp/>compactions,<sp/>we<sp/>will<sp/>pick<sp/>one<sp/>2MB<sp/>file<sp/>from<sp/>level</highlight></codeline>
+<codeline><highlight class="normal">L.<sp/>In<sp/>the<sp/>worst<sp/>case,<sp/>this<sp/>will<sp/>overlap<sp/>~<sp/>12<sp/>files<sp/>from<sp/>level<sp/>L+1<sp/>(10<sp/>because</highlight></codeline>
+<codeline><highlight class="normal">level-(L+1)<sp/>is<sp/>ten<sp/>times<sp/>the<sp/>size<sp/>of<sp/>level-L,<sp/>and<sp/>another<sp/>two<sp/>at<sp/>the<sp/>boundaries</highlight></codeline>
+<codeline><highlight class="normal">since<sp/>the<sp/>file<sp/>ranges<sp/>at<sp/>level-L<sp/>will<sp/>usually<sp/>not<sp/>be<sp/>aligned<sp/>with<sp/>the<sp/>file</highlight></codeline>
+<codeline><highlight class="normal">ranges<sp/>at<sp/>level-L+1).<sp/>The<sp/>compaction<sp/>will<sp/>therefore<sp/>read<sp/>26MB<sp/>and<sp/>write<sp/>26MB.</highlight></codeline>
+<codeline><highlight class="normal">Assuming<sp/>a<sp/>disk<sp/>IO<sp/>rate<sp/>of<sp/>100MB/s<sp/>(ballpark<sp/>range<sp/>for<sp/>modern<sp/>drives),<sp/>the<sp/>worst</highlight></codeline>
+<codeline><highlight class="normal">compaction<sp/>cost<sp/>will<sp/>be<sp/>approximately<sp/>0.5<sp/>second.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">If<sp/>we<sp/>throttle<sp/>the<sp/>background<sp/>writing<sp/>to<sp/>something<sp/>small,<sp/>say<sp/>10%<sp/>of<sp/>the<sp/>full</highlight></codeline>
+<codeline><highlight class="normal">100MB/s<sp/>speed,<sp/>a<sp/>compaction<sp/>may<sp/>take<sp/>up<sp/>to<sp/>5<sp/>seconds.<sp/>If<sp/>the<sp/>user<sp/>is<sp/>writing<sp/>at</highlight></codeline>
+<codeline><highlight class="normal">10MB/s,<sp/>we<sp/>might<sp/>build<sp/>up<sp/>lots<sp/>of<sp/>level-0<sp/>files<sp/>(~50<sp/>to<sp/>hold<sp/>the<sp/>5*10MB).<sp/>This</highlight></codeline>
+<codeline><highlight class="normal">may<sp/>significantly<sp/>increase<sp/>the<sp/>cost<sp/>of<sp/>reads<sp/>due<sp/>to<sp/>the<sp/>overhead<sp/>of<sp/>merging<sp/>more</highlight></codeline>
+<codeline><highlight class="normal">files<sp/>together<sp/>on<sp/>every<sp/>read.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Solution<sp/>1:<sp/>To<sp/>reduce<sp/>this<sp/>problem,<sp/>we<sp/>might<sp/>want<sp/>to<sp/>increase<sp/>the<sp/>log<sp/>switching</highlight></codeline>
+<codeline><highlight class="normal">threshold<sp/>when<sp/>the<sp/>number<sp/>of<sp/>level-0<sp/>files<sp/>is<sp/>large.<sp/>Though<sp/>the<sp/>downside<sp/>is<sp/>that</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>larger<sp/>this<sp/>threshold,<sp/>the<sp/>more<sp/>memory<sp/>we<sp/>will<sp/>need<sp/>to<sp/>hold<sp/>the</highlight></codeline>
+<codeline><highlight class="normal">corresponding<sp/>memtable.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Solution<sp/>2:<sp/>We<sp/>might<sp/>want<sp/>to<sp/>decrease<sp/>write<sp/>rate<sp/>artificially<sp/>when<sp/>the<sp/>number<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">level-0<sp/>files<sp/>goes<sp/>up.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Solution<sp/>3:<sp/>We<sp/>work<sp/>on<sp/>reducing<sp/>the<sp/>cost<sp/>of<sp/>very<sp/>wide<sp/>merges.<sp/>Perhaps<sp/>most<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>level-0<sp/>files<sp/>will<sp/>have<sp/>their<sp/>blocks<sp/>sitting<sp/>uncompressed<sp/>in<sp/>the<sp/>cache<sp/>and</highlight></codeline>
+<codeline><highlight class="normal">we<sp/>will<sp/>only<sp/>need<sp/>to<sp/>worry<sp/>about<sp/>the<sp/>O(N)<sp/>complexity<sp/>in<sp/>the<sp/>merging<sp/>iterator.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">###<sp/>Number<sp/>of<sp/>files</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Instead<sp/>of<sp/>always<sp/>making<sp/>2MB<sp/>files,<sp/>we<sp/>could<sp/>make<sp/>larger<sp/>files<sp/>for<sp/>larger<sp/>levels</highlight></codeline>
+<codeline><highlight class="normal">to<sp/>reduce<sp/>the<sp/>total<sp/>file<sp/>count,<sp/>though<sp/>at<sp/>the<sp/>expense<sp/>of<sp/>more<sp/>bursty</highlight></codeline>
+<codeline><highlight class="normal">compactions.<sp/><sp/>Alternatively,<sp/>we<sp/>could<sp/>shard<sp/>the<sp/>set<sp/>of<sp/>files<sp/>into<sp/>multiple</highlight></codeline>
+<codeline><highlight class="normal">directories.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">An<sp/>experiment<sp/>on<sp/>an<sp/>ext3<sp/>filesystem<sp/>on<sp/>Feb<sp/>04,<sp/>2011<sp/>shows<sp/>the<sp/>following<sp/>timings</highlight></codeline>
+<codeline><highlight class="normal">to<sp/>do<sp/>100K<sp/>file<sp/>opens<sp/>in<sp/>directories<sp/>with<sp/>varying<sp/>number<sp/>of<sp/>files:</highlight></codeline>
+<codeline></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">|<sp/>Files<sp/>in<sp/>directory<sp/>|<sp/>Microseconds<sp/>to<sp/>open<sp/>a<sp/>file<sp/>|</highlight></codeline>
+<codeline><highlight class="normal">|-------------------:|----------------------------:|</highlight></codeline>
+<codeline><highlight class="normal">|<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>1000<sp/>|<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>9<sp/>|</highlight></codeline>
+<codeline><highlight class="normal">|<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>10000<sp/>|<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>10<sp/>|</highlight></codeline>
+<codeline><highlight class="normal">|<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>100000<sp/>|<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>16<sp/>|</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">So<sp/>maybe<sp/>even<sp/>the<sp/>sharding<sp/>is<sp/>not<sp/>necessary<sp/>on<sp/>modern<sp/>filesystems?</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Recovery</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">*<sp/>Read<sp/>CURRENT<sp/>to<sp/>find<sp/>name<sp/>of<sp/>the<sp/>latest<sp/>committed<sp/>MANIFEST</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Read<sp/>the<sp/>named<sp/>MANIFEST<sp/>file</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Clean<sp/>up<sp/>stale<sp/>files</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>We<sp/>could<sp/>open<sp/>all<sp/>sstables<sp/>here,<sp/>but<sp/>it<sp/>is<sp/>probably<sp/>better<sp/>to<sp/>be<sp/>lazy...</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Convert<sp/>log<sp/>chunk<sp/>to<sp/>a<sp/>new<sp/>level-0<sp/>sstable</highlight></codeline>
+<codeline><highlight class="normal">*<sp/>Start<sp/>directing<sp/>new<sp/>writes<sp/>to<sp/>a<sp/>new<sp/>log<sp/>file<sp/>with<sp/>recovered<sp/>sequence#</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Garbage<sp/>collection<sp/>of<sp/>files</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">`DeleteObsoleteFiles()`<sp/>is<sp/>called<sp/>at<sp/>the<sp/>end<sp/>of<sp/>every<sp/>compaction<sp/>and<sp/>at<sp/>the<sp/>end</highlight></codeline>
+<codeline><highlight class="normal">of<sp/>recovery.<sp/>It<sp/>finds<sp/>the<sp/>names<sp/>of<sp/>all<sp/>files<sp/>in<sp/>the<sp/>database.<sp/>It<sp/>deletes<sp/>all<sp/>log</highlight></codeline>
+<codeline><highlight class="normal">files<sp/>that<sp/>are<sp/>not<sp/>the<sp/>current<sp/>log<sp/>file.<sp/>It<sp/>deletes<sp/>all<sp/>table<sp/>files<sp/>that<sp/>are<sp/>not</highlight></codeline>
+<codeline><highlight class="normal">referenced<sp/>from<sp/>some<sp/>level<sp/>and<sp/>are<sp/>not<sp/>the<sp/>output<sp/>of<sp/>an<sp/>active<sp/>compaction.</highlight></codeline>
+    </programlisting>
+    <location file="src/leveldb/doc/impl.md"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,305 @@
+.TH "src/qt/guiutil.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/qt/guiutil.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <qt/guiutil\&.h>\fP
+.br
+\fR#include <qt/bitcoinaddressvalidator\&.h>\fP
+.br
+\fR#include <qt/bitcoinunits\&.h>\fP
+.br
+\fR#include <qt/platformstyle\&.h>\fP
+.br
+\fR#include <qt/qvalidatedlineedit\&.h>\fP
+.br
+\fR#include <qt/sendcoinsrecipient\&.h>\fP
+.br
+\fR#include <addresstype\&.h>\fP
+.br
+\fR#include <base58\&.h>\fP
+.br
+\fR#include <chainparams\&.h>\fP
+.br
+\fR#include <common/args\&.h>\fP
+.br
+\fR#include <interfaces/node\&.h>\fP
+.br
+\fR#include <key_io\&.h>\fP
+.br
+\fR#include <logging\&.h>\fP
+.br
+\fR#include <policy/policy\&.h>\fP
+.br
+\fR#include <primitives/transaction\&.h>\fP
+.br
+\fR#include <protocol\&.h>\fP
+.br
+\fR#include <script/script\&.h>\fP
+.br
+\fR#include <util/chaintype\&.h>\fP
+.br
+\fR#include <util/exception\&.h>\fP
+.br
+\fR#include <util/fs\&.h>\fP
+.br
+\fR#include <util/fs_helpers\&.h>\fP
+.br
+\fR#include <util/time\&.h>\fP
+.br
+\fR#include <QAbstractButton>\fP
+.br
+\fR#include <QAbstractItemView>\fP
+.br
+\fR#include <QApplication>\fP
+.br
+\fR#include <QClipboard>\fP
+.br
+\fR#include <QDateTime>\fP
+.br
+\fR#include <QDesktopServices>\fP
+.br
+\fR#include <QDialog>\fP
+.br
+\fR#include <QDoubleValidator>\fP
+.br
+\fR#include <QFileDialog>\fP
+.br
+\fR#include <QFont>\fP
+.br
+\fR#include <QFontDatabase>\fP
+.br
+\fR#include <QFontMetrics>\fP
+.br
+\fR#include <QGuiApplication>\fP
+.br
+\fR#include <QJsonObject>\fP
+.br
+\fR#include <QKeyEvent>\fP
+.br
+\fR#include <QKeySequence>\fP
+.br
+\fR#include <QLatin1String>\fP
+.br
+\fR#include <QLineEdit>\fP
+.br
+\fR#include <QList>\fP
+.br
+\fR#include <QLocale>\fP
+.br
+\fR#include <QMenu>\fP
+.br
+\fR#include <QMouseEvent>\fP
+.br
+\fR#include <QPluginLoader>\fP
+.br
+\fR#include <QProgressDialog>\fP
+.br
+\fR#include <QRegularExpression>\fP
+.br
+\fR#include <QScreen>\fP
+.br
+\fR#include <QSettings>\fP
+.br
+\fR#include <QShortcut>\fP
+.br
+\fR#include <QSize>\fP
+.br
+\fR#include <QStandardPaths>\fP
+.br
+\fR#include <QString>\fP
+.br
+\fR#include <QTextDocument>\fP
+.br
+\fR#include <QThread>\fP
+.br
+\fR#include <QUrlQuery>\fP
+.br
+\fR#include <QtGlobal>\fP
+.br
+\fR#include <cassert>\fP
+.br
+\fR#include <chrono>\fP
+.br
+\fR#include <exception>\fP
+.br
+\fR#include <fstream>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Namespaces"
+
+.in +1c
+.ti -1c
+.RI "namespace \fBGUIUtil\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "QString \fBdateTimeStr\fP (const QDateTime &date)"
+.br
+.ti -1c
+.RI "QString \fBdateTimeStr\fP (qint64 nTime)"
+.br
+.ti -1c
+.RI "QFont \fBfixedPitchFont\fP (bool use_embedded_font)"
+.br
+.ti -1c
+.RI "void \fBsetupAddressWidget\fP (\fBQValidatedLineEdit\fP *widget, QWidget *parent)"
+.br
+.ti -1c
+.RI "void \fBAddButtonShortcut\fP (QAbstractButton *button, const QKeySequence &shortcut)"
+.br
+.ti -1c
+.RI "bool \fBparseBitcoinURI\fP (const QUrl &uri, \fBSendCoinsRecipient\fP *out)"
+.br
+.ti -1c
+.RI "bool \fBparseBitcoinURI\fP (QString uri, \fBSendCoinsRecipient\fP *out)"
+.br
+.ti -1c
+.RI "QString \fBformatBitcoinURI\fP (const \fBSendCoinsRecipient\fP &info)"
+.br
+.ti -1c
+.RI "bool \fBisDust\fP (\fBinterfaces::Node\fP &\fBnode\fP, const QString &address, const \fBCAmount\fP &amount)"
+.br
+.ti -1c
+.RI "QString \fBHtmlEscape\fP (const QString &str, bool fMultiLine)"
+.br
+.ti -1c
+.RI "QString \fBHtmlEscape\fP (const std::string &str, bool fMultiLine)"
+.br
+.ti -1c
+.RI "void \fBcopyEntryData\fP (const QAbstractItemView *view, int column, int role)"
+.br
+.ti -1c
+.RI "QList< QModelIndex > \fBgetEntryData\fP (const QAbstractItemView *view, int column)"
+.br
+.ti -1c
+.RI "bool \fBhasEntryData\fP (const QAbstractItemView *view, int column, int role)"
+.br
+.ti -1c
+.RI "void \fBLoadFont\fP (const QString &file_name)"
+.br
+.ti -1c
+.RI "QString \fBgetDefaultDataDirectory\fP ()"
+.br
+.ti -1c
+.RI "QString \fBExtractFirstSuffixFromFilter\fP (const QString &filter)"
+.br
+.ti -1c
+.RI "QString \fBgetSaveFileName\fP (QWidget *parent, const QString &caption, const QString &dir, const QString &filter, QString *selectedSuffixOut)"
+.br
+.ti -1c
+.RI "QString \fBgetOpenFileName\fP (QWidget *parent, const QString &caption, const QString &dir, const QString &filter, QString *selectedSuffixOut)"
+.br
+.ti -1c
+.RI "Qt::ConnectionType \fBblockingGUIThreadConnection\fP ()"
+.br
+.ti -1c
+.RI "bool \fBcheckPoint\fP (const QPoint &p, const QWidget *w)"
+.br
+.ti -1c
+.RI "bool \fBisObscured\fP (QWidget *w)"
+.br
+.ti -1c
+.RI "void \fBbringToFront\fP (QWidget *w)"
+.br
+.ti -1c
+.RI "void \fBhandleCloseWindowShortcut\fP (QWidget *w)"
+.br
+.ti -1c
+.RI "void \fBopenDebugLogfile\fP ()"
+.br
+.ti -1c
+.RI "bool \fBopenBitcoinConf\fP ()"
+.br
+.ti -1c
+.RI "bool \fBGetStartOnSystemStartup\fP ()"
+.br
+.ti -1c
+.RI "bool \fBSetStartOnSystemStartup\fP (bool fAutoStart)"
+.br
+.ti -1c
+.RI "void \fBsetClipboard\fP (const QString &str)"
+.br
+.ti -1c
+.RI "\fBfs::path\fP \fBQStringToPath\fP (const QString &path)"
+.br
+.ti -1c
+.RI "QString \fBPathToQString\fP (const \fBfs::path\fP &path)"
+.br
+.ti -1c
+.RI "QString \fBNetworkToQString\fP (\fBNetwork\fP net)"
+.br
+.ti -1c
+.RI "QString \fBConnectionTypeToQString\fP (\fBConnectionType\fP conn_type, bool prepend_direction)"
+.br
+.ti -1c
+.RI "QString \fBformatDurationStr\fP (std::chrono::seconds dur)"
+.br
+.ti -1c
+.RI "QString \fBFormatPeerAge\fP (std::chrono::seconds time_connected)"
+.br
+.ti -1c
+.RI "QString \fBformatServicesStr\fP (quint64 mask)"
+.br
+.ti -1c
+.RI "QString \fBformatPingTime\fP (std::chrono::microseconds ping_time)"
+.br
+.ti -1c
+.RI "QString \fBformatTimeOffset\fP (int64_t time_offset)"
+.br
+.ti -1c
+.RI "QString \fBformatNiceTimeOffset\fP (qint64 secs)"
+.br
+.ti -1c
+.RI "QString \fBformatBytes\fP (uint64_t bytes)"
+.br
+.ti -1c
+.RI "qreal \fBcalculateIdealFontSize\fP (int width, const QString &text, QFont font, qreal minPointSize, qreal font_size)"
+.br
+.ti -1c
+.RI "void \fBPolishProgressDialog\fP (QProgressDialog *dialog)"
+.br
+.ti -1c
+.RI "int \fBTextWidth\fP (const QFontMetrics &fm, const QString &text)"
+.br
+.ti -1c
+.RI "void \fBLogQtInfo\fP ()"
+.br
+.ti -1c
+.RI "void \fBPopupMenu\fP (QMenu *menu, const QPoint &point, QAction *at_action)"
+.br
+.ti -1c
+.RI "QDateTime \fBStartOfDay\fP (const QDate &date)"
+.br
+.ti -1c
+.RI "bool \fBHasPixmap\fP (const QLabel *label)"
+.br
+.ti -1c
+.RI "QString \fBMakeHtmlLink\fP (const QString &source, const QString &link)"
+.br
+.ti -1c
+.RI "void \fBPrintSlotException\fP (const std::exception *exception, const QObject *sender, const QObject *receiver)"
+.br
+.ti -1c
+.RI "void \fBShowModalDialogAsynchronously\fP (QDialog *dialog)"
+.br
+.ti -1c
+.RI "QString \fBWalletDisplayName\fP (const QString &\fBname\fP)"
+.br
+.ti -1c
+.RI "QString \fBWalletDisplayName\fP (const std::string &\fBname\fP)"
+.br
+.in -1c
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

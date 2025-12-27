@@ -1,0 +1,2443 @@
+.TH "src/kernel/bitcoinkernel.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/kernel/bitcoinkernel.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <stddef\&.h>\fP
+.br
+\fR#include <stdint\&.h>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBbtck_ValidationInterfaceCallbacks\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_NotificationInterfaceCallbacks\fP"
+.br
+.ti -1c
+.RI "struct \fBbtck_LoggingOptions\fP"
+.br
+.in -1c
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBBITCOINKERNEL_API\fP"
+.br
+.ti -1c
+.RI "#define \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP"
+.br
+.ti -1c
+.RI "#define \fBBITCOINKERNEL_ARG_NONNULL\fP(\&.\&.\&.)"
+.br
+.ti -1c
+.RI "#define \fBbtck_SynchronizationState_INIT_REINDEX\fP   ((\fBbtck_SynchronizationState\fP)(0))"
+.br
+.ti -1c
+.RI "#define \fBbtck_SynchronizationState_INIT_DOWNLOAD\fP   ((\fBbtck_SynchronizationState\fP)(1))"
+.br
+.ti -1c
+.RI "#define \fBbtck_SynchronizationState_POST_INIT\fP   ((\fBbtck_SynchronizationState\fP)(2))"
+.br
+.ti -1c
+.RI "#define \fBbtck_Warning_UNKNOWN_NEW_RULES_ACTIVATED\fP   ((\fBbtck_Warning\fP)(0))"
+.br
+.ti -1c
+.RI "#define \fBbtck_Warning_LARGE_WORK_INVALID_CHAIN\fP   ((\fBbtck_Warning\fP)(1))"
+.br
+.ti -1c
+.RI "#define \fBbtck_ValidationMode_VALID\fP   ((\fBbtck_ValidationMode\fP)(0))"
+.br
+.ti -1c
+.RI "#define \fBbtck_ValidationMode_INVALID\fP   ((\fBbtck_ValidationMode\fP)(1))"
+.br
+.ti -1c
+.RI "#define \fBbtck_ValidationMode_INTERNAL_ERROR\fP   ((\fBbtck_ValidationMode\fP)(2))"
+.br
+.ti -1c
+.RI "#define \fBbtck_BlockValidationResult_UNSET\fP   ((\fBbtck_BlockValidationResult\fP)(0))"
+.br
+.RI "initial value\&. Block has not yet been rejected "
+.ti -1c
+.RI "#define \fBbtck_BlockValidationResult_CONSENSUS\fP   ((\fBbtck_BlockValidationResult\fP)(1))"
+.br
+.RI "invalid by consensus rules (excluding any below reasons) "
+.ti -1c
+.RI "#define \fBbtck_BlockValidationResult_CACHED_INVALID\fP   ((\fBbtck_BlockValidationResult\fP)(2))"
+.br
+.RI "this block was cached as being invalid and we didn't store the reason why "
+.ti -1c
+.RI "#define \fBbtck_BlockValidationResult_INVALID_HEADER\fP   ((\fBbtck_BlockValidationResult\fP)(3))"
+.br
+.RI "invalid proof of work or time too old "
+.ti -1c
+.RI "#define \fBbtck_BlockValidationResult_MUTATED\fP   ((\fBbtck_BlockValidationResult\fP)(4))"
+.br
+.RI "the block's data didn't match the data committed to by the PoW "
+.ti -1c
+.RI "#define \fBbtck_BlockValidationResult_MISSING_PREV\fP   ((\fBbtck_BlockValidationResult\fP)(5))"
+.br
+.RI "We don't have the previous block the checked one is built on\&. "
+.ti -1c
+.RI "#define \fBbtck_BlockValidationResult_INVALID_PREV\fP   ((\fBbtck_BlockValidationResult\fP)(6))"
+.br
+.RI "A block this one builds on is invalid\&. "
+.ti -1c
+.RI "#define \fBbtck_BlockValidationResult_TIME_FUTURE\fP   ((\fBbtck_BlockValidationResult\fP)(7))"
+.br
+.RI "block timestamp was > 2 hours in the future (or our clock is bad) "
+.ti -1c
+.RI "#define \fBbtck_BlockValidationResult_HEADER_LOW_WORK\fP   ((\fBbtck_BlockValidationResult\fP)(8))"
+.br
+.RI "the block header may be on a too-little-work chain "
+.ti -1c
+.RI "#define \fBbtck_LogCategory_ALL\fP   ((\fBbtck_LogCategory\fP)(0))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogCategory_BENCH\fP   ((\fBbtck_LogCategory\fP)(1))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogCategory_BLOCKSTORAGE\fP   ((\fBbtck_LogCategory\fP)(2))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogCategory_COINDB\fP   ((\fBbtck_LogCategory\fP)(3))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogCategory_LEVELDB\fP   ((\fBbtck_LogCategory\fP)(4))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogCategory_MEMPOOL\fP   ((\fBbtck_LogCategory\fP)(5))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogCategory_PRUNE\fP   ((\fBbtck_LogCategory\fP)(6))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogCategory_RAND\fP   ((\fBbtck_LogCategory\fP)(7))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogCategory_REINDEX\fP   ((\fBbtck_LogCategory\fP)(8))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogCategory_VALIDATION\fP   ((\fBbtck_LogCategory\fP)(9))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogCategory_KERNEL\fP   ((\fBbtck_LogCategory\fP)(10))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogLevel_TRACE\fP   ((\fBbtck_LogLevel\fP)(0))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogLevel_DEBUG\fP   ((\fBbtck_LogLevel\fP)(1))"
+.br
+.ti -1c
+.RI "#define \fBbtck_LogLevel_INFO\fP   ((\fBbtck_LogLevel\fP)(2))"
+.br
+.ti -1c
+.RI "#define \fBbtck_ScriptVerifyStatus_OK\fP   ((\fBbtck_ScriptVerifyStatus\fP)(0))"
+.br
+.ti -1c
+.RI "#define \fBbtck_ScriptVerifyStatus_ERROR_INVALID_FLAGS_COMBINATION\fP   ((\fBbtck_ScriptVerifyStatus\fP)(1))"
+.br
+.RI "The flags were combined in an invalid way\&. "
+.ti -1c
+.RI "#define \fBbtck_ScriptVerifyStatus_ERROR_SPENT_OUTPUTS_REQUIRED\fP   ((\fBbtck_ScriptVerifyStatus\fP)(2))"
+.br
+.RI "The taproot flag was set, so valid spent_outputs have to be provided\&. "
+.ti -1c
+.RI "#define \fBbtck_ScriptVerificationFlags_NONE\fP   ((\fBbtck_ScriptVerificationFlags\fP)(0))"
+.br
+.ti -1c
+.RI "#define \fBbtck_ScriptVerificationFlags_P2SH\fP   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 0))"
+.br
+.RI "evaluate P2SH (BIP16) subscripts "
+.ti -1c
+.RI "#define \fBbtck_ScriptVerificationFlags_DERSIG\fP   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 2))"
+.br
+.RI "enforce strict DER (BIP66) compliance "
+.ti -1c
+.RI "#define \fBbtck_ScriptVerificationFlags_NULLDUMMY\fP   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 4))"
+.br
+.RI "enforce NULLDUMMY (BIP147) "
+.ti -1c
+.RI "#define \fBbtck_ScriptVerificationFlags_CHECKLOCKTIMEVERIFY\fP   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 9))"
+.br
+.RI "enable CHECKLOCKTIMEVERIFY (BIP65) "
+.ti -1c
+.RI "#define \fBbtck_ScriptVerificationFlags_CHECKSEQUENCEVERIFY\fP   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 10))"
+.br
+.RI "enable CHECKSEQUENCEVERIFY (BIP112) "
+.ti -1c
+.RI "#define \fBbtck_ScriptVerificationFlags_WITNESS\fP   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 11))"
+.br
+.RI "enable WITNESS (BIP141) "
+.ti -1c
+.RI "#define \fBbtck_ScriptVerificationFlags_TAPROOT\fP   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 17))"
+.br
+.RI "enable TAPROOT (BIPs 341 & 342) "
+.ti -1c
+.RI "#define \fBbtck_ScriptVerificationFlags_ALL\fP"
+.br
+.ti -1c
+.RI "#define \fBbtck_ChainType_MAINNET\fP   ((\fBbtck_ChainType\fP)(0))"
+.br
+.ti -1c
+.RI "#define \fBbtck_ChainType_TESTNET\fP   ((\fBbtck_ChainType\fP)(1))"
+.br
+.ti -1c
+.RI "#define \fBbtck_ChainType_TESTNET_4\fP   ((\fBbtck_ChainType\fP)(2))"
+.br
+.ti -1c
+.RI "#define \fBbtck_ChainType_SIGNET\fP   ((\fBbtck_ChainType\fP)(3))"
+.br
+.ti -1c
+.RI "#define \fBbtck_ChainType_REGTEST\fP   ((\fBbtck_ChainType\fP)(4))"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "typedef struct btck_Transaction \fBbtck_Transaction\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_ScriptPubkey \fBbtck_ScriptPubkey\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_TransactionOutput \fBbtck_TransactionOutput\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_LoggingConnection \fBbtck_LoggingConnection\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_ChainParameters \fBbtck_ChainParameters\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_ContextOptions \fBbtck_ContextOptions\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_Context \fBbtck_Context\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_BlockTreeEntry \fBbtck_BlockTreeEntry\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_ChainstateManagerOptions \fBbtck_ChainstateManagerOptions\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_ChainstateManager \fBbtck_ChainstateManager\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_Block \fBbtck_Block\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_BlockValidationState \fBbtck_BlockValidationState\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_Chain \fBbtck_Chain\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_BlockSpentOutputs \fBbtck_BlockSpentOutputs\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_TransactionSpentOutputs \fBbtck_TransactionSpentOutputs\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_Coin \fBbtck_Coin\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_BlockHash \fBbtck_BlockHash\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_TransactionInput \fBbtck_TransactionInput\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_TransactionOutPoint \fBbtck_TransactionOutPoint\fP"
+.br
+.ti -1c
+.RI "typedef struct btck_Txid \fBbtck_Txid\fP"
+.br
+.ti -1c
+.RI "typedef uint8_t \fBbtck_SynchronizationState\fP"
+.br
+.ti -1c
+.RI "typedef uint8_t \fBbtck_Warning\fP"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_LogCallback\fP) (void *user_data, const char *message, size_t message_len)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_DestroyCallback\fP) (void *user_data)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_NotifyBlockTip\fP) (void *user_data, \fBbtck_SynchronizationState\fP state, const \fBbtck_BlockTreeEntry\fP *entry, double verification_progress)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_NotifyHeaderTip\fP) (void *user_data, \fBbtck_SynchronizationState\fP state, int64_t height, int64_t timestamp, int presync)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_NotifyProgress\fP) (void *user_data, const char *title, size_t title_len, int progress_percent, int resume_possible)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_NotifyWarningSet\fP) (void *user_data, \fBbtck_Warning\fP warning, const char *message, size_t message_len)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_NotifyWarningUnset\fP) (void *user_data, \fBbtck_Warning\fP warning)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_NotifyFlushError\fP) (void *user_data, const char *message, size_t message_len)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_NotifyFatalError\fP) (void *user_data, const char *message, size_t message_len)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_ValidationInterfaceBlockChecked\fP) (void *user_data, \fBbtck_Block\fP *block, const \fBbtck_BlockValidationState\fP *state)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_ValidationInterfacePoWValidBlock\fP) (void *user_data, \fBbtck_Block\fP *block, const \fBbtck_BlockTreeEntry\fP *entry)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_ValidationInterfaceBlockConnected\fP) (void *user_data, \fBbtck_Block\fP *block, const \fBbtck_BlockTreeEntry\fP *entry)"
+.br
+.ti -1c
+.RI "typedef void(* \fBbtck_ValidationInterfaceBlockDisconnected\fP) (void *user_data, \fBbtck_Block\fP *block, const \fBbtck_BlockTreeEntry\fP *entry)"
+.br
+.ti -1c
+.RI "typedef int(* \fBbtck_WriteBytes\fP) (const void *bytes, size_t size, void *userdata)"
+.br
+.ti -1c
+.RI "typedef uint8_t \fBbtck_ValidationMode\fP"
+.br
+.ti -1c
+.RI "typedef uint32_t \fBbtck_BlockValidationResult\fP"
+.br
+.ti -1c
+.RI "typedef uint8_t \fBbtck_LogCategory\fP"
+.br
+.ti -1c
+.RI "typedef uint8_t \fBbtck_LogLevel\fP"
+.br
+.ti -1c
+.RI "typedef uint8_t \fBbtck_ScriptVerifyStatus\fP"
+.br
+.ti -1c
+.RI "typedef uint32_t \fBbtck_ScriptVerificationFlags\fP"
+.br
+.ti -1c
+.RI "typedef uint8_t \fBbtck_ChainType\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.PP
+.RI "\fBTransaction\fP"
+.br
+Functions for working with transactions\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_Transaction\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_create\fP (const void *raw_transaction, size_t raw_transaction_len)"
+.br
+.RI "Create a new transaction from the serialized data\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_Transaction\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_copy\fP (const \fBbtck_Transaction\fP *transaction) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Copy a transaction\&. Transactions are reference counted, so this just increments the reference count\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBbtck_transaction_to_bytes\fP (const \fBbtck_Transaction\fP *transaction, \fBbtck_WriteBytes\fP writer, void *user_data) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Serializes the transaction through the passed in callback to bytes\&. This is consensus serialization that is also used for the P2P network\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_API\fP size_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_count_outputs\fP (const \fBbtck_Transaction\fP *transaction) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Get the number of outputs of a transaction\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_TransactionOutput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_get_output_at\fP (const \fBbtck_Transaction\fP *transaction, size_t output_index) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Get the transaction outputs at the provided index\&. The returned transaction output is not owned and depends on the lifetime of the transaction\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_TransactionInput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_get_input_at\fP (const \fBbtck_Transaction\fP *transaction, size_t input_index) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Get the transaction input at the provided index\&. The returned transaction input is not owned and depends on the lifetime of the transaction\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP size_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_count_inputs\fP (const \fBbtck_Transaction\fP *transaction) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Get the number of inputs of a transaction\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_Txid\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_get_txid\fP (const \fBbtck_Transaction\fP *transaction) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Get the txid of a transaction\&. The returned txid is not owned and depends on the lifetime of the transaction\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_transaction_destroy\fP (\fBbtck_Transaction\fP *transaction)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBScriptPubkey\fP"
+.br
+Functions for working with script pubkeys\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_ScriptPubkey\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_script_pubkey_create\fP (const void *script_pubkey, size_t script_pubkey_len)"
+.br
+.RI "Create a script pubkey from serialized data\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_ScriptPubkey\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_script_pubkey_copy\fP (const \fBbtck_ScriptPubkey\fP *script_pubkey) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Copy a script pubkey\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_script_pubkey_verify\fP (const \fBbtck_ScriptPubkey\fP *script_pubkey, int64_t amount, const \fBbtck_Transaction\fP *tx_to, const \fBbtck_TransactionOutput\fP **spent_outputs, size_t spent_outputs_len, unsigned int input_index, \fBbtck_ScriptVerificationFlags\fP \fBflags\fP, \fBbtck_ScriptVerifyStatus\fP *status) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Verify if the input at input_index of tx_to spends the script pubkey under the constraints specified by flags\&. If the \fR\fBbtck_ScriptVerificationFlags_WITNESS\fP\fP flag is set in the flags bitfield, the amount parameter is used\&. If the taproot flag is set, the spent outputs parameter is used to validate taproot transactions\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP int \fBbtck_script_pubkey_to_bytes\fP (const \fBbtck_ScriptPubkey\fP *script_pubkey, \fBbtck_WriteBytes\fP writer, void *user_data) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Serializes the script pubkey through the passed in callback to bytes\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_API\fP void \fBbtck_script_pubkey_destroy\fP (\fBbtck_ScriptPubkey\fP *script_pubkey)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBTransactionOutput\fP"
+.br
+Functions for working with transaction outputs\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_TransactionOutput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_output_create\fP (const \fBbtck_ScriptPubkey\fP *script_pubkey, int64_t amount) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Create a transaction output from a script pubkey and an amount\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_ScriptPubkey\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_output_get_script_pubkey\fP (const \fBbtck_TransactionOutput\fP *transaction_output) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Get the script pubkey of the output\&. The returned script pubkey is not owned and depends on the lifetime of the transaction output\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int64_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_output_get_amount\fP (const \fBbtck_TransactionOutput\fP *transaction_output) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Get the amount in the output\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_TransactionOutput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_output_copy\fP (const \fBbtck_TransactionOutput\fP *transaction_output) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Copy a transaction output\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_transaction_output_destroy\fP (\fBbtck_TransactionOutput\fP *transaction_output)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBLogging\fP"
+.br
+Logging-related functions\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_logging_disable\fP ()"
+.br
+.RI "This disables the global internal logger\&. No log messages will be buffered internally anymore once this is called and the buffer is cleared\&. This function should only be called once and is not thread or re-entry safe\&. Log messages will be buffered until this function is called, or a logging connection is created\&. This must not be called while a logging connection already exists\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_logging_set_options\fP (const \fBbtck_LoggingOptions\fP options)"
+.br
+.RI "Set some options for the global internal logger\&. This changes global settings and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_logging_set_level_category\fP (\fBbtck_LogCategory\fP category, \fBbtck_LogLevel\fP level)"
+.br
+.RI "Set the log level of the global internal logger\&. This does not enable the selected categories\&. Use \fBbtck_logging_enable_category\fP to start logging from a specific, or all categories\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_logging_enable_category\fP (\fBbtck_LogCategory\fP category)"
+.br
+.RI "Enable a specific log category for the global internal logger\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_logging_disable_category\fP (\fBbtck_LogCategory\fP category)"
+.br
+.RI "Disable a specific log category for the global internal logger\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_LoggingConnection\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_logging_connection_create\fP (\fBbtck_LogCallback\fP log_callback, void *user_data, \fBbtck_DestroyCallback\fP user_data_destroy_callback) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Start logging messages through the provided callback\&. Log messages produced before this function is first called are buffered and on calling this function are logged immediately\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_logging_connection_destroy\fP (\fBbtck_LoggingConnection\fP *logging_connection)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBChainParameters\fP"
+.br
+Functions for working with chain parameters\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_ChainParameters\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chain_parameters_create\fP (const \fBbtck_ChainType\fP chain_type)"
+.br
+.RI "Creates a chain parameters struct with default parameters based on the passed in chain type\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_ChainParameters\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chain_parameters_copy\fP (const \fBbtck_ChainParameters\fP *chain_parameters) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_chain_parameters_destroy\fP (\fBbtck_ChainParameters\fP *chain_parameters)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBContextOptions\fP"
+.br
+Functions for working with context options\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_ContextOptions\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_context_options_create\fP ()"
+.br
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_context_options_set_chainparams\fP (\fBbtck_ContextOptions\fP *context_options, const \fBbtck_ChainParameters\fP *chain_parameters) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Sets the chain params for the context options\&. The context created with the options will be configured for these chain parameters\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBBITCOINKERNEL_API\fP void \fBbtck_context_options_set_notifications\fP (\fBbtck_ContextOptions\fP *context_options, \fBbtck_NotificationInterfaceCallbacks\fP notifications) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Set the kernel notifications for the context options\&. The context created with the options will be configured with these notifications\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_context_options_set_validation_interface\fP (\fBbtck_ContextOptions\fP *context_options, \fBbtck_ValidationInterfaceCallbacks\fP validation_interface_callbacks) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Set the validation interface callbacks for the context options\&. The context created with the options will be configured for these validation interface callbacks\&. The callbacks will then be triggered from validation events issued by the chainstate manager created from the same context\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_context_options_destroy\fP (\fBbtck_ContextOptions\fP *context_options)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBContext\fP"
+.br
+Functions for working with contexts\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_Context\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_context_create\fP (const \fBbtck_ContextOptions\fP *context_options)"
+.br
+.RI "Create a new kernel context\&. If the options have not been previously set, their corresponding fields will be initialized to default values; the context will assume mainnet chain parameters and won't attempt to call the kernel notification callbacks\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_Context\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_context_copy\fP (const \fBbtck_Context\fP *context) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_context_interrupt\fP (\fBbtck_Context\fP *context) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Interrupt can be used to halt long-running validation functions like when reindexing, importing or processing blocks\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_context_destroy\fP (\fBbtck_Context\fP *context)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBBlockTreeEntry\fP"
+.br
+Functions for working with block tree entries\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_BlockTreeEntry\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_tree_entry_get_previous\fP (const \fBbtck_BlockTreeEntry\fP *block_tree_entry) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Returns the previous block tree entry in the tree, or null if the current block tree entry is the genesis block\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int32_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_tree_entry_get_height\fP (const \fBbtck_BlockTreeEntry\fP *block_tree_entry) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Return the height of a certain block tree entry\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_BlockHash\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_tree_entry_get_block_hash\fP (const \fBbtck_BlockTreeEntry\fP *block_tree_entry) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Return the block hash associated with a block tree entry\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_tree_entry_equals\fP (const \fBbtck_BlockTreeEntry\fP *entry1, const \fBbtck_BlockTreeEntry\fP *entry2) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Check if two block tree entries are equal\&. Two block tree entries are equal when they point to the same block\&. "
+.in -1c
+.in -1c
+.PP
+.RI "\fBChainstateManagerOptions\fP"
+.br
+Functions for working with chainstate manager options\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_ChainstateManagerOptions\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chainstate_manager_options_create\fP (const \fBbtck_Context\fP *context, const char *data_directory, size_t data_directory_len, const char *blocks_directory, size_t blocks_directory_len) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Create options for the chainstate manager\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_chainstate_manager_options_set_worker_threads_num\fP (\fBbtck_ChainstateManagerOptions\fP *chainstate_manager_options, int worker_threads) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Set the number of available worker threads used during validation\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chainstate_manager_options_set_wipe_dbs\fP (\fBbtck_ChainstateManagerOptions\fP *chainstate_manager_options, int wipe_block_tree_db, int wipe_chainstate_db) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Sets wipe db in the options\&. In combination with calling \fBbtck_chainstate_manager_import_blocks\fP this triggers either a full reindex, or a reindex of just the chainstate database\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_chainstate_manager_options_update_block_tree_db_in_memory\fP (\fBbtck_ChainstateManagerOptions\fP *chainstate_manager_options, int block_tree_db_in_memory) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Sets block tree db in memory in the options\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_chainstate_manager_options_update_chainstate_db_in_memory\fP (\fBbtck_ChainstateManagerOptions\fP *chainstate_manager_options, int chainstate_db_in_memory) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Sets chainstate db in memory in the options\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_chainstate_manager_options_destroy\fP (\fBbtck_ChainstateManagerOptions\fP *chainstate_manager_options)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBChainstateManager\fP"
+.br
+Functions for chainstate management\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_ChainstateManager\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chainstate_manager_create\fP (const \fBbtck_ChainstateManagerOptions\fP *chainstate_manager_options) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Create a chainstate manager\&. This is the main object for many validation tasks as well as for retrieving data from the chain and interacting with its chainstate and indexes\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chainstate_manager_import_blocks\fP (\fBbtck_ChainstateManager\fP *chainstate_manager, const char **block_file_paths_data, size_t *block_file_paths_lens, size_t block_file_paths_data_len) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Triggers the start of a reindex if the wipe options were previously set for the chainstate manager\&. Can also import an array of existing block files selected by the user\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chainstate_manager_process_block\fP (\fBbtck_ChainstateManager\fP *chainstate_manager, const \fBbtck_Block\fP *block, int *new_block) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Process and validate the passed in block with the chainstate manager\&. Processing first does checks on the block, and if these passed, saves it to disk\&. It then validates the block against the utxo set\&. If it is valid, the chain is extended with it\&. The return value is not indicative of the block's validity\&. Detailed information on the validity of the block can be retrieved by registering the \fRblock_checked\fP callback in the validation interface\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP const \fBbtck_Chain\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chainstate_manager_get_active_chain\fP (const \fBbtck_ChainstateManager\fP *chainstate_manager) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Returns the best known currently active chain\&. Its lifetime is dependent on the chainstate manager\&. It can be thought of as a view on a vector of block tree entries that form the best chain\&. The returned chain reference always points to the currently active best chain\&. However, state transitions within the chainstate manager (e\&.g\&., processing blocks) will update the chain's contents\&. Data retrieved from this chain is only consistent up to the point when new data is processed in the chainstate manager\&. It is the user's responsibility to guard against these inconsistencies\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_BlockTreeEntry\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chainstate_manager_get_block_tree_entry_by_hash\fP (const \fBbtck_ChainstateManager\fP *chainstate_manager, const \fBbtck_BlockHash\fP *block_hash) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Retrieve a block tree entry by its block hash\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_BlockTreeEntry\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP void \fBbtck_chainstate_manager_destroy\fP (\fBbtck_ChainstateManager\fP *chainstate_manager)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBBlock\fP"
+.br
+Functions for working with blocks\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_Block\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_read\fP (const \fBbtck_ChainstateManager\fP *chainstate_manager, const \fBbtck_BlockTreeEntry\fP *block_tree_entry) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Reads the block the passed in block tree entry points to from disk and returns it\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_Block\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP \fBbtck_Block\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_create\fP (const void *raw_block, size_t raw_block_len)"
+.br
+.RI "Parse a serialized raw block into a new block object\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_Block\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_copy\fP (const \fBbtck_Block\fP *block) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Copy a block\&. Blocks are reference counted, so this just increments the reference count\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP size_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_count_transactions\fP (const \fBbtck_Block\fP *block) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Count the number of transactions contained in a block\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_Transaction\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_get_transaction_at\fP (const \fBbtck_Block\fP *block, size_t transaction_index) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Get the transaction at the provided index\&. The returned transaction is not owned and depends on the lifetime of the block\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_BlockHash\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_get_hash\fP (const \fBbtck_Block\fP *block) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Calculate and return the hash of a block\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBbtck_block_to_bytes\fP (const \fBbtck_Block\fP *block, \fBbtck_WriteBytes\fP writer, void *user_data) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Serializes the block through the passed in callback to bytes\&. This is consensus serialization that is also used for the P2P network\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_API\fP void \fBbtck_block_destroy\fP (\fBbtck_Block\fP *block)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBBlockValidationState\fP"
+.br
+Functions for working with block validation states\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_ValidationMode\fP \fBbtck_block_validation_state_get_validation_mode\fP (const \fBbtck_BlockValidationState\fP *block_validation_state) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_BlockValidationResult\fP \fBbtck_block_validation_state_get_block_validation_result\fP (const \fBbtck_BlockValidationState\fP *block_validation_state) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBChain\fP"
+.br
+Functions for working with the chain 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int32_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chain_get_height\fP (const \fBbtck_Chain\fP *chain) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Return the height of the tip of the chain\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_BlockTreeEntry\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chain_get_by_height\fP (const \fBbtck_Chain\fP *chain, int block_height) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Retrieve a block tree entry by its height in the currently active chain\&. Once retrieved there is no guarantee that it remains in the active chain\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_chain_contains\fP (const \fBbtck_Chain\fP *chain, const \fBbtck_BlockTreeEntry\fP *block_tree_entry) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Return true if the passed in chain contains the block tree entry\&. "
+.in -1c
+.in -1c
+.PP
+.RI "\fBBlockSpentOutputs\fP"
+.br
+Functions for working with block spent outputs\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_BlockSpentOutputs\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_spent_outputs_read\fP (const \fBbtck_ChainstateManager\fP *chainstate_manager, const \fBbtck_BlockTreeEntry\fP *block_tree_entry) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Reads the block spent coins data the passed in block tree entry points to from disk and returns it\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_BlockSpentOutputs\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP \fBbtck_BlockSpentOutputs\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_spent_outputs_copy\fP (const \fBbtck_BlockSpentOutputs\fP *block_spent_outputs) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Copy a block's spent outputs\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP size_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_spent_outputs_count\fP (const \fBbtck_BlockSpentOutputs\fP *block_spent_outputs) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Returns the number of transaction spent outputs whose data is contained in block spent outputs\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_TransactionSpentOutputs\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_spent_outputs_get_transaction_spent_outputs_at\fP (const \fBbtck_BlockSpentOutputs\fP *block_spent_outputs, size_t transaction_spent_outputs_index) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Returns a transaction spent outputs contained in the block spent outputs at a certain index\&. The returned pointer is unowned and only valid for the lifetime of block_spent_outputs\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_block_spent_outputs_destroy\fP (\fBbtck_BlockSpentOutputs\fP *block_spent_outputs)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBTransactionSpentOutputs\fP"
+.br
+Functions for working with the spent coins of a transaction 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_TransactionSpentOutputs\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_spent_outputs_copy\fP (const \fBbtck_TransactionSpentOutputs\fP *transaction_spent_outputs) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Copy a transaction's spent outputs\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP size_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_spent_outputs_count\fP (const \fBbtck_TransactionSpentOutputs\fP *transaction_spent_outputs) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Returns the number of previous transaction outputs contained in the transaction spent outputs data\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_Coin\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_spent_outputs_get_coin_at\fP (const \fBbtck_TransactionSpentOutputs\fP *transaction_spent_outputs, size_t coin_index) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Returns a coin contained in the transaction spent outputs at a certain index\&. The returned pointer is unowned and only valid for the lifetime of transaction_spent_outputs\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_transaction_spent_outputs_destroy\fP (\fBbtck_TransactionSpentOutputs\fP *transaction_spent_outputs)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBTransaction Input\fP"
+.br
+Functions for working with transaction inputs\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_TransactionInput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_input_copy\fP (const \fBbtck_TransactionInput\fP *transaction_input) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Copy a transaction input\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_TransactionOutPoint\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_input_get_out_point\fP (const \fBbtck_TransactionInput\fP *transaction_input) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Get the transaction out point\&. The returned transaction out point is not owned and depends on the lifetime of the transaction\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_transaction_input_destroy\fP (\fBbtck_TransactionInput\fP *transaction_input)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBTransaction Out Point\fP"
+.br
+Functions for working with transaction out points\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_TransactionOutPoint\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_out_point_copy\fP (const \fBbtck_TransactionOutPoint\fP *transaction_out_point) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Copy a transaction out point\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP uint32_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_out_point_get_index\fP (const \fBbtck_TransactionOutPoint\fP *transaction_out_point) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Get the output position from the transaction out point\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_Txid\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_transaction_out_point_get_txid\fP (const \fBbtck_TransactionOutPoint\fP *transaction_out_point) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Get the txid from the transaction out point\&. The returned txid is not owned and depends on the lifetime of the transaction out point\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_transaction_out_point_destroy\fP (\fBbtck_TransactionOutPoint\fP *transaction_out_point)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBTxid\fP"
+.br
+Functions for working with txids\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_Txid\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_txid_copy\fP (const \fBbtck_Txid\fP *txid) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Copy a txid\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_txid_equals\fP (const \fBbtck_Txid\fP *txid1, const \fBbtck_Txid\fP *txid2) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Check if two txids are equal\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP void \fBbtck_txid_to_bytes\fP (const \fBbtck_Txid\fP *txid, unsigned char output[32]) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Serializes the txid to bytes\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP void \fBBITCOINKERNEL_API\fP void \fBbtck_txid_destroy\fP (\fBbtck_Txid\fP *txid)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBCoin\fP"
+.br
+Functions for working with coins\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_Coin\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_coin_copy\fP (const \fBbtck_Coin\fP *coin) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Copy a coin\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP uint32_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_coin_confirmation_height\fP (const \fBbtck_Coin\fP *coin) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Returns the block height where the transaction that created this coin was included in\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_coin_is_coinbase\fP (const \fBbtck_Coin\fP *coin) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Returns whether the containing transaction was a coinbase\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP const \fBbtck_TransactionOutput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_coin_get_output\fP (const \fBbtck_Coin\fP *coin) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Return the transaction output of a coin\&. The returned pointer is unowned and only valid for the lifetime of the coin\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_coin_destroy\fP (\fBbtck_Coin\fP *coin)"
+.br
+.in -1c
+.in -1c
+.PP
+.RI "\fBBlockHash\fP"
+.br
+Functions for working with block hashes\&. 
+.PP
+.in +1c
+.in +1c
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP \fBbtck_BlockHash\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_hash_create\fP (const unsigned char block_hash[32]) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Create a block hash from its raw data\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_hash_equals\fP (const \fBbtck_BlockHash\fP *hash1, const \fBbtck_BlockHash\fP *hash2) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Check if two block hashes are equal\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP \fBbtck_BlockHash\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBbtck_block_hash_copy\fP (const \fBbtck_BlockHash\fP *block_hash) \fBBITCOINKERNEL_ARG_NONNULL\fP(1)"
+.br
+.RI "Copy a block hash\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBbtck_block_hash_to_bytes\fP (const \fBbtck_BlockHash\fP *block_hash, unsigned char output[32]) \fBBITCOINKERNEL_ARG_NONNULL\fP(1"
+.br
+.RI "Serializes the block hash to bytes\&. "
+.ti -1c
+.RI "\fBBITCOINKERNEL_API\fP void \fBBITCOINKERNEL_API\fP void \fBbtck_block_hash_destroy\fP (\fBbtck_BlockHash\fP *block_hash)"
+.br
+.in -1c
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define BITCOINKERNEL_API"
+
+.SS "#define BITCOINKERNEL_ARG_NONNULL( \&.\&.\&.)"
+BITCOINKERNEL_ARG_NONNULL is a compiler attribute used to indicate that certain pointer arguments to a function are not expected to be null\&.
+
+.PP
+Callers must not pass a null pointer for arguments marked with this attribute, as doing so may result in undefined behavior\&. This attribute should only be used for arguments where a null pointer is unambiguously a programmer error, such as for opaque handles, and not for pointers to raw input data that might validly be null (e\&.g\&., from an empty std::span or std::string)\&. 
+.SS "#define BITCOINKERNEL_WARN_UNUSED_RESULT"
+
+.SS "#define btck_BlockValidationResult_CACHED_INVALID   ((\fBbtck_BlockValidationResult\fP)(2))"
+
+.PP
+this block was cached as being invalid and we didn't store the reason why 
+.SS "#define btck_BlockValidationResult_CONSENSUS   ((\fBbtck_BlockValidationResult\fP)(1))"
+
+.PP
+invalid by consensus rules (excluding any below reasons) 
+.SS "#define btck_BlockValidationResult_HEADER_LOW_WORK   ((\fBbtck_BlockValidationResult\fP)(8))"
+
+.PP
+the block header may be on a too-little-work chain 
+.SS "#define btck_BlockValidationResult_INVALID_HEADER   ((\fBbtck_BlockValidationResult\fP)(3))"
+
+.PP
+invalid proof of work or time too old 
+.SS "#define btck_BlockValidationResult_INVALID_PREV   ((\fBbtck_BlockValidationResult\fP)(6))"
+
+.PP
+A block this one builds on is invalid\&. 
+.SS "#define btck_BlockValidationResult_MISSING_PREV   ((\fBbtck_BlockValidationResult\fP)(5))"
+
+.PP
+We don't have the previous block the checked one is built on\&. 
+.SS "#define btck_BlockValidationResult_MUTATED   ((\fBbtck_BlockValidationResult\fP)(4))"
+
+.PP
+the block's data didn't match the data committed to by the PoW 
+.SS "#define btck_BlockValidationResult_TIME_FUTURE   ((\fBbtck_BlockValidationResult\fP)(7))"
+
+.PP
+block timestamp was > 2 hours in the future (or our clock is bad) 
+.SS "#define btck_BlockValidationResult_UNSET   ((\fBbtck_BlockValidationResult\fP)(0))"
+
+.PP
+initial value\&. Block has not yet been rejected 
+.SS "#define btck_ChainType_MAINNET   ((\fBbtck_ChainType\fP)(0))"
+
+.SS "#define btck_ChainType_REGTEST   ((\fBbtck_ChainType\fP)(4))"
+
+.SS "#define btck_ChainType_SIGNET   ((\fBbtck_ChainType\fP)(3))"
+
+.SS "#define btck_ChainType_TESTNET   ((\fBbtck_ChainType\fP)(1))"
+
+.SS "#define btck_ChainType_TESTNET_4   ((\fBbtck_ChainType\fP)(2))"
+
+.SS "#define btck_LogCategory_ALL   ((\fBbtck_LogCategory\fP)(0))"
+
+.SS "#define btck_LogCategory_BENCH   ((\fBbtck_LogCategory\fP)(1))"
+
+.SS "#define btck_LogCategory_BLOCKSTORAGE   ((\fBbtck_LogCategory\fP)(2))"
+
+.SS "#define btck_LogCategory_COINDB   ((\fBbtck_LogCategory\fP)(3))"
+
+.SS "#define btck_LogCategory_KERNEL   ((\fBbtck_LogCategory\fP)(10))"
+
+.SS "#define btck_LogCategory_LEVELDB   ((\fBbtck_LogCategory\fP)(4))"
+
+.SS "#define btck_LogCategory_MEMPOOL   ((\fBbtck_LogCategory\fP)(5))"
+
+.SS "#define btck_LogCategory_PRUNE   ((\fBbtck_LogCategory\fP)(6))"
+
+.SS "#define btck_LogCategory_RAND   ((\fBbtck_LogCategory\fP)(7))"
+
+.SS "#define btck_LogCategory_REINDEX   ((\fBbtck_LogCategory\fP)(8))"
+
+.SS "#define btck_LogCategory_VALIDATION   ((\fBbtck_LogCategory\fP)(9))"
+
+.SS "#define btck_LogLevel_DEBUG   ((\fBbtck_LogLevel\fP)(1))"
+
+.SS "#define btck_LogLevel_INFO   ((\fBbtck_LogLevel\fP)(2))"
+
+.SS "#define btck_LogLevel_TRACE   ((\fBbtck_LogLevel\fP)(0))"
+
+.SS "#define btck_ScriptVerificationFlags_ALL"
+\fBValue:\fP
+.nf
+                                                                         ((btck_ScriptVerificationFlags)(btck_ScriptVerificationFlags_P2SH |                \\
+                                                                         btck_ScriptVerificationFlags_DERSIG |              \\
+                                                                         btck_ScriptVerificationFlags_NULLDUMMY |           \\
+                                                                         btck_ScriptVerificationFlags_CHECKLOCKTIMEVERIFY | \\
+                                                                         btck_ScriptVerificationFlags_CHECKSEQUENCEVERIFY | \\
+                                                                         btck_ScriptVerificationFlags_WITNESS |             \\
+                                                                         btck_ScriptVerificationFlags_TAPROOT))
+.PP
+.fi
+
+.SS "#define btck_ScriptVerificationFlags_CHECKLOCKTIMEVERIFY   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 9))"
+
+.PP
+enable CHECKLOCKTIMEVERIFY (BIP65) 
+.SS "#define btck_ScriptVerificationFlags_CHECKSEQUENCEVERIFY   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 10))"
+
+.PP
+enable CHECKSEQUENCEVERIFY (BIP112) 
+.SS "#define btck_ScriptVerificationFlags_DERSIG   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 2))"
+
+.PP
+enforce strict DER (BIP66) compliance 
+.SS "#define btck_ScriptVerificationFlags_NONE   ((\fBbtck_ScriptVerificationFlags\fP)(0))"
+
+.SS "#define btck_ScriptVerificationFlags_NULLDUMMY   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 4))"
+
+.PP
+enforce NULLDUMMY (BIP147) 
+.SS "#define btck_ScriptVerificationFlags_P2SH   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 0))"
+
+.PP
+evaluate P2SH (BIP16) subscripts 
+.SS "#define btck_ScriptVerificationFlags_TAPROOT   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 17))"
+
+.PP
+enable TAPROOT (BIPs 341 & 342) 
+.SS "#define btck_ScriptVerificationFlags_WITNESS   ((\fBbtck_ScriptVerificationFlags\fP)(1U << 11))"
+
+.PP
+enable WITNESS (BIP141) 
+.SS "#define btck_ScriptVerifyStatus_ERROR_INVALID_FLAGS_COMBINATION   ((\fBbtck_ScriptVerifyStatus\fP)(1))"
+
+.PP
+The flags were combined in an invalid way\&. 
+.SS "#define btck_ScriptVerifyStatus_ERROR_SPENT_OUTPUTS_REQUIRED   ((\fBbtck_ScriptVerifyStatus\fP)(2))"
+
+.PP
+The taproot flag was set, so valid spent_outputs have to be provided\&. 
+.SS "#define btck_ScriptVerifyStatus_OK   ((\fBbtck_ScriptVerifyStatus\fP)(0))"
+
+.SS "#define btck_SynchronizationState_INIT_DOWNLOAD   ((\fBbtck_SynchronizationState\fP)(1))"
+
+.SS "#define btck_SynchronizationState_INIT_REINDEX   ((\fBbtck_SynchronizationState\fP)(0))"
+
+.SS "#define btck_SynchronizationState_POST_INIT   ((\fBbtck_SynchronizationState\fP)(2))"
+
+.SS "#define btck_ValidationMode_INTERNAL_ERROR   ((\fBbtck_ValidationMode\fP)(2))"
+
+.SS "#define btck_ValidationMode_INVALID   ((\fBbtck_ValidationMode\fP)(1))"
+
+.SS "#define btck_ValidationMode_VALID   ((\fBbtck_ValidationMode\fP)(0))"
+
+.SS "#define btck_Warning_LARGE_WORK_INVALID_CHAIN   ((\fBbtck_Warning\fP)(1))"
+
+.SS "#define btck_Warning_UNKNOWN_NEW_RULES_ACTIVATED   ((\fBbtck_Warning\fP)(0))"
+
+.SH "Typedef Documentation"
+.PP 
+.SS "typedef struct btck_Block btck_Block"
+Opaque data structure for holding a block\&. 
+.SS "typedef struct btck_BlockHash btck_BlockHash"
+Opaque data structure for holding a block hash\&.
+
+.PP
+This is a type-safe identifier for a block\&. 
+.SS "typedef struct btck_BlockSpentOutputs btck_BlockSpentOutputs"
+Opaque data structure for holding a block's spent outputs\&.
+
+.PP
+Contains all the previous outputs consumed by all transactions in a specific block\&. Internally it holds a nested vector\&. The top level vector has an entry for each transaction in a block (in order of the actual transactions of the block and without the coinbase transaction)\&. This is exposed through \fBbtck_TransactionSpentOutputs\fP\&. Each \fBbtck_TransactionSpentOutputs\fP is in turn a vector of all the previous outputs of a transaction (in order of their corresponding inputs)\&. 
+.SS "typedef struct btck_BlockTreeEntry btck_BlockTreeEntry"
+Opaque data structure for holding a block tree entry\&.
+
+.PP
+This is a pointer to an element in the block index currently in memory of the chainstate manager\&. It is valid for the lifetime of the chainstate manager it was retrieved from\&. The entry is part of a tree-like structure that is maintained internally\&. Every entry, besides the genesis, points to a single parent\&. Multiple entries may share a parent, thus forming a tree\&. Each entry corresponds to a single block and may be used to retrieve its data and validation status\&. 
+.SS "typedef uint32_t \fBbtck_BlockValidationResult\fP"
+A granular "reason" why a block was invalid\&. 
+.SS "typedef struct btck_BlockValidationState btck_BlockValidationState"
+Opaque data structure for holding the state of a block during validation\&.
+
+.PP
+Contains information indicating whether validation was successful, and if not which step during block validation failed\&. 
+.SS "typedef struct btck_Chain btck_Chain"
+Opaque data structure for holding the currently known best-chain associated with a chainstate\&. 
+.SS "typedef struct btck_ChainParameters btck_ChainParameters"
+Opaque data structure for holding the chain parameters\&.
+
+.PP
+These are eventually placed into a kernel context through the kernel context options\&. The parameters describe the properties of a chain, and may be instantiated for either mainnet, testnet, signet, or regtest\&. 
+.SS "typedef struct btck_ChainstateManager btck_ChainstateManager"
+Opaque data structure for holding a chainstate manager\&.
+
+.PP
+The chainstate manager is the central object for doing validation tasks as well as retrieving data from the chain\&. Internally it is a complex data structure with diverse functionality\&.
+
+.PP
+Its functionality will be more and more exposed in the future\&. 
+.SS "typedef struct btck_ChainstateManagerOptions btck_ChainstateManagerOptions"
+Opaque data structure for holding options for creating a new chainstate manager\&.
+
+.PP
+The chainstate manager options are used to set some parameters for the chainstate manager\&. 
+.SS "typedef uint8_t \fBbtck_ChainType\fP"
+
+.SS "typedef struct btck_Coin btck_Coin"
+Opaque data structure for holding a coin\&.
+
+.PP
+Holds information on the \fBbtck_TransactionOutput\fP held within, including the height it was spent at and whether it is a coinbase output\&. 
+.SS "typedef struct btck_Context btck_Context"
+Opaque data structure for holding a kernel context\&.
+
+.PP
+The kernel context is used to initialize internal state and hold the chain parameters and callbacks for handling error and validation events\&. Once other validation objects are instantiated from it, the context is kept in memory for the duration of their lifetimes\&.
+
+.PP
+The processing of validation events is done through an internal task runner owned by the context\&. It passes events through the registered validation interface callbacks\&.
+
+.PP
+A constructed context can be safely used from multiple threads\&. 
+.SS "typedef struct btck_ContextOptions btck_ContextOptions"
+Opaque data structure for holding options for creating a new kernel context\&.
+
+.PP
+Once a kernel context has been created from these options, they may be destroyed\&. The options hold the notification and validation interface callbacks as well as the selected chain type until they are passed to the context\&. If no options are configured, the context will be instantiated with no callbacks and for mainnet\&. Their content and scope can be expanded over time\&. 
+.SS "typedef void(* btck_DestroyCallback) (void *user_data)"
+Function signature for freeing user data\&. 
+.SS "typedef void(* btck_LogCallback) (void *user_data, const char *message, size_t message_len)"
+Callback function types Function signature for the global logging callback\&. All bitcoin kernel internal logs will pass through this callback\&. 
+.SS "typedef uint8_t \fBbtck_LogCategory\fP"
+A collection of logging categories that may be encountered by kernel code\&. 
+.SS "typedef struct btck_LoggingConnection btck_LoggingConnection"
+Opaque data structure for holding a logging connection\&.
+
+.PP
+The logging connection can be used to manually stop logging\&.
+
+.PP
+Messages that were logged before a connection is created are buffered in a 1MB buffer\&. Logging can alternatively be permanently disabled by calling \fBbtck_logging_disable\fP\&. Functions changing the logging settings are global and change the settings for all existing \fBbtck_LoggingConnection\fP instances\&. 
+.SS "typedef uint8_t \fBbtck_LogLevel\fP"
+The level at which logs should be produced\&. 
+.SS "typedef void(* btck_NotifyBlockTip) (void *user_data, \fBbtck_SynchronizationState\fP state, const \fBbtck_BlockTreeEntry\fP *entry, double verification_progress)"
+Function signatures for the kernel notifications\&. 
+.SS "typedef void(* btck_NotifyFatalError) (void *user_data, const char *message, size_t message_len)"
+
+.SS "typedef void(* btck_NotifyFlushError) (void *user_data, const char *message, size_t message_len)"
+
+.SS "typedef void(* btck_NotifyHeaderTip) (void *user_data, \fBbtck_SynchronizationState\fP state, int64_t height, int64_t timestamp, int presync)"
+
+.SS "typedef void(* btck_NotifyProgress) (void *user_data, const char *title, size_t title_len, int progress_percent, int resume_possible)"
+
+.SS "typedef void(* btck_NotifyWarningSet) (void *user_data, \fBbtck_Warning\fP warning, const char *message, size_t message_len)"
+
+.SS "typedef void(* btck_NotifyWarningUnset) (void *user_data, \fBbtck_Warning\fP warning)"
+
+.SS "typedef struct btck_ScriptPubkey btck_ScriptPubkey"
+Opaque data structure for holding a script pubkey\&. 
+.SS "typedef uint32_t \fBbtck_ScriptVerificationFlags\fP"
+Script verification flags that may be composed with each other\&. 
+.SS "typedef uint8_t \fBbtck_ScriptVerifyStatus\fP"
+A collection of status codes that may be issued by the script verify function\&. 
+.SS "typedef uint8_t \fBbtck_SynchronizationState\fP"
+Current sync state passed to tip changed callbacks\&. 
+.SS "typedef struct btck_Transaction btck_Transaction"
+Opaque data structure for holding a transaction\&. 
+.SS "typedef struct btck_TransactionInput btck_TransactionInput"
+Opaque data structure for holding a transaction input\&.
+
+.PP
+Holds information on the \fBbtck_TransactionOutPoint\fP held within\&. 
+.SS "typedef struct btck_TransactionOutPoint btck_TransactionOutPoint"
+Opaque data structure for holding a transaction out point\&.
+
+.PP
+Holds the txid and output index it is pointing to\&. 
+.SS "typedef struct btck_TransactionOutput btck_TransactionOutput"
+Opaque data structure for holding a transaction output\&. 
+.SS "typedef struct btck_TransactionSpentOutputs btck_TransactionSpentOutputs"
+Opaque data structure for holding a transaction's spent outputs\&.
+
+.PP
+Holds the coins consumed by a certain transaction\&. Retrieved through the \fBbtck_BlockSpentOutputs\fP\&. The coins are in the same order as the transaction's inputs consuming them\&. 
+.SS "typedef struct btck_Txid btck_Txid"
+
+.SS "typedef void(* btck_ValidationInterfaceBlockChecked) (void *user_data, \fBbtck_Block\fP *block, const \fBbtck_BlockValidationState\fP *state)"
+Function signatures for the validation interface\&. 
+.SS "typedef void(* btck_ValidationInterfaceBlockConnected) (void *user_data, \fBbtck_Block\fP *block, const \fBbtck_BlockTreeEntry\fP *entry)"
+
+.SS "typedef void(* btck_ValidationInterfaceBlockDisconnected) (void *user_data, \fBbtck_Block\fP *block, const \fBbtck_BlockTreeEntry\fP *entry)"
+
+.SS "typedef void(* btck_ValidationInterfacePoWValidBlock) (void *user_data, \fBbtck_Block\fP *block, const \fBbtck_BlockTreeEntry\fP *entry)"
+
+.SS "typedef uint8_t \fBbtck_ValidationMode\fP"
+Whether a validated data structure is valid, invalid, or an error was encountered during processing\&. 
+.SS "typedef uint8_t \fBbtck_Warning\fP"
+Possible warning types issued by validation\&. 
+.SS "typedef int(* btck_WriteBytes) (const void *bytes, size_t size, void *userdata)"
+Function signature for serializing data\&. 
+.SH "Function Documentation"
+.PP 
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_Block\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_copy (const \fBbtck_Block\fP * block)"
+
+.PP
+Copy a block\&. Blocks are reference counted, so this just increments the reference count\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied block\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP size_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_count_transactions (const \fBbtck_Block\fP * block)"
+
+.PP
+Count the number of transactions contained in a block\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The number of transactions in the block\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_Block\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP \fBbtck_Block\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_create (const void * raw_block, size_t raw_block_len)"
+
+.PP
+Parse a serialized raw block into a new block object\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIraw_block\fP Serialized block\&. 
+.br
+\fIraw_block_len\fP Length of the serialized block\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The allocated block, or null on error\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_API\fP void btck_block_destroy (\fBbtck_Block\fP * block)"
+Destroy the block\&. 
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_BlockHash\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_get_hash (const \fBbtck_Block\fP * block)"
+
+.PP
+Calculate and return the hash of a block\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The block hash\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_Transaction\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_get_transaction_at (const \fBbtck_Block\fP * block, size_t transaction_index)"
+
+.PP
+Get the transaction at the provided index\&. The returned transaction is not owned and depends on the lifetime of the block\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock\fP Non-null\&. 
+.br
+\fItransaction_index\fP The index of the transaction to be retrieved\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP \fBbtck_BlockHash\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_hash_copy (const \fBbtck_BlockHash\fP * block_hash)"
+
+.PP
+Copy a block hash\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_hash\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied block hash\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_BlockHash\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_hash_create (const unsigned char block_hash[32])"
+
+.PP
+Create a block hash from its raw data\&. 
+.SS "\fBBITCOINKERNEL_API\fP void \fBBITCOINKERNEL_API\fP void btck_block_hash_destroy (\fBbtck_BlockHash\fP * block_hash)"
+Destroy the block hash\&. 
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_hash_equals (const \fBbtck_BlockHash\fP * hash1, const \fBbtck_BlockHash\fP * hash2)"
+
+.PP
+Check if two block hashes are equal\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIhash1\fP Non-null\&. 
+.br
+\fIhash2\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 if the block hashes are not equal\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_block_hash_to_bytes (const \fBbtck_BlockHash\fP * block_hash, unsigned char output[32])"
+
+.PP
+Serializes the block hash to bytes\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_hash\fP Non-null\&. 
+.br
+\fIoutput\fP The serialized block hash\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_Block\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_read (const \fBbtck_ChainstateManager\fP * chainstate_manager, const \fBbtck_BlockTreeEntry\fP * block_tree_entry)"
+
+.PP
+Reads the block the passed in block tree entry points to from disk and returns it\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager\fP Non-null\&. 
+.br
+\fIblock_tree_entry\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The read out block, or null on error\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_BlockSpentOutputs\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP \fBbtck_BlockSpentOutputs\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_spent_outputs_copy (const \fBbtck_BlockSpentOutputs\fP * block_spent_outputs)"
+
+.PP
+Copy a block's spent outputs\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_spent_outputs\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied block spent outputs\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP size_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_spent_outputs_count (const \fBbtck_BlockSpentOutputs\fP * block_spent_outputs)"
+
+.PP
+Returns the number of transaction spent outputs whose data is contained in block spent outputs\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_spent_outputs\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The number of transaction spent outputs data in the block spent outputs\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_block_spent_outputs_destroy (\fBbtck_BlockSpentOutputs\fP * block_spent_outputs)"
+Destroy the block spent outputs\&. 
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_TransactionSpentOutputs\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_spent_outputs_get_transaction_spent_outputs_at (const \fBbtck_BlockSpentOutputs\fP * block_spent_outputs, size_t transaction_spent_outputs_index)"
+
+.PP
+Returns a transaction spent outputs contained in the block spent outputs at a certain index\&. The returned pointer is unowned and only valid for the lifetime of block_spent_outputs\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_spent_outputs\fP Non-null\&. 
+.br
+\fItransaction_spent_outputs_index\fP The index of the transaction spent outputs within the block spent outputs\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A transaction spent outputs pointer\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_BlockSpentOutputs\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_spent_outputs_read (const \fBbtck_ChainstateManager\fP * chainstate_manager, const \fBbtck_BlockTreeEntry\fP * block_tree_entry)"
+
+.PP
+Reads the block spent coins data the passed in block tree entry points to from disk and returns it\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager\fP Non-null\&. 
+.br
+\fIblock_tree_entry\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The read out block spent outputs, or null on error\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int btck_block_to_bytes (const \fBbtck_Block\fP * block, \fBbtck_WriteBytes\fP writer, void * user_data)"
+
+.PP
+Serializes the block through the passed in callback to bytes\&. This is consensus serialization that is also used for the P2P network\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock\fP Non-null\&. 
+.br
+\fIwriter\fP Non-null, callback to a write bytes function\&. 
+.br
+\fIuser_data\fP Holds a user-defined opaque structure that will be passed back through the writer callback\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 on success\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_tree_entry_equals (const \fBbtck_BlockTreeEntry\fP * entry1, const \fBbtck_BlockTreeEntry\fP * entry2)"
+
+.PP
+Check if two block tree entries are equal\&. Two block tree entries are equal when they point to the same block\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIentry1\fP Non-null\&. 
+.br
+\fIentry2\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+1 if the block tree entries are equal, 0 otherwise\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_BlockHash\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_tree_entry_get_block_hash (const \fBbtck_BlockTreeEntry\fP * block_tree_entry)"
+
+.PP
+Return the block hash associated with a block tree entry\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_tree_entry\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The block hash\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int32_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_tree_entry_get_height (const \fBbtck_BlockTreeEntry\fP * block_tree_entry)"
+
+.PP
+Return the height of a certain block tree entry\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_tree_entry\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The block height\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_BlockTreeEntry\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_block_tree_entry_get_previous (const \fBbtck_BlockTreeEntry\fP * block_tree_entry)"
+
+.PP
+Returns the previous block tree entry in the tree, or null if the current block tree entry is the genesis block\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_tree_entry\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The previous block tree entry, or null on error or if the current block tree entry is the genesis block\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_BlockValidationResult\fP btck_block_validation_state_get_block_validation_result (const \fBbtck_BlockValidationState\fP * block_validation_state)"
+Returns the validation result from an opaque block validation state pointer\&. 
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_ValidationMode\fP btck_block_validation_state_get_validation_mode (const \fBbtck_BlockValidationState\fP * block_validation_state)"
+Returns the validation mode from an opaque block validation state pointer\&. 
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chain_contains (const \fBbtck_Chain\fP * chain, const \fBbtck_BlockTreeEntry\fP * block_tree_entry)"
+
+.PP
+Return true if the passed in chain contains the block tree entry\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchain\fP Non-null\&. 
+.br
+\fIblock_tree_entry\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+1 if the block_tree_entry is in the chain, 0 otherwise\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_BlockTreeEntry\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chain_get_by_height (const \fBbtck_Chain\fP * chain, int block_height)"
+
+.PP
+Retrieve a block tree entry by its height in the currently active chain\&. Once retrieved there is no guarantee that it remains in the active chain\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchain\fP Non-null\&. 
+.br
+\fIblock_height\fP Height in the chain of the to be retrieved block tree entry\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The block tree entry at a certain height in the currently active chain, or null if the height is out of bounds\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int32_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chain_get_height (const \fBbtck_Chain\fP * chain)"
+
+.PP
+Return the height of the tip of the chain\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchain\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The current height\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_ChainParameters\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chain_parameters_copy (const \fBbtck_ChainParameters\fP * chain_parameters)"
+Copy the chain parameters\&. 
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_ChainParameters\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chain_parameters_create (const \fBbtck_ChainType\fP chain_type)"
+
+.PP
+Creates a chain parameters struct with default parameters based on the passed in chain type\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchain_type\fP Controls the chain parameters type created\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+An allocated chain parameters opaque struct\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_chain_parameters_destroy (\fBbtck_ChainParameters\fP * chain_parameters)"
+Destroy the chain parameters\&. 
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_ChainstateManager\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chainstate_manager_create (const \fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options)"
+
+.PP
+Create a chainstate manager\&. This is the main object for many validation tasks as well as for retrieving data from the chain and interacting with its chainstate and indexes\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager_options\fP Non-null, created by \fBbtck_chainstate_manager_options_create\fP\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The allocated chainstate manager, or null on error\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_BlockTreeEntry\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP void btck_chainstate_manager_destroy (\fBbtck_ChainstateManager\fP * chainstate_manager)"
+Destroy the chainstate manager\&. 
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP const \fBbtck_Chain\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chainstate_manager_get_active_chain (const \fBbtck_ChainstateManager\fP * chainstate_manager)"
+
+.PP
+Returns the best known currently active chain\&. Its lifetime is dependent on the chainstate manager\&. It can be thought of as a view on a vector of block tree entries that form the best chain\&. The returned chain reference always points to the currently active best chain\&. However, state transitions within the chainstate manager (e\&.g\&., processing blocks) will update the chain's contents\&. Data retrieved from this chain is only consistent up to the point when new data is processed in the chainstate manager\&. It is the user's responsibility to guard against these inconsistencies\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The chain\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_BlockTreeEntry\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chainstate_manager_get_block_tree_entry_by_hash (const \fBbtck_ChainstateManager\fP * chainstate_manager, const \fBbtck_BlockHash\fP * block_hash)"
+
+.PP
+Retrieve a block tree entry by its block hash\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager\fP Non-null\&. 
+.br
+\fIblock_hash\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The block tree entry of the block with the passed in hash, or null if the block hash is not found\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chainstate_manager_import_blocks (\fBbtck_ChainstateManager\fP * chainstate_manager, const char ** block_file_paths_data, size_t * block_file_paths_lens, size_t block_file_paths_data_len)"
+
+.PP
+Triggers the start of a reindex if the wipe options were previously set for the chainstate manager\&. Can also import an array of existing block files selected by the user\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager\fP Non-null\&. 
+.br
+\fIblock_file_paths_data\fP Nullable, array of block files described by their full filesystem paths\&. 
+.br
+\fIblock_file_paths_lens\fP Nullable, array containing the lengths of each of the paths\&. 
+.br
+\fIblock_file_paths_data_len\fP Length of the block_file_paths_data and block_file_paths_len arrays\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 if the import blocks call was completed successfully, non-zero otherwise\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_ChainstateManagerOptions\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chainstate_manager_options_create (const \fBbtck_Context\fP * context, const char * data_directory, size_t data_directory_len, const char * blocks_directory, size_t blocks_directory_len)"
+
+.PP
+Create options for the chainstate manager\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontext\fP Non-null, the created options and through it the chainstate manager will associate with this kernel context for the duration of their lifetimes\&. 
+.br
+\fIdata_directory\fP Non-null, non-empty path string of the directory containing the chainstate data\&. If the directory does not exist yet, it will be created\&. 
+.br
+\fIblocks_directory\fP Non-null, non-empty path string of the directory containing the block data\&. If the directory does not exist yet, it will be created\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The allocated chainstate manager options, or null on error\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_chainstate_manager_options_destroy (\fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options)"
+Destroy the chainstate manager options\&. 
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chainstate_manager_options_set_wipe_dbs (\fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options, int wipe_block_tree_db, int wipe_chainstate_db)"
+
+.PP
+Sets wipe db in the options\&. In combination with calling \fBbtck_chainstate_manager_import_blocks\fP this triggers either a full reindex, or a reindex of just the chainstate database\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager_options\fP Non-null, created by \fBbtck_chainstate_manager_options_create\fP\&. 
+.br
+\fIwipe_block_tree_db\fP Set wipe block tree db\&. Should only be 1 if wipe_chainstate_db is 1 too\&. 
+.br
+\fIwipe_chainstate_db\fP Set wipe chainstate db\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 if the set was successful, non-zero if the set failed\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_chainstate_manager_options_set_worker_threads_num (\fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options, int worker_threads)"
+
+.PP
+Set the number of available worker threads used during validation\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager_options\fP Non-null, options to be set\&. 
+.br
+\fIworker_threads\fP The number of worker threads that should be spawned in the thread pool used for validation\&. When set to 0 no parallel verification is done\&. The value range is clamped internally between 0 and 15\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_chainstate_manager_options_update_block_tree_db_in_memory (\fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options, int block_tree_db_in_memory)"
+
+.PP
+Sets block tree db in memory in the options\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager_options\fP Non-null, created by \fBbtck_chainstate_manager_options_create\fP\&. 
+.br
+\fIblock_tree_db_in_memory\fP Set block tree db in memory\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_chainstate_manager_options_update_chainstate_db_in_memory (\fBbtck_ChainstateManagerOptions\fP * chainstate_manager_options, int chainstate_db_in_memory)"
+
+.PP
+Sets chainstate db in memory in the options\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager_options\fP Non-null, created by \fBbtck_chainstate_manager_options_create\fP\&. 
+.br
+\fIchainstate_db_in_memory\fP Set chainstate db in memory\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_chainstate_manager_process_block (\fBbtck_ChainstateManager\fP * chainstate_manager, const \fBbtck_Block\fP * block, int * new_block)"
+
+.PP
+Process and validate the passed in block with the chainstate manager\&. Processing first does checks on the block, and if these passed, saves it to disk\&. It then validates the block against the utxo set\&. If it is valid, the chain is extended with it\&. The return value is not indicative of the block's validity\&. Detailed information on the validity of the block can be retrieved by registering the \fRblock_checked\fP callback in the validation interface\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIchainstate_manager\fP Non-null\&. 
+.br
+\fIblock\fP Non-null, block to be validated\&.
+.br
+\fInew_block\fP Nullable, will be set to 1 if this block was not processed before\&. Note that this means it might also not be 1 if processing was attempted before, but the block was found invalid before its data was persisted\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 if processing the block was successful\&. Will also return 0 for valid, but duplicate blocks\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP uint32_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_coin_confirmation_height (const \fBbtck_Coin\fP * coin)"
+
+.PP
+Returns the block height where the transaction that created this coin was included in\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcoin\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The block height of the coin\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_Coin\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_coin_copy (const \fBbtck_Coin\fP * coin)"
+
+.PP
+Copy a coin\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcoin\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied coin\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_coin_destroy (\fBbtck_Coin\fP * coin)"
+Destroy the coin\&. 
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_TransactionOutput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_coin_get_output (const \fBbtck_Coin\fP * coin)"
+
+.PP
+Return the transaction output of a coin\&. The returned pointer is unowned and only valid for the lifetime of the coin\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcoin\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A transaction output pointer\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_coin_is_coinbase (const \fBbtck_Coin\fP * coin)"
+
+.PP
+Returns whether the containing transaction was a coinbase\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcoin\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+1 if the coin is a coinbase coin, 0 otherwise\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_Context\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_context_copy (const \fBbtck_Context\fP * context)"
+Copy the context\&. 
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_Context\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_context_create (const \fBbtck_ContextOptions\fP * context_options)"
+
+.PP
+Create a new kernel context\&. If the options have not been previously set, their corresponding fields will be initialized to default values; the context will assume mainnet chain parameters and won't attempt to call the kernel notification callbacks\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontext_options\fP Nullable, created by \fBbtck_context_options_create\fP\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The allocated context, or null on error\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_context_destroy (\fBbtck_Context\fP * context)"
+Destroy the context\&. 
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_context_interrupt (\fBbtck_Context\fP * context)"
+
+.PP
+Interrupt can be used to halt long-running validation functions like when reindexing, importing or processing blocks\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontext\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 if the interrupt was successful, non-zero otherwise\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_ContextOptions\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_context_options_create ()"
+Creates an empty context options\&. 
+.SS "\fBBITCOINKERNEL_API\fP void btck_context_options_destroy (\fBbtck_ContextOptions\fP * context_options)"
+Destroy the context options\&. 
+.SS "\fBBITCOINKERNEL_API\fP void btck_context_options_set_chainparams (\fBbtck_ContextOptions\fP * context_options, const \fBbtck_ChainParameters\fP * chain_parameters)"
+
+.PP
+Sets the chain params for the context options\&. The context created with the options will be configured for these chain parameters\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontext_options\fP Non-null, previously created by \fBbtck_context_options_create\fP\&. 
+.br
+\fIchain_parameters\fP Is set to the context options\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void \fBBITCOINKERNEL_API\fP void btck_context_options_set_notifications (\fBbtck_ContextOptions\fP * context_options, \fBbtck_NotificationInterfaceCallbacks\fP notifications)"
+
+.PP
+Set the kernel notifications for the context options\&. The context created with the options will be configured with these notifications\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontext_options\fP Non-null, previously created by \fBbtck_context_options_create\fP\&. 
+.br
+\fInotifications\fP Is set to the context options\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_context_options_set_validation_interface (\fBbtck_ContextOptions\fP * context_options, \fBbtck_ValidationInterfaceCallbacks\fP validation_interface_callbacks)"
+
+.PP
+Set the validation interface callbacks for the context options\&. The context created with the options will be configured for these validation interface callbacks\&. The callbacks will then be triggered from validation events issued by the chainstate manager created from the same context\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontext_options\fP Non-null, previously created with btck_context_options_create\&. 
+.br
+\fIvalidation_interface_callbacks\fP The callbacks used for passing validation information to the user\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_LoggingConnection\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_logging_connection_create (\fBbtck_LogCallback\fP log_callback, void * user_data, \fBbtck_DestroyCallback\fP user_data_destroy_callback)"
+
+.PP
+Start logging messages through the provided callback\&. Log messages produced before this function is first called are buffered and on calling this function are logged immediately\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIlog_callback\fP Non-null, function through which messages will be logged\&. 
+.br
+\fIuser_data\fP Nullable, holds a user-defined opaque structure\&. Is passed back to the user through the callback\&. If the user_data_destroy_callback is also defined it is assumed that ownership of the user_data is passed to the created logging connection\&. 
+.br
+\fIuser_data_destroy_callback\fP Nullable, function for freeing the user data\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A new kernel logging connection, or null on error\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_logging_connection_destroy (\fBbtck_LoggingConnection\fP * logging_connection)"
+Stop logging and destroy the logging connection\&. 
+.SS "\fBBITCOINKERNEL_API\fP void btck_logging_disable ()"
+
+.PP
+This disables the global internal logger\&. No log messages will be buffered internally anymore once this is called and the buffer is cleared\&. This function should only be called once and is not thread or re-entry safe\&. Log messages will be buffered until this function is called, or a logging connection is created\&. This must not be called while a logging connection already exists\&. 
+.SS "\fBBITCOINKERNEL_API\fP void btck_logging_disable_category (\fBbtck_LogCategory\fP category)"
+
+.PP
+Disable a specific log category for the global internal logger\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcategory\fP If btck_LogCategory_ALL is chosen, all categories will be disabled\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_logging_enable_category (\fBbtck_LogCategory\fP category)"
+
+.PP
+Enable a specific log category for the global internal logger\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcategory\fP If btck_LogCategory_ALL is chosen, all categories will be enabled\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_logging_set_level_category (\fBbtck_LogCategory\fP category, \fBbtck_LogLevel\fP level)"
+
+.PP
+Set the log level of the global internal logger\&. This does not enable the selected categories\&. Use \fBbtck_logging_enable_category\fP to start logging from a specific, or all categories\&. This changes a global setting and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcategory\fP If btck_LogCategory_ALL is chosen, sets both the global fallback log level used by all categories that don't have a specific level set, and also sets the log level for messages logged with the btck_LogCategory_ALL category itself\&. For any other category, sets a category-specific log level that overrides the global fallback for that category only\&.
+.br
+\fIlevel\fP Log level at which the log category is set\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_logging_set_options (const \fBbtck_LoggingOptions\fP options)"
+
+.PP
+Set some options for the global internal logger\&. This changes global settings and will override settings for all existing \fBbtck_LoggingConnection\fP instances\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIoptions\fP Sets formatting options of the log messages\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_ScriptPubkey\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_script_pubkey_copy (const \fBbtck_ScriptPubkey\fP * script_pubkey)"
+
+.PP
+Copy a script pubkey\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIscript_pubkey\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied script pubkey\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_ScriptPubkey\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_script_pubkey_create (const void * script_pubkey, size_t script_pubkey_len)"
+
+.PP
+Create a script pubkey from serialized data\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIscript_pubkey\fP Serialized script pubkey\&. 
+.br
+\fIscript_pubkey_len\fP Length of the script pubkey data\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The script pubkey\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_API\fP void btck_script_pubkey_destroy (\fBbtck_ScriptPubkey\fP * script_pubkey)"
+Destroy the script pubkey\&. 
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP int btck_script_pubkey_to_bytes (const \fBbtck_ScriptPubkey\fP * script_pubkey, \fBbtck_WriteBytes\fP writer, void * user_data)"
+
+.PP
+Serializes the script pubkey through the passed in callback to bytes\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIscript_pubkey\fP Non-null\&. 
+.br
+\fIwriter\fP Non-null, callback to a write bytes function\&. 
+.br
+\fIuser_data\fP Holds a user-defined opaque structure that will be passed back through the writer callback\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 on success\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_script_pubkey_verify (const \fBbtck_ScriptPubkey\fP * script_pubkey, int64_t amount, const \fBbtck_Transaction\fP * tx_to, const \fBbtck_TransactionOutput\fP ** spent_outputs, size_t spent_outputs_len, unsigned int input_index, \fBbtck_ScriptVerificationFlags\fP flags, \fBbtck_ScriptVerifyStatus\fP * status)"
+
+.PP
+Verify if the input at input_index of tx_to spends the script pubkey under the constraints specified by flags\&. If the \fR\fBbtck_ScriptVerificationFlags_WITNESS\fP\fP flag is set in the flags bitfield, the amount parameter is used\&. If the taproot flag is set, the spent outputs parameter is used to validate taproot transactions\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIscript_pubkey\fP Non-null, script pubkey to be spent\&. 
+.br
+\fIamount\fP Amount of the script pubkey's associated output\&. May be zero if the witness flag is not set\&. 
+.br
+\fItx_to\fP Non-null, transaction spending the script_pubkey\&. 
+.br
+\fIspent_outputs\fP Nullable if the taproot flag is not set\&. Points to an array of outputs spent by the transaction\&. 
+.br
+\fIspent_outputs_len\fP Length of the spent_outputs array\&. 
+.br
+\fIinput_index\fP Index of the input in tx_to spending the script_pubkey\&. 
+.br
+\fIflags\fP Bitfield of \fBbtck_ScriptVerificationFlags\fP controlling validation constraints\&. 
+.br
+\fIstatus\fP Nullable, will be set to an error code if the operation fails, or OK otherwise\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+1 if the script is valid, 0 otherwise\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_Transaction\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_copy (const \fBbtck_Transaction\fP * transaction)"
+
+.PP
+Copy a transaction\&. Transactions are reference counted, so this just increments the reference count\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied transaction\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP size_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_count_inputs (const \fBbtck_Transaction\fP * transaction)"
+
+.PP
+Get the number of inputs of a transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The number of inputs\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_API\fP size_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_count_outputs (const \fBbtck_Transaction\fP * transaction)"
+
+.PP
+Get the number of outputs of a transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The number of outputs\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_Transaction\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_create (const void * raw_transaction, size_t raw_transaction_len)"
+
+.PP
+Create a new transaction from the serialized data\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIraw_transaction\fP Serialized transaction\&. 
+.br
+\fIraw_transaction_len\fP Length of the serialized transaction\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction, or null on error\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_transaction_destroy (\fBbtck_Transaction\fP * transaction)"
+Destroy the transaction\&. 
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_TransactionInput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_get_input_at (const \fBbtck_Transaction\fP * transaction, size_t input_index)"
+
+.PP
+Get the transaction input at the provided index\&. The returned transaction input is not owned and depends on the lifetime of the transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.br
+\fIinput_index\fP The index of the transaction input to be retrieved\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction input 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_TransactionOutput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_get_output_at (const \fBbtck_Transaction\fP * transaction, size_t output_index)"
+
+.PP
+Get the transaction outputs at the provided index\&. The returned transaction output is not owned and depends on the lifetime of the transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.br
+\fIoutput_index\fP The index of the transaction output to be retrieved\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction output 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_Txid\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_get_txid (const \fBbtck_Transaction\fP * transaction)"
+
+.PP
+Get the txid of a transaction\&. The returned txid is not owned and depends on the lifetime of the transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The txid\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_TransactionInput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_input_copy (const \fBbtck_TransactionInput\fP * transaction_input)"
+
+.PP
+Copy a transaction input\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_input\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied transaction input\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_transaction_input_destroy (\fBbtck_TransactionInput\fP * transaction_input)"
+Destroy the transaction input\&. 
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_TransactionOutPoint\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_input_get_out_point (const \fBbtck_TransactionInput\fP * transaction_input)"
+
+.PP
+Get the transaction out point\&. The returned transaction out point is not owned and depends on the lifetime of the transaction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_input\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction out point\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_TransactionOutPoint\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_out_point_copy (const \fBbtck_TransactionOutPoint\fP * transaction_out_point)"
+
+.PP
+Copy a transaction out point\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_out_point\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied transaction out point\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_transaction_out_point_destroy (\fBbtck_TransactionOutPoint\fP * transaction_out_point)"
+Destroy the transaction out point\&. 
+.SS "\fBBITCOINKERNEL_API\fP uint32_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_out_point_get_index (const \fBbtck_TransactionOutPoint\fP * transaction_out_point)"
+
+.PP
+Get the output position from the transaction out point\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_out_point\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The output index\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_Txid\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_out_point_get_txid (const \fBbtck_TransactionOutPoint\fP * transaction_out_point)"
+
+.PP
+Get the txid from the transaction out point\&. The returned txid is not owned and depends on the lifetime of the transaction out point\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_out_point\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The txid\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_TransactionOutput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_output_copy (const \fBbtck_TransactionOutput\fP * transaction_output)"
+
+.PP
+Copy a transaction output\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_output\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied transaction output\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_TransactionOutput\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_output_create (const \fBbtck_ScriptPubkey\fP * script_pubkey, int64_t amount)"
+
+.PP
+Create a transaction output from a script pubkey and an amount\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIscript_pubkey\fP Non-null\&. 
+.br
+\fIamount\fP The amount associated with the script pubkey for this output\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The transaction output\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_transaction_output_destroy (\fBbtck_TransactionOutput\fP * transaction_output)"
+Destroy the transaction output\&. 
+.SS "\fBBITCOINKERNEL_API\fP int64_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_output_get_amount (const \fBbtck_TransactionOutput\fP * transaction_output)"
+
+.PP
+Get the amount in the output\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_output\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The amount\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_ScriptPubkey\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_output_get_script_pubkey (const \fBbtck_TransactionOutput\fP * transaction_output)"
+
+.PP
+Get the script pubkey of the output\&. The returned script pubkey is not owned and depends on the lifetime of the transaction output\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_output\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The script pubkey\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_TransactionSpentOutputs\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_spent_outputs_copy (const \fBbtck_TransactionSpentOutputs\fP * transaction_spent_outputs)"
+
+.PP
+Copy a transaction's spent outputs\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_spent_outputs\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied transaction spent outputs\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP size_t \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_spent_outputs_count (const \fBbtck_TransactionSpentOutputs\fP * transaction_spent_outputs)"
+
+.PP
+Returns the number of previous transaction outputs contained in the transaction spent outputs data\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_spent_outputs\fP Non-null 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The number of spent transaction outputs for the transaction\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP void btck_transaction_spent_outputs_destroy (\fBbtck_TransactionSpentOutputs\fP * transaction_spent_outputs)"
+Destroy the transaction spent outputs\&. 
+.SS "\fBBITCOINKERNEL_API\fP const \fBbtck_Coin\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_transaction_spent_outputs_get_coin_at (const \fBbtck_TransactionSpentOutputs\fP * transaction_spent_outputs, size_t coin_index)"
+
+.PP
+Returns a coin contained in the transaction spent outputs at a certain index\&. The returned pointer is unowned and only valid for the lifetime of transaction_spent_outputs\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction_spent_outputs\fP Non-null\&. 
+.br
+\fIcoin_index\fP The index of the to be retrieved coin within the transaction spent outputs\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A coin pointer\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int btck_transaction_to_bytes (const \fBbtck_Transaction\fP * transaction, \fBbtck_WriteBytes\fP writer, void * user_data)"
+
+.PP
+Serializes the transaction through the passed in callback to bytes\&. This is consensus serialization that is also used for the P2P network\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItransaction\fP Non-null\&. 
+.br
+\fIwriter\fP Non-null, callback to a write bytes function\&. 
+.br
+\fIuser_data\fP Holds a user-defined opaque structure that will be passed back through the writer callback\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 on success\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP \fBbtck_Txid\fP *\fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_txid_copy (const \fBbtck_Txid\fP * txid)"
+
+.PP
+Copy a txid\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItxid\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The copied txid\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP void \fBBITCOINKERNEL_API\fP void btck_txid_destroy (\fBbtck_Txid\fP * txid)"
+Destroy the txid\&. 
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP btck_txid_equals (const \fBbtck_Txid\fP * txid1, const \fBbtck_Txid\fP * txid2)"
+
+.PP
+Check if two txids are equal\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItxid1\fP Non-null\&. 
+.br
+\fItxid2\fP Non-null\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+0 if the txid is not equal\&. 
+.RE
+.PP
+
+.SS "\fBBITCOINKERNEL_API\fP int \fBBITCOINKERNEL_WARN_UNUSED_RESULT\fP \fBBITCOINKERNEL_API\fP void btck_txid_to_bytes (const \fBbtck_Txid\fP * txid, unsigned char output[32])"
+
+.PP
+Serializes the txid to bytes\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItxid\fP Non-null\&. 
+.br
+\fIoutput\fP The serialized txid\&. 
+.RE
+.PP
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

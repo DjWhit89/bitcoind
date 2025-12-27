@@ -1,0 +1,103 @@
+\doxysection{blockfilterindex.\+h}
+\label{blockfilterindex_8h_source}\index{src/index/blockfilterindex.h@{src/index/blockfilterindex.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2018-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_INDEX\_BLOCKFILTERINDEX\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_INDEX\_BLOCKFILTERINDEX\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <flatfile.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <index/base.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <interfaces/chain.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/hasher.h>}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{class\ }BlockFilter;}
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }CBlockIndex;}
+\DoxyCodeLine{00026\ \textcolor{keyword}{enum\ class}\ BlockFilterType\ :\ uint8\_t;}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ \textcolor{keyword}{const}\ DEFAULT\_BLOCKFILTERINDEX\ =\ \textcolor{stringliteral}{"{}0"{}};}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00031\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ CFCHECKPT\_INTERVAL\ =\ 1000;}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00040\ \textcolor{keyword}{class\ }BlockFilterIndex\ final\ :\ \textcolor{keyword}{public}\ BaseIndex}
+\DoxyCodeLine{00041\ \{}
+\DoxyCodeLine{00042\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00043\ \ \ \ \ BlockFilterType\ m\_filter\_type;}
+\DoxyCodeLine{00044\ \ \ \ \ std::unique\_ptr<BaseIndex::DB>\ m\_db;}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \ \ FlatFilePos\ m\_next\_filter\_pos;}
+\DoxyCodeLine{00047\ \ \ \ \ std::unique\_ptr<FlatFileSeq>\ m\_filter\_fileseq;}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReadFilterFromDisk(\textcolor{keyword}{const}\ FlatFilePos\&\ pos,\ \textcolor{keyword}{const}\ uint256\&\ hash,\ BlockFilter\&\ filter)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ WriteFilterToDisk(FlatFilePos\&\ pos,\ \textcolor{keyword}{const}\ BlockFilter\&\ filter);}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ \ \ Mutex\ m\_cs\_headers\_cache;}
+\DoxyCodeLine{00054\ \ \ \ \ std::unordered\_map<uint256,\ uint256,\ FilterHeaderHasher>\ m\_headers\_cache\ GUARDED\_BY(m\_cs\_headers\_cache);}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{comment}{//\ Last\ computed\ header\ to\ avoid\ disk\ reads\ on\ every\ new\ block.}}
+\DoxyCodeLine{00057\ \ \ \ \ uint256\ m\_last\_header\{\};}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keywordtype}{bool}\ AllowPrune()\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};\ \}}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordtype}{bool}\ Write(\textcolor{keyword}{const}\ BlockFilter\&\ filter,\ uint32\_t\ block\_height,\ \textcolor{keyword}{const}\ uint256\&\ filter\_header);}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \ \ std::optional<uint256>\ ReadFilterHeader(\textcolor{keywordtype}{int}\ height,\ \textcolor{keyword}{const}\ uint256\&\ expected\_block\_hash);}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00066\ \ \ \ \ interfaces::Chain::NotifyOptions\ CustomOptions()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keywordtype}{bool}\ CustomInit(\textcolor{keyword}{const}\ std::optional<interfaces::BlockRef>\&\ block)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keywordtype}{bool}\ CustomCommit(CDBBatch\&\ batch)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keywordtype}{bool}\ CustomAppend(\textcolor{keyword}{const}\ interfaces::BlockInfo\&\ block)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keywordtype}{bool}\ CustomRemove(\textcolor{keyword}{const}\ interfaces::BlockInfo\&\ block)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \ \ \ \ BaseIndex::DB\&\ GetDB()\ const\ LIFETIMEBOUND\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ *m\_db;\ \}}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keyword}{explicit}\ BlockFilterIndex(std::unique\_ptr<interfaces::Chain>\ chain,\ BlockFilterType\ filter\_type,}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\_cache\_size,\ \textcolor{keywordtype}{bool}\ f\_memory\ =\ \textcolor{keyword}{false},\ \textcolor{keywordtype}{bool}\ f\_wipe\ =\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \ \ \ BlockFilterType\ GetFilterType()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_filter\_type;\ \}}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keywordtype}{bool}\ LookupFilter(\textcolor{keyword}{const}\ CBlockIndex*\ block\_index,\ BlockFilter\&\ filter\_out)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordtype}{bool}\ LookupFilterHeader(\textcolor{keyword}{const}\ CBlockIndex*\ block\_index,\ uint256\&\ header\_out)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs\_headers\_cache);}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keywordtype}{bool}\ LookupFilterRange(\textcolor{keywordtype}{int}\ start\_height,\ \textcolor{keyword}{const}\ CBlockIndex*\ stop\_index,}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<BlockFilter>\&\ filters\_out)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordtype}{bool}\ LookupFilterHashRange(\textcolor{keywordtype}{int}\ start\_height,\ \textcolor{keyword}{const}\ CBlockIndex*\ stop\_index,}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<uint256>\&\ hashes\_out)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00098\ \};}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00104\ BlockFilterIndex*\ GetBlockFilterIndex(BlockFilterType\ filter\_type);}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00107\ \textcolor{keywordtype}{void}\ ForEachBlockFilterIndex(std::function<\textcolor{keywordtype}{void}\ (BlockFilterIndex\&)>\ fn);}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00113\ \textcolor{keywordtype}{bool}\ InitBlockFilterIndex(std::function<std::unique\_ptr<interfaces::Chain>()>\ make\_chain,\ BlockFilterType\ filter\_type,}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ n\_cache\_size,\ \textcolor{keywordtype}{bool}\ f\_memory\ =\ \textcolor{keyword}{false},\ \textcolor{keywordtype}{bool}\ f\_wipe\ =\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00121\ \textcolor{keywordtype}{bool}\ DestroyBlockFilterIndex(BlockFilterType\ filter\_type);}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00124\ \textcolor{keywordtype}{void}\ DestroyAllBlockFilterIndexes();}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_INDEX\_BLOCKFILTERINDEX\_H}}
+
+\end{DoxyCode}

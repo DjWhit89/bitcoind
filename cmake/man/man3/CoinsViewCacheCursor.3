@@ -1,0 +1,59 @@
+.TH "CoinsViewCacheCursor" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+CoinsViewCacheCursor
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <coins\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBCoinsViewCacheCursor\fP (\fBCoinsCachePair\fP &sentinel \fBLIFETIMEBOUND\fP, \fBCCoinsMap\fP &map \fBLIFETIMEBOUND\fP, bool will_erase) noexcept"
+.br
+.ti -1c
+.RI "\fBCoinsCachePair\fP * \fBBegin\fP () const noexcept"
+.br
+.ti -1c
+.RI "\fBCoinsCachePair\fP * \fBEnd\fP () const noexcept"
+.br
+.ti -1c
+.RI "\fBCoinsCachePair\fP * \fBNextAndMaybeErase\fP (\fBCoinsCachePair\fP &current) noexcept"
+.br
+.RI "Return the next entry after current, possibly erasing current\&. "
+.ti -1c
+.RI "bool \fBWillErase\fP (\fBCoinsCachePair\fP &current) const noexcept"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Cursor for iterating over the linked list of flagged entries in \fBCCoinsViewCache\fP\&.
+
+.PP
+This is a helper struct to encapsulate the diverging logic between a non-erasing \fBCCoinsViewCache::Sync\fP and an erasing \fBCCoinsViewCache::Flush\fP\&. This allows the receiver of \fBCCoinsView::BatchWrite\fP to iterate through the flagged entries without knowing the caller's intent\&.
+
+.PP
+However, the receiver can still call \fBCoinsViewCacheCursor::WillErase\fP to see if the caller will erase the entry after BatchWrite returns\&. If so, the receiver can perform optimizations such as moving the coin out of the CCoinsCachEntry instead of copying it\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBCoinsViewCacheCursor\fP (\fBCoinsCachePair\fP &sentinel LIFETIMEBOUND, \fBCCoinsMap\fP &map LIFETIMEBOUND, bool will_erase)\fR [inline]\fP, \fR [noexcept]\fP"
+If will_erase is not set, iterating through the cursor will erase spent coins from the map, and other coins will be unflagged (removing them from the linked list)\&. If will_erase is set, the underlying map and linked list will not be modified, as the caller is expected to wipe the entire map anyway\&. This is an optimization compared to erasing all entries as the cursor iterates them when will_erase is set\&. Calling CCoinsMap::clear() afterwards is faster because a \fBCoinsCachePair\fP cannot be coerced back into a CCoinsMap::iterator to be erased, and must therefore be looked up again by key in the \fBCCoinsMap\fP before being erased\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "\fBCoinsCachePair\fP * Begin () const\fR [inline]\fP, \fR [noexcept]\fP"
+
+.SS "\fBCoinsCachePair\fP * End () const\fR [inline]\fP, \fR [noexcept]\fP"
+
+.SS "\fBCoinsCachePair\fP * NextAndMaybeErase (\fBCoinsCachePair\fP & current)\fR [inline]\fP, \fR [noexcept]\fP"
+
+.PP
+Return the next entry after current, possibly erasing current\&. 
+.SS "bool WillErase (\fBCoinsCachePair\fP & current) const\fR [inline]\fP, \fR [noexcept]\fP"
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

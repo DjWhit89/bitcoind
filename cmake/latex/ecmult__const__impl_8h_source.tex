@@ -1,0 +1,400 @@
+\doxysection{ecmult\+\_\+const\+\_\+impl.\+h}
+\label{ecmult__const__impl_8h_source}\index{src/secp256k1/src/ecmult\_const\_impl.h@{src/secp256k1/src/ecmult\_const\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2015,\ 2022\ Pieter\ Wuille,\ Andrew\ Poelstra\ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_ECMULT\_CONST\_IMPL\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_ECMULT\_CONST\_IMPL\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}scalar.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}group.h"{}}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}ecmult\_const.h"{}}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}ecmult\_impl.h"{}}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#if\ defined(EXHAUSTIVE\_TEST\_ORDER)}}
+\DoxyCodeLine{00016\ \textcolor{comment}{/*\ We\ need\ 2\string^ECMULT\_CONST\_GROUP\_SIZE\ -\/\ 1\ to\ be\ less\ than\ EXHAUSTIVE\_TEST\_ORDER,\ because}}
+\DoxyCodeLine{00017\ \textcolor{comment}{\ *\ the\ tables\ cannot\ have\ infinities\ in\ them\ (this\ breaks\ the\ effective-\/affine\ technique's}}
+\DoxyCodeLine{00018\ \textcolor{comment}{\ *\ z-\/ratio\ tracking)\ */}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#\ \ if\ EXHAUSTIVE\_TEST\_ORDER\ ==\ 199}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#\ \ \ \ define\ ECMULT\_CONST\_GROUP\_SIZE\ 4}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#\ \ elif\ EXHAUSTIVE\_TEST\_ORDER\ ==\ 13}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#\ \ \ \ define\ ECMULT\_CONST\_GROUP\_SIZE\ 3}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#\ \ elif\ EXHAUSTIVE\_TEST\_ORDER\ ==\ 7}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#\ \ \ \ define\ ECMULT\_CONST\_GROUP\_SIZE\ 2}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#\ \ else}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#\ \ \ \ error\ "{}Unknown\ EXHAUSTIVE\_TEST\_ORDER"{}}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#\ \ endif}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00029\ \textcolor{comment}{/*\ Group\ size\ 4\ or\ 5\ appears\ optimal.\ */}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#\ \ define\ ECMULT\_CONST\_GROUP\_SIZE\ 5}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#define\ ECMULT\_CONST\_TABLE\_SIZE\ (1L\ <<\ (ECMULT\_CONST\_GROUP\_SIZE\ -\/\ 1))}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#define\ ECMULT\_CONST\_GROUPS\ ((129\ +\ ECMULT\_CONST\_GROUP\_SIZE\ -\/\ 1)\ /\ ECMULT\_CONST\_GROUP\_SIZE)}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#define\ ECMULT\_CONST\_BITS\ (ECMULT\_CONST\_GROUPS\ *\ ECMULT\_CONST\_GROUP\_SIZE)}}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00044\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_const\_odd\_multiples\_table\_globalz(secp256k1\_ge\ *pre,\ secp256k1\_fe\ *globalz,\ \textcolor{keyword}{const}\ secp256k1\_gej\ *a)\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ secp256k1\_fe\ zr[ECMULT\_CONST\_TABLE\_SIZE];}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ \ \ \ \ secp256k1\_ecmult\_odd\_multiples\_table(ECMULT\_CONST\_TABLE\_SIZE,\ pre,\ zr,\ globalz,\ a);}
+\DoxyCodeLine{00048\ \ \ \ \ secp256k1\_ge\_table\_set\_globalz(ECMULT\_CONST\_TABLE\_SIZE,\ pre,\ zr);}
+\DoxyCodeLine{00049\ \}}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \textcolor{comment}{/*\ Given\ a\ table\ 'pre'\ with\ odd\ multiples\ of\ a\ point,\ put\ in\ r\ the\ signed-\/bit\ multiplication\ of\ n\ with\ that\ point.}}
+\DoxyCodeLine{00052\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00053\ \textcolor{comment}{\ *\ For\ example,\ if\ ECMULT\_CONST\_GROUP\_SIZE\ is\ 4,\ then\ pre\ is\ expected\ to\ contain\ 8\ entries:}}
+\DoxyCodeLine{00054\ \textcolor{comment}{\ *\ [1*P,\ 3*P,\ 5*P,\ 7*P,\ 9*P,\ 11*P,\ 13*P,\ 15*P].\ n\ is\ then\ expected\ to\ be\ a\ 4-\/bit\ integer\ (range\ 0-\/15),\ and\ its}}
+\DoxyCodeLine{00055\ \textcolor{comment}{\ *\ bits\ are\ interpreted\ as\ signs\ of\ powers\ of\ two\ to\ look\ up.}}
+\DoxyCodeLine{00056\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00057\ \textcolor{comment}{\ *\ For\ example,\ if\ n=4,\ which\ is\ 0100\ in\ binary,\ which\ is\ interpreted\ as\ [-\/\ +\ -\/\ -\/],\ so\ the\ looked\ up\ value\ is}}
+\DoxyCodeLine{00058\ \textcolor{comment}{\ *\ [\ -\/(2\string^3)\ +\ (2\string^2)\ -\/\ (2\string^1)\ -\/\ (2\string^0)\ ]*P\ =\ -\/7*P.\ Every\ valid\ n\ translates\ to\ an\ odd\ number\ in\ range\ [-\/15,15],}}
+\DoxyCodeLine{00059\ \textcolor{comment}{\ *\ which\ means\ we\ just\ need\ to\ look\ up\ one\ of\ the\ precomputed\ values,\ and\ optionally\ negate\ it.}}
+\DoxyCodeLine{00060\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00061\ \textcolor{preprocessor}{\#define\ ECMULT\_CONST\_TABLE\_GET\_GE(r,pre,n)\ do\ \{\ \(\backslash\)}}
+\DoxyCodeLine{00062\ \textcolor{preprocessor}{\ \ \ \ unsigned\ int\ m\ =\ 0;\ \(\backslash\)}}
+\DoxyCodeLine{00063\ \textcolor{preprocessor}{\ \ \ \ }\textcolor{comment}{/*\ If\ the\ top\ bit\ of\ n\ is\ 0,\ we\ want\ the\ negation.\ */}\textcolor{preprocessor}{\ \(\backslash\)}}
+\DoxyCodeLine{00064\ \textcolor{preprocessor}{\ \ \ \ volatile\ unsigned\ int\ negative\ =\ ((n)\ >>\ (ECMULT\_CONST\_GROUP\_SIZE\ -\/\ 1))\ \string^\ 1;\ \(\backslash\)}}
+\DoxyCodeLine{00065\ \textcolor{preprocessor}{\ \ \ \ }\textcolor{comment}{/*\ Let\ n[i]\ be\ the\ i-\/th\ bit\ of\ n,\ then\ the\ index\ is}}
+\DoxyCodeLine{00066\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ sum(cnot(n[i])\ *\ 2\string^i,\ i=0..l-\/2)}}
+\DoxyCodeLine{00067\ \textcolor{comment}{\ \ \ \ \ *\ where\ cnot(b)\ =\ b\ if\ n[l-\/1]\ =\ 1\ and\ 1\ -\/\ b\ otherwise.}}
+\DoxyCodeLine{00068\ \textcolor{comment}{\ \ \ \ \ *\ For\ example,\ if\ n\ =\ 4,\ in\ binary\ 0100,\ the\ index\ is\ 3,\ in\ binary\ 011.}}
+\DoxyCodeLine{00069\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00070\ \textcolor{comment}{\ \ \ \ \ *\ Proof:}}
+\DoxyCodeLine{00071\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ Let}}
+\DoxyCodeLine{00072\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ x\ =\ sum((2*n[i]\ -\/\ 1)*2\string^i,\ i=0..l-\/1)}}
+\DoxyCodeLine{00073\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ =\ 2*sum(n[i]\ *\ 2\string^i,\ i=0..l-\/1)\ -\/\ 2\string^l\ +\ 1}}
+\DoxyCodeLine{00074\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ be\ the\ value\ represented\ by\ n.}}
+\DoxyCodeLine{00075\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ The\ index\ is\ (x\ -\/\ 1)/2\ if\ x\ >\ 0\ and\ -\/(x\ +\ 1)/2\ otherwise.}}
+\DoxyCodeLine{00076\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ Case\ x\ >\ 0:}}
+\DoxyCodeLine{00077\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ n[l-\/1]\ =\ 1}}
+\DoxyCodeLine{00078\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ index\ =\ sum(n[i]\ *\ 2\string^i,\ i=0..l-\/1)\ -\/\ 2\string^(l-\/1)}}
+\DoxyCodeLine{00079\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ =\ sum(n[i]\ *\ 2\string^i,\ i=0..l-\/2)}}
+\DoxyCodeLine{00080\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ Case\ x\ <=\ 0:}}
+\DoxyCodeLine{00081\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ n[l-\/1]\ =\ 0}}
+\DoxyCodeLine{00082\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ index\ =\ -\/(2*sum(n[i]\ *\ 2\string^i,\ i=0..l-\/1)\ -\/\ 2\string^l\ +\ 2)/2}}
+\DoxyCodeLine{00083\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ =\ 2\string^(l-\/1)\ -\/\ 1\ -\/\ sum(n[i]\ *\ 2\string^i,\ i=0..l-\/1)}}
+\DoxyCodeLine{00084\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ =\ sum((1\ -\/\ n[i])\ *\ 2\string^i,\ i=0..l-\/2)}}
+\DoxyCodeLine{00085\ \textcolor{comment}{\ \ \ \ \ */}\textcolor{preprocessor}{\ \(\backslash\)}}
+\DoxyCodeLine{00086\ \textcolor{preprocessor}{\ \ \ \ unsigned\ int\ index\ =\ ((unsigned\ int)(-\/negative)\ \string^\ n)\ \&\ ((1U\ <<\ (ECMULT\_CONST\_GROUP\_SIZE\ -\/\ 1))\ -\/\ 1U);\ \(\backslash\)}}
+\DoxyCodeLine{00087\ \textcolor{preprocessor}{\ \ \ \ secp256k1\_fe\ neg\_y;\ \(\backslash\)}}
+\DoxyCodeLine{00088\ \textcolor{preprocessor}{\ \ \ \ VERIFY\_CHECK((n)\ <\ (1U\ <<\ ECMULT\_CONST\_GROUP\_SIZE));\ \(\backslash\)}}
+\DoxyCodeLine{00089\ \textcolor{preprocessor}{\ \ \ \ VERIFY\_CHECK(index\ <\ (1U\ <<\ (ECMULT\_CONST\_GROUP\_SIZE\ -\/\ 1)));\ \(\backslash\)}}
+\DoxyCodeLine{00090\ \textcolor{preprocessor}{\ \ \ \ }\textcolor{comment}{/*\ Unconditionally\ set\ r-\/>x\ =\ (pre)[m].x.\ r-\/>y\ =\ (pre)[m].y.\ because\ it's\ either\ the\ correct\ one}}
+\DoxyCodeLine{00091\ \textcolor{comment}{\ \ \ \ \ *\ or\ will\ get\ replaced\ in\ the\ later\ iterations,\ this\ is\ needed\ to\ make\ sure\ \`{}r`\ is\ initialized.\ */}\textcolor{preprocessor}{\ \(\backslash\)}}
+\DoxyCodeLine{00092\ \textcolor{preprocessor}{\ \ \ \ (r)-\/>x\ =\ (pre)[m].x;\ \(\backslash\)}}
+\DoxyCodeLine{00093\ \textcolor{preprocessor}{\ \ \ \ (r)-\/>y\ =\ (pre)[m].y;\ \(\backslash\)}}
+\DoxyCodeLine{00094\ \textcolor{preprocessor}{\ \ \ \ for\ (m\ =\ 1;\ m\ <\ ECMULT\_CONST\_TABLE\_SIZE;\ m++)\ \{\ \(\backslash\)}}
+\DoxyCodeLine{00095\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ }\textcolor{comment}{/*\ This\ loop\ is\ used\ to\ avoid\ secret\ data\ in\ array\ indices.\ See}}
+\DoxyCodeLine{00096\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ the\ comment\ in\ ecmult\_gen\_impl.h\ for\ rationale.\ */}\textcolor{preprocessor}{\ \(\backslash\)}}
+\DoxyCodeLine{00097\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ secp256k1\_fe\_cmov(\&(r)-\/>x,\ \&(pre)[m].x,\ m\ ==\ index);\ \(\backslash\)}}
+\DoxyCodeLine{00098\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ secp256k1\_fe\_cmov(\&(r)-\/>y,\ \&(pre)[m].y,\ m\ ==\ index);\ \(\backslash\)}}
+\DoxyCodeLine{00099\ \textcolor{preprocessor}{\ \ \ \ \}\ \(\backslash\)}}
+\DoxyCodeLine{00100\ \textcolor{preprocessor}{\ \ \ \ (r)-\/>infinity\ =\ 0;\ \(\backslash\)}}
+\DoxyCodeLine{00101\ \textcolor{preprocessor}{\ \ \ \ secp256k1\_fe\_negate(\&neg\_y,\ \&(r)-\/>y,\ 1);\ \(\backslash\)}}
+\DoxyCodeLine{00102\ \textcolor{preprocessor}{\ \ \ \ secp256k1\_fe\_cmov(\&(r)-\/>y,\ \&neg\_y,\ negative);\ \(\backslash\)}}
+\DoxyCodeLine{00103\ \textcolor{preprocessor}{\}\ while(0)}}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \textcolor{comment}{/*\ For\ K\ as\ defined\ in\ the\ comment\ of\ secp256k1\_ecmult\_const,\ we\ have\ several\ precomputed}}
+\DoxyCodeLine{00106\ \textcolor{comment}{\ *\ formulas/constants.}}
+\DoxyCodeLine{00107\ \textcolor{comment}{\ *\ -\/\ in\ exhaustive\ test\ mode,\ we\ give\ an\ explicit\ expression\ to\ compute\ it\ at\ compile\ time:\ */}}
+\DoxyCodeLine{00108\ \textcolor{preprocessor}{\#ifdef\ EXHAUSTIVE\_TEST\_ORDER}}
+\DoxyCodeLine{00109\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_scalar\ secp256k1\_ecmult\_const\_K\ =\ ((SECP256K1\_SCALAR\_CONST(0,\ 0,\ 0,\ (1U\ <<\ (ECMULT\_CONST\_BITS\ -\/\ 128))\ -\/\ 2U,\ 0,\ 0,\ 0,\ 0)\ +\ EXHAUSTIVE\_TEST\_ORDER\ -\/\ 1U)\ *\ (1U\ +\ EXHAUSTIVE\_TEST\_LAMBDA))\ \%\ EXHAUSTIVE\_TEST\_ORDER;}
+\DoxyCodeLine{00110\ \textcolor{comment}{/*\ -\/\ for\ the\ real\ secp256k1\ group\ we\ have\ constants\ for\ various\ ECMULT\_CONST\_BITS\ values.\ */}}
+\DoxyCodeLine{00111\ \textcolor{preprocessor}{\#elif\ ECMULT\_CONST\_BITS\ ==\ 129}}
+\DoxyCodeLine{00112\ \textcolor{comment}{/*\ For\ GROUP\_SIZE\ =\ 1,3.\ */}}
+\DoxyCodeLine{00113\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_scalar\ secp256k1\_ecmult\_const\_K\ =\ SECP256K1\_SCALAR\_CONST(0xac9c52b3ul,\ 0x3fa3cf1ful,\ 0x5ad9e3fdul,\ 0x77ed9ba4ul,\ 0xa880b9fcul,\ 0x8ec739c2ul,\ 0xe0cfc810ul,\ 0xb51283ceul);}
+\DoxyCodeLine{00114\ \textcolor{preprocessor}{\#elif\ ECMULT\_CONST\_BITS\ ==\ 130}}
+\DoxyCodeLine{00115\ \textcolor{comment}{/*\ For\ GROUP\_SIZE\ =\ 2,5.\ */}}
+\DoxyCodeLine{00116\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_scalar\ secp256k1\_ecmult\_const\_K\ =\ SECP256K1\_SCALAR\_CONST(0xa4e88a7dul,\ 0xcb13034eul,\ 0xc2bdd6bful,\ 0x7c118d6bul,\ 0x589ae848ul,\ 0x26ba29e4ul,\ 0xb5c2c1dcul,\ 0xde9798d9ul);}
+\DoxyCodeLine{00117\ \textcolor{preprocessor}{\#elif\ ECMULT\_CONST\_BITS\ ==\ 132}}
+\DoxyCodeLine{00118\ \textcolor{comment}{/*\ For\ GROUP\_SIZE\ =\ 4,6\ */}}
+\DoxyCodeLine{00119\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_scalar\ secp256k1\_ecmult\_const\_K\ =\ SECP256K1\_SCALAR\_CONST(0x76b1d93dul,\ 0x0fae3c6bul,\ 0x3215874bul,\ 0x94e93813ul,\ 0x7937fe0dul,\ 0xb66bcaaful,\ 0xb3749ca5ul,\ 0xd7b6171bul);}
+\DoxyCodeLine{00120\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00121\ \textcolor{preprocessor}{\#\ \ error\ "{}Unknown\ ECMULT\_CONST\_BITS"{}}}
+\DoxyCodeLine{00122\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ecmult\_const(secp256k1\_gej\ *r,\ \textcolor{keyword}{const}\ secp256k1\_ge\ *a,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *q)\ \{}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{comment}{/*\ The\ approach\ below\ combines\ the\ signed-\/digit\ logic\ from\ Mike\ Hamburg's}}
+\DoxyCodeLine{00126\ \textcolor{comment}{\ \ \ \ \ *\ "{}Fast\ and\ compact\ elliptic-\/curve\ cryptography"{}\ (https://eprint.iacr.org/2012/309)}}
+\DoxyCodeLine{00127\ \textcolor{comment}{\ \ \ \ \ *\ Section\ 3.3,\ with\ the\ GLV\ endomorphism.}}
+\DoxyCodeLine{00128\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00129\ \textcolor{comment}{\ \ \ \ \ *\ The\ idea\ there\ is\ to\ interpret\ the\ bits\ of\ a\ scalar\ as\ signs\ (1\ =\ +,\ 0\ =\ -\/),\ and\ compute\ a}}
+\DoxyCodeLine{00130\ \textcolor{comment}{\ \ \ \ \ *\ point\ multiplication\ in\ that\ fashion.\ Let\ v\ be\ an\ n-\/bit\ non-\/negative\ integer\ (0\ <=\ v\ <\ 2\string^n),}}
+\DoxyCodeLine{00131\ \textcolor{comment}{\ \ \ \ \ *\ and\ v[i]\ its\ i'th\ bit\ (so\ v\ =\ sum(v[i]\ *\ 2\string^i,\ i=0..n-\/1)).\ Then\ define:}}
+\DoxyCodeLine{00132\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00133\ \textcolor{comment}{\ \ \ \ \ *\ \ \ C\_l(v,\ A)\ =\ sum((2*v[i]\ -\/\ 1)\ *\ 2\string^i*A,\ i=0..l-\/1)}}
+\DoxyCodeLine{00134\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00135\ \textcolor{comment}{\ \ \ \ \ *\ Then\ it\ holds\ that\ C\_l(v,\ A)\ =\ sum((2*v[i]\ -\/\ 1)\ *\ 2\string^i*A,\ i=0..l-\/1)}}
+\DoxyCodeLine{00136\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ =\ (2*sum(v[i]\ *\ 2\string^i,\ i=0..l-\/1)\ +\ 1\ -\/\ 2\string^l)\ *\ A}}
+\DoxyCodeLine{00137\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ =\ (2*v\ +\ 1\ -\/\ 2\string^l)\ *\ A}}
+\DoxyCodeLine{00138\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00139\ \textcolor{comment}{\ \ \ \ \ *\ Thus,\ one\ can\ compute\ q*A\ as\ C\_256((q\ +\ 2\string^256\ -\/\ 1)\ /\ 2,\ A).\ This\ is\ the\ basis\ for\ the}}
+\DoxyCodeLine{00140\ \textcolor{comment}{\ \ \ \ \ *\ paper's\ signed-\/digit\ multi-\/comb\ algorithm\ for\ multiplication\ using\ a\ precomputed\ table.}}
+\DoxyCodeLine{00141\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00142\ \textcolor{comment}{\ \ \ \ \ *\ It\ is\ appealing\ to\ try\ to\ combine\ this\ with\ the\ GLV\ optimization:\ the\ idea\ that\ a\ scalar}}
+\DoxyCodeLine{00143\ \textcolor{comment}{\ \ \ \ \ *\ s\ can\ be\ written\ as\ s1\ +\ lambda*s2,\ where\ lambda\ is\ a\ curve-\/specific\ constant\ such\ that}}
+\DoxyCodeLine{00144\ \textcolor{comment}{\ \ \ \ \ *\ lambda*A\ is\ easy\ to\ compute,\ and\ where\ s1\ and\ s2\ are\ small.\ In\ particular\ we\ have\ the}}
+\DoxyCodeLine{00145\ \textcolor{comment}{\ \ \ \ \ *\ secp256k1\_scalar\_split\_lambda\ function\ which\ performs\ such\ a\ split\ with\ the\ resulting\ s1}}
+\DoxyCodeLine{00146\ \textcolor{comment}{\ \ \ \ \ *\ and\ s2\ in\ range\ (-\/2\string^128,\ 2\string^128)\ mod\ n.\ This\ does\ work,\ but\ is\ uninteresting:}}
+\DoxyCodeLine{00147\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00148\ \textcolor{comment}{\ \ \ \ \ *\ \ \ To\ compute\ q*A:}}
+\DoxyCodeLine{00149\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ s1,\ s2\ =\ split\_lambda(q)}}
+\DoxyCodeLine{00150\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ R1\ =\ C\_256((s1\ +\ 2\string^256\ -\/\ 1)\ /\ 2,\ A)}}
+\DoxyCodeLine{00151\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ R2\ =\ C\_256((s2\ +\ 2\string^256\ -\/\ 1)\ /\ 2,\ lambda*A)}}
+\DoxyCodeLine{00152\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Return\ R1\ +\ R2}}
+\DoxyCodeLine{00153\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00154\ \textcolor{comment}{\ \ \ \ \ *\ The\ issue\ is\ that\ while\ s1\ and\ s2\ are\ small-\/range\ numbers,\ (s1\ +\ 2\string^256\ -\/\ 1)\ /\ 2\ (mod\ n)}}
+\DoxyCodeLine{00155\ \textcolor{comment}{\ \ \ \ \ *\ and\ (s2\ +\ 2\string^256\ -\/\ 1)\ /\ 2\ (mod\ n)\ are\ not,\ undoing\ the\ benefit\ of\ the\ splitting.}}
+\DoxyCodeLine{00156\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00157\ \textcolor{comment}{\ \ \ \ \ *\ To\ make\ it\ work,\ we\ want\ to\ modify\ the\ input\ scalar\ q\ first,\ before\ splitting,\ and\ then\ only}}
+\DoxyCodeLine{00158\ \textcolor{comment}{\ \ \ \ \ *\ add\ a\ 2\string^128\ offset\ of\ the\ split\ results\ (so\ that\ they\ end\ up\ in\ the\ single\ 129-\/bit\ range}}
+\DoxyCodeLine{00159\ \textcolor{comment}{\ \ \ \ \ *\ [0,2\string^129]).\ A\ slightly\ smaller\ offset\ would\ work\ due\ to\ the\ bounds\ on\ the\ split,\ but\ we\ pick}}
+\DoxyCodeLine{00160\ \textcolor{comment}{\ \ \ \ \ *\ 2\string^128\ for\ simplicity.\ Let\ s\ be\ the\ scalar\ fed\ to\ split\_lambda,\ and\ f(q)\ the\ function\ to}}
+\DoxyCodeLine{00161\ \textcolor{comment}{\ \ \ \ \ *\ compute\ it\ from\ q:}}
+\DoxyCodeLine{00162\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00163\ \textcolor{comment}{\ \ \ \ \ *\ \ \ To\ compute\ q*A:}}
+\DoxyCodeLine{00164\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Compute\ s\ =\ f(q)}}
+\DoxyCodeLine{00165\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ s1,\ s2\ =\ split\_lambda(s)}}
+\DoxyCodeLine{00166\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ v1\ =\ s1\ +\ 2\string^128\ (mod\ n)}}
+\DoxyCodeLine{00167\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ v2\ =\ s2\ +\ 2\string^128\ (mod\ n)}}
+\DoxyCodeLine{00168\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ R1\ =\ C\_l(v1,\ A)}}
+\DoxyCodeLine{00169\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ R2\ =\ C\_l(v2,\ lambda*A)}}
+\DoxyCodeLine{00170\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Return\ R1\ +\ R2}}
+\DoxyCodeLine{00171\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00172\ \textcolor{comment}{\ \ \ \ \ *\ l\ will\ thus\ need\ to\ be\ at\ least\ 129,\ but\ we\ may\ overshoot\ by\ a\ few\ bits\ (see}}
+\DoxyCodeLine{00173\ \textcolor{comment}{\ \ \ \ \ *\ further),\ so\ keep\ it\ as\ a\ variable.}}
+\DoxyCodeLine{00174\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00175\ \textcolor{comment}{\ \ \ \ \ *\ To\ solve\ for\ s,\ we\ reason:}}
+\DoxyCodeLine{00176\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ q*A\ \ =\ R1\ +\ R2}}
+\DoxyCodeLine{00177\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ q*A\ \ =\ C\_l(s1\ +\ 2\string^128,\ A)\ +\ C\_l(s2\ +\ 2\string^128,\ lambda*A)}}
+\DoxyCodeLine{00178\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ q*A\ \ =\ (2*(s1\ +\ 2\string^128)\ +\ 1\ -\/\ 2\string^l)\ *\ A\ +\ (2*(s2\ +\ 2\string^128)\ +\ 1\ -\/\ 2\string^l)\ *\ lambda*A}}
+\DoxyCodeLine{00179\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ q*A\ \ =\ (2*(s1\ +\ s2*lambda)\ +\ (2\string^129\ +\ 1\ -\/\ 2\string^l)\ *\ (1\ +\ lambda))\ *\ A}}
+\DoxyCodeLine{00180\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ q\ \ \ \ =\ 2*(s1\ +\ s2*lambda)\ +\ (2\string^129\ +\ 1\ -\/\ 2\string^l)\ *\ (1\ +\ lambda)\ (mod\ n)}}
+\DoxyCodeLine{00181\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ q\ \ \ \ =\ 2*s\ +\ (2\string^129\ +\ 1\ -\/\ 2\string^l)\ *\ (1\ +\ lambda)\ (mod\ n)}}
+\DoxyCodeLine{00182\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ s\ \ \ \ =\ (q\ +\ (2\string^l\ -\/\ 2\string^129\ -\/\ 1)\ *\ (1\ +\ lambda))\ /\ 2\ (mod\ n)}}
+\DoxyCodeLine{00183\ \textcolor{comment}{\ \ \ \ \ *\ <=>\ f(q)\ =\ (q\ +\ K)\ /\ 2\ (mod\ n)}}
+\DoxyCodeLine{00184\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ where\ K\ =\ (2\string^l\ -\/\ 2\string^129\ -\/\ 1)*(1\ +\ lambda)\ (mod\ n)}}
+\DoxyCodeLine{00185\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00186\ \textcolor{comment}{\ \ \ \ \ *\ We\ will\ process\ the\ computation\ of\ C\_l(v1,\ A)\ and\ C\_l(v2,\ lambda*A)\ in\ groups\ of}}
+\DoxyCodeLine{00187\ \textcolor{comment}{\ \ \ \ \ *\ ECMULT\_CONST\_GROUP\_SIZE,\ so\ we\ set\ l\ to\ the\ smallest\ multiple\ of\ ECMULT\_CONST\_GROUP\_SIZE}}
+\DoxyCodeLine{00188\ \textcolor{comment}{\ \ \ \ \ *\ that\ is\ not\ less\ than\ 129;\ this\ equals\ ECMULT\_CONST\_BITS.}}
+\DoxyCodeLine{00189\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00190\ }
+\DoxyCodeLine{00191\ \ \ \ \ \textcolor{comment}{/*\ The\ offset\ to\ add\ to\ s1\ and\ s2\ to\ make\ them\ non-\/negative.\ Equal\ to\ 2\string^128.\ */}}
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_scalar\ S\_OFFSET\ =\ SECP256K1\_SCALAR\_CONST(0,\ 0,\ 0,\ 1,\ 0,\ 0,\ 0,\ 0);}
+\DoxyCodeLine{00193\ \ \ \ \ secp256k1\_scalar\ s,\ v1,\ v2;}
+\DoxyCodeLine{00194\ \ \ \ \ secp256k1\_ge\ pre\_a[ECMULT\_CONST\_TABLE\_SIZE];}
+\DoxyCodeLine{00195\ \ \ \ \ secp256k1\_ge\ pre\_a\_lam[ECMULT\_CONST\_TABLE\_SIZE];}
+\DoxyCodeLine{00196\ \ \ \ \ secp256k1\_fe\ global\_z;}
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keywordtype}{int}\ group,\ i;}
+\DoxyCodeLine{00198\ }
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{comment}{/*\ We're\ allowed\ to\ be\ non-\/constant\ time\ in\ the\ point,\ and\ the\ code\ below\ (in\ particular,}}
+\DoxyCodeLine{00200\ \textcolor{comment}{\ \ \ \ \ *\ secp256k1\_ecmult\_const\_odd\_multiples\_table\_globalz)\ cannot\ deal\ with\ infinity\ in\ a}}
+\DoxyCodeLine{00201\ \textcolor{comment}{\ \ \ \ \ *\ constant-\/time\ manner\ anyway.\ */}}
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_ge\_is\_infinity(a))\ \{}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ secp256k1\_gej\_set\_infinity(r);}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00205\ \ \ \ \ \}}
+\DoxyCodeLine{00206\ }
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{comment}{/*\ Compute\ v1\ and\ v2.\ */}}
+\DoxyCodeLine{00208\ \ \ \ \ secp256k1\_scalar\_add(\&s,\ q,\ \&secp256k1\_ecmult\_const\_K);}
+\DoxyCodeLine{00209\ \ \ \ \ secp256k1\_scalar\_half(\&s,\ \&s);}
+\DoxyCodeLine{00210\ \ \ \ \ secp256k1\_scalar\_split\_lambda(\&v1,\ \&v2,\ \&s);}
+\DoxyCodeLine{00211\ \ \ \ \ secp256k1\_scalar\_add(\&v1,\ \&v1,\ \&S\_OFFSET);}
+\DoxyCodeLine{00212\ \ \ \ \ secp256k1\_scalar\_add(\&v2,\ \&v2,\ \&S\_OFFSET);}
+\DoxyCodeLine{00213\ }
+\DoxyCodeLine{00214\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00215\ \ \ \ \ \textcolor{comment}{/*\ Verify\ that\ v1\ and\ v2\ are\ in\ range\ [0,\ 2\string^129-\/1].\ */}}
+\DoxyCodeLine{00216\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 129;\ i\ <\ 256;\ ++i)\ \{}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_scalar\_get\_bits\_limb32(\&v1,\ i,\ 1)\ ==\ 0);}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_scalar\_get\_bits\_limb32(\&v2,\ i,\ 1)\ ==\ 0);}
+\DoxyCodeLine{00219\ \ \ \ \ \}}
+\DoxyCodeLine{00220\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{comment}{/*\ Calculate\ odd\ multiples\ of\ A\ and\ A*lambda.}}
+\DoxyCodeLine{00223\ \textcolor{comment}{\ \ \ \ \ *\ All\ multiples\ are\ brought\ to\ the\ same\ Z\ 'denominator',\ which\ is\ stored}}
+\DoxyCodeLine{00224\ \textcolor{comment}{\ \ \ \ \ *\ in\ global\_z.\ Due\ to\ secp256k1'\ isomorphism\ we\ can\ do\ all\ operations\ pretending}}
+\DoxyCodeLine{00225\ \textcolor{comment}{\ \ \ \ \ *\ that\ the\ Z\ coordinate\ was\ 1,\ use\ affine\ addition\ formulae,\ and\ correct}}
+\DoxyCodeLine{00226\ \textcolor{comment}{\ \ \ \ \ *\ the\ Z\ coordinate\ of\ the\ result\ once\ at\ the\ end.}}
+\DoxyCodeLine{00227\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00228\ \ \ \ \ secp256k1\_gej\_set\_ge(r,\ a);}
+\DoxyCodeLine{00229\ \ \ \ \ secp256k1\_ecmult\_const\_odd\_multiples\_table\_globalz(pre\_a,\ \&global\_z,\ r);}
+\DoxyCodeLine{00230\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ ECMULT\_CONST\_TABLE\_SIZE;\ i++)\ \{}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ secp256k1\_ge\_mul\_lambda(\&pre\_a\_lam[i],\ \&pre\_a[i]);}
+\DoxyCodeLine{00232\ \ \ \ \ \}}
+\DoxyCodeLine{00233\ }
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{comment}{/*\ Next,\ we\ compute\ r\ =\ C\_l(v1,\ A)\ +\ C\_l(v2,\ lambda*A).}}
+\DoxyCodeLine{00235\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00236\ \textcolor{comment}{\ \ \ \ \ *\ We\ proceed\ in\ groups\ of\ ECMULT\_CONST\_GROUP\_SIZE\ bits,\ operating\ on\ that\ many\ bits}}
+\DoxyCodeLine{00237\ \textcolor{comment}{\ \ \ \ \ *\ at\ a\ time,\ from\ high\ in\ v1,\ v2\ to\ low.\ Call\ these\ bits1\ (from\ v1)\ and\ bits2\ (from\ v2).}}
+\DoxyCodeLine{00238\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00239\ \textcolor{comment}{\ \ \ \ \ *\ Now\ note\ that\ ECMULT\_CONST\_TABLE\_GET\_GE(\&t,\ pre\_a,\ bits1)\ loads\ into\ t\ a\ point\ equal}}
+\DoxyCodeLine{00240\ \textcolor{comment}{\ \ \ \ \ *\ to\ C\_\{ECMULT\_CONST\_GROUP\_SIZE\}(bits1,\ A),\ and\ analogously\ for\ pre\_lam\_a\ /\ bits2.}}
+\DoxyCodeLine{00241\ \textcolor{comment}{\ \ \ \ \ *\ This\ means\ that\ all\ we\ need\ to\ do\ is\ add\ these\ looked\ up\ values\ together,\ multiplied}}
+\DoxyCodeLine{00242\ \textcolor{comment}{\ \ \ \ \ *\ by\ 2\string^(ECMULT\_GROUP\_SIZE\ *\ group).}}
+\DoxyCodeLine{00243\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keywordflow}{for}\ (group\ =\ ECMULT\_CONST\_GROUPS\ -\/\ 1;\ group\ >=\ 0;\ -\/-\/group)\ \{}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Using\ the\ \_var\ get\_bits\ function\ is\ ok\ here,\ since\ it's\ only\ variable\ in\ offset\ and\ count,\ not\ in\ the\ scalar.\ */}}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ bits1\ =\ secp256k1\_scalar\_get\_bits\_var(\&v1,\ group\ *\ ECMULT\_CONST\_GROUP\_SIZE,\ ECMULT\_CONST\_GROUP\_SIZE);}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ bits2\ =\ secp256k1\_scalar\_get\_bits\_var(\&v2,\ group\ *\ ECMULT\_CONST\_GROUP\_SIZE,\ ECMULT\_CONST\_GROUP\_SIZE);}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ secp256k1\_ge\ t;}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ j;}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ ECMULT\_CONST\_TABLE\_GET\_GE(\&t,\ pre\_a,\ bits1);}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (group\ ==\ ECMULT\_CONST\_GROUPS\ -\/\ 1)\ \{}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Directly\ set\ r\ in\ the\ first\ iteration.\ */}}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_set\_ge(r,\ \&t);}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Shift\ the\ result\ so\ far\ up.\ */}}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (j\ =\ 0;\ j\ <\ ECMULT\_CONST\_GROUP\_SIZE;\ ++j)\ \{}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_double(r,\ r);}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_ge(r,\ r,\ \&t);}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ ECMULT\_CONST\_TABLE\_GET\_GE(\&t,\ pre\_a\_lam,\ bits2);}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ secp256k1\_gej\_add\_ge(r,\ r,\ \&t);}
+\DoxyCodeLine{00264\ \ \ \ \ \}}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00266\ \ \ \ \ \textcolor{comment}{/*\ Map\ the\ result\ back\ to\ the\ secp256k1\ curve\ from\ the\ isomorphic\ curve.\ */}}
+\DoxyCodeLine{00267\ \ \ \ \ secp256k1\_fe\_mul(\&r-\/>z,\ \&r-\/>z,\ \&global\_z);}
+\DoxyCodeLine{00268\ \}}
+\DoxyCodeLine{00269\ }
+\DoxyCodeLine{00270\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ecmult\_const\_xonly(secp256k1\_fe*\ r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *n,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *d,\ \textcolor{keyword}{const}\ secp256k1\_scalar\ *q,\ \textcolor{keywordtype}{int}\ known\_on\_curve)\ \{}
+\DoxyCodeLine{00271\ }
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{comment}{/*\ This\ algorithm\ is\ a\ generalization\ of\ Peter\ Dettman's\ technique\ for}}
+\DoxyCodeLine{00273\ \textcolor{comment}{\ \ \ \ \ *\ avoiding\ the\ square\ root\ in\ a\ random-\/basepoint\ x-\/only\ multiplication}}
+\DoxyCodeLine{00274\ \textcolor{comment}{\ \ \ \ \ *\ on\ a\ Weierstrass\ curve:}}
+\DoxyCodeLine{00275\ \textcolor{comment}{\ \ \ \ \ *\ https://mailarchive.ietf.org/arch/msg/cfrg/7DyYY6gg32wDgHAhgSb6XxMDlJA/}}
+\DoxyCodeLine{00276\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00277\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00278\ \textcolor{comment}{\ \ \ \ \ *\ ===\ Background:\ the\ effective\ affine\ technique\ ===}}
+\DoxyCodeLine{00279\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00280\ \textcolor{comment}{\ \ \ \ \ *\ Let\ phi\_u\ be\ the\ isomorphism\ that\ maps\ (x,\ y)\ on\ secp256k1\ curve\ y\string^2\ =\ x\string^3\ +\ 7\ to}}
+\DoxyCodeLine{00281\ \textcolor{comment}{\ \ \ \ \ *\ x'\ =\ u\string^2*x,\ y'\ =\ u\string^3*y\ on\ curve\ y'\string^2\ =\ x'\string^3\ +\ u\string^6*7.\ This\ new\ curve\ has\ the\ same\ order\ as}}
+\DoxyCodeLine{00282\ \textcolor{comment}{\ \ \ \ \ *\ the\ original\ (it\ is\ isomorphic),\ but\ moreover,\ has\ the\ same\ addition/doubling\ formulas,\ as}}
+\DoxyCodeLine{00283\ \textcolor{comment}{\ \ \ \ \ *\ the\ curve\ b=7\ coefficient\ does\ not\ appear\ in\ those\ formulas\ (or\ at\ least\ does\ not\ appear\ in}}
+\DoxyCodeLine{00284\ \textcolor{comment}{\ \ \ \ \ *\ the\ formulas\ implemented\ in\ this\ codebase,\ both\ affine\ and\ Jacobian).\ See\ also\ Example\ 9.5.2}}
+\DoxyCodeLine{00285\ \textcolor{comment}{\ \ \ \ \ *\ in\ https://www.math.auckland.ac.nz/\string~sgal018/crypto-\/book/ch9.pdf.}}
+\DoxyCodeLine{00286\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00287\ \textcolor{comment}{\ \ \ \ \ *\ This\ means\ any\ linear\ combination\ of\ secp256k1\ points\ can\ be\ computed\ by\ applying\ phi\_u}}
+\DoxyCodeLine{00288\ \textcolor{comment}{\ \ \ \ \ *\ (with\ non-\/zero\ u)\ on\ all\ input\ points\ (including\ the\ generator,\ if\ used),\ computing\ the}}
+\DoxyCodeLine{00289\ \textcolor{comment}{\ \ \ \ \ *\ linear\ combination\ on\ the\ isomorphic\ curve\ (using\ the\ same\ group\ laws),\ and\ then\ applying}}
+\DoxyCodeLine{00290\ \textcolor{comment}{\ \ \ \ \ *\ phi\_u\string^\{-\/1\}\ to\ get\ back\ to\ secp256k1.}}
+\DoxyCodeLine{00291\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00292\ \textcolor{comment}{\ \ \ \ \ *\ Switching\ to\ Jacobian\ coordinates,\ note\ that\ phi\_u\ applied\ to\ (X,\ Y,\ Z)\ is\ simply}}
+\DoxyCodeLine{00293\ \textcolor{comment}{\ \ \ \ \ *\ (X,\ Y,\ Z/u).\ Thus,\ if\ we\ want\ to\ compute\ (X1,\ Y1,\ Z)\ +\ (X2,\ Y2,\ Z),\ with\ identical\ Z}}
+\DoxyCodeLine{00294\ \textcolor{comment}{\ \ \ \ \ *\ coordinates,\ we\ can\ use\ phi\_Z\ to\ transform\ it\ to\ (X1,\ Y1,\ 1)\ +\ (X2,\ Y2,\ 1)\ on\ an\ isomorphic}}
+\DoxyCodeLine{00295\ \textcolor{comment}{\ \ \ \ \ *\ curve\ where\ the\ affine\ addition\ formula\ can\ be\ used\ instead.}}
+\DoxyCodeLine{00296\ \textcolor{comment}{\ \ \ \ \ *\ If\ (X3,\ Y3,\ Z3)\ =\ (X1,\ Y1)\ +\ (X2,\ Y2)\ on\ that\ curve,\ then\ our\ answer\ on\ secp256k1\ is}}
+\DoxyCodeLine{00297\ \textcolor{comment}{\ \ \ \ \ *\ (X3,\ Y3,\ Z3*Z).}}
+\DoxyCodeLine{00298\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00299\ \textcolor{comment}{\ \ \ \ \ *\ This\ is\ the\ effective\ affine\ technique:\ if\ we\ have\ a\ linear\ combination\ of\ group\ elements}}
+\DoxyCodeLine{00300\ \textcolor{comment}{\ \ \ \ \ *\ to\ compute,\ and\ all\ those\ group\ elements\ have\ the\ same\ Z\ coordinate,\ we\ can\ simply\ pretend}}
+\DoxyCodeLine{00301\ \textcolor{comment}{\ \ \ \ \ *\ that\ all\ those\ Z\ coordinates\ are\ 1,\ perform\ the\ computation\ that\ way,\ and\ then\ multiply\ the}}
+\DoxyCodeLine{00302\ \textcolor{comment}{\ \ \ \ \ *\ original\ Z\ coordinate\ back\ in.}}
+\DoxyCodeLine{00303\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00304\ \textcolor{comment}{\ \ \ \ \ *\ The\ technique\ works\ on\ any\ a=0\ short\ Weierstrass\ curve.\ It\ is\ possible\ to\ generalize\ it\ to}}
+\DoxyCodeLine{00305\ \textcolor{comment}{\ \ \ \ \ *\ other\ curves\ too,\ but\ there\ the\ isomorphic\ curves\ will\ have\ different\ 'a'\ coefficients,}}
+\DoxyCodeLine{00306\ \textcolor{comment}{\ \ \ \ \ *\ which\ typically\ does\ affect\ the\ group\ laws.}}
+\DoxyCodeLine{00307\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00308\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00309\ \textcolor{comment}{\ \ \ \ \ *\ ===\ Avoiding\ the\ square\ root\ for\ x-\/only\ point\ multiplication\ ===}}
+\DoxyCodeLine{00310\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00311\ \textcolor{comment}{\ \ \ \ \ *\ In\ this\ function,\ we\ want\ to\ compute\ the\ X\ coordinate\ of\ q*(n/d,\ y),\ for}}
+\DoxyCodeLine{00312\ \textcolor{comment}{\ \ \ \ \ *\ y\ =\ sqrt((n/d)\string^3\ +\ 7).\ Its\ negation\ would\ also\ be\ a\ valid\ Y\ coordinate,\ but\ by\ convention}}
+\DoxyCodeLine{00313\ \textcolor{comment}{\ \ \ \ \ *\ we\ pick\ whatever\ sqrt\ returns\ (which\ we\ assume\ to\ be\ a\ deterministic\ function).}}
+\DoxyCodeLine{00314\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00315\ \textcolor{comment}{\ \ \ \ \ *\ Let\ g\ =\ y\string^2*d\string^3\ =\ n\string^3\ +\ 7*d\string^3.\ This\ also\ means\ y\ =\ sqrt(g/d\string^3).}}
+\DoxyCodeLine{00316\ \textcolor{comment}{\ \ \ \ \ *\ Further\ let\ v\ =\ sqrt(d*g),\ which\ must\ exist\ as\ d*g\ =\ y\string^2*d\string^4\ =\ (y*d\string^2)\string^2.}}
+\DoxyCodeLine{00317\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00318\ \textcolor{comment}{\ \ \ \ \ *\ The\ input\ point\ (n/d,\ y)\ also\ has\ Jacobian\ coordinates:}}
+\DoxyCodeLine{00319\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00320\ \textcolor{comment}{\ \ \ \ \ *\ \ \ \ \ (n/d,\ y,\ 1)}}
+\DoxyCodeLine{00321\ \textcolor{comment}{\ \ \ \ \ *\ \ \ =\ (n/d\ *\ v\string^2,\ y\ *\ v\string^3,\ v)}}
+\DoxyCodeLine{00322\ \textcolor{comment}{\ \ \ \ \ *\ \ \ =\ (n/d\ *\ d*g,\ y\ *\ sqrt(d\string^3*g\string^3),\ v)}}
+\DoxyCodeLine{00323\ \textcolor{comment}{\ \ \ \ \ *\ \ \ =\ (n/d\ *\ d*g,\ sqrt(y\string^2\ *\ d\string^3*g\string^3),\ v)}}
+\DoxyCodeLine{00324\ \textcolor{comment}{\ \ \ \ \ *\ \ \ =\ (n*g,\ sqrt(g/d\string^3\ *\ d\string^3*g\string^3),\ v)}}
+\DoxyCodeLine{00325\ \textcolor{comment}{\ \ \ \ \ *\ \ \ =\ (n*g,\ sqrt(g\string^4),\ v)}}
+\DoxyCodeLine{00326\ \textcolor{comment}{\ \ \ \ \ *\ \ \ =\ (n*g,\ g\string^2,\ v)}}
+\DoxyCodeLine{00327\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00328\ \textcolor{comment}{\ \ \ \ \ *\ It\ is\ easy\ to\ verify\ that\ both\ (n*g,\ g\string^2,\ v)\ and\ its\ negation\ (n*g,\ -\/g\string^2,\ v)\ have\ affine\ X}}
+\DoxyCodeLine{00329\ \textcolor{comment}{\ \ \ \ \ *\ coordinate\ n/d,\ and\ this\ holds\ even\ when\ the\ square\ root\ function\ doesn't\ have\ a}}
+\DoxyCodeLine{00330\ \textcolor{comment}{\ \ \ \ \ *\ deterministic\ sign.\ We\ choose\ the\ (n*g,\ g\string^2,\ v)\ version.}}
+\DoxyCodeLine{00331\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00332\ \textcolor{comment}{\ \ \ \ \ *\ Now\ switch\ to\ the\ effective\ affine\ curve\ using\ phi\_v,\ where\ the\ input\ point\ has\ coordinates}}
+\DoxyCodeLine{00333\ \textcolor{comment}{\ \ \ \ \ *\ (n*g,\ g\string^2).\ Compute\ (X,\ Y,\ Z)\ =\ q\ *\ (n*g,\ g\string^2)\ there.}}
+\DoxyCodeLine{00334\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00335\ \textcolor{comment}{\ \ \ \ \ *\ Back\ on\ secp256k1,\ that\ means\ q\ *\ (n*g,\ g\string^2,\ v)\ =\ (X,\ Y,\ v*Z).\ This\ last\ point\ has\ affine\ X}}
+\DoxyCodeLine{00336\ \textcolor{comment}{\ \ \ \ \ *\ coordinate\ X\ /\ (v\string^2*Z\string^2)\ =\ X\ /\ (d*g*Z\string^2).\ Determining\ the\ affine\ Y\ coordinate\ would\ involve}}
+\DoxyCodeLine{00337\ \textcolor{comment}{\ \ \ \ \ *\ a\ square\ root,\ but\ as\ long\ as\ we\ only\ care\ about\ the\ resulting\ X\ coordinate,\ no\ square\ root}}
+\DoxyCodeLine{00338\ \textcolor{comment}{\ \ \ \ \ *\ is\ needed\ anywhere\ in\ this\ computation.}}
+\DoxyCodeLine{00339\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00340\ }
+\DoxyCodeLine{00341\ \ \ \ \ secp256k1\_fe\ g,\ i;}
+\DoxyCodeLine{00342\ \ \ \ \ secp256k1\_ge\ p;}
+\DoxyCodeLine{00343\ \ \ \ \ secp256k1\_gej\ rj;}
+\DoxyCodeLine{00344\ }
+\DoxyCodeLine{00345\ \ \ \ \ \textcolor{comment}{/*\ Compute\ g\ =\ (n\string^3\ +\ B*d\string^3).\ */}}
+\DoxyCodeLine{00346\ \ \ \ \ secp256k1\_fe\_sqr(\&g,\ n);}
+\DoxyCodeLine{00347\ \ \ \ \ secp256k1\_fe\_mul(\&g,\ \&g,\ n);}
+\DoxyCodeLine{00348\ \ \ \ \ \textcolor{keywordflow}{if}\ (d)\ \{}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ secp256k1\_fe\ b;}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(!secp256k1\_fe\_normalizes\_to\_zero(d));}
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ secp256k1\_fe\_sqr(\&b,\ d);}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(SECP256K1\_B\ <=\ 8);\ \textcolor{comment}{/*\ magnitude\ of\ b\ will\ be\ <=\ 8\ after\ the\ next\ call\ */}}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul\_int(\&b,\ SECP256K1\_B);}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&b,\ \&b,\ d);}
+\DoxyCodeLine{00355\ \ \ \ \ \ \ \ \ secp256k1\_fe\_add(\&g,\ \&b);}
+\DoxyCodeLine{00356\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!known\_on\_curve)\ \{}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ We\ need\ to\ determine\ whether\ (n/d)\string^3\ +\ 7\ is\ square.}}
+\DoxyCodeLine{00358\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00359\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ \ \ \ \ is\_square((n/d)\string^3\ +\ 7)}}
+\DoxyCodeLine{00360\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ <=>\ is\_square(((n/d)\string^3\ +\ 7)\ *\ d\string^4)}}
+\DoxyCodeLine{00361\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ <=>\ is\_square((n\string^3\ +\ 7*d\string^3)\ *\ d)}}
+\DoxyCodeLine{00362\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ <=>\ is\_square(g\ *\ d)}}
+\DoxyCodeLine{00363\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ */}}
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_fe\ c;}
+\DoxyCodeLine{00365\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&c,\ \&g,\ d);}
+\DoxyCodeLine{00366\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_fe\_is\_square\_var(\&c))\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00367\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00368\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00369\ \ \ \ \ \ \ \ \ secp256k1\_fe\_add\_int(\&g,\ SECP256K1\_B);}
+\DoxyCodeLine{00370\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!known\_on\_curve)\ \{}
+\DoxyCodeLine{00371\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ g\ at\ this\ point\ equals\ x\string^3\ +\ 7.\ Test\ if\ it\ is\ square.\ */}}
+\DoxyCodeLine{00372\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_fe\_is\_square\_var(\&g))\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00373\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00374\ \ \ \ \ \}}
+\DoxyCodeLine{00375\ }
+\DoxyCodeLine{00376\ \ \ \ \ SECP256K1\_FE\_VERIFY\_MAGNITUDE(\&g,\ 2);}
+\DoxyCodeLine{00377\ }
+\DoxyCodeLine{00378\ \ \ \ \ \textcolor{comment}{/*\ Compute\ base\ point\ P\ =\ (n*g,\ g\string^2),\ the\ effective\ affine\ version\ of\ (n*g,\ g\string^2,\ v),\ which\ has}}
+\DoxyCodeLine{00379\ \textcolor{comment}{\ \ \ \ \ *\ corresponding\ affine\ X\ coordinate\ n/d.\ */}}
+\DoxyCodeLine{00380\ \ \ \ \ secp256k1\_fe\_mul(\&p.x,\ \&g,\ n);}
+\DoxyCodeLine{00381\ \ \ \ \ secp256k1\_fe\_sqr(\&p.y,\ \&g);}
+\DoxyCodeLine{00382\ \ \ \ \ p.infinity\ =\ 0;}
+\DoxyCodeLine{00383\ }
+\DoxyCodeLine{00384\ \ \ \ \ \textcolor{comment}{/*\ Perform\ x-\/only\ EC\ multiplication\ of\ P\ with\ q.\ */}}
+\DoxyCodeLine{00385\ \ \ \ \ VERIFY\_CHECK(!secp256k1\_scalar\_is\_zero(q));}
+\DoxyCodeLine{00386\ \ \ \ \ secp256k1\_ecmult\_const(\&rj,\ \&p,\ q);}
+\DoxyCodeLine{00387\ \ \ \ \ VERIFY\_CHECK(!secp256k1\_gej\_is\_infinity(\&rj));}
+\DoxyCodeLine{00388\ }
+\DoxyCodeLine{00389\ \ \ \ \ \textcolor{comment}{/*\ The\ resulting\ (X,\ Y,\ Z)\ point\ on\ the\ effective-\/affine\ isomorphic\ curve\ corresponds\ to}}
+\DoxyCodeLine{00390\ \textcolor{comment}{\ \ \ \ \ *\ (X,\ Y,\ Z*v)\ on\ the\ secp256k1\ curve.\ The\ affine\ version\ of\ that\ has\ X\ coordinate}}
+\DoxyCodeLine{00391\ \textcolor{comment}{\ \ \ \ \ *\ (X\ /\ (Z\string^2*d*g)).\ */}}
+\DoxyCodeLine{00392\ \ \ \ \ secp256k1\_fe\_sqr(\&i,\ \&rj.z);}
+\DoxyCodeLine{00393\ \ \ \ \ secp256k1\_fe\_mul(\&i,\ \&i,\ \&g);}
+\DoxyCodeLine{00394\ \ \ \ \ \textcolor{keywordflow}{if}\ (d)\ secp256k1\_fe\_mul(\&i,\ \&i,\ d);}
+\DoxyCodeLine{00395\ \ \ \ \ secp256k1\_fe\_inv(\&i,\ \&i);}
+\DoxyCodeLine{00396\ \ \ \ \ secp256k1\_fe\_mul(r,\ \&rj.x,\ \&i);}
+\DoxyCodeLine{00397\ }
+\DoxyCodeLine{00398\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00399\ \}}
+\DoxyCodeLine{00400\ }
+\DoxyCodeLine{00401\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_ECMULT\_CONST\_IMPL\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

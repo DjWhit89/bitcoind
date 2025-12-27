@@ -1,0 +1,118 @@
+\doxysection{type-\/pointer.h}
+\label{type-pointer_8h_source}\index{src/ipc/libmultiprocess/include/mp/type-\/pointer.h@{src/ipc/libmultiprocess/include/mp/type-\/pointer.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ MP\_PROXY\_TYPE\_POINTER\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ MP\_PROXY\_TYPE\_POINTER\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <mp/util.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{keyword}{namespace\ }mp\ \{}
+\DoxyCodeLine{00011\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Value,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00012\ \textcolor{keywordtype}{void}\ CustomBuildField(TypeList<LocalType*>,\ Priority<3>,\ InvokeContext\&\ invoke\_context,\ Value\&\&\ value,\ Output\&\&\ output)}
+\DoxyCodeLine{00013\ \{}
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keywordflow}{if}\ (value)\ \{}
+\DoxyCodeLine{00015\ \ \ \ \ \ \ \ \ BuildField(TypeList<LocalType>(),\ invoke\_context,\ output,\ *value);}
+\DoxyCodeLine{00016\ \ \ \ \ \}}
+\DoxyCodeLine{00017\ \}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Value,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00020\ \textcolor{keywordtype}{void}\ CustomBuildField(TypeList<std::shared\_ptr<LocalType>>,}
+\DoxyCodeLine{00021\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00022\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00023\ \ \ \ \ Value\&\&\ value,}
+\DoxyCodeLine{00024\ \ \ \ \ Output\&\&\ output)}
+\DoxyCodeLine{00025\ \{}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordflow}{if}\ (value)\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ BuildField(TypeList<LocalType>(),\ invoke\_context,\ output,\ *value);}
+\DoxyCodeLine{00028\ \ \ \ \ \}}
+\DoxyCodeLine{00029\ \}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00032\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<LocalType*>,}
+\DoxyCodeLine{00033\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00034\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00035\ \ \ \ \ Input\&\&\ input,}
+\DoxyCodeLine{00036\ \ \ \ \ ReadDest\&\&\ read\_dest)}
+\DoxyCodeLine{00037\ \{}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.update([\&](\textcolor{keyword}{auto}\&\ value)\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (value)\ \{}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ ReadField(TypeList<LocalType>(),\ invoke\_context,\ std::forward<Input>(input),\ ReadDestUpdate(*value));}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00042\ \ \ \ \ \});}
+\DoxyCodeLine{00043\ \}}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00046\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<std::shared\_ptr<LocalType>>,}
+\DoxyCodeLine{00047\ \ \ \ \ Priority<0>,}
+\DoxyCodeLine{00048\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00049\ \ \ \ \ Input\&\&\ input,}
+\DoxyCodeLine{00050\ \ \ \ \ ReadDest\&\&\ read\_dest)}
+\DoxyCodeLine{00051\ \{}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.update([\&](\textcolor{keyword}{auto}\&\ value)\ \{}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!input.has())\ \{}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ value.reset();}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (value)\ \{}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ ReadField(TypeList<LocalType>(),\ invoke\_context,\ input,\ ReadDestUpdate(*value));}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ ReadField(TypeList<LocalType>(),\ invoke\_context,\ input,}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ReadDestEmplace(TypeList<LocalType>(),\ [\&](\textcolor{keyword}{auto}\&\&...\ args)\ -\/>\ \textcolor{keyword}{auto}\&\ \{}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ value\ =\ std::make\_shared<LocalType>(std::forward<\textcolor{keyword}{decltype}(args)>(args)...);}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *value;}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}));}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00064\ \ \ \ \ \});}
+\DoxyCodeLine{00065\ \}}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00068\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<std::shared\_ptr<const\ LocalType>>,}
+\DoxyCodeLine{00069\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00070\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00071\ \ \ \ \ Input\&\&\ input,}
+\DoxyCodeLine{00072\ \ \ \ \ ReadDest\&\&\ read\_dest)}
+\DoxyCodeLine{00073\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.update([\&](\textcolor{keyword}{auto}\&\ value)\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!input.has())\ \{}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ value.reset();}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ ReadField(TypeList<LocalType>(),\ invoke\_context,\ std::forward<Input>(input),}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ ReadDestEmplace(TypeList<LocalType>(),\ [\&](\textcolor{keyword}{auto}\&\&...\ args)\ -\/>\ \textcolor{keyword}{auto}\&\ \{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ value\ =\ std::make\_shared<LocalType>(std::forward<\textcolor{keyword}{decltype}(args)>(args)...);}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *value;}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \}));}
+\DoxyCodeLine{00084\ \ \ \ \ \});}
+\DoxyCodeLine{00085\ \}}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00088\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Accessor,\ \textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ ServerContext,\ \textcolor{keyword}{typename}\ Fn,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00089\ \textcolor{keywordtype}{void}\ PassField(Priority<1>,\ TypeList<LocalType*>,\ ServerContext\&\ server\_context,\ \textcolor{keyword}{const}\ Fn\&\ fn,\ Args\&\&...\ args)}
+\DoxyCodeLine{00090\ \{}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ params\ =\ server\_context.call\_context.getParams();}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ input\ =\ Make<StructField,\ Accessor>(params);}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keywordflow}{if}\ (!input.want())\ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ fn.invoke(server\_context,\ std::forward<Args>(args)...,\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00097\ \ \ \ \ \}}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ \ \ InvokeContext\&\ invoke\_context\ =\ server\_context;}
+\DoxyCodeLine{00100\ \ \ \ \ Decay<LocalType>\ param;}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \ \ \ \ MaybeReadField(std::integral\_constant<bool,\ Accessor::in>(),\ TypeList<LocalType>(),\ invoke\_context,\ input,}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ ReadDestUpdate(param));}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \ \ \ \ fn.invoke(server\_context,\ std::forward<Args>(args)...,\ \&param);}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keyword}{auto}\&\&\ results\ =\ server\_context.call\_context.getResults();}
+\DoxyCodeLine{00108\ \ \ \ \ MaybeBuildField(std::integral\_constant<bool,\ Accessor::out>(),\ TypeList<LocalType>(),\ invoke\_context,}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ Make<StructField,\ Accessor>(results),\ param);}
+\DoxyCodeLine{00110\ \}}
+\DoxyCodeLine{00111\ \}\ \textcolor{comment}{//\ namespace\ mp}}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00113\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ MP\_PROXY\_TYPE\_POINTER\_H}}
+
+\end{DoxyCode}

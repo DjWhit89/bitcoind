@@ -1,0 +1,93 @@
+\doxysection{memtable.\+h}
+\label{memtable_8h_source}\index{src/leveldb/db/memtable.h@{src/leveldb/db/memtable.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_DB\_MEMTABLE\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_DB\_MEMTABLE\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}db/dbformat.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}db/skiplist.h"{}}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}leveldb/db.h"{}}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}util/arena.h"{}}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{keyword}{class\ }InternalKeyComparator;}
+\DoxyCodeLine{00018\ \textcolor{keyword}{class\ }MemTableIterator;}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{keyword}{class\ }MemTable\ \{}
+\DoxyCodeLine{00021\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00022\ \ \ \textcolor{comment}{//\ MemTables\ are\ reference\ counted.\ \ The\ initial\ reference\ count}}
+\DoxyCodeLine{00023\ \ \ \textcolor{comment}{//\ is\ zero\ and\ the\ caller\ must\ call\ Ref()\ at\ least\ once.}}
+\DoxyCodeLine{00024\ \ \ \textcolor{keyword}{explicit}\ MemTable(\textcolor{keyword}{const}\ InternalKeyComparator\&\ comparator);}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \ \ MemTable(\textcolor{keyword}{const}\ MemTable\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00027\ \ \ MemTable\&\ operator=(\textcolor{keyword}{const}\ MemTable\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \ \ \textcolor{comment}{//\ Increase\ reference\ count.}}
+\DoxyCodeLine{00030\ \ \ \textcolor{keywordtype}{void}\ Ref()\ \{\ ++refs\_;\ \}}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \ \ \textcolor{comment}{//\ Drop\ reference\ count.\ \ Delete\ if\ no\ more\ references\ exist.}}
+\DoxyCodeLine{00033\ \ \ \textcolor{keywordtype}{void}\ Unref()\ \{}
+\DoxyCodeLine{00034\ \ \ \ \ -\/-\/refs\_;}
+\DoxyCodeLine{00035\ \ \ \ \ assert(refs\_\ >=\ 0);}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordflow}{if}\ (refs\_\ <=\ 0)\ \{}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \textcolor{keyword}{delete}\ \textcolor{keyword}{this};}
+\DoxyCodeLine{00038\ \ \ \ \ \}}
+\DoxyCodeLine{00039\ \ \ \}}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \textcolor{comment}{//\ Returns\ an\ estimate\ of\ the\ number\ of\ bytes\ of\ data\ in\ use\ by\ this}}
+\DoxyCodeLine{00042\ \ \ \textcolor{comment}{//\ data\ structure.\ It\ is\ safe\ to\ call\ when\ MemTable\ is\ being\ modified.}}
+\DoxyCodeLine{00043\ \ \ \textcolor{keywordtype}{size\_t}\ ApproximateMemoryUsage();}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \ \ \textcolor{comment}{//\ Return\ an\ iterator\ that\ yields\ the\ contents\ of\ the\ memtable.}}
+\DoxyCodeLine{00046\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00047\ \ \ \textcolor{comment}{//\ The\ caller\ must\ ensure\ that\ the\ underlying\ MemTable\ remains\ live}}
+\DoxyCodeLine{00048\ \ \ \textcolor{comment}{//\ while\ the\ returned\ iterator\ is\ live.\ \ The\ keys\ returned\ by\ this}}
+\DoxyCodeLine{00049\ \ \ \textcolor{comment}{//\ iterator\ are\ internal\ keys\ encoded\ by\ AppendInternalKey\ in\ the}}
+\DoxyCodeLine{00050\ \ \ \textcolor{comment}{//\ db/format.\{h,cc\}\ module.}}
+\DoxyCodeLine{00051\ \ \ Iterator*\ NewIterator();}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \ \ \textcolor{comment}{//\ Add\ an\ entry\ into\ memtable\ that\ maps\ key\ to\ value\ at\ the}}
+\DoxyCodeLine{00054\ \ \ \textcolor{comment}{//\ specified\ sequence\ number\ and\ with\ the\ specified\ type.}}
+\DoxyCodeLine{00055\ \ \ \textcolor{comment}{//\ Typically\ value\ will\ be\ empty\ if\ type==kTypeDeletion.}}
+\DoxyCodeLine{00056\ \ \ \textcolor{keywordtype}{void}\ Add(SequenceNumber\ seq,\ ValueType\ type,\ \textcolor{keyword}{const}\ Slice\&\ key,}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Slice\&\ value);}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \textcolor{comment}{//\ If\ memtable\ contains\ a\ value\ for\ key,\ store\ it\ in\ *value\ and\ return\ true.}}
+\DoxyCodeLine{00060\ \ \ \textcolor{comment}{//\ If\ memtable\ contains\ a\ deletion\ for\ key,\ store\ a\ NotFound()\ error}}
+\DoxyCodeLine{00061\ \ \ \textcolor{comment}{//\ in\ *status\ and\ return\ true.}}
+\DoxyCodeLine{00062\ \ \ \textcolor{comment}{//\ Else,\ return\ false.}}
+\DoxyCodeLine{00063\ \ \ \textcolor{keywordtype}{bool}\ Get(\textcolor{keyword}{const}\ LookupKey\&\ key,\ std::string*\ value,\ Status*\ s);}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00066\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }MemTableIterator;}
+\DoxyCodeLine{00067\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }MemTableBackwardIterator;}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \textcolor{keyword}{struct\ }KeyComparator\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keyword}{const}\ InternalKeyComparator\ comparator;}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keyword}{explicit}\ KeyComparator(\textcolor{keyword}{const}\ InternalKeyComparator\&\ c)\ :\ comparator(c)\ \{\}}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keywordtype}{int}\ operator()(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ a,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ b)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00073\ \ \ \};}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ \textcolor{keyword}{typedef}\ SkipList<const\ char*,\ KeyComparator>\ Table;}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ \ \ \string~MemTable();\ \ \textcolor{comment}{//\ Private\ since\ only\ Unref()\ should\ be\ used\ to\ delete\ it}}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ KeyComparator\ comparator\_;}
+\DoxyCodeLine{00080\ \ \ \textcolor{keywordtype}{int}\ refs\_;}
+\DoxyCodeLine{00081\ \ \ Arena\ arena\_;}
+\DoxyCodeLine{00082\ \ \ Table\ table\_;}
+\DoxyCodeLine{00083\ \};}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_DB\_MEMTABLE\_H\_}}
+
+\end{DoxyCode}

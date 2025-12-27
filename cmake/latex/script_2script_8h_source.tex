@@ -1,0 +1,597 @@
+\doxysection{script.\+h}
+\label{script_2script_8h_source}\index{src/script/script.h@{src/script/script.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_SCRIPT\_SCRIPT\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_SCRIPT\_SCRIPT\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <crypto/common.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <prevector.h>}\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/hash\_type.h>}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <span>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <stdexcept>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{comment}{//\ Maximum\ number\ of\ bytes\ pushable\ to\ the\ stack}}
+\DoxyCodeLine{00028\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ MAX\_SCRIPT\_ELEMENT\_SIZE\ =\ 520;}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{comment}{//\ Maximum\ number\ of\ non-\/push\ operations\ per\ script}}
+\DoxyCodeLine{00031\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ MAX\_OPS\_PER\_SCRIPT\ =\ 201;}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{comment}{//\ Maximum\ number\ of\ public\ keys\ per\ multisig}}
+\DoxyCodeLine{00034\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ MAX\_PUBKEYS\_PER\_MULTISIG\ =\ 20;}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00037\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ MAX\_PUBKEYS\_PER\_MULTI\_A\ =\ 999;}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{comment}{//\ Maximum\ script\ length\ in\ bytes}}
+\DoxyCodeLine{00040\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ MAX\_SCRIPT\_SIZE\ =\ 10000;}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \textcolor{comment}{//\ Maximum\ number\ of\ values\ on\ script\ interpreter\ stack}}
+\DoxyCodeLine{00043\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ MAX\_STACK\_SIZE\ =\ 1000;}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \textcolor{comment}{//\ Threshold\ for\ nLockTime:\ below\ this\ value\ it\ is\ interpreted\ as\ block\ number,}}
+\DoxyCodeLine{00046\ \textcolor{comment}{//\ otherwise\ as\ UNIX\ timestamp.}}
+\DoxyCodeLine{00047\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ LOCKTIME\_THRESHOLD\ =\ 500000000;\ \textcolor{comment}{//\ Tue\ Nov\ \ 5\ 00:53:20\ 1985\ UTC}}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \textcolor{comment}{//\ Maximum\ nLockTime.\ Since\ a\ lock\ time\ indicates\ the\ last\ invalid\ timestamp,\ a}}
+\DoxyCodeLine{00050\ \textcolor{comment}{//\ transaction\ with\ this\ lock\ time\ will\ never\ be\ valid\ unless\ lock\ time}}
+\DoxyCodeLine{00051\ \textcolor{comment}{//\ checking\ is\ disabled\ (by\ setting\ all\ input\ sequence\ numbers\ to}}
+\DoxyCodeLine{00052\ \textcolor{comment}{//\ SEQUENCE\_FINAL).}}
+\DoxyCodeLine{00053\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint32\_t\ LOCKTIME\_MAX\ =\ 0xFFFFFFFFU;}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{comment}{//\ Tag\ for\ input\ annex.\ If\ there\ are\ at\ least\ two\ witness\ elements\ for\ a\ transaction\ input,}}
+\DoxyCodeLine{00056\ \textcolor{comment}{//\ and\ the\ first\ byte\ of\ the\ last\ element\ is\ 0x50,\ this\ last\ element\ is\ called\ annex,\ and}}
+\DoxyCodeLine{00057\ \textcolor{comment}{//\ has\ meanings\ independent\ of\ the\ script}}
+\DoxyCodeLine{00058\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ ANNEX\_TAG\ =\ 0x50;}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \textcolor{comment}{//\ Validation\ weight\ per\ passing\ signature\ (Tapscript\ only,\ see\ BIP\ 342).}}
+\DoxyCodeLine{00061\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int64\_t\ VALIDATION\_WEIGHT\_PER\_SIGOP\_PASSED\{50\};}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \textcolor{comment}{//\ How\ much\ weight\ budget\ is\ added\ to\ the\ witness\ size\ (Tapscript\ only,\ see\ BIP\ 342).}}
+\DoxyCodeLine{00064\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int64\_t\ VALIDATION\_WEIGHT\_OFFSET\{50\};}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00067\ std::vector<unsigned\ char>\ ToByteVector(\textcolor{keyword}{const}\ T\&\ in)}
+\DoxyCodeLine{00068\ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordflow}{return}\ std::vector<unsigned\ char>(in.begin(),\ in.end());}
+\DoxyCodeLine{00070\ \}}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00073\ \textcolor{keyword}{enum}\ opcodetype}
+\DoxyCodeLine{00074\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{comment}{//\ push\ value}}
+\DoxyCodeLine{00076\ \ \ \ \ OP\_0\ =\ 0x00,}
+\DoxyCodeLine{00077\ \ \ \ \ OP\_FALSE\ =\ OP\_0,}
+\DoxyCodeLine{00078\ \ \ \ \ OP\_PUSHDATA1\ =\ 0x4c,}
+\DoxyCodeLine{00079\ \ \ \ \ OP\_PUSHDATA2\ =\ 0x4d,}
+\DoxyCodeLine{00080\ \ \ \ \ OP\_PUSHDATA4\ =\ 0x4e,}
+\DoxyCodeLine{00081\ \ \ \ \ OP\_1NEGATE\ =\ 0x4f,}
+\DoxyCodeLine{00082\ \ \ \ \ OP\_RESERVED\ =\ 0x50,}
+\DoxyCodeLine{00083\ \ \ \ \ OP\_1\ =\ 0x51,}
+\DoxyCodeLine{00084\ \ \ \ \ OP\_TRUE=OP\_1,}
+\DoxyCodeLine{00085\ \ \ \ \ OP\_2\ =\ 0x52,}
+\DoxyCodeLine{00086\ \ \ \ \ OP\_3\ =\ 0x53,}
+\DoxyCodeLine{00087\ \ \ \ \ OP\_4\ =\ 0x54,}
+\DoxyCodeLine{00088\ \ \ \ \ OP\_5\ =\ 0x55,}
+\DoxyCodeLine{00089\ \ \ \ \ OP\_6\ =\ 0x56,}
+\DoxyCodeLine{00090\ \ \ \ \ OP\_7\ =\ 0x57,}
+\DoxyCodeLine{00091\ \ \ \ \ OP\_8\ =\ 0x58,}
+\DoxyCodeLine{00092\ \ \ \ \ OP\_9\ =\ 0x59,}
+\DoxyCodeLine{00093\ \ \ \ \ OP\_10\ =\ 0x5a,}
+\DoxyCodeLine{00094\ \ \ \ \ OP\_11\ =\ 0x5b,}
+\DoxyCodeLine{00095\ \ \ \ \ OP\_12\ =\ 0x5c,}
+\DoxyCodeLine{00096\ \ \ \ \ OP\_13\ =\ 0x5d,}
+\DoxyCodeLine{00097\ \ \ \ \ OP\_14\ =\ 0x5e,}
+\DoxyCodeLine{00098\ \ \ \ \ OP\_15\ =\ 0x5f,}
+\DoxyCodeLine{00099\ \ \ \ \ OP\_16\ =\ 0x60,}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{comment}{//\ control}}
+\DoxyCodeLine{00102\ \ \ \ \ OP\_NOP\ =\ 0x61,}
+\DoxyCodeLine{00103\ \ \ \ \ OP\_VER\ =\ 0x62,}
+\DoxyCodeLine{00104\ \ \ \ \ OP\_IF\ =\ 0x63,}
+\DoxyCodeLine{00105\ \ \ \ \ OP\_NOTIF\ =\ 0x64,}
+\DoxyCodeLine{00106\ \ \ \ \ OP\_VERIF\ =\ 0x65,}
+\DoxyCodeLine{00107\ \ \ \ \ OP\_VERNOTIF\ =\ 0x66,}
+\DoxyCodeLine{00108\ \ \ \ \ OP\_ELSE\ =\ 0x67,}
+\DoxyCodeLine{00109\ \ \ \ \ OP\_ENDIF\ =\ 0x68,}
+\DoxyCodeLine{00110\ \ \ \ \ OP\_VERIFY\ =\ 0x69,}
+\DoxyCodeLine{00111\ \ \ \ \ OP\_RETURN\ =\ 0x6a,}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{comment}{//\ stack\ ops}}
+\DoxyCodeLine{00114\ \ \ \ \ OP\_TOALTSTACK\ =\ 0x6b,}
+\DoxyCodeLine{00115\ \ \ \ \ OP\_FROMALTSTACK\ =\ 0x6c,}
+\DoxyCodeLine{00116\ \ \ \ \ OP\_2DROP\ =\ 0x6d,}
+\DoxyCodeLine{00117\ \ \ \ \ OP\_2DUP\ =\ 0x6e,}
+\DoxyCodeLine{00118\ \ \ \ \ OP\_3DUP\ =\ 0x6f,}
+\DoxyCodeLine{00119\ \ \ \ \ OP\_2OVER\ =\ 0x70,}
+\DoxyCodeLine{00120\ \ \ \ \ OP\_2ROT\ =\ 0x71,}
+\DoxyCodeLine{00121\ \ \ \ \ OP\_2SWAP\ =\ 0x72,}
+\DoxyCodeLine{00122\ \ \ \ \ OP\_IFDUP\ =\ 0x73,}
+\DoxyCodeLine{00123\ \ \ \ \ OP\_DEPTH\ =\ 0x74,}
+\DoxyCodeLine{00124\ \ \ \ \ OP\_DROP\ =\ 0x75,}
+\DoxyCodeLine{00125\ \ \ \ \ OP\_DUP\ =\ 0x76,}
+\DoxyCodeLine{00126\ \ \ \ \ OP\_NIP\ =\ 0x77,}
+\DoxyCodeLine{00127\ \ \ \ \ OP\_OVER\ =\ 0x78,}
+\DoxyCodeLine{00128\ \ \ \ \ OP\_PICK\ =\ 0x79,}
+\DoxyCodeLine{00129\ \ \ \ \ OP\_ROLL\ =\ 0x7a,}
+\DoxyCodeLine{00130\ \ \ \ \ OP\_ROT\ =\ 0x7b,}
+\DoxyCodeLine{00131\ \ \ \ \ OP\_SWAP\ =\ 0x7c,}
+\DoxyCodeLine{00132\ \ \ \ \ OP\_TUCK\ =\ 0x7d,}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{comment}{//\ splice\ ops}}
+\DoxyCodeLine{00135\ \ \ \ \ OP\_CAT\ =\ 0x7e,}
+\DoxyCodeLine{00136\ \ \ \ \ OP\_SUBSTR\ =\ 0x7f,}
+\DoxyCodeLine{00137\ \ \ \ \ OP\_LEFT\ =\ 0x80,}
+\DoxyCodeLine{00138\ \ \ \ \ OP\_RIGHT\ =\ 0x81,}
+\DoxyCodeLine{00139\ \ \ \ \ OP\_SIZE\ =\ 0x82,}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{comment}{//\ bit\ logic}}
+\DoxyCodeLine{00142\ \ \ \ \ OP\_INVERT\ =\ 0x83,}
+\DoxyCodeLine{00143\ \ \ \ \ OP\_AND\ =\ 0x84,}
+\DoxyCodeLine{00144\ \ \ \ \ OP\_OR\ =\ 0x85,}
+\DoxyCodeLine{00145\ \ \ \ \ OP\_XOR\ =\ 0x86,}
+\DoxyCodeLine{00146\ \ \ \ \ OP\_EQUAL\ =\ 0x87,}
+\DoxyCodeLine{00147\ \ \ \ \ OP\_EQUALVERIFY\ =\ 0x88,}
+\DoxyCodeLine{00148\ \ \ \ \ OP\_RESERVED1\ =\ 0x89,}
+\DoxyCodeLine{00149\ \ \ \ \ OP\_RESERVED2\ =\ 0x8a,}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{comment}{//\ numeric}}
+\DoxyCodeLine{00152\ \ \ \ \ OP\_1ADD\ =\ 0x8b,}
+\DoxyCodeLine{00153\ \ \ \ \ OP\_1SUB\ =\ 0x8c,}
+\DoxyCodeLine{00154\ \ \ \ \ OP\_2MUL\ =\ 0x8d,}
+\DoxyCodeLine{00155\ \ \ \ \ OP\_2DIV\ =\ 0x8e,}
+\DoxyCodeLine{00156\ \ \ \ \ OP\_NEGATE\ =\ 0x8f,}
+\DoxyCodeLine{00157\ \ \ \ \ OP\_ABS\ =\ 0x90,}
+\DoxyCodeLine{00158\ \ \ \ \ OP\_NOT\ =\ 0x91,}
+\DoxyCodeLine{00159\ \ \ \ \ OP\_0NOTEQUAL\ =\ 0x92,}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00161\ \ \ \ \ OP\_ADD\ =\ 0x93,}
+\DoxyCodeLine{00162\ \ \ \ \ OP\_SUB\ =\ 0x94,}
+\DoxyCodeLine{00163\ \ \ \ \ OP\_MUL\ =\ 0x95,}
+\DoxyCodeLine{00164\ \ \ \ \ OP\_DIV\ =\ 0x96,}
+\DoxyCodeLine{00165\ \ \ \ \ OP\_MOD\ =\ 0x97,}
+\DoxyCodeLine{00166\ \ \ \ \ OP\_LSHIFT\ =\ 0x98,}
+\DoxyCodeLine{00167\ \ \ \ \ OP\_RSHIFT\ =\ 0x99,}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00169\ \ \ \ \ OP\_BOOLAND\ =\ 0x9a,}
+\DoxyCodeLine{00170\ \ \ \ \ OP\_BOOLOR\ =\ 0x9b,}
+\DoxyCodeLine{00171\ \ \ \ \ OP\_NUMEQUAL\ =\ 0x9c,}
+\DoxyCodeLine{00172\ \ \ \ \ OP\_NUMEQUALVERIFY\ =\ 0x9d,}
+\DoxyCodeLine{00173\ \ \ \ \ OP\_NUMNOTEQUAL\ =\ 0x9e,}
+\DoxyCodeLine{00174\ \ \ \ \ OP\_LESSTHAN\ =\ 0x9f,}
+\DoxyCodeLine{00175\ \ \ \ \ OP\_GREATERTHAN\ =\ 0xa0,}
+\DoxyCodeLine{00176\ \ \ \ \ OP\_LESSTHANOREQUAL\ =\ 0xa1,}
+\DoxyCodeLine{00177\ \ \ \ \ OP\_GREATERTHANOREQUAL\ =\ 0xa2,}
+\DoxyCodeLine{00178\ \ \ \ \ OP\_MIN\ =\ 0xa3,}
+\DoxyCodeLine{00179\ \ \ \ \ OP\_MAX\ =\ 0xa4,}
+\DoxyCodeLine{00180\ }
+\DoxyCodeLine{00181\ \ \ \ \ OP\_WITHIN\ =\ 0xa5,}
+\DoxyCodeLine{00182\ }
+\DoxyCodeLine{00183\ \ \ \ \ \textcolor{comment}{//\ crypto}}
+\DoxyCodeLine{00184\ \ \ \ \ OP\_RIPEMD160\ =\ 0xa6,}
+\DoxyCodeLine{00185\ \ \ \ \ OP\_SHA1\ =\ 0xa7,}
+\DoxyCodeLine{00186\ \ \ \ \ OP\_SHA256\ =\ 0xa8,}
+\DoxyCodeLine{00187\ \ \ \ \ OP\_HASH160\ =\ 0xa9,}
+\DoxyCodeLine{00188\ \ \ \ \ OP\_HASH256\ =\ 0xaa,}
+\DoxyCodeLine{00189\ \ \ \ \ OP\_CODESEPARATOR\ =\ 0xab,}
+\DoxyCodeLine{00190\ \ \ \ \ OP\_CHECKSIG\ =\ 0xac,}
+\DoxyCodeLine{00191\ \ \ \ \ OP\_CHECKSIGVERIFY\ =\ 0xad,}
+\DoxyCodeLine{00192\ \ \ \ \ OP\_CHECKMULTISIG\ =\ 0xae,}
+\DoxyCodeLine{00193\ \ \ \ \ OP\_CHECKMULTISIGVERIFY\ =\ 0xaf,}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00195\ \ \ \ \ \textcolor{comment}{//\ expansion}}
+\DoxyCodeLine{00196\ \ \ \ \ OP\_NOP1\ =\ 0xb0,}
+\DoxyCodeLine{00197\ \ \ \ \ OP\_CHECKLOCKTIMEVERIFY\ =\ 0xb1,}
+\DoxyCodeLine{00198\ \ \ \ \ OP\_NOP2\ =\ OP\_CHECKLOCKTIMEVERIFY,}
+\DoxyCodeLine{00199\ \ \ \ \ OP\_CHECKSEQUENCEVERIFY\ =\ 0xb2,}
+\DoxyCodeLine{00200\ \ \ \ \ OP\_NOP3\ =\ OP\_CHECKSEQUENCEVERIFY,}
+\DoxyCodeLine{00201\ \ \ \ \ OP\_NOP4\ =\ 0xb3,}
+\DoxyCodeLine{00202\ \ \ \ \ OP\_NOP5\ =\ 0xb4,}
+\DoxyCodeLine{00203\ \ \ \ \ OP\_NOP6\ =\ 0xb5,}
+\DoxyCodeLine{00204\ \ \ \ \ OP\_NOP7\ =\ 0xb6,}
+\DoxyCodeLine{00205\ \ \ \ \ OP\_NOP8\ =\ 0xb7,}
+\DoxyCodeLine{00206\ \ \ \ \ OP\_NOP9\ =\ 0xb8,}
+\DoxyCodeLine{00207\ \ \ \ \ OP\_NOP10\ =\ 0xb9,}
+\DoxyCodeLine{00208\ }
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{comment}{//\ Opcode\ added\ by\ BIP\ 342\ (Tapscript)}}
+\DoxyCodeLine{00210\ \ \ \ \ OP\_CHECKSIGADD\ =\ 0xba,}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \ \ \ \ OP\_INVALIDOPCODE\ =\ 0xff,}
+\DoxyCodeLine{00213\ \};}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00215\ \textcolor{comment}{//\ Maximum\ value\ that\ an\ opcode\ can\ be}}
+\DoxyCodeLine{00216\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ MAX\_OPCODE\ =\ OP\_NOP10;}
+\DoxyCodeLine{00217\ }
+\DoxyCodeLine{00218\ std::string\ GetOpName(opcodetype\ opcode);}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00220\ \textcolor{keyword}{class\ }scriptnum\_error\ :\ \textcolor{keyword}{public}\ std::runtime\_error}
+\DoxyCodeLine{00221\ \{}
+\DoxyCodeLine{00222\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00223\ \ \ \ \ \textcolor{keyword}{explicit}\ scriptnum\_error(\textcolor{keyword}{const}\ std::string\&\ str)\ :\ std::runtime\_error(str)\ \{\}}
+\DoxyCodeLine{00224\ \};}
+\DoxyCodeLine{00225\ }
+\DoxyCodeLine{00226\ \textcolor{keyword}{class\ }CScriptNum}
+\DoxyCodeLine{00227\ \{}
+\DoxyCodeLine{00236\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00237\ }
+\DoxyCodeLine{00238\ \ \ \ \ \textcolor{keyword}{explicit}\ CScriptNum(\textcolor{keyword}{const}\ int64\_t\&\ n)}
+\DoxyCodeLine{00239\ \ \ \ \ \{}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ m\_value\ =\ n;}
+\DoxyCodeLine{00241\ \ \ \ \ \}}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ nDefaultMaxNumSize\ =\ 4;}
+\DoxyCodeLine{00244\ }
+\DoxyCodeLine{00245\ \ \ \ \ \textcolor{keyword}{explicit}\ CScriptNum(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ vch,\ \textcolor{keywordtype}{bool}\ fRequireMinimal,}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ nMaxNumSize\ =\ nDefaultMaxNumSize)}
+\DoxyCodeLine{00247\ \ \ \ \ \{}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (vch.size()\ >\ nMaxNumSize)\ \{}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ scriptnum\_error(\textcolor{stringliteral}{"{}script\ number\ overflow"{}});}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fRequireMinimal\ \&\&\ vch.size()\ >\ 0)\ \{}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Check\ that\ the\ number\ is\ encoded\ with\ the\ minimum\ possible}}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ number\ of\ bytes.}}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ the\ most-\/significant-\/byte\ -\/\ excluding\ the\ sign\ bit\ -\/\ is\ zero}}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ then\ we're\ not\ minimal.\ Note\ how\ this\ test\ also\ rejects\ the}}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ negative-\/zero\ encoding,\ 0x80.}}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((vch.back()\ \&\ 0x7f)\ ==\ 0)\ \{}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ One\ exception:\ if\ there's\ more\ than\ one\ byte\ and\ the\ most}}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ significant\ bit\ of\ the\ second-\/most-\/significant-\/byte\ is\ set}}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ it\ would\ conflict\ with\ the\ sign\ bit.\ An\ example\ of\ this\ case}}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ is\ +-\/255,\ which\ encode\ to\ 0xff00\ and\ 0xff80\ respectively.}}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ (big-\/endian).}}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (vch.size()\ <=\ 1\ ||\ (vch[vch.size()\ -\/\ 2]\ \&\ 0x80)\ ==\ 0)\ \{}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ scriptnum\_error(\textcolor{stringliteral}{"{}non-\/minimally\ encoded\ script\ number"{}});}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ m\_value\ =\ set\_vch(vch);}
+\DoxyCodeLine{00270\ \ \ \ \ \}}
+\DoxyCodeLine{00271\ }
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ int64\_t\&\ rhs)\textcolor{keyword}{\ const\ \ \ \ }\{\ \textcolor{keywordflow}{return}\ m\_value\ ==\ rhs;\ \}}
+\DoxyCodeLine{00273\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{auto}\ operator<=>(\textcolor{keyword}{const}\ int64\_t\&\ rhs)\textcolor{keyword}{\ const\ \ \ \ }\{\ \textcolor{keywordflow}{return}\ m\_value\ <=>\ rhs;\ \}}
+\DoxyCodeLine{00274\ }
+\DoxyCodeLine{00275\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ CScriptNum\&\ rhs)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ operator==(rhs.m\_value);\ \}}
+\DoxyCodeLine{00276\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{auto}\ operator<=>(\textcolor{keyword}{const}\ CScriptNum\&\ rhs)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ operator<=>(rhs.m\_value);\ \}}
+\DoxyCodeLine{00277\ }
+\DoxyCodeLine{00278\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\ operator+(\ \ \ \textcolor{keyword}{const}\ int64\_t\&\ rhs)\textcolor{keyword}{\ \ \ \ const\ }\{\ \textcolor{keywordflow}{return}\ CScriptNum(m\_value\ +\ rhs);\}}
+\DoxyCodeLine{00279\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\ operator-\/(\ \ \ \textcolor{keyword}{const}\ int64\_t\&\ rhs)\textcolor{keyword}{\ \ \ \ const\ }\{\ \textcolor{keywordflow}{return}\ CScriptNum(m\_value\ -\/\ rhs);\}}
+\DoxyCodeLine{00280\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\ operator+(\ \ \ \textcolor{keyword}{const}\ CScriptNum\&\ rhs)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ operator+(rhs.m\_value);\ \ \ \}}
+\DoxyCodeLine{00281\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\ operator-\/(\ \ \ \textcolor{keyword}{const}\ CScriptNum\&\ rhs)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ operator-\/(rhs.m\_value);\ \ \ \}}
+\DoxyCodeLine{00282\ }
+\DoxyCodeLine{00283\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\&\ operator+=(\ \textcolor{keyword}{const}\ CScriptNum\&\ rhs)\ \ \ \ \ \ \ \{\ \textcolor{keywordflow}{return}\ operator+=(rhs.m\_value);\ \ \}}
+\DoxyCodeLine{00284\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\&\ operator-\/=(\ \textcolor{keyword}{const}\ CScriptNum\&\ rhs)\ \ \ \ \ \ \ \{\ \textcolor{keywordflow}{return}\ operator-\/=(rhs.m\_value);\ \ \}}
+\DoxyCodeLine{00285\ }
+\DoxyCodeLine{00286\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\ operator\&(\ \ \ \textcolor{keyword}{const}\ int64\_t\&\ rhs)\textcolor{keyword}{\ \ \ \ const\ }\{\ \textcolor{keywordflow}{return}\ CScriptNum(m\_value\ \&\ rhs);\}}
+\DoxyCodeLine{00287\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\ operator\&(\ \ \ \textcolor{keyword}{const}\ CScriptNum\&\ rhs)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ operator\&(rhs.m\_value);\ \ \ \}}
+\DoxyCodeLine{00288\ }
+\DoxyCodeLine{00289\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\&\ operator\&=(\ \textcolor{keyword}{const}\ CScriptNum\&\ rhs)\ \ \ \ \ \ \ \{\ \textcolor{keywordflow}{return}\ operator\&=(rhs.m\_value);\ \ \}}
+\DoxyCodeLine{00290\ }
+\DoxyCodeLine{00291\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\ operator-\/()\textcolor{keyword}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const}}
+\DoxyCodeLine{00292\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ assert(m\_value\ !=\ std::numeric\_limits<int64\_t>::min());}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ CScriptNum(-\/m\_value);}
+\DoxyCodeLine{00295\ \ \ \ \ \}}
+\DoxyCodeLine{00296\ }
+\DoxyCodeLine{00297\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\&\ operator=(\ \textcolor{keyword}{const}\ int64\_t\&\ rhs)}
+\DoxyCodeLine{00298\ \ \ \ \ \{}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ m\_value\ =\ rhs;}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00301\ \ \ \ \ \}}
+\DoxyCodeLine{00302\ }
+\DoxyCodeLine{00303\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\&\ operator+=(\ \textcolor{keyword}{const}\ int64\_t\&\ rhs)}
+\DoxyCodeLine{00304\ \ \ \ \ \{}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ assert(rhs\ ==\ 0\ ||\ (rhs\ >\ 0\ \&\&\ m\_value\ <=\ std::numeric\_limits<int64\_t>::max()\ -\/\ rhs)\ ||}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (rhs\ <\ 0\ \&\&\ m\_value\ >=\ std::numeric\_limits<int64\_t>::min()\ -\/\ rhs));}
+\DoxyCodeLine{00307\ \ \ \ \ \ \ \ \ m\_value\ +=\ rhs;}
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00309\ \ \ \ \ \}}
+\DoxyCodeLine{00310\ }
+\DoxyCodeLine{00311\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\&\ operator-\/=(\ \textcolor{keyword}{const}\ int64\_t\&\ rhs)}
+\DoxyCodeLine{00312\ \ \ \ \ \{}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ assert(rhs\ ==\ 0\ ||\ (rhs\ >\ 0\ \&\&\ m\_value\ >=\ std::numeric\_limits<int64\_t>::min()\ +\ rhs)\ ||}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (rhs\ <\ 0\ \&\&\ m\_value\ <=\ std::numeric\_limits<int64\_t>::max()\ +\ rhs));}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ m\_value\ -\/=\ rhs;}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00317\ \ \ \ \ \}}
+\DoxyCodeLine{00318\ }
+\DoxyCodeLine{00319\ \ \ \ \ \textcolor{keyword}{inline}\ CScriptNum\&\ operator\&=(\ \textcolor{keyword}{const}\ int64\_t\&\ rhs)}
+\DoxyCodeLine{00320\ \ \ \ \ \{}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ m\_value\ \&=\ rhs;}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00323\ \ \ \ \ \}}
+\DoxyCodeLine{00324\ }
+\DoxyCodeLine{00325\ \ \ \ \ \textcolor{keywordtype}{int}\ getint()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00326\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00327\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_value\ >\ std::numeric\_limits<int>::max())}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::numeric\_limits<int>::max();}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (m\_value\ <\ std::numeric\_limits<int>::min())}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::numeric\_limits<int>::min();}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_value;}
+\DoxyCodeLine{00332\ \ \ \ \ \}}
+\DoxyCodeLine{00333\ }
+\DoxyCodeLine{00334\ \ \ \ \ int64\_t\ GetInt64()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_value;\ \}}
+\DoxyCodeLine{00335\ }
+\DoxyCodeLine{00336\ \ \ \ \ std::vector<unsigned\ char>\ getvch()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00337\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ serialize(m\_value);}
+\DoxyCodeLine{00339\ \ \ \ \ \}}
+\DoxyCodeLine{00340\ }
+\DoxyCodeLine{00341\ \ \ \ \ \textcolor{keyword}{static}\ std::vector<unsigned\ char>\ serialize(\textcolor{keyword}{const}\ int64\_t\&\ value)}
+\DoxyCodeLine{00342\ \ \ \ \ \{}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}(value\ ==\ 0)}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::vector<unsigned\ char>();}
+\DoxyCodeLine{00345\ }
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ result;}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ neg\ =\ value\ <\ 0;}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ uint64\_t\ absvalue\ =\ neg\ ?\ \string~static\_cast<uint64\_t>(value)\ +\ 1\ :\ \textcolor{keyword}{static\_cast<}uint64\_t\textcolor{keyword}{>}(value);}
+\DoxyCodeLine{00349\ }
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}(absvalue)}
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ \ \ \ \ result.push\_back(absvalue\ \&\ 0xff);}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ \ \ \ \ absvalue\ >>=\ 8;}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00355\ }
+\DoxyCodeLine{00356\ \textcolor{comment}{//\ \ \ \ -\/\ If\ the\ most\ significant\ byte\ is\ >=\ 0x80\ and\ the\ value\ is\ positive,\ push\ a}}
+\DoxyCodeLine{00357\ \textcolor{comment}{//\ \ \ \ new\ zero-\/byte\ to\ make\ the\ significant\ byte\ <\ 0x80\ again.}}
+\DoxyCodeLine{00358\ }
+\DoxyCodeLine{00359\ \textcolor{comment}{//\ \ \ \ -\/\ If\ the\ most\ significant\ byte\ is\ >=\ 0x80\ and\ the\ value\ is\ negative,\ push\ a}}
+\DoxyCodeLine{00360\ \textcolor{comment}{//\ \ \ \ new\ 0x80\ byte\ that\ will\ be\ popped\ off\ when\ converting\ to\ an\ integral.}}
+\DoxyCodeLine{00361\ }
+\DoxyCodeLine{00362\ \textcolor{comment}{//\ \ \ \ -\/\ If\ the\ most\ significant\ byte\ is\ <\ 0x80\ and\ the\ value\ is\ negative,\ add}}
+\DoxyCodeLine{00363\ \textcolor{comment}{//\ \ \ \ 0x80\ to\ it,\ since\ it\ will\ be\ subtracted\ and\ interpreted\ as\ a\ negative\ when}}
+\DoxyCodeLine{00364\ \textcolor{comment}{//\ \ \ \ converting\ to\ an\ integral.}}
+\DoxyCodeLine{00365\ }
+\DoxyCodeLine{00366\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (result.back()\ \&\ 0x80)}
+\DoxyCodeLine{00367\ \ \ \ \ \ \ \ \ \ \ \ \ result.push\_back(neg\ ?\ 0x80\ :\ 0);}
+\DoxyCodeLine{00368\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (neg)}
+\DoxyCodeLine{00369\ \ \ \ \ \ \ \ \ \ \ \ \ result.back()\ |=\ 0x80;}
+\DoxyCodeLine{00370\ }
+\DoxyCodeLine{00371\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00372\ \ \ \ \ \}}
+\DoxyCodeLine{00373\ }
+\DoxyCodeLine{00374\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00375\ \ \ \ \ \textcolor{keyword}{static}\ int64\_t\ set\_vch(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ vch)}
+\DoxyCodeLine{00376\ \ \ \ \ \{}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (vch.empty())}
+\DoxyCodeLine{00378\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00379\ }
+\DoxyCodeLine{00380\ \ \ \ \ \ \ int64\_t\ result\ =\ 0;}
+\DoxyCodeLine{00381\ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ !=\ vch.size();\ ++i)}
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ \ \ result\ |=\ \textcolor{keyword}{static\_cast<}int64\_t\textcolor{keyword}{>}(vch[i])\ <<\ 8*i;}
+\DoxyCodeLine{00383\ }
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \textcolor{comment}{//\ If\ the\ input\ vector's\ most\ significant\ byte\ is\ 0x80,\ remove\ it\ from}}
+\DoxyCodeLine{00385\ \ \ \ \ \ \ \textcolor{comment}{//\ the\ result's\ msb\ and\ return\ a\ negative.}}
+\DoxyCodeLine{00386\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (vch.back()\ \&\ 0x80)}
+\DoxyCodeLine{00387\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/((int64\_t)(result\ \&\ \string~(0x80ULL\ <<\ (8\ *\ (vch.size()\ -\/\ 1)))));}
+\DoxyCodeLine{00388\ }
+\DoxyCodeLine{00389\ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00390\ \ \ \ \ \}}
+\DoxyCodeLine{00391\ }
+\DoxyCodeLine{00392\ \ \ \ \ int64\_t\ m\_value;}
+\DoxyCodeLine{00393\ \};}
+\DoxyCodeLine{00394\ }
+\DoxyCodeLine{00399\ \textcolor{keyword}{using\ }CScriptBase\ =\ prevector<36,\ uint8\_t>;}
+\DoxyCodeLine{00400\ }
+\DoxyCodeLine{00401\ \textcolor{keywordtype}{bool}\ GetScriptOp(CScriptBase::const\_iterator\&\ pc,\ CScriptBase::const\_iterator\ end,\ opcodetype\&\ opcodeRet,\ std::vector<unsigned\ char>*\ pvchRet);}
+\DoxyCodeLine{00402\ }
+\DoxyCodeLine{00404\ \textcolor{keyword}{class\ }CScript\ :\ \textcolor{keyword}{public}\ CScriptBase}
+\DoxyCodeLine{00405\ \{}
+\DoxyCodeLine{00406\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00407\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ AppendDataSize(\textcolor{keyword}{const}\ uint32\_t\ size)}
+\DoxyCodeLine{00408\ \ \ \ \ \{}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (size\ <\ OP\_PUSHDATA1)\ \{}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ \ \ \ \ insert(end(),\ \textcolor{keyword}{static\_cast<}value\_type\textcolor{keyword}{>}(size));}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (size\ <=\ 0xff)\ \{}
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ \ \ \ \ insert(end(),\ OP\_PUSHDATA1);}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ \ \ \ \ insert(end(),\ \textcolor{keyword}{static\_cast<}value\_type\textcolor{keyword}{>}(size));}
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (size\ <=\ 0xffff)\ \{}
+\DoxyCodeLine{00415\ \ \ \ \ \ \ \ \ \ \ \ \ insert(end(),\ OP\_PUSHDATA2);}
+\DoxyCodeLine{00416\ \ \ \ \ \ \ \ \ \ \ \ \ value\_type\ data[2];}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ \ \ \ \ WriteLE16(data,\ size);}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ \ \ \ \ insert(end(),\ std::cbegin(data),\ std::cend(data));}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ \ \ \ \ insert(end(),\ OP\_PUSHDATA4);}
+\DoxyCodeLine{00421\ \ \ \ \ \ \ \ \ \ \ \ \ value\_type\ data[4];}
+\DoxyCodeLine{00422\ \ \ \ \ \ \ \ \ \ \ \ \ WriteLE32(data,\ size);}
+\DoxyCodeLine{00423\ \ \ \ \ \ \ \ \ \ \ \ \ insert(end(),\ std::cbegin(data),\ std::cend(data));}
+\DoxyCodeLine{00424\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00425\ \ \ \ \ \}}
+\DoxyCodeLine{00426\ }
+\DoxyCodeLine{00427\ \ \ \ \ \textcolor{keywordtype}{void}\ AppendData(std::span<const\ value\_type>\ data)}
+\DoxyCodeLine{00428\ \ \ \ \ \{}
+\DoxyCodeLine{00429\ \ \ \ \ \ \ \ \ insert(end(),\ data.begin(),\ data.end());}
+\DoxyCodeLine{00430\ \ \ \ \ \}}
+\DoxyCodeLine{00431\ }
+\DoxyCodeLine{00432\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00433\ \ \ \ \ CScript\&\ push\_int64(int64\_t\ n)}
+\DoxyCodeLine{00434\ \ \ \ \ \{}
+\DoxyCodeLine{00435\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ ==\ -\/1\ ||\ (n\ >=\ 1\ \&\&\ n\ <=\ 16))}
+\DoxyCodeLine{00436\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00437\ \ \ \ \ \ \ \ \ \ \ \ \ push\_back(n\ +\ (OP\_1\ -\/\ 1));}
+\DoxyCodeLine{00438\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00439\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (n\ ==\ 0)}
+\DoxyCodeLine{00440\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00441\ \ \ \ \ \ \ \ \ \ \ \ \ push\_back(OP\_0);}
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ \ \ \ \ *\textcolor{keyword}{this}\ <<\ CScriptNum::serialize(n);}
+\DoxyCodeLine{00446\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00447\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00448\ \ \ \ \ \}}
+\DoxyCodeLine{00449\ }
+\DoxyCodeLine{00450\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00451\ \ \ \ \ CScript()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00452\ \ \ \ \ \textcolor{keyword}{template}\ <std::input\_iterator\ InputIterator>}
+\DoxyCodeLine{00453\ \ \ \ \ CScript(InputIterator\ first,\ InputIterator\ last)\ :\ CScriptBase\{first,\ last\}\ \{\ \}}
+\DoxyCodeLine{00454\ }
+\DoxyCodeLine{00455\ \ \ \ \ SERIALIZE\_METHODS(CScript,\ obj)\ \{\ READWRITE(AsBase<CScriptBase>(obj));\ \}}
+\DoxyCodeLine{00456\ }
+\DoxyCodeLine{00457\ \ \ \ \ \textcolor{keyword}{explicit}\ CScript(int64\_t\ b)\ \{\ operator<<(b);\ \}}
+\DoxyCodeLine{00458\ \ \ \ \ \textcolor{keyword}{explicit}\ CScript(opcodetype\ b)\ \ \ \ \ \{\ operator<<(b);\ \}}
+\DoxyCodeLine{00459\ \ \ \ \ \textcolor{keyword}{explicit}\ CScript(\textcolor{keyword}{const}\ CScriptNum\&\ b)\ \{\ operator<<(b);\ \}}
+\DoxyCodeLine{00460\ \ \ \ \ \textcolor{comment}{//\ delete\ non-\/existent\ constructor\ to\ defend\ against\ future\ introduction}}
+\DoxyCodeLine{00461\ \ \ \ \ \textcolor{comment}{//\ e.g.\ via\ prevector}}
+\DoxyCodeLine{00462\ \ \ \ \ \textcolor{keyword}{explicit}\ CScript(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ b)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00463\ }
+\DoxyCodeLine{00465\ \ \ \ \ CScript\&\ operator<<(\textcolor{keyword}{const}\ CScript\&\ b)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00466\ }
+\DoxyCodeLine{00467\ \ \ \ \ CScript\&\ operator<<(int64\_t\ b)\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ push\_int64(b);\ \}}
+\DoxyCodeLine{00468\ }
+\DoxyCodeLine{00469\ \ \ \ \ CScript\&\ operator<<(opcodetype\ opcode)\ LIFETIMEBOUND}
+\DoxyCodeLine{00470\ \ \ \ \ \{}
+\DoxyCodeLine{00471\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (opcode\ <\ 0\ ||\ opcode\ >\ 0xff)}
+\DoxyCodeLine{00472\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(\textcolor{stringliteral}{"{}CScript::operator<<():\ invalid\ opcode"{}});}
+\DoxyCodeLine{00473\ \ \ \ \ \ \ \ \ insert(end(),\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char})opcode);}
+\DoxyCodeLine{00474\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00475\ \ \ \ \ \}}
+\DoxyCodeLine{00476\ }
+\DoxyCodeLine{00477\ \ \ \ \ CScript\&\ operator<<(\textcolor{keyword}{const}\ CScriptNum\&\ b)\ LIFETIMEBOUND}
+\DoxyCodeLine{00478\ \ \ \ \ \{}
+\DoxyCodeLine{00479\ \ \ \ \ \ \ \ \ *\textcolor{keyword}{this}\ <<\ b.getvch();}
+\DoxyCodeLine{00480\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00481\ \ \ \ \ \}}
+\DoxyCodeLine{00482\ }
+\DoxyCodeLine{00483\ \ \ \ \ CScript\&\ operator<<(std::span<const\ std::byte>\ b)\ LIFETIMEBOUND}
+\DoxyCodeLine{00484\ \ \ \ \ \{}
+\DoxyCodeLine{00485\ \ \ \ \ \ \ \ \ AppendDataSize(b.size());}
+\DoxyCodeLine{00486\ \ \ \ \ \ \ \ \ AppendData(\{\textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }value\_type*\textcolor{keyword}{>}(b.data()),\ b.size()\});}
+\DoxyCodeLine{00487\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00488\ \ \ \ \ \}}
+\DoxyCodeLine{00489\ }
+\DoxyCodeLine{00490\ \ \ \ \ \textcolor{comment}{//\ For\ compatibility\ reasons.\ In\ new\ code,\ prefer\ using\ std::byte\ instead\ of\ uint8\_t.}}
+\DoxyCodeLine{00491\ \ \ \ \ CScript\&\ operator<<(std::span<const\ value\_type>\ b)\ LIFETIMEBOUND}
+\DoxyCodeLine{00492\ \ \ \ \ \{}
+\DoxyCodeLine{00493\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this}\ <<\ std::as\_bytes(b);}
+\DoxyCodeLine{00494\ \ \ \ \ \}}
+\DoxyCodeLine{00495\ }
+\DoxyCodeLine{00496\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetOp(const\_iterator\&\ pc,\ opcodetype\&\ opcodeRet,\ std::vector<unsigned\ char>\&\ vchRet)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00497\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00498\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ GetScriptOp(pc,\ end(),\ opcodeRet,\ \&vchRet);}
+\DoxyCodeLine{00499\ \ \ \ \ \}}
+\DoxyCodeLine{00500\ }
+\DoxyCodeLine{00501\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetOp(const\_iterator\&\ pc,\ opcodetype\&\ opcodeRet)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00502\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00503\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ GetScriptOp(pc,\ end(),\ opcodeRet,\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00504\ \ \ \ \ \}}
+\DoxyCodeLine{00505\ }
+\DoxyCodeLine{00507\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ DecodeOP\_N(opcodetype\ opcode)}
+\DoxyCodeLine{00508\ \ \ \ \ \{}
+\DoxyCodeLine{00509\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (opcode\ ==\ OP\_0)}
+\DoxyCodeLine{00510\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00511\ \ \ \ \ \ \ \ \ assert(opcode\ >=\ OP\_1\ \&\&\ opcode\ <=\ OP\_16);}
+\DoxyCodeLine{00512\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (\textcolor{keywordtype}{int})opcode\ -\/\ (int)(OP\_1\ -\/\ 1);}
+\DoxyCodeLine{00513\ \ \ \ \ \}}
+\DoxyCodeLine{00514\ \ \ \ \ \textcolor{keyword}{static}\ opcodetype\ EncodeOP\_N(\textcolor{keywordtype}{int}\ n)}
+\DoxyCodeLine{00515\ \ \ \ \ \{}
+\DoxyCodeLine{00516\ \ \ \ \ \ \ \ \ assert(n\ >=\ 0\ \&\&\ n\ <=\ 16);}
+\DoxyCodeLine{00517\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ ==\ 0)}
+\DoxyCodeLine{00518\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ OP\_0;}
+\DoxyCodeLine{00519\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (opcodetype)(OP\_1+n-\/1);}
+\DoxyCodeLine{00520\ \ \ \ \ \}}
+\DoxyCodeLine{00521\ }
+\DoxyCodeLine{00529\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ GetSigOpCount(\textcolor{keywordtype}{bool}\ fAccurate)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00530\ }
+\DoxyCodeLine{00535\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ GetSigOpCount(\textcolor{keyword}{const}\ CScript\&\ scriptSig)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00536\ }
+\DoxyCodeLine{00537\ \ \ \ \ \textcolor{comment}{/*}}
+\DoxyCodeLine{00538\ \textcolor{comment}{\ \ \ \ \ *\ OP\_1\ <0x4e73>}}
+\DoxyCodeLine{00539\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00540\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsPayToAnchor()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00543\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ IsPayToAnchor(\textcolor{keywordtype}{int}\ version,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ program);}
+\DoxyCodeLine{00544\ }
+\DoxyCodeLine{00545\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsPayToScriptHash()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00546\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsPayToWitnessScriptHash()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00547\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsWitnessProgram(\textcolor{keywordtype}{int}\&\ version,\ std::vector<unsigned\ char>\&\ program)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00548\ }
+\DoxyCodeLine{00549\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsPayToTaproot()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00550\ }
+\DoxyCodeLine{00552\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsPushOnly(const\_iterator\ pc)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00553\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsPushOnly()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00554\ }
+\DoxyCodeLine{00556\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasValidOps()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00557\ }
+\DoxyCodeLine{00563\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsUnspendable()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00564\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00565\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (size()\ >\ 0\ \&\&\ *begin()\ ==\ OP\_RETURN)\ ||\ (size()\ >\ MAX\_SCRIPT\_SIZE);}
+\DoxyCodeLine{00566\ \ \ \ \ \}}
+\DoxyCodeLine{00567\ }
+\DoxyCodeLine{00568\ \ \ \ \ \textcolor{keywordtype}{void}\ clear()}
+\DoxyCodeLine{00569\ \ \ \ \ \{}
+\DoxyCodeLine{00570\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ default\ prevector::clear()\ does\ not\ release\ memory}}
+\DoxyCodeLine{00571\ \ \ \ \ \ \ \ \ CScriptBase::clear();}
+\DoxyCodeLine{00572\ \ \ \ \ \ \ \ \ shrink\_to\_fit();}
+\DoxyCodeLine{00573\ \ \ \ \ \}}
+\DoxyCodeLine{00574\ \};}
+\DoxyCodeLine{00575\ }
+\DoxyCodeLine{00576\ \textcolor{keyword}{struct\ }CScriptWitness}
+\DoxyCodeLine{00577\ \{}
+\DoxyCodeLine{00578\ \ \ \ \ \textcolor{comment}{//\ Note\ that\ this\ encodes\ the\ data\ elements\ being\ pushed,\ rather\ than}}
+\DoxyCodeLine{00579\ \ \ \ \ \textcolor{comment}{//\ encoding\ them\ as\ a\ CScript\ that\ pushes\ them.}}
+\DoxyCodeLine{00580\ \ \ \ \ std::vector<std::vector<unsigned\ char>\ >\ stack;}
+\DoxyCodeLine{00581\ }
+\DoxyCodeLine{00582\ \ \ \ \ \textcolor{comment}{//\ Some\ compilers\ complain\ without\ a\ default\ constructor}}
+\DoxyCodeLine{00583\ \ \ \ \ CScriptWitness()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00584\ }
+\DoxyCodeLine{00585\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsNull()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ stack.empty();\ \}}
+\DoxyCodeLine{00586\ }
+\DoxyCodeLine{00587\ \ \ \ \ \textcolor{keywordtype}{void}\ SetNull()\ \{\ stack.clear();\ stack.shrink\_to\_fit();\ \}}
+\DoxyCodeLine{00588\ }
+\DoxyCodeLine{00589\ \ \ \ \ std::string\ ToString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00590\ \};}
+\DoxyCodeLine{00591\ }
+\DoxyCodeLine{00593\ \textcolor{keyword}{class\ }CScriptID\ :\ \textcolor{keyword}{public}\ BaseHash<uint160>}
+\DoxyCodeLine{00594\ \{}
+\DoxyCodeLine{00595\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00596\ \ \ \ \ CScriptID()\ :\ BaseHash()\ \{\}}
+\DoxyCodeLine{00597\ \ \ \ \ \textcolor{keyword}{explicit}\ CScriptID(\textcolor{keyword}{const}\ CScript\&\ in);}
+\DoxyCodeLine{00598\ \ \ \ \ \textcolor{keyword}{explicit}\ CScriptID(\textcolor{keyword}{const}\ uint160\&\ in)\ :\ BaseHash(in)\ \{\}}
+\DoxyCodeLine{00599\ \};}
+\DoxyCodeLine{00600\ }
+\DoxyCodeLine{00602\ \textcolor{keywordtype}{bool}\ IsOpSuccess(\textcolor{keyword}{const}\ opcodetype\&\ opcode);}
+\DoxyCodeLine{00603\ }
+\DoxyCodeLine{00604\ \textcolor{keywordtype}{bool}\ CheckMinimalPush(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ data,\ opcodetype\ opcode);}
+\DoxyCodeLine{00605\ }
+\DoxyCodeLine{00607\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}...\ Ts>}
+\DoxyCodeLine{00608\ CScript\ BuildScript(Ts\&\&...\ inputs)}
+\DoxyCodeLine{00609\ \{}
+\DoxyCodeLine{00610\ \ \ \ \ CScript\ ret;}
+\DoxyCodeLine{00611\ \ \ \ \ \textcolor{keywordtype}{int}\ cnt\{0\};}
+\DoxyCodeLine{00612\ }
+\DoxyCodeLine{00613\ \ \ \ \ ([\&ret,\ \&cnt]\ (Ts\&\&\ input)\ \{}
+\DoxyCodeLine{00614\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_same\_v<std::remove\_cv\_t<std::remove\_reference\_t<Ts>>,\ CScript>)\ \{}
+\DoxyCodeLine{00615\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ it\ is\ a\ CScript,\ extend\ ret\ with\ it.\ Move\ or\ copy\ the\ first\ element\ instead.}}
+\DoxyCodeLine{00616\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cnt\ ==\ 0)\ \{}
+\DoxyCodeLine{00617\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ret\ =\ std::forward<Ts>(input);}
+\DoxyCodeLine{00618\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00619\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ret.insert(ret.end(),\ input.begin(),\ input.end());}
+\DoxyCodeLine{00620\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00621\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00622\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Otherwise\ invoke\ CScript::operator<<.}}
+\DoxyCodeLine{00623\ \ \ \ \ \ \ \ \ \ \ \ \ ret\ <<\ input;}
+\DoxyCodeLine{00624\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00625\ \ \ \ \ \ \ \ \ cnt++;}
+\DoxyCodeLine{00626\ \ \ \ \ \}\ (std::forward<Ts>(inputs)),\ ...);}
+\DoxyCodeLine{00627\ }
+\DoxyCodeLine{00628\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00629\ \}}
+\DoxyCodeLine{00630\ }
+\DoxyCodeLine{00631\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_SCRIPT\_SCRIPT\_H}}
+
+\end{DoxyCode}

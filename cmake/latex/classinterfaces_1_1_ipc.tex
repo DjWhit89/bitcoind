@@ -1,0 +1,124 @@
+\doxysection{Ipc Class Reference}
+\label{classinterfaces_1_1_ipc}\index{Ipc@{Ipc}}
+
+
+{\ttfamily \#include $<$ipc.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual \textbf{ $\sim$\+Ipc} ()=default
+\item 
+virtual std\+::unique\+\_\+ptr$<$ \textbf{ Init} $>$ \textbf{ spawn\+Process} (const char $\ast$exe\+\_\+name)=0
+\begin{DoxyCompactList}\small\item\em Spawn a child process returning pointer to its \doxyref{Init}{p.}{classinterfaces_1_1_init} interface. \end{DoxyCompactList}\item 
+virtual bool \textbf{ start\+Spawned\+Process} (int argc, char $\ast$argv[$\,$], int \&\textbf{ exit\+\_\+status})=0
+\item 
+virtual std\+::unique\+\_\+ptr$<$ \textbf{ Init} $>$ \textbf{ connect\+Address} (std\+::string \&address)=0
+\item 
+virtual void \textbf{ listen\+Address} (std\+::string \&address)=0
+\item 
+virtual void \textbf{ disconnect\+Incoming} ()=0
+\begin{DoxyCompactList}\small\item\em Disconnect any incoming connections that are still connected. \end{DoxyCompactList}\item 
+{\footnotesize template$<$typename Interface$>$ }\\void \textbf{ add\+Cleanup} (Interface \&iface, std\+::function$<$ void()$>$ cleanup)
+\item 
+virtual \textbf{ ipc\+::\+Context} \& \textbf{ context} ()=0
+\begin{DoxyCompactList}\small\item\em IPC context struct accessor (see struct definition for more description). \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \textbf{ add\+Cleanup} (std\+::type\+\_\+index type, void $\ast$iface, std\+::function$<$ void()$>$ cleanup)=0
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Interface providing access to interprocess-\/communication (IPC) functionality. The IPC implementation is responsible for establishing connections between a controlling process and a process being controlled. When a connection is established, the process being controlled returns an \doxyref{interfaces\+::\+Init}{p.}{classinterfaces_1_1_init} pointer to the controlling process, which the controlling process can use to get access to other interfaces and functionality.
+
+When spawning a new process, the steps are\+:
+
+
+\begin{DoxyEnumerate}
+\item The controlling process calls \doxyref{interfaces\+::\+Ipc\+::spawn\+Process()}{p.}{classinterfaces_1_1_ipc_adac82dc623fa04500dcc1c4eee94760b}, which calls \doxyref{ipc\+::\+Process\+::spawn()}{p.}{classipc_1_1_process_a75aaa60d46ba19dacf4a926911a4069d}, which spawns a new process and returns a socketpair file descriptor for communicating with it. \doxyref{interfaces\+::\+Ipc\+::spawn\+Process()}{p.}{classinterfaces_1_1_ipc_adac82dc623fa04500dcc1c4eee94760b} then calls \doxyref{ipc\+::\+Protocol\+::connect()}{p.}{classipc_1_1_protocol_a098584fc42adacc9ecfd5dc910fea66f} passing the socketpair descriptor, which returns a local proxy \doxyref{interfaces\+::\+Init}{p.}{classinterfaces_1_1_init} implementation calling remote \doxyref{interfaces\+::\+Init}{p.}{classinterfaces_1_1_init} methods.
+\item The spawned process calls interfaces\+::\+Ipc\+::start\+Spawn\+Process(), which calls \doxyref{ipc\+::\+Process\+::check\+Spawned()}{p.}{classipc_1_1_process_ae29d81a1df3ef04d9031ed37834db893} to read command line arguments and determine whether it is a spawned process and what socketpair file descriptor it should use. It then calls \doxyref{ipc\+::\+Protocol\+::serve()}{p.}{classipc_1_1_protocol_a5249513dbbca3afe53c192be98ac7504} to handle incoming requests from the socketpair and invoke \doxyref{interfaces\+::\+Init}{p.}{classinterfaces_1_1_init} interface methods, and exit when the socket is closed.
+\item The controlling process calls local proxy \doxyref{interfaces\+::\+Init}{p.}{classinterfaces_1_1_init} object methods to make other proxy objects calling other remote interfaces. It can also destroy the initial \doxyref{interfaces\+::\+Init}{p.}{classinterfaces_1_1_init} object to close the connection and shut down the spawned process.
+\end{DoxyEnumerate}
+
+When connecting to an existing process, the steps are similar to spawning a new process, except a socket is created instead of a socketpair, and destroying an \doxyref{Init}{p.}{classinterfaces_1_1_init} interface doesn\textquotesingle{}t end the process, since there can be multiple connections. 
+
+\label{doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{Ipc@{Ipc}!````~Ipc@{$\sim$Ipc}}
+\index{````~Ipc@{$\sim$Ipc}!Ipc@{Ipc}}
+\doxysubsubsection{$\sim$Ipc()}
+{\footnotesize\ttfamily \label{classinterfaces_1_1_ipc_a901cfb7417e9511e9890c137eb556c18} 
+virtual $\sim$\textbf{ Ipc} (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [virtual]}, {\ttfamily [default]}}
+
+
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{Ipc@{Ipc}!addCleanup@{addCleanup}}
+\index{addCleanup@{addCleanup}!Ipc@{Ipc}}
+\doxysubsubsection{addCleanup()\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily \label{classinterfaces_1_1_ipc_adc17e7ae36bce773070d934e22ab97d7} 
+template$<$typename Interface$>$ \\
+void add\+Cleanup (\begin{DoxyParamCaption}\item[{Interface \&}]{iface}{, }\item[{std\+::function$<$ void()$>$}]{cleanup}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+Add cleanup callback to remote interface that will run when the interface is deleted. \index{Ipc@{Ipc}!addCleanup@{addCleanup}}
+\index{addCleanup@{addCleanup}!Ipc@{Ipc}}
+\doxysubsubsection{addCleanup()\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily \label{classinterfaces_1_1_ipc_ab752d262895c2173617749fea06bcba1} 
+virtual void add\+Cleanup (\begin{DoxyParamCaption}\item[{std\+::type\+\_\+index}]{type}{, }\item[{void $\ast$}]{iface}{, }\item[{std\+::function$<$ void()$>$}]{cleanup}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [protected]}, {\ttfamily [pure virtual]}}
+
+Internal implementation of public add\+Cleanup method (above) as a type-\/erased virtual function, since template functions can\textquotesingle{}t be virtual. \index{Ipc@{Ipc}!connectAddress@{connectAddress}}
+\index{connectAddress@{connectAddress}!Ipc@{Ipc}}
+\doxysubsubsection{connectAddress()}
+{\footnotesize\ttfamily \label{classinterfaces_1_1_ipc_a8f4b6624f88179cc8e91b0eec3698b45} 
+virtual std\+::unique\+\_\+ptr$<$ \textbf{ Init} $>$ connect\+Address (\begin{DoxyParamCaption}\item[{std\+::string \&}]{address}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Connect to a socket address and return a pointer to its \doxyref{Init}{p.}{classinterfaces_1_1_init} interface. Returns a non-\/null pointer if the connection was established, returns null if address is empty ("{}"{}) or disabled ("{}0"{}) or if a connection was refused but not required ("{}auto"{}), and throws an exception if there was an unexpected error. \index{Ipc@{Ipc}!context@{context}}
+\index{context@{context}!Ipc@{Ipc}}
+\doxysubsubsection{context()}
+{\footnotesize\ttfamily \label{classinterfaces_1_1_ipc_aadeee9466f33f2396a7ad52831083f8a} 
+virtual \textbf{ ipc\+::\+Context} \& context (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+
+
+IPC context struct accessor (see struct definition for more description). 
+
+\index{Ipc@{Ipc}!disconnectIncoming@{disconnectIncoming}}
+\index{disconnectIncoming@{disconnectIncoming}!Ipc@{Ipc}}
+\doxysubsubsection{disconnectIncoming()}
+{\footnotesize\ttfamily \label{classinterfaces_1_1_ipc_a45306c63b743375d0db4f613d2de7300} 
+virtual void disconnect\+Incoming (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+
+
+Disconnect any incoming connections that are still connected. 
+
+\index{Ipc@{Ipc}!listenAddress@{listenAddress}}
+\index{listenAddress@{listenAddress}!Ipc@{Ipc}}
+\doxysubsubsection{listenAddress()}
+{\footnotesize\ttfamily \label{classinterfaces_1_1_ipc_a9c3d57bf43d3d20ace3a4249e6a797b5} 
+virtual void listen\+Address (\begin{DoxyParamCaption}\item[{std\+::string \&}]{address}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+Listen on a socket address exposing this process\textquotesingle{}s init interface to clients. Throws an exception if there was an error. \index{Ipc@{Ipc}!spawnProcess@{spawnProcess}}
+\index{spawnProcess@{spawnProcess}!Ipc@{Ipc}}
+\doxysubsubsection{spawnProcess()}
+{\footnotesize\ttfamily \label{classinterfaces_1_1_ipc_adac82dc623fa04500dcc1c4eee94760b} 
+virtual std\+::unique\+\_\+ptr$<$ \textbf{ Init} $>$ spawn\+Process (\begin{DoxyParamCaption}\item[{const char $\ast$}]{exe\+\_\+name}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+
+
+Spawn a child process returning pointer to its \doxyref{Init}{p.}{classinterfaces_1_1_init} interface. 
+
+\index{Ipc@{Ipc}!startSpawnedProcess@{startSpawnedProcess}}
+\index{startSpawnedProcess@{startSpawnedProcess}!Ipc@{Ipc}}
+\doxysubsubsection{startSpawnedProcess()}
+{\footnotesize\ttfamily \label{classinterfaces_1_1_ipc_a5e302c6524dd19f78c2efe9a55abd057} 
+virtual bool start\+Spawned\+Process (\begin{DoxyParamCaption}\item[{int}]{argc}{, }\item[{char $\ast$}]{argv}{[$\,$], }\item[{int \&}]{exit\+\_\+status}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [pure virtual]}}
+
+If this is a spawned process, block and handle requests from the parent process by forwarding them to this process\textquotesingle{}s \doxyref{Init}{p.}{classinterfaces_1_1_init} interface, then return true. If this is not a spawned child process, return false. 
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/interfaces/\textbf{ ipc.\+h}\end{DoxyCompactItemize}

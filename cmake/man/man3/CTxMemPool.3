@@ -1,0 +1,699 @@
+.TH "CTxMemPool" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+CTxMemPool
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <txmempool\&.h>\fP
+.PP
+Inherited by \fBMemPoolTest\fP\&.
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBCTxMemPoolEntry_Indices\fP"
+.br
+.ti -1c
+.RI "struct \fBdelta_info\fP"
+.br
+.ti -1c
+.RI "class \fBChangeSet\fP"
+.br
+.in -1c
+.SS "Public Types"
+
+.in +1c
+.ti -1c
+.RI "typedef boost::multi_index_container< \fBCTxMemPoolEntry\fP, \fBCTxMemPoolEntry_Indices\fP > \fBindexed_transaction_set\fP"
+.br
+.ti -1c
+.RI "using \fBtxiter\fP = indexed_transaction_set::nth_index<0>::type::const_iterator"
+.br
+.ti -1c
+.RI "typedef std::set< \fBtxiter\fP, \fBCompareIteratorByHash\fP > \fBsetEntries\fP"
+.br
+.ti -1c
+.RI "using \fBLimits\fP = \fBkernel::MemPoolLimits\fP"
+.br
+.ti -1c
+.RI "using \fBOptions\fP = \fBkernel::MemPoolOptions\fP"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "std::unique_ptr< \fBTxGraph\fP > m_txgraph \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.ti -1c
+.RI "std::unique_ptr< \fBTxGraph::BlockBuilder\fP > m_builder \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBindexed_transaction_set\fP mapTx \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.ti -1c
+.RI "std::vector< std::pair< \fBWtxid\fP, \fBtxiter\fP > > txns_randomized \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.RI "All transactions in mapTx with their wtxids, in arbitrary order\&. "
+.ti -1c
+.RI "std::tuple< size_t, size_t, \fBCAmount\fP > \fBCalculateAncestorData\fP (const \fBCTxMemPoolEntry\fP &entry) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "std::tuple< size_t, size_t, \fBCAmount\fP > \fBCalculateDescendantData\fP (const \fBCTxMemPoolEntry\fP &entry) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "int64_t \fBGetDescendantCount\fP (\fBtxiter\fP \fBit\fP) const"
+.br
+.ti -1c
+.RI "int64_t \fBGetDescendantCount\fP (const \fBCTxMemPoolEntry\fP &e) const"
+.br
+.ti -1c
+.RI "int64_t \fBGetAncestorCount\fP (const \fBCTxMemPoolEntry\fP &e) const"
+.br
+.ti -1c
+.RI "std::vector< \fBCTxMemPoolEntry::CTxMemPoolEntryRef\fP > \fBGetChildren\fP (const \fBCTxMemPoolEntry\fP &entry) const"
+.br
+.ti -1c
+.RI "std::vector< \fBCTxMemPoolEntry::CTxMemPoolEntryRef\fP > \fBGetParents\fP (const \fBCTxMemPoolEntry\fP &entry) const"
+.br
+.ti -1c
+.RI "\fBindirectmap\fP< \fBCOutPoint\fP, \fBtxiter\fP > mapNextTx \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.ti -1c
+.RI "std::map< \fBTxid\fP, \fBCAmount\fP > mapDeltas \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBCTxMemPool\fP (\fBOptions\fP\fBOptions\fP opts, \fBbilingual_str\fP &error)"
+.br
+.ti -1c
+.RI "void \fBremoveForReorg\fP (\fBCChain\fP &chain, std::function< bool(\fBtxiter\fP)> filter_final_and_mature) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP"
+.br
+.ti -1c
+.RI "void \fBremoveForBlock\fP (const std::vector< \fBCTransactionRef\fP > &vtx, unsigned int nBlockHeight) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "bool \fBCompareMiningScoreWithTopology\fP (const \fBWtxid\fP &hasha, const \fBWtxid\fP &hashb) const"
+.br
+.ti -1c
+.RI "bool \fBisSpent\fP (const \fBCOutPoint\fP &outpoint) const"
+.br
+.ti -1c
+.RI "unsigned int \fBGetTransactionsUpdated\fP () const"
+.br
+.ti -1c
+.RI "void \fBAddTransactionsUpdated\fP (unsigned int n)"
+.br
+.ti -1c
+.RI "bool \fBHasNoInputsOf\fP (const \fBCTransaction\fP &tx) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBPrioritiseTransaction\fP (const \fBTxid\fP &hash, const \fBCAmount\fP &nFeeDelta)"
+.br
+.ti -1c
+.RI "void \fBApplyDelta\fP (const \fBTxid\fP &hash, \fBCAmount\fP &nFeeDelta) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBClearPrioritisation\fP (const \fBTxid\fP &hash) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "std::vector< \fBdelta_info\fP > \fBGetPrioritisedTransactions\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!\fBcs\fP)"
+.br
+.ti -1c
+.RI "const \fBCTransaction\fP * \fBGetConflictTx\fP (const \fBCOutPoint\fP &prevout) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "std::optional< \fBtxiter\fP > \fBGetIter\fP (const \fBTxid\fP &txid) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "std::optional< \fBtxiter\fP > \fBGetIter\fP (const \fBWtxid\fP &wtxid) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBsetEntries\fP \fBGetIterSet\fP (const std::set< \fBTxid\fP > &hashes) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "std::vector< \fBtxiter\fP > \fBGetIterVec\fP (const std::vector< \fBTxid\fP > &txids) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBUpdateTransactionsFromBlock\fP (const std::vector< \fBTxid\fP > &vHashesToUpdate) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP"
+.br
+.ti -1c
+.RI "void \fBcs_main\fP \fBLOCKS_EXCLUDED\fP (\fBm_epoch\fP)"
+.br
+.ti -1c
+.RI "std::vector< \fBFeePerWeight\fP > \fBGetFeerateDiagram\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBFeePerWeight\fP \fBGetMainChunkFeerate\fP (const \fBCTxMemPoolEntry\fP &tx) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "std::vector< const \fBCTxMemPoolEntry\fP * > \fBGetCluster\fP (\fBTxid\fP txid) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "size_t \fBGetUniqueClusterCount\fP (const \fBsetEntries\fP &iters_conflicting) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBsetEntries\fP \fBCalculateMemPoolAncestors\fP (const \fBCTxMemPoolEntry\fP &entry) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "bool \fBHasDescendants\fP (const \fBTxid\fP &txid) const"
+.br
+.ti -1c
+.RI "std::vector< \fBtxiter\fP > \fBGatherClusters\fP (const std::vector< \fBTxid\fP > &txids) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBCalculateDescendants\fP (\fBtxiter\fP \fBit\fP, \fBsetEntries\fP &setDescendants) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBCTxMemPool::txiter\fP \fBCalculateDescendants\fP (const \fBCTxMemPoolEntry\fP &entry, \fBsetEntries\fP &setDescendants) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBCFeeRate\fP \fBGetMinFee\fP () const"
+.br
+.ti -1c
+.RI "void \fBTrimToSize\fP (size_t sizelimit, std::vector< \fBCOutPoint\fP > *pvNoSpendsRemaining=nullptr) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "int \fBExpire\fP (std::chrono::seconds time) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBGetTransactionAncestry\fP (const \fBTxid\fP &txid, size_t &ancestors, size_t &cluster_count, size_t *ancestorsize=nullptr, \fBCAmount\fP *ancestorfees=nullptr) const"
+.br
+.ti -1c
+.RI "bool \fBGetLoadTried\fP () const"
+.br
+.ti -1c
+.RI "void \fBSetLoadTried\fP (bool load_tried)"
+.br
+.ti -1c
+.RI "unsigned long \fBsize\fP () const"
+.br
+.ti -1c
+.RI "uint64_t \fBGetTotalTxSize\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBCAmount\fP \fBGetTotalFee\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "bool \fBexists\fP (const \fBTxid\fP &txid) const"
+.br
+.ti -1c
+.RI "bool \fBexists\fP (const \fBWtxid\fP &wtxid) const"
+.br
+.ti -1c
+.RI "const \fBCTxMemPoolEntry\fP * \fBGetEntry\fP (const \fBTxid\fP &txid) const \fBLIFETIMEBOUND\fP \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBCTransactionRef\fP \fBget\fP (const \fBTxid\fP &hash) const"
+.br
+.ti -1c
+.RI "template<\fBTxidOrWtxid\fP T> \fBTxMempoolInfo\fP \fBinfo\fP (const \fBT\fP &id) const"
+.br
+.ti -1c
+.RI "template<\fBTxidOrWtxid\fP T> \fBTxMempoolInfo\fP \fBinfo_for_relay\fP (const \fBT\fP &id, uint64_t last_sequence) const"
+.br
+.ti -1c
+.RI "std::vector< \fBCTxMemPoolEntryRef\fP > \fBentryAll\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "std::vector< \fBTxMempoolInfo\fP > \fBinfoAll\fP () const"
+.br
+.ti -1c
+.RI "size_t \fBDynamicMemoryUsage\fP () const"
+.br
+.ti -1c
+.RI "void \fBAddUnbroadcastTx\fP (const \fBTxid\fP &txid)"
+.br
+.ti -1c
+.RI "bool \fBCheckPolicyLimits\fP (const \fBCTransactionRef\fP &tx)"
+.br
+.ti -1c
+.RI "void \fBRemoveUnbroadcastTx\fP (const \fBTxid\fP &txid, const bool unchecked=false)"
+.br
+.ti -1c
+.RI "std::set< \fBTxid\fP > \fBGetUnbroadcastTxs\fP () const"
+.br
+.ti -1c
+.RI "bool \fBIsUnbroadcastTx\fP (const \fBTxid\fP &txid) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "uint64_t \fBGetAndIncrementSequence\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "uint64_t \fBGetSequence\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "bool \fBvisited\fP (const \fBtxiter\fP \fBit\fP) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP"
+.br
+.ti -1c
+.RI "bool \fBvisited\fP (std::optional< \fBtxiter\fP > \fBit\fP) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP"
+.br
+.ti -1c
+.RI "std::unique_ptr< \fBChangeSet\fP > \fBGetChangeSet\fP () \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "bool m_have_changeset \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBStartBlockBuilding\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBFeePerWeight\fP \fBGetBlockBuilderChunk\fP (std::vector< \fBCTxMemPoolEntry::CTxMemPoolEntryRef\fP > &entries) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBIncludeBuilderChunk\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBSkipBuilderChunk\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBStopBlockBuilding\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.in -1c
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "\fBRecursiveMutex\fP \fBcs\fP"
+.br
+.ti -1c
+.RI "const \fBOptions\fP\fBOptions\fP \fBm_opts\fP"
+.br
+.ti -1c
+.RI "void check(const \fBCCoinsViewCache\fP &active_coins_tip, int64_t spendheight) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(voi \fBremoveRecursive\fP )(const \fBCTransaction\fP &tx, \fBMemPoolRemovalReason\fP reason) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBcs_main\fP"
+.br
+.ti -1c
+.RI "bool \fBm_epoch\fP"
+.br
+.ti -1c
+.RI "return !it \fBvisited\fP * \fBit\fP"
+.br
+.in -1c
+.SS "Static Public Attributes"
+
+.in +1c
+.ti -1c
+.RI "static const int \fBROLLING_FEE_HALFLIFE\fP = 60 * 60 * 12"
+.br
+.in -1c
+.SS "Protected Member Functions"
+
+.in +1c
+.ti -1c
+.RI "uint64_t totalTxSize \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBCAmount\fP m_total_fee \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.RI "sum of all mempool tx's virtual sizes\&. Differs from serialized tx size since witness data is discounted\&. Defined in BIP 141\&. "
+.ti -1c
+.RI "uint64_t cachedInnerUsage \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.RI "sum of all mempool tx's fees (NOT modified fee) "
+.ti -1c
+.RI "int64_t lastRollingFeeUpdate \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.RI "sum of dynamic memory usage of all the map elements (NOT the maps themselves) "
+.ti -1c
+.RI "bool blockSinceLastRollingFeeBump \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.ti -1c
+.RI "double rollingMinimumFeeRate \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBEpoch\fP \fBm_epoch\fP \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.RI "minimum fee to get into the pool, decreases exponentially "
+.ti -1c
+.RI "uint64_t m_sequence_number \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.ti -1c
+.RI "void \fBtrackPackageRemoved\fP (const \fBCFeeRate\fP &rate) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs\fP)"
+.br
+.ti -1c
+.RI "bool m_load_tried \fBGUARDED_BY\fP (\fBcs\fP)"
+.br
+.ti -1c
+.RI "\fBCFeeRate\fP \fBGetMinFee\fP (size_t sizelimit) const"
+.br
+.in -1c
+.SS "Protected Attributes"
+
+.in +1c
+.ti -1c
+.RI "std::atomic< unsigned int > \fBnTransactionsUpdated\fP {0}"
+.br
+.RI "Used by getblocktemplate to trigger CreateNewBlock() invocation\&. "
+.in -1c
+.SS "Friends"
+
+.in +1c
+.ti -1c
+.RI "class \fBCTxMemPool::ChangeSet\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+\fBCTxMemPool\fP stores valid-according-to-the-current-best-chain transactions that may be included in the next block\&.
+
+.PP
+Transactions are added when they are seen on the network (or created by the local node), but not all transactions seen are added to the pool\&. For example, the following new transactions will not be added to the mempool:
+.IP "\(bu" 2
+a transaction which doesn't meet the minimum fee requirements\&.
+.IP "\(bu" 2
+a new transaction that double-spends an input of a transaction already in the pool where the new transaction does not meet the Replace-By-Fee requirements as defined in doc/policy/mempool-replacements\&.md\&.
+.IP "\(bu" 2
+a non-standard transaction\&.
+.PP
+
+.PP
+\fBTxGraph\fP (CTxMemPool::m_txgraph) provides an abstraction layer for separating the transaction graph parts of the mempool from the rest of the Bitcoin-specific logic\&. Specifically, \fBTxGraph\fP handles (for each transaction) managing the in-mempool parents and children, and has knowledge of the fee and size of every transaction\&. It uses this to partition the mempool into connected clusters, and it implements (among other things):
+.IP "\(bu" 2
+limits on the size of a cluster (in both number of transactions and total weight)
+.IP "\(bu" 2
+sorting the mempool optimally for block inclusion, taking into account dependencies
+.IP "\(bu" 2
+selecting transactions for removal due to cluster size limit violations after a reorg\&. See \fBtxgraph\&.h\fP and txgraph\&.cpp for more details\&.
+.PP
+
+.PP
+\fBCTxMemPool\fP itself handles the Bitcoin-specific parts of mempool transactions; it stores the full transaction inside \fBCTxMemPoolEntry\fP, along with other consensus-specific fields (such as whether a transaction spends a coinbase, or the \fBLockPoints\fP for transaction finality)\&. And it provides interfaces to the rest of the codebase, such as:
+.IP "\(bu" 2
+to validation for replace-by-fee calculations and cluster size limits when evaluating unconfirmed transactions
+.IP "\(bu" 2
+to validation for evicting transactions due to expiry or the mempool size limit being hit
+.IP "\(bu" 2
+to validation for updating the mempool to be consistent with the best chain after a new block is connected or after a reorg\&.
+.IP "\(bu" 2
+to net_processing for ordering transactions that are to-be-announced to other peers
+.IP "\(bu" 2
+to RPC code for inspecting the mempool
+.PP
+
+.PP
+(Many of these interfaces are just wrappers around corresponding \fBTxGraph\fP functions\&.)
+
+.PP
+Within \fBCTxMemPool\fP, the mempool entries are stored in a boost::multi_index mapTx, which sorts the mempool on 3 criteria:
+.IP "\(bu" 2
+transaction hash (txid)
+.IP "\(bu" 2
+witness-transaction hash (wtxid)
+.IP "\(bu" 2
+time in mempool
+.PP
+
+.PP
+We also maintain a map from \fBCOutPoint\fP to the (in-mempool) transaction that spends it (mapNextTx)\&. This allows us to recover from a reorg and find transactions in the mempool that conflict with transactions that are confirmed in a block\&. 
+.SH "Member Typedef Documentation"
+.PP 
+.SS "typedef boost::multi_index_container< \fBCTxMemPoolEntry\fP, \fBCTxMemPoolEntry_Indices\fP > \fBindexed_transaction_set\fP"
+
+.SS "using \fBLimits\fP = \fBkernel::MemPoolLimits\fP"
+
+.SS "using \fBOptions\fP\fBOptions\fP = \fBkernel::MemPoolOptions\fP"
+
+.SS "typedef std::set<\fBtxiter\fP, \fBCompareIteratorByHash\fP> \fBsetEntries\fP"
+
+.SS "using \fBtxiter\fP = indexed_transaction_set::nth_index<0>::type::const_iterator"
+
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBCTxMemPool\fP (\fBOptions\fP\fBOptions\fP opts, \fBbilingual_str\fP & error)\fR [explicit]\fP"
+Create a new \fBCTxMemPool\fP\&. Sanity checks will be off by default for performance, because otherwise accepting transactions becomes O(N^2) where N is the number of transactions in the pool\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "void AddTransactionsUpdated (unsigned int n)"
+
+.SS "void AddUnbroadcastTx (const \fBTxid\fP & txid)\fR [inline]\fP"
+Adds a transaction to the unbroadcast set 
+.SS "void ApplyDelta (const \fBTxid\fP & hash, \fBCAmount\fP & nFeeDelta) const"
+
+.SS "std::tuple< size_t, size_t, \fBCAmount\fP > CalculateAncestorData (const \fBCTxMemPoolEntry\fP & entry) const"
+
+.SS "std::tuple< size_t, size_t, \fBCAmount\fP > CalculateDescendantData (const \fBCTxMemPoolEntry\fP & entry) const"
+
+.SS "\fBCTxMemPool::txiter\fP CalculateDescendants (const \fBCTxMemPoolEntry\fP & entry, \fBsetEntries\fP & setDescendants) const"
+
+.SS "void CalculateDescendants (\fBtxiter\fP it, \fBsetEntries\fP & setDescendants) const"
+Populate setDescendants with all in-mempool descendants of given transaction\&. Assumes that setDescendants includes all in-mempool descendants of anything already in it\&. 
+.SS "\fBCTxMemPool::setEntries\fP CalculateMemPoolAncestors (const \fBCTxMemPoolEntry\fP & entry) const"
+Calculate all in-mempool ancestors of entry (not including the tx itself)
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIentry\fP \fBCTxMemPoolEntry\fP of which all in-mempool ancestors are calculated
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+all in-mempool ancestors 
+.RE
+.PP
+
+.SS "bool CheckPolicyLimits (const \fBCTransactionRef\fP & tx)"
+
+.SS "void ClearPrioritisation (const \fBTxid\fP & hash)"
+
+.SS "bool CompareMiningScoreWithTopology (const \fBWtxid\fP & hasha, const \fBWtxid\fP & hashb) const"
+
+.SS "size_t DynamicMemoryUsage () const"
+
+.SS "std::vector< \fBCTxMemPoolEntryRef\fP > entryAll () const"
+
+.SS "bool exists (const \fBTxid\fP & txid) const\fR [inline]\fP"
+
+.SS "bool exists (const \fBWtxid\fP & wtxid) const\fR [inline]\fP"
+
+.SS "int Expire (std::chrono::seconds time)"
+Expire all transaction (and their dependencies) in the mempool older than time\&. Return the number of removed transactions\&. 
+.SS "std::vector< \fBCTxMemPool::txiter\fP > GatherClusters (const std::vector< \fBTxid\fP > & txids) const"
+Collect the entire cluster of connected transactions for each transaction in txids\&. All txids must correspond to transaction entries in the mempool, otherwise this returns an empty vector\&. This call will also exit early and return an empty vector if it collects 500 or more transactions as a DoS protection\&. 
+.SS "\fBCTransactionRef\fP get (const \fBTxid\fP & hash) const"
+
+.SS "int64_t GetAncestorCount (const \fBCTxMemPoolEntry\fP & e) const\fR [inline]\fP"
+
+.SS "uint64_t GetAndIncrementSequence () const\fR [inline]\fP"
+Guards this internal counter for external reporting 
+.SS "\fBFeePerWeight\fP GetBlockBuilderChunk (std::vector< \fBCTxMemPoolEntry::CTxMemPoolEntryRef\fP > & entries) const\fR [inline]\fP"
+
+.SS "std::unique_ptr< \fBChangeSet\fP > GetChangeSet ()\fR [inline]\fP"
+
+.SS "std::vector< \fBCTxMemPoolEntry::CTxMemPoolEntryRef\fP > GetChildren (const \fBCTxMemPoolEntry\fP & entry) const"
+
+.SS "std::vector< const \fBCTxMemPoolEntry\fP * > GetCluster (\fBTxid\fP txid) const\fR [inline]\fP"
+
+.SS "const \fBCTransaction\fP * GetConflictTx (const \fBCOutPoint\fP & prevout) const"
+Get the transaction in the pool that spends the same prevout 
+.SS "int64_t GetDescendantCount (const \fBCTxMemPoolEntry\fP & e) const\fR [inline]\fP"
+
+.SS "int64_t GetDescendantCount (\fBtxiter\fP it) const\fR [inline]\fP"
+
+.SS "const \fBCTxMemPoolEntry\fP * GetEntry (const \fBTxid\fP & txid) const"
+
+.SS "std::vector< \fBFeePerWeight\fP > GetFeerateDiagram () const"
+
+.SS "std::optional< \fBCTxMemPool::txiter\fP > GetIter (const \fBTxid\fP & txid) const"
+Returns an iterator to the given hash, if found 
+.SS "std::optional< \fBCTxMemPool::txiter\fP > GetIter (const \fBWtxid\fP & wtxid) const"
+
+.SS "\fBCTxMemPool::setEntries\fP GetIterSet (const std::set< \fBTxid\fP > & hashes) const"
+Translate a set of hashes into a set of pool iterators to avoid repeated lookups\&. Does not require that all of the hashes correspond to actual transactions in the mempool, only returns the ones that exist\&. 
+.SS "std::vector< \fBCTxMemPool::txiter\fP > GetIterVec (const std::vector< \fBTxid\fP > & txids) const"
+Translate a list of hashes into a list of mempool iterators to avoid repeated lookups\&. The nth element in txids becomes the nth element in the returned vector\&. If any of the txids don't actually exist in the mempool, returns an empty vector\&. 
+.SS "bool GetLoadTried () const"
+
+.PP
+\fBReturns\fP
+.RS 4
+true if an initial attempt to load the persisted mempool was made, regardless of whether the attempt was successful or not 
+.RE
+.PP
+
+.SS "\fBFeePerWeight\fP GetMainChunkFeerate (const \fBCTxMemPoolEntry\fP & tx) const\fR [inline]\fP"
+
+.SS "\fBCFeeRate\fP GetMinFee () const\fR [inline]\fP"
+The minimum fee to get into the mempool, which may itself not be enough for larger-sized transactions\&. The m_incremental_relay_feerate policy variable is used to bound the time it takes the fee rate to go back down all the way to 0\&. When the feerate would otherwise be half of this, it is set to 0 instead\&. 
+.SS "\fBCFeeRate\fP GetMinFee (size_t sizelimit) const\fR [protected]\fP"
+
+.SS "std::vector< \fBCTxMemPoolEntry::CTxMemPoolEntryRef\fP > GetParents (const \fBCTxMemPoolEntry\fP & entry) const"
+
+.SS "std::vector< \fBCTxMemPool::delta_info\fP > GetPrioritisedTransactions () const"
+Return a vector of all entries in mapDeltas with their corresponding \fBdelta_info\fP\&. 
+.SS "uint64_t GetSequence () const\fR [inline]\fP"
+
+.SS "\fBCAmount\fP GetTotalFee () const\fR [inline]\fP"
+
+.SS "uint64_t GetTotalTxSize () const\fR [inline]\fP"
+
+.SS "void GetTransactionAncestry (const \fBTxid\fP & txid, size_t & ancestors, size_t & cluster_count, size_t * ancestorsize = \fRnullptr\fP, \fBCAmount\fP * ancestorfees = \fRnullptr\fP) const"
+Calculate the ancestor and cluster count for the given transaction\&. The counts include the transaction itself\&. When ancestors is non-zero (ie, the transaction itself is in the mempool), ancestorsize and ancestorfees will also be set to the appropriate values\&. 
+.SS "unsigned int GetTransactionsUpdated () const"
+
+.SS "std::set< \fBTxid\fP > GetUnbroadcastTxs () const\fR [inline]\fP"
+Returns transactions in unbroadcast set 
+.SS "size_t GetUniqueClusterCount (const \fBsetEntries\fP & iters_conflicting) const\fR [inline]\fP"
+
+.SS "bool m_have_changeset GUARDED_BY (\fBcs\fP )\fR [inline]\fP"
+
+.SS "std::map< \fBTxid\fP, \fBCAmount\fP > mapDeltas GUARDED_BY (\fBcs\fP )"
+
+.SS "\fBindirectmap\fP< \fBCOutPoint\fP, \fBtxiter\fP > mapNextTx GUARDED_BY (\fBcs\fP )"
+
+.SS "std::vector< std::pair< \fBWtxid\fP, \fBtxiter\fP > > txns_randomized GUARDED_BY (\fBcs\fP )"
+
+.PP
+All transactions in mapTx with their wtxids, in arbitrary order\&. 
+.SS "\fBindexed_transaction_set\fP mapTx GUARDED_BY (\fBcs\fP )"
+
+.SS "std::unique_ptr< \fBTxGraph::BlockBuilder\fP > m_builder GUARDED_BY (\fBcs\fP )\fR [mutable]\fP"
+
+.SS "std::unique_ptr< \fBTxGraph\fP > m_txgraph GUARDED_BY (\fBcs\fP )"
+
+.SS "bool m_load_tried GUARDED_BY (\fBcs\fP )\fR [inline]\fP, \fR [protected]\fP"
+
+.SS "uint64_t m_sequence_number GUARDED_BY (\fBcs\fP )\fR [inline]\fP, \fR [mutable]\fP, \fR [protected]\fP"
+
+.SS "\fBEpoch\fP \fBm_epoch\fP GUARDED_BY (\fBcs\fP )\fR [inline]\fP, \fR [mutable]\fP, \fR [protected]\fP"
+
+.PP
+minimum fee to get into the pool, decreases exponentially 
+.SS "double rollingMinimumFeeRate GUARDED_BY (\fBcs\fP )\fR [inline]\fP, \fR [mutable]\fP, \fR [protected]\fP"
+
+.SS "bool blockSinceLastRollingFeeBump GUARDED_BY (\fBcs\fP )\fR [inline]\fP, \fR [mutable]\fP, \fR [protected]\fP"
+
+.SS "int64_t lastRollingFeeUpdate GUARDED_BY (\fBcs\fP )\fR [inline]\fP, \fR [mutable]\fP, \fR [protected]\fP"
+
+.PP
+sum of dynamic memory usage of all the map elements (NOT the maps themselves) 
+.SS "uint64_t cachedInnerUsage GUARDED_BY (\fBcs\fP )\fR [inline]\fP, \fR [protected]\fP"
+
+.PP
+sum of all mempool tx's fees (NOT modified fee) 
+.SS "\fBCAmount\fP m_total_fee GUARDED_BY (\fBcs\fP )\fR [inline]\fP, \fR [protected]\fP"
+
+.PP
+sum of all mempool tx's virtual sizes\&. Differs from serialized tx size since witness data is discounted\&. Defined in BIP 141\&. 
+.SS "uint64_t totalTxSize GUARDED_BY (\fBcs\fP )\fR [inline]\fP, \fR [protected]\fP"
+
+.SS "bool HasDescendants (const \fBTxid\fP & txid) const"
+
+.SS "bool HasNoInputsOf (const \fBCTransaction\fP & tx) const"
+Check that none of this transactions inputs are in the mempool, and thus the tx is not dependent on other mempool transactions to be included in a block\&. 
+.SS "void IncludeBuilderChunk () const\fR [inline]\fP"
+
+.SS "template<\fBTxidOrWtxid\fP T> \fBTxMempoolInfo\fP info (const \fBT\fP & id) const\fR [inline]\fP"
+
+.SS "template<\fBTxidOrWtxid\fP T> \fBTxMempoolInfo\fP info_for_relay (const \fBT\fP & id, uint64_t last_sequence) const\fR [inline]\fP"
+Returns info for a transaction if its entry_sequence < last_sequence 
+.SS "std::vector< \fBTxMempoolInfo\fP > infoAll () const"
+
+.SS "bool isSpent (const \fBCOutPoint\fP & outpoint) const"
+
+.SS "bool IsUnbroadcastTx (const \fBTxid\fP & txid) const\fR [inline]\fP"
+Returns whether a txid is in the unbroadcast set 
+.SS "void \fBcs_main\fP LOCKS_EXCLUDED (\fBm_epoch\fP )"
+
+.SS "void PrioritiseTransaction (const \fBTxid\fP & hash, const \fBCAmount\fP & nFeeDelta)"
+Affect CreateNewBlock prioritisation of transactions 
+.SS "void removeForBlock (const std::vector< \fBCTransactionRef\fP > & vtx, unsigned int nBlockHeight)"
+
+.SS "void removeForReorg (\fBCChain\fP & chain, std::function< bool(\fBtxiter\fP)> filter_final_and_mature)"
+After reorg, filter the entries that would no longer be valid in the next block, and update the entries' cached \fBLockPoints\fP if needed\&. The mempool does not have any knowledge of consensus rules\&. It just applies the callable function and removes the ones for which it returns true\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIfilter_final_and_mature\fP Predicate that checks the relevant validation rules and updates an entry's \fBLockPoints\fP\&. 
+.RE
+.PP
+
+.SS "void RemoveUnbroadcastTx (const \fBTxid\fP & txid, const bool unchecked = \fRfalse\fP)"
+Removes a transaction from the unbroadcast set 
+.SS "void SetLoadTried (bool load_tried)"
+Set whether or not an initial attempt to load the persisted mempool was made (regardless of whether the attempt was successful or not) 
+.SS "unsigned long size () const\fR [inline]\fP"
+
+.SS "void SkipBuilderChunk () const\fR [inline]\fP"
+
+.SS "void StartBlockBuilding () const\fR [inline]\fP"
+
+.SS "void StopBlockBuilding () const\fR [inline]\fP"
+
+.SS "void trackPackageRemoved (const \fBCFeeRate\fP & rate)\fR [protected]\fP"
+
+.SS "void TrimToSize (size_t sizelimit, std::vector< \fBCOutPoint\fP > * pvNoSpendsRemaining = \fRnullptr\fP)"
+Remove transactions from the mempool until its dynamic size is <= sizelimit\&. pvNoSpendsRemaining, if set, will be populated with the list of outpoints which are not in mempool which no longer have any spends in this mempool\&. 
+.SS "void UpdateTransactionsFromBlock (const std::vector< \fBTxid\fP > & vHashesToUpdate)"
+UpdateTransactionsFromBlock is called when adding transactions from a disconnected block back to the mempool, new mempool entries may have children in the mempool (which is generally not the case when otherwise adding transactions)\&. 
+.PP
+\fBPostcondition\fP
+.RS 4
+updated descendant state for descendants of each transaction in vHashesToUpdate (excluding any child transactions present in vHashesToUpdate, which are already accounted for)\&. Updated state includes add fee/size information for such descendants to the parent and updated ancestor state to include the parent\&.
+.RE
+.PP
+\fBParameters\fP
+.RS 4
+\fIvHashesToUpdate\fP The set of txids from the disconnected block that have been accepted back into the mempool\&. 
+.RE
+.PP
+
+.SS "bool visited (const \fBtxiter\fP it) const"
+visited marks a \fBCTxMemPoolEntry\fP as having been traversed during the lifetime of the most recently created \fBEpoch::Guard\fP and returns false if we are the first visitor, true otherwise\&.
+
+.PP
+An \fBEpoch::Guard\fP must be held when visited is called or an assert will be triggered\&. 
+.SS "bool visited (std::optional< \fBtxiter\fP > it) const"
+
+.SH "Friends And Related Symbol Documentation"
+.PP 
+.SS "friend class CTxMemPool::ChangeSet\fR [friend]\fP"
+
+.SH "Field Documentation"
+.PP 
+.SS "\fBRecursiveMutex\fP cs\fR [mutable]\fP"
+This mutex needs to be locked when accessing \fRmapTx\fP or other members that are guarded by it\&.
+
+.PP
+\fBConsistency guarantees\fP
+.RS 4
+By design, it is guaranteed that:
+.IP "1." 4
+Locking both \fR\fBcs_main\fP\fP and \fRmempool\&.cs\fP will give a view of mempool that is consistent with current chain tip (\fRActiveChain()\fP and \fRCoinsTip()\fP) and is fully populated\&. Fully populated means that if the current active chain is missing transactions that were present in a previously active chain, all the missing transactions will have been re-added to the mempool and should be present if they meet size and consistency constraints\&.
+.IP "2." 4
+Locking \fRmempool\&.cs\fP without \fR\fBcs_main\fP\fP will give a view of a mempool consistent with some chain that was active since \fR\fBcs_main\fP\fP was last locked, and that is fully populated as described above\&. It is ok for code that only needs to query or remove transactions from the mempool to lock just \fRmempool\&.cs\fP without \fR\fBcs_main\fP\fP\&.
+.PP
+.RE
+.PP
+To provide these guarantees, it is necessary to lock both \fR\fBcs_main\fP\fP and \fRmempool\&.cs\fP whenever adding transactions to the mempool and whenever changing the chain tip\&. It's necessary to keep both mutexes locked until the mempool is consistent with the new chain tip and fully populated\&. 
+.SS "void cs_main"
+
+.SS "return !it \fBvisited\fP* it"
+
+.SS "bool m_epoch"
+\fBInitial value:\fP
+.nf
+{
+        return m_epoch\&.visited(it\->m_epoch_marker)
+.PP
+.fi
+
+.SS "const \fBOptions\fP\fBOptions\fP m_opts"
+
+.SS "std::atomic<unsigned int> nTransactionsUpdated {0}\fR [protected]\fP"
+
+.PP
+Used by getblocktemplate to trigger CreateNewBlock() invocation\&. 
+.SS "void removeRecursive"
+If sanity-checking is turned on, check makes sure the pool is consistent (does not contain two transactions that spend the same inputs, all inputs are in the mapNextTx array)\&. If sanity-checking is turned off, check does nothing\&. Remove a transaction from the mempool along with any descendants\&. If the transaction is not already in the mempool, find any descendants and remove them\&. 
+.SS "const int ROLLING_FEE_HALFLIFE = 60 * 60 * 12\fR [static]\fP"
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

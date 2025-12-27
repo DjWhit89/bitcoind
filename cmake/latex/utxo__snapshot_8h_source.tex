@@ -1,0 +1,121 @@
+\doxysection{utxo\+\_\+snapshot.\+h}
+\label{utxo__snapshot_8h_source}\index{src/node/utxo\_snapshot.h@{src/node/utxo\_snapshot.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_NODE\_UTXO\_SNAPSHOT\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_NODE\_UTXO\_SNAPSHOT\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <kernel/chainparams.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <kernel/cs\_main.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <kernel/messagestartchars.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <tinyformat.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <util/chaintype.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <util/fs.h>}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <ios>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <string\_view>}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{comment}{//\ UTXO\ set\ snapshot\ magic\ bytes}}
+\DoxyCodeLine{00028\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ std::array<uint8\_t,\ 5>\ SNAPSHOT\_MAGIC\_BYTES\ =\ \{\textcolor{charliteral}{'u'},\ \textcolor{charliteral}{'t'},\ \textcolor{charliteral}{'x'},\ \textcolor{charliteral}{'o'},\ 0xff\};}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{keyword}{class\ }Chainstate;}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{namespace\ }node\ \{}
+\DoxyCodeLine{00037\ \textcolor{keyword}{class\ }SnapshotMetadata}
+\DoxyCodeLine{00038\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint16\_t\ VERSION\{2\};}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{const}\ std::set<uint16\_t>\ m\_supported\_versions\{VERSION\};}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keyword}{const}\ MessageStartChars\ m\_network\_magic;}
+\DoxyCodeLine{00042\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00045\ \ \ \ \ uint256\ m\_base\_blockhash;}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00050\ \ \ \ \ uint64\_t\ m\_coins\_count\ =\ 0;}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ \ \ SnapshotMetadata(}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ MessageStartChars\ network\_magic)\ :}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ m\_network\_magic(network\_magic)\ \{\ \}}
+\DoxyCodeLine{00055\ \ \ \ \ SnapshotMetadata(}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ MessageStartChars\ network\_magic,}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ uint256\&\ base\_blockhash,}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ uint64\_t\ coins\_count)\ :}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ m\_network\_magic(network\_magic),}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ m\_base\_blockhash(base\_blockhash),}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ m\_coins\_count(coins\_count)\ \{\ \}}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ s\ <<\ SNAPSHOT\_MAGIC\_BYTES;}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ s\ <<\ VERSION;}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ s\ <<\ m\_network\_magic;}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ s\ <<\ m\_base\_blockhash;}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ s\ <<\ m\_coins\_count;}
+\DoxyCodeLine{00070\ \ \ \ \ \}}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ the\ snapshot\ magic\ bytes}}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ std::array<uint8\_t,\ SNAPSHOT\_MAGIC\_BYTES.size()>\ snapshot\_magic;}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ s\ >>\ snapshot\_magic;}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (snapshot\_magic\ !=\ SNAPSHOT\_MAGIC\_BYTES)\ \{}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}Invalid\ UTXO\ set\ snapshot\ magic\ bytes.\ Please\ check\ if\ this\ is\ indeed\ a\ snapshot\ file\ or\ if\ you\ are\ using\ an\ outdated\ snapshot\ format."{}});}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ the\ version}}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ uint16\_t\ version;}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ s\ >>\ version;}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_supported\_versions.contains(version))\ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(strprintf(\textcolor{stringliteral}{"{}Version\ of\ snapshot\ \%s\ does\ not\ match\ any\ of\ the\ supported\ versions."{}},\ version));}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ the\ network\ magic\ (pchMessageStart)}}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ MessageStartChars\ message;}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ s\ >>\ message;}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!std::equal(message.begin(),\ message.end(),\ m\_network\_magic.data()))\ \{}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ metadata\_network\{GetNetworkForMagic(message)\};}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (metadata\_network)\ \{}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ network\_string\{ChainTypeToString(metadata\_network.value())\};}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ node\_network\{GetNetworkForMagic(m\_network\_magic)\};}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ node\_network\_string\{ChainTypeToString(node\_network.value())\};}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(strprintf(\textcolor{stringliteral}{"{}The\ network\ of\ the\ snapshot\ (\%s)\ does\ not\ match\ the\ network\ of\ this\ node\ (\%s)."{}},\ network\_string,\ node\_network\_string));}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}This\ snapshot\ has\ been\ created\ for\ an\ unrecognized\ network.\ This\ could\ be\ a\ custom\ signet,\ a\ new\ testnet\ or\ possibly\ caused\ by\ data\ corruption."{}});}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ s\ >>\ m\_base\_blockhash;}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ s\ >>\ m\_coins\_count;}
+\DoxyCodeLine{00105\ \ \ \ \ \}}
+\DoxyCodeLine{00106\ \};}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00113\ \textcolor{keyword}{const}\ fs::path\ SNAPSHOT\_BLOCKHASH\_FILENAME\{\textcolor{stringliteral}{"{}base\_blockhash"{}}\};}
+\DoxyCodeLine{00114\ }
+\DoxyCodeLine{00118\ \textcolor{keywordtype}{bool}\ WriteSnapshotBaseBlockhash(Chainstate\&\ snapshot\_chainstate)}
+\DoxyCodeLine{00119\ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00123\ std::optional<uint256>\ ReadSnapshotBaseBlockhash(fs::path\ chaindir)}
+\DoxyCodeLine{00124\ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00128\ \textcolor{keyword}{constexpr}\ std::string\_view\ SNAPSHOT\_CHAINSTATE\_SUFFIX\ =\ \textcolor{stringliteral}{"{}\_snapshot"{}};}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00132\ std::optional<fs::path>\ FindAssumeutxoChainstateDir(\textcolor{keyword}{const}\ fs::path\&\ data\_dir);}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00134\ \}\ \textcolor{comment}{//\ namespace\ node}}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00136\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_NODE\_UTXO\_SNAPSHOT\_H}}
+
+\end{DoxyCode}

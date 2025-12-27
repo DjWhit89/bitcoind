@@ -1,0 +1,73 @@
+\doxysection{versionbits\+\_\+impl.\+h}
+\label{versionbits__impl_8h_source}\index{src/versionbits\_impl.h@{src/versionbits\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2016-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_VERSIONBITS\_IMPL\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_VERSIONBITS\_IMPL\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <chain.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <versionbits.h>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00017\ \textcolor{keyword}{enum\ class}\ ThresholdState\ :\ uint8\_t\ \{}
+\DoxyCodeLine{00018\ \ \ \ \ DEFINED,\ \ \ \textcolor{comment}{//\ First\ state\ that\ each\ softfork\ starts\ out\ as.\ The\ genesis\ block\ is\ by\ definition\ in\ this\ state\ for\ each\ deployment.}}
+\DoxyCodeLine{00019\ \ \ \ \ STARTED,\ \ \ \textcolor{comment}{//\ For\ blocks\ past\ the\ starttime.}}
+\DoxyCodeLine{00020\ \ \ \ \ LOCKED\_IN,\ \textcolor{comment}{//\ For\ at\ least\ one\ retarget\ period\ after\ the\ first\ retarget\ period\ with\ STARTED\ blocks\ of\ which\ at\ least\ threshold\ have\ the\ associated\ bit\ set\ in\ nVersion,\ until\ min\_activation\_height\ is\ reached.}}
+\DoxyCodeLine{00021\ \ \ \ \ ACTIVE,\ \ \ \ \textcolor{comment}{//\ For\ all\ blocks\ after\ the\ LOCKED\_IN\ retarget\ period\ (final\ state)}}
+\DoxyCodeLine{00022\ \ \ \ \ FAILED,\ \ \ \ \textcolor{comment}{//\ For\ all\ blocks\ once\ the\ first\ retarget\ period\ after\ the\ timeout\ time\ is\ hit,\ if\ LOCKED\_IN\ wasn't\ already\ reached\ (final\ state)}}
+\DoxyCodeLine{00023\ \};}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00026\ std::string\ StateName(ThresholdState\ state);}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00031\ \textcolor{keyword}{class\ }AbstractThresholdConditionChecker\ \{}
+\DoxyCodeLine{00032\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ Condition(\textcolor{keyword}{const}\ CBlockIndex*\ pindex)\ \textcolor{keyword}{const}\ =0;}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keyword}{virtual}\ int64\_t\ BeginTime()\ \textcolor{keyword}{const}\ =0;}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keyword}{virtual}\ int64\_t\ EndTime()\ \textcolor{keyword}{const}\ =0;}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{int}\ MinActivationHeight()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ 0;\ \}}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{int}\ Period()\ \textcolor{keyword}{const}\ =0;}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{int}\ Threshold()\ \textcolor{keyword}{const}\ =0;}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~AbstractThresholdConditionChecker()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00046\ \ \ \ \ BIP9Stats\ GetStateStatisticsFor(\textcolor{keyword}{const}\ CBlockIndex*\ pindex,\ std::vector<bool>*\ signalling\_blocks\ =\ \textcolor{keyword}{nullptr})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00049\ \ \ \ \ ThresholdState\ GetStateFor(\textcolor{keyword}{const}\ CBlockIndex*\ pindexPrev,\ ThresholdConditionCache\&\ cache)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keywordtype}{int}\ GetStateSinceHeightFor(\textcolor{keyword}{const}\ CBlockIndex*\ pindexPrev,\ ThresholdConditionCache\&\ cache)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00052\ \};}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00057\ \textcolor{keyword}{class\ }VersionBitsConditionChecker\ :\ \textcolor{keyword}{public}\ AbstractThresholdConditionChecker\ \{}
+\DoxyCodeLine{00058\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keyword}{const}\ Consensus::BIP9Deployment\&\ dep;}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00062\ \ \ \ \ int64\_t\ BeginTime()\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ dep.nStartTime;\ \}}
+\DoxyCodeLine{00063\ \ \ \ \ int64\_t\ EndTime()\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ dep.nTimeout;\ \}}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordtype}{int}\ MinActivationHeight()\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ dep.min\_activation\_height;\ \}}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordtype}{int}\ Period()\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ dep.period;\ \}}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keywordtype}{int}\ Threshold()\textcolor{keyword}{\ const\ override\ }\{\ \textcolor{keywordflow}{return}\ dep.threshold;\ \}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keywordtype}{bool}\ Condition(\textcolor{keyword}{const}\ CBlockIndex*\ pindex)\textcolor{keyword}{\ const\ override}}
+\DoxyCodeLine{00069\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Condition(pindex-\/>nVersion);}
+\DoxyCodeLine{00071\ \ \ \ \ \}}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keyword}{explicit}\ VersionBitsConditionChecker(\textcolor{keyword}{const}\ Consensus::BIP9Deployment\&\ dep)\ :\ dep\{dep\}\ \{\}}
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keyword}{explicit}\ VersionBitsConditionChecker(\textcolor{keyword}{const}\ Consensus::Params\&\ params,\ Consensus::DeploymentPos\ \textcolor{keywordtype}{id})\ :\ VersionBitsConditionChecker\{params.vDeployments[id]\}\ \{\}}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ \ \ \ \ uint32\_t\ Mask()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (uint32\_t\{1\})\ <<\ dep.bit;\ \}}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keywordtype}{bool}\ Condition(int32\_t\ nVersion)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00080\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (((nVersion\ \&\ VERSIONBITS\_TOP\_MASK)\ ==\ VERSIONBITS\_TOP\_BITS)\ \&\&\ (nVersion\ \&\ Mask())\ !=\ 0);}
+\DoxyCodeLine{00082\ \ \ \ \ \}}
+\DoxyCodeLine{00083\ \};}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_VERSIONBITS\_IMPL\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,74 @@
+\doxysection{crc32c\+\_\+arm64\+\_\+check.\+h}
+\label{crc32c__arm64__check_8h_source}\index{src/crc32c/src/crc32c\_arm64\_check.h@{src/crc32c/src/crc32c\_arm64\_check.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ 2017\ The\ CRC32C\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ ARM-\/specific\ code\ checking\ for\ the\ availability\ of\ CRC32C\ instructions.}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ CRC32C\_CRC32C\_ARM\_CHECK\_H\_}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ CRC32C\_CRC32C\_ARM\_CHECK\_H\_}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#ifdef\ CRC32C\_HAVE\_CONFIG\_H}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}crc32c/crc32c\_config.h"{}}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#if\ HAVE\_ARM64\_CRC32C}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#ifdef\ \_\_linux\_\_}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#if\ HAVE\_STRONG\_GETAUXVAL}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <sys/auxv.h>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#elif\ HAVE\_WEAK\_GETAUXVAL}}
+\DoxyCodeLine{00023\ \textcolor{comment}{//\ getauxval()\ is\ not\ available\ on\ Android\ until\ API\ level\ 20.\ Link\ it\ as\ a\ weak}}
+\DoxyCodeLine{00024\ \textcolor{comment}{//\ symbol.}}
+\DoxyCodeLine{00025\ \textcolor{keyword}{extern}\ \textcolor{stringliteral}{"{}C"{}}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{long}\ getauxval(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{long}\ type)\ \_\_attribute\_\_((weak));}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#define\ AT\_HWCAP\ 16}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ HAVE\_STRONG\_GETAUXVAL\ ||\ HAVE\_WEAK\_GETAUXVAL}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ defined\ (\_\_linux\_\_)}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#ifdef\ \_\_APPLE\_\_}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#include\ <sys/types.h>}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#include\ <sys/sysctl.h>}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ defined\ (\_\_APPLE\_\_)}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{keyword}{namespace\ }crc32c\ \{}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ CanUseArm64Crc32()\ \{}
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#if\ defined\ (\_\_linux\_\_)\ \&\&\ (HAVE\_STRONG\_GETAUXVAL\ ||\ HAVE\_WEAK\_GETAUXVAL)}}
+\DoxyCodeLine{00040\ \ \ \textcolor{comment}{//\ From\ 'arch/arm64/include/uapi/asm/hwcap.h'\ in\ Linux\ kernel\ source\ code.}}
+\DoxyCodeLine{00041\ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{long}\ kHWCAP\_PMULL\ =\ 1\ <<\ 4;}
+\DoxyCodeLine{00042\ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{long}\ kHWCAP\_CRC32\ =\ 1\ <<\ 7;}
+\DoxyCodeLine{00043\ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{long}\ hwcap\ =}
+\DoxyCodeLine{00044\ \textcolor{preprocessor}{\#if\ HAVE\_STRONG\_GETAUXVAL}}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \textcolor{comment}{//\ Some\ compilers\ warn\ on\ (\&getauxval\ !=\ nullptr)\ in\ the\ block\ below.}}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ getauxval(AT\_HWCAP);}
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\#elif\ HAVE\_WEAK\_GETAUXVAL}}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ (\&getauxval\ !=\ \textcolor{keyword}{nullptr})\ ?\ getauxval(AT\_HWCAP)\ :\ 0;}
+\DoxyCodeLine{00049\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\#error\ This\ is\ supposed\ to\ be\ nested\ inside\ a\ check\ for\ HAVE\_*\_GETAUXVAL.}}
+\DoxyCodeLine{00051\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ HAVE\_STRONG\_GETAUXVAL}}
+\DoxyCodeLine{00052\ \ \ \textcolor{keywordflow}{return}\ (hwcap\ \&\ (kHWCAP\_PMULL\ |\ kHWCAP\_CRC32))\ ==}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ (kHWCAP\_PMULL\ |\ kHWCAP\_CRC32);}
+\DoxyCodeLine{00054\ \textcolor{preprocessor}{\#elif\ defined(\_\_APPLE\_\_)}}
+\DoxyCodeLine{00055\ \ \ \textcolor{keywordtype}{int}\ val\ =\ 0;}
+\DoxyCodeLine{00056\ \ \ \textcolor{keywordtype}{size\_t}\ len\ =\ \textcolor{keyword}{sizeof}(val);}
+\DoxyCodeLine{00057\ \ \ \textcolor{keywordflow}{return}\ sysctlbyname(\textcolor{stringliteral}{"{}hw.optional.armv8\_crc32"{}},\ \&val,\ \&len,\ \textcolor{keyword}{nullptr},\ 0)\ ==\ 0}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \&\&\ val\ !=\ 0;}
+\DoxyCodeLine{00059\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00060\ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00061\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ HAVE\_STRONG\_GETAUXVAL\ ||\ HAVE\_WEAK\_GETAUXVAL}}
+\DoxyCodeLine{00062\ \}}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \}\ \ \textcolor{comment}{//\ namespace\ crc32c}}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ HAVE\_ARM64\_CRC32C}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ CRC32C\_CRC32C\_ARM\_CHECK\_H\_}}
+
+\end{DoxyCode}

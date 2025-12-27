@@ -1,0 +1,318 @@
+\doxysection{Addr\+Man Class Reference}
+\label{class_addr_man}\index{AddrMan@{AddrMan}}
+
+
+{\ttfamily \#include $<$addrman.\+h$>$}
+
+Inheritance diagram for Addr\+Man\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{class_addr_man}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ Addr\+Man} (const \textbf{ Net\+Group\+Manager} \&netgroupman, bool deterministic, int32\+\_\+t consistency\+\_\+check\+\_\+ratio)
+\item 
+\textbf{ $\sim$\+Addr\+Man} ()
+\item 
+{\footnotesize template$<$typename Stream$>$ }\\void \textbf{ Serialize} (Stream \&s\+\_\+) const
+\item 
+{\footnotesize template$<$typename Stream$>$ }\\void \textbf{ Unserialize} (Stream \&s\+\_\+)
+\item 
+size\+\_\+t \textbf{ Size} (std\+::optional$<$ \textbf{ Network} $>$ net=std\+::nullopt, std\+::optional$<$ bool $>$ in\+\_\+new=std\+::nullopt) const
+\item 
+bool \textbf{ Add} (const std\+::vector$<$ \textbf{ CAddress} $>$ \&v\+Addr, const \textbf{ CNet\+Addr} \&source, std\+::chrono\+::seconds time\+\_\+penalty=0s)
+\item 
+bool \textbf{ Good} (const \textbf{ CService} \&addr, \textbf{ Node\+Seconds} time=\textbf{ Now}$<$ \textbf{ Node\+Seconds} $>$())
+\item 
+void \textbf{ Attempt} (const \textbf{ CService} \&addr, bool f\+Count\+Failure, \textbf{ Node\+Seconds} time=\textbf{ Now}$<$ \textbf{ Node\+Seconds} $>$())
+\begin{DoxyCompactList}\small\item\em Mark an entry as connection attempted to. \end{DoxyCompactList}\item 
+void \textbf{ Resolve\+Collisions} ()
+\begin{DoxyCompactList}\small\item\em See if any to-\/be-\/evicted tried table entries have been tested and if so resolve the collisions. \end{DoxyCompactList}\item 
+std\+::pair$<$ \textbf{ CAddress}, \textbf{ Node\+Seconds} $>$ \textbf{ Select\+Tried\+Collision} ()
+\item 
+std\+::pair$<$ \textbf{ CAddress}, \textbf{ Node\+Seconds} $>$ \textbf{ Select} (bool new\+\_\+only=false, const std\+::unordered\+\_\+set$<$ \textbf{ Network} $>$ \&networks=\{\}) const
+\item 
+std\+::vector$<$ \textbf{ CAddress} $>$ \textbf{ Get\+Addr} (size\+\_\+t max\+\_\+addresses, size\+\_\+t max\+\_\+pct, std\+::optional$<$ \textbf{ Network} $>$ network, const bool filtered=true) const
+\item 
+std\+::vector$<$ std\+::pair$<$ \textbf{ Addr\+Info}, \textbf{ Address\+Position} $>$ $>$ \textbf{ Get\+Entries} (bool from\+\_\+tried) const
+\item 
+void \textbf{ Connected} (const \textbf{ CService} \&addr, \textbf{ Node\+Seconds} time=\textbf{ Now}$<$ \textbf{ Node\+Seconds} $>$())
+\item 
+void \textbf{ Set\+Services} (const \textbf{ CService} \&addr, \textbf{ Service\+Flags} n\+Services)
+\begin{DoxyCompactList}\small\item\em Update an entry\textquotesingle{}s service bits. \end{DoxyCompactList}\item 
+std\+::optional$<$ \textbf{ Address\+Position} $>$ \textbf{ Find\+Address\+Entry} (const \textbf{ CAddress} \&addr)
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+const std\+::unique\+\_\+ptr$<$ \textbf{ Addr\+Man\+Impl} $>$ \textbf{ m\+\_\+impl}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Stochastic address manager
+
+Design goals\+:
+\begin{DoxyItemize}
+\item Keep the address tables in-\/memory, and asynchronously dump the entire table to peers.\+dat.
+\item Make sure no (localized) attacker can fill the entire table with his nodes/addresses.
+\end{DoxyItemize}
+
+To that end\+:
+\begin{DoxyItemize}
+\item Addresses are organized into buckets that can each store up to 64 entries.
+\begin{DoxyItemize}
+\item Addresses to which our node has not successfully connected go into 1024 "{}new"{} buckets.
+\begin{DoxyItemize}
+\item Based on the address range (/16 for IPv4) of the source of information, or if an asmap is provided, the AS it belongs to (for IPv4/\+IPv6), 64 buckets are selected at random.
+\item The actual bucket is chosen from one of these, based on the range in which the address itself is located.
+\item The position in the bucket is chosen based on the full address.
+\item One single address can occur in up to 8 different buckets to increase selection chances for addresses that are seen frequently. The chance for increasing this multiplicity decreases exponentially.
+\item When adding a new address to an occupied position of a bucket, it will not replace the existing entry unless that address is also stored in another bucket or it doesn\textquotesingle{}t meet one of several quality criteria (see Is\+Terrible for exact criteria).
+\end{DoxyItemize}
+\item Addresses of nodes that are known to be accessible go into 256 "{}tried"{} buckets.
+\begin{DoxyItemize}
+\item Each address range selects at random 8 of these buckets.
+\item The actual bucket is chosen from one of these, based on the full address.
+\item When adding a new good address to an occupied position of a bucket, a FEELER connection to the old address is attempted. The old entry is only replaced and moved back to the "{}new"{} buckets if this attempt was unsuccessful.
+\end{DoxyItemize}
+\item Bucket selection is based on cryptographic hashing, using a randomly-\/generated 256-\/bit key, which should not be observable by adversaries.
+\item Several indexes are kept for high performance. Setting m\+\_\+consistency\+\_\+check\+\_\+ratio with the -\/checkaddrman configuration option will introduce (expensive) consistency checks for the entire data structure. 
+\end{DoxyItemize}
+\end{DoxyItemize}
+
+\label{doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{AddrMan@{AddrMan}!AddrMan@{AddrMan}}
+\index{AddrMan@{AddrMan}!AddrMan@{AddrMan}}
+\doxysubsubsection{AddrMan()}
+{\footnotesize\ttfamily \label{class_addr_man_a4b6cb9872d13a1e3d821f9b17a8b6db6} 
+\textbf{ Addr\+Man} (\begin{DoxyParamCaption}\item[{const \textbf{ Net\+Group\+Manager} \&}]{netgroupman}{, }\item[{bool}]{deterministic}{, }\item[{int32\+\_\+t}]{consistency\+\_\+check\+\_\+ratio}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [explicit]}}
+
+\index{AddrMan@{AddrMan}!````~AddrMan@{$\sim$AddrMan}}
+\index{````~AddrMan@{$\sim$AddrMan}!AddrMan@{AddrMan}}
+\doxysubsubsection{$\sim$AddrMan()}
+{\footnotesize\ttfamily \label{class_addr_man_ae269a6c335d01a48a541f6d7e3b0ecbf} 
+$\sim$\textbf{ Addr\+Man} (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [default]}}
+
+
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{AddrMan@{AddrMan}!Add@{Add}}
+\index{Add@{Add}!AddrMan@{AddrMan}}
+\doxysubsubsection{Add()}
+{\footnotesize\ttfamily \label{class_addr_man_af0acda4d7598ebd2cb76c8ee97ee845f} 
+bool Add (\begin{DoxyParamCaption}\item[{const std\+::vector$<$ \textbf{ CAddress} $>$ \&}]{v\+Addr}{, }\item[{const \textbf{ CNet\+Addr} \&}]{source}{, }\item[{std\+::chrono\+::seconds}]{time\+\_\+penalty}{ = {\ttfamily 0s}}\end{DoxyParamCaption})}
+
+Attempt to add one or more addresses to addrman\textquotesingle{}s new table. If an address already exists in addrman, the existing entry may be updated (e.\+g. adding additional service flags). If the existing entry is in the new table, it may be added to more buckets, improving the probability of selection.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em v\+Addr} & Address records to attempt to add. \\
+\hline
+\mbox{\texttt{in}}  & {\em source} & The address of the node that sent us these addr records. \\
+\hline
+\mbox{\texttt{in}}  & {\em time\+\_\+penalty} & A "{}time penalty"{} to apply to the address record\textquotesingle{}s n\+Time. If a peer sends us an address record with n\+Time=n, then we\textquotesingle{}ll add it to our addrman with n\+Time=(n -\/ time\+\_\+penalty). \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if at least one address is successfully added, or added to an additional bucket. Unaffected by updates. 
+\end{DoxyReturn}
+\index{AddrMan@{AddrMan}!Attempt@{Attempt}}
+\index{Attempt@{Attempt}!AddrMan@{AddrMan}}
+\doxysubsubsection{Attempt()}
+{\footnotesize\ttfamily \label{class_addr_man_af610ed4d0bc8631426d628c08c392585} 
+void Attempt (\begin{DoxyParamCaption}\item[{const \textbf{ CService} \&}]{addr}{, }\item[{bool}]{f\+Count\+Failure}{, }\item[{\textbf{ Node\+Seconds}}]{time}{ = {\ttfamily \textbf{ Now}$<$\textbf{ Node\+Seconds}$>$()}}\end{DoxyParamCaption})}
+
+
+
+Mark an entry as connection attempted to. 
+
+\index{AddrMan@{AddrMan}!Connected@{Connected}}
+\index{Connected@{Connected}!AddrMan@{AddrMan}}
+\doxysubsubsection{Connected()}
+{\footnotesize\ttfamily \label{class_addr_man_a5db77c65bd764c01b128936f2dcca9ef} 
+void Connected (\begin{DoxyParamCaption}\item[{const \textbf{ CService} \&}]{addr}{, }\item[{\textbf{ Node\+Seconds}}]{time}{ = {\ttfamily \textbf{ Now}$<$\textbf{ Node\+Seconds}$>$()}}\end{DoxyParamCaption})}
+
+We have successfully connected to this peer. Calling this function updates the \doxyref{CAddress}{p.}{class_c_address}\textquotesingle{}s n\+Time, which is used in our Is\+Terrible() decisions and gossiped to peers. Callers should be careful that updating this information doesn\textquotesingle{}t leak topology information to network spies.
+
+net\+\_\+processing calls this function when it {\itshape disconnects} from a peer to not leak information about currently connected peers.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em addr} & The address of the peer we were connected to \\
+\hline
+\mbox{\texttt{in}}  & {\em time} & The time that we were last connected to this peer \\
+\hline
+\end{DoxyParams}
+\index{AddrMan@{AddrMan}!FindAddressEntry@{FindAddressEntry}}
+\index{FindAddressEntry@{FindAddressEntry}!AddrMan@{AddrMan}}
+\doxysubsubsection{FindAddressEntry()}
+{\footnotesize\ttfamily \label{class_addr_man_ae6f01245c5edff531298e93e6ed69d42} 
+std\+::optional$<$ \textbf{ Address\+Position} $>$ Find\+Address\+Entry (\begin{DoxyParamCaption}\item[{const \textbf{ CAddress} \&}]{addr}{}\end{DoxyParamCaption})}
+
+Test-\/only function Find the address record in \doxyref{Addr\+Man}{p.}{class_addr_man} and return information about its position. 
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em addr} & The address record to look up. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Information about the address record in \doxyref{Addr\+Man}{p.}{class_addr_man} or nullopt if address is not found. 
+\end{DoxyReturn}
+\index{AddrMan@{AddrMan}!GetAddr@{GetAddr}}
+\index{GetAddr@{GetAddr}!AddrMan@{AddrMan}}
+\doxysubsubsection{GetAddr()}
+{\footnotesize\ttfamily \label{class_addr_man_ab64d634410f099e19c2f2b6b83876118} 
+std\+::vector$<$ \textbf{ CAddress} $>$ Get\+Addr (\begin{DoxyParamCaption}\item[{size\+\_\+t}]{max\+\_\+addresses}{, }\item[{size\+\_\+t}]{max\+\_\+pct}{, }\item[{std\+::optional$<$ \textbf{ Network} $>$}]{network}{, }\item[{const bool}]{filtered}{ = {\ttfamily true}}\end{DoxyParamCaption}) const}
+
+Return all or many randomly selected addresses, optionally by network.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em max\+\_\+addresses} & Maximum number of addresses to return (0 = all). \\
+\hline
+\mbox{\texttt{in}}  & {\em max\+\_\+pct} & Maximum percentage of addresses to return (0 = all). Value must be from 0 to 100. \\
+\hline
+\mbox{\texttt{in}}  & {\em network} & Select only addresses of this network (nullopt = all). \\
+\hline
+\mbox{\texttt{in}}  & {\em filtered} & Select only addresses that are considered good quality (false = all).\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A vector of randomly selected addresses from v\+Random. 
+\end{DoxyReturn}
+\index{AddrMan@{AddrMan}!GetEntries@{GetEntries}}
+\index{GetEntries@{GetEntries}!AddrMan@{AddrMan}}
+\doxysubsubsection{GetEntries()}
+{\footnotesize\ttfamily \label{class_addr_man_ae18710a592d984080a6b29c9965b7418} 
+std\+::vector$<$ std\+::pair$<$ \textbf{ Addr\+Info}, \textbf{ Address\+Position} $>$ $>$ Get\+Entries (\begin{DoxyParamCaption}\item[{bool}]{from\+\_\+tried}{}\end{DoxyParamCaption}) const}
+
+Returns an information-\/location pair for all addresses in the selected addrman table. If an address appears multiple times in the new table, an information-\/location pair is returned for each occurrence. Addresses only ever appear once in the tried table.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em from\+\_\+tried} & Selects which table to return entries from.\\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A vector consisting of pairs of \doxyref{Addr\+Info}{p.}{class_addr_info} and \doxyref{Address\+Position}{p.}{struct_address_position}. 
+\end{DoxyReturn}
+\index{AddrMan@{AddrMan}!Good@{Good}}
+\index{Good@{Good}!AddrMan@{AddrMan}}
+\doxysubsubsection{Good()}
+{\footnotesize\ttfamily \label{class_addr_man_a706c1c1b34e109a4c2e5310b15a72c4d} 
+bool Good (\begin{DoxyParamCaption}\item[{const \textbf{ CService} \&}]{addr}{, }\item[{\textbf{ Node\+Seconds}}]{time}{ = {\ttfamily \textbf{ Now}$<$\textbf{ Node\+Seconds}$>$()}}\end{DoxyParamCaption})}
+
+Mark an address record as accessible and attempt to move it to addrman\textquotesingle{}s tried table.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em addr} & Address record to attempt to move to tried table. \\
+\hline
+\mbox{\texttt{in}}  & {\em time} & The time that we were last connected to this peer. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if the address is successfully moved from the new table to the tried table. 
+\end{DoxyReturn}
+\index{AddrMan@{AddrMan}!ResolveCollisions@{ResolveCollisions}}
+\index{ResolveCollisions@{ResolveCollisions}!AddrMan@{AddrMan}}
+\doxysubsubsection{ResolveCollisions()}
+{\footnotesize\ttfamily \label{class_addr_man_a15574032976f63a21b1781d0ed08d75b} 
+void Resolve\+Collisions (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+
+
+See if any to-\/be-\/evicted tried table entries have been tested and if so resolve the collisions. 
+
+\index{AddrMan@{AddrMan}!Select@{Select}}
+\index{Select@{Select}!AddrMan@{AddrMan}}
+\doxysubsubsection{Select()}
+{\footnotesize\ttfamily \label{class_addr_man_aef855c09bfa93ccd88508eaf73d5bc74} 
+std\+::pair$<$ \textbf{ CAddress}, \textbf{ Node\+Seconds} $>$ Select (\begin{DoxyParamCaption}\item[{bool}]{new\+\_\+only}{ = {\ttfamily false}, }\item[{const std\+::unordered\+\_\+set$<$ \textbf{ Network} $>$ \&}]{networks}{ = {\ttfamily \{\}}}\end{DoxyParamCaption}) const}
+
+Choose an address to connect to.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em new\+\_\+only} & Whether to only select addresses from the new table. Passing {\ttfamily true} returns an address from the new table or an empty pair. Passing {\ttfamily false} will return an empty pair or an address from either the new or tried table (it does not guarantee a tried entry). \\
+\hline
+\mbox{\texttt{in}}  & {\em networks} & Select only addresses of these networks (empty = all). Passing networks may slow down the search. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+\doxyref{CAddress}{p.}{class_c_address} The record for the selected peer. seconds The last time we attempted to connect to that peer. 
+\end{DoxyReturn}
+\index{AddrMan@{AddrMan}!SelectTriedCollision@{SelectTriedCollision}}
+\index{SelectTriedCollision@{SelectTriedCollision}!AddrMan@{AddrMan}}
+\doxysubsubsection{SelectTriedCollision()}
+{\footnotesize\ttfamily \label{class_addr_man_af0fc23fd56fa4cfc1327991984fb9389} 
+std\+::pair$<$ \textbf{ CAddress}, \textbf{ Node\+Seconds} $>$ Select\+Tried\+Collision (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})}
+
+Randomly select an address in the tried table that another address is attempting to evict.
+
+\begin{DoxyReturn}{Returns}
+\doxyref{CAddress}{p.}{class_c_address} The record for the selected tried peer. seconds The last time we attempted to connect to that peer. 
+\end{DoxyReturn}
+\index{AddrMan@{AddrMan}!Serialize@{Serialize}}
+\index{Serialize@{Serialize}!AddrMan@{AddrMan}}
+\doxysubsubsection{Serialize()}
+{\footnotesize\ttfamily \label{class_addr_man_ae7b340a1417273fa5fb4dd89b68e90a5} 
+template$<$typename Stream$>$ \\
+template void Serialize (\begin{DoxyParamCaption}\item[{Stream \&}]{s\+\_\+}{}\end{DoxyParamCaption}) const}
+
+\index{AddrMan@{AddrMan}!SetServices@{SetServices}}
+\index{SetServices@{SetServices}!AddrMan@{AddrMan}}
+\doxysubsubsection{SetServices()}
+{\footnotesize\ttfamily \label{class_addr_man_a0b0d0a32c294a075972d91681ed918fb} 
+void Set\+Services (\begin{DoxyParamCaption}\item[{const \textbf{ CService} \&}]{addr}{, }\item[{\textbf{ Service\+Flags}}]{n\+Services}{}\end{DoxyParamCaption})}
+
+
+
+Update an entry\textquotesingle{}s service bits. 
+
+\index{AddrMan@{AddrMan}!Size@{Size}}
+\index{Size@{Size}!AddrMan@{AddrMan}}
+\doxysubsubsection{Size()}
+{\footnotesize\ttfamily \label{class_addr_man_ad14483585857cd4336e052ecdea6eb92} 
+size\+\_\+t Size (\begin{DoxyParamCaption}\item[{std\+::optional$<$ \textbf{ Network} $>$}]{net}{ = {\ttfamily std\+:\+:nullopt}, }\item[{std\+::optional$<$ bool $>$}]{in\+\_\+new}{ = {\ttfamily std\+:\+:nullopt}}\end{DoxyParamCaption}) const}
+
+Return size information about addrman.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em net} & Select addresses only from specified network (nullopt = all) \\
+\hline
+\mbox{\texttt{in}}  & {\em in\+\_\+new} & Select addresses only from one table (true = new, false = tried, nullopt = both) \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Number of unique addresses that match specified options. 
+\end{DoxyReturn}
+\index{AddrMan@{AddrMan}!Unserialize@{Unserialize}}
+\index{Unserialize@{Unserialize}!AddrMan@{AddrMan}}
+\doxysubsubsection{Unserialize()}
+{\footnotesize\ttfamily \label{class_addr_man_ab646bc9d141d8c4971fa522a73677586} 
+template$<$typename Stream$>$ \\
+template void Unserialize (\begin{DoxyParamCaption}\item[{Stream \&}]{s\+\_\+}{}\end{DoxyParamCaption})}
+
+
+
+\label{doc-variable-members}
+\doxysubsection{Field Documentation}
+\index{AddrMan@{AddrMan}!m\_impl@{m\_impl}}
+\index{m\_impl@{m\_impl}!AddrMan@{AddrMan}}
+\doxysubsubsection{m\_impl}
+{\footnotesize\ttfamily \label{class_addr_man_a810d1e6cf5525f90041da212f6189e89} 
+const std\+::unique\+\_\+ptr$<$\textbf{ Addr\+Man\+Impl}$>$ m\+\_\+impl\hspace{0.3cm}{\ttfamily [protected]}}
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+src/\textbf{ addrman.\+h}\item 
+src/\textbf{ addrman.\+cpp}\end{DoxyCompactItemize}

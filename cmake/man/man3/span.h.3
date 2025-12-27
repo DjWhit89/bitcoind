@@ -1,0 +1,177 @@
+.TH "src/span.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/span.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <cassert>\fP
+.br
+\fR#include <cstddef>\fP
+.br
+\fR#include <span>\fP
+.br
+\fR#include <type_traits>\fP
+.br
+\fR#include <utility>\fP
+.br
+
+.SS "Concepts"
+
+.in +1c
+.ti -1c
+.RI "concept \fBBasicByte\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "template<typename \fBT\fP> \fBT\fP & \fBSpanPopBack\fP (std::span< \fBT\fP > &span)"
+.br
+.ti -1c
+.RI "template<typename V> auto \fBMakeByteSpan\fP (const V &v) noexcept"
+.br
+.ti -1c
+.RI "template<typename V> auto \fBMakeWritableByteSpan\fP (V &&v) noexcept"
+.br
+.ti -1c
+.RI "unsigned char * \fBUCharCast\fP (char *c)"
+.br
+.ti -1c
+.RI "unsigned char * \fBUCharCast\fP (unsigned char *c)"
+.br
+.ti -1c
+.RI "unsigned char * \fBUCharCast\fP (signed char *c)"
+.br
+.ti -1c
+.RI "unsigned char * \fBUCharCast\fP (std::byte *c)"
+.br
+.ti -1c
+.RI "const unsigned char * \fBUCharCast\fP (const char *c)"
+.br
+.ti -1c
+.RI "const unsigned char * \fBUCharCast\fP (const unsigned char *c)"
+.br
+.ti -1c
+.RI "const unsigned char * \fBUCharCast\fP (const signed char *c)"
+.br
+.ti -1c
+.RI "const unsigned char * \fBUCharCast\fP (const std::byte *c)"
+.br
+.ti -1c
+.RI "template<typename \fBT\fP, size_t N> constexpr auto \fBUCharSpanCast\fP (std::span< \fBT\fP, N > s)"
+.br
+.ti -1c
+.RI "template<typename V> constexpr auto \fBMakeUCharSpan\fP (const V &v) \-> decltype(\fBUCharSpanCast\fP(std::span{v}))"
+.br
+.ti -1c
+.RI "template<typename V> constexpr auto \fBMakeWritableUCharSpan\fP (V &&v) \-> decltype(\fBUCharSpanCast\fP(std::span{std::forward< V >(v)}))"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "template<typename V> auto MakeByteSpan (const V & v)\fR [noexcept]\fP"
+
+.SS "template<typename V> auto MakeUCharSpan (const V & v)\->decltype(\fBUCharSpanCast\fP(std::span{v}))\fR [constexpr]\fP"
+Like the std::span constructor, but for (const) unsigned char member types only\&. Only works for (un)signed char containers\&. 
+.SS "template<typename V> auto MakeWritableByteSpan (V && v)\fR [noexcept]\fP"
+
+.SS "template<typename V> auto MakeWritableUCharSpan (V && v)\->decltype(\fBUCharSpanCast\fP(std::span{std::forward< V >(v)}))\fR [constexpr]\fP"
+
+.SS "template<typename \fBT\fP> \fBT\fP & SpanPopBack (std::span< \fBT\fP > & span)"
+A span is an object that can refer to a contiguous sequence of objects\&.
+
+.PP
+Things to be aware of when writing code that deals with spans:
+
+.PP
+.IP "\(bu" 2
+Similar to references themselves, spans are subject to reference lifetime issues\&. The user is responsible for making sure the objects pointed to by a span live as long as the span is used\&. For example: 
+.PP
+.nf
+std::vector<int> vec{1,2,3,4};
+std::span<int> sp(vec);
+vec\&.push_back(5);
+printf("%i\\n", sp\&.front()); // UB!
+
+.fi
+.PP
+
+.PP
+may exhibit undefined behavior, as increasing the size of a vector may invalidate references\&.
+.IP "\(bu" 2
+One particular pitfall is that spans can be constructed from temporaries, but this is unsafe when the span is stored in a variable, outliving the temporary\&. For example, this will compile, but exhibits undefined behavior: 
+.PP
+.nf
+std::span<const int> sp(std::vector<int>{1, 2, 3});
+printf("%i\\n", sp\&.front()); // UB!
+
+.fi
+.PP
+
+.PP
+The lifetime of the vector ends when the statement it is created in ends\&. Thus the span is left with a dangling reference, and using it is undefined\&.
+.IP "\(bu" 2
+Due to spans automatic creation from range-like objects (arrays, and data types that expose a data() and size() member function), functions that accept a span as input parameter can be called with any compatible range-like object\&. For example, this works: 
+.PP
+.nf
+void Foo(std::span<const int> arg);
+
+Foo(std::vector<int>{1, 2, 3}); // Works
+
+.fi
+.PP
+
+.PP
+This is very useful in cases where a function truly does not care about the container, and only about having exactly a range of elements\&. However it may also be surprising to see automatic conversions in this case\&.
+
+.PP
+When a function accepts a span with a mutable element type, it will not accept temporaries; only variables or other references\&. For example: 
+.PP
+.nf
+void FooMut(std::span<int> arg);
+
+FooMut(std::vector<int>{1, 2, 3}); // Does not compile
+std::vector<int> baz{1, 2, 3};
+FooMut(baz); // Works
+
+.fi
+.PP
+
+.PP
+This is similar to how functions that take (non-const) lvalue references as input cannot accept temporaries\&. This does not work either: 
+.PP
+.nf
+void FooVec(std::vector<int>& arg);
+FooVec(std::vector<int>{1, 2, 3}); // Does not compile
+
+.fi
+.PP
+
+.PP
+The idea is that if a function accepts a mutable reference, a meaningful result will be present in that variable after the call\&. Passing a temporary is useless in that context\&. Pop the last element off a span, and return a reference to that element\&. 
+.PP
+
+.SS "unsigned char * UCharCast (char * c)\fR [inline]\fP"
+
+.SS "const unsigned char * UCharCast (const char * c)\fR [inline]\fP"
+
+.SS "const unsigned char * UCharCast (const signed char * c)\fR [inline]\fP"
+
+.SS "const unsigned char * UCharCast (const std::byte * c)\fR [inline]\fP"
+
+.SS "const unsigned char * UCharCast (const unsigned char * c)\fR [inline]\fP"
+
+.SS "unsigned char * UCharCast (signed char * c)\fR [inline]\fP"
+
+.SS "unsigned char * UCharCast (std::byte * c)\fR [inline]\fP"
+
+.SS "unsigned char * UCharCast (unsigned char * c)\fR [inline]\fP"
+
+.SS "template<typename \fBT\fP, size_t N> auto UCharSpanCast (std::span< \fBT\fP, N > s)\fR [constexpr]\fP"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

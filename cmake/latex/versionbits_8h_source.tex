@@ -1,0 +1,83 @@
+\doxysection{versionbits.\+h}
+\label{versionbits_8h_source}\index{src/versionbits.h@{src/versionbits.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2016-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_VERSIONBITS\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_VERSIONBITS\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <chain.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{keyword}{class\ }CChainParams;}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ int32\_t\ VERSIONBITS\_LAST\_OLD\_BLOCK\_VERSION\ =\ 4;}
+\DoxyCodeLine{00021\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ int32\_t\ VERSIONBITS\_TOP\_BITS\ =\ 0x20000000UL;}
+\DoxyCodeLine{00023\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ int32\_t\ VERSIONBITS\_TOP\_MASK\ =\ 0xE0000000UL;}
+\DoxyCodeLine{00025\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ int32\_t\ VERSIONBITS\_NUM\_BITS\ =\ 29;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{enum\ class}\ ThresholdState\ :\ uint8\_t;}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{comment}{//\ A\ map\ that\ gives\ the\ state\ for\ blocks\ whose\ height\ is\ a\ multiple\ of\ Period().}}
+\DoxyCodeLine{00031\ \textcolor{comment}{//\ The\ map\ is\ indexed\ by\ the\ block's\ parent,\ however,\ so\ all\ keys\ in\ the\ map}}
+\DoxyCodeLine{00032\ \textcolor{comment}{//\ will\ either\ be\ nullptr\ or\ a\ block\ with\ (height\ +\ 1)\ \%\ Period()\ ==\ 0.}}
+\DoxyCodeLine{00033\ \textcolor{keyword}{typedef}\ std::map<const\ CBlockIndex*,\ ThresholdState>\ ThresholdConditionCache;}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00036\ \textcolor{keyword}{struct\ }BIP9Stats\ \{}
+\DoxyCodeLine{00038\ \ \ \ \ uint32\_t\ period\{0\};}
+\DoxyCodeLine{00040\ \ \ \ \ uint32\_t\ threshold\{0\};}
+\DoxyCodeLine{00042\ \ \ \ \ uint32\_t\ elapsed\{0\};}
+\DoxyCodeLine{00044\ \ \ \ \ uint32\_t\ count\{0\};}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{bool}\ possible\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00047\ \};}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00050\ \textcolor{keyword}{struct\ }BIP9Info\ \{}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keywordtype}{int}\ since\{0\};}
+\DoxyCodeLine{00054\ \ \ \ \ std::string\ current\_state\{\};}
+\DoxyCodeLine{00056\ \ \ \ \ std::string\ next\_state\{\};}
+\DoxyCodeLine{00058\ \ \ \ \ std::optional<BIP9Stats>\ stats;}
+\DoxyCodeLine{00060\ \ \ \ \ std::vector<bool>\ signalling\_blocks;}
+\DoxyCodeLine{00062\ \ \ \ \ std::optional<int>\ active\_since;}
+\DoxyCodeLine{00063\ \};}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \textcolor{keyword}{struct\ }BIP9GBTStatus\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keyword}{struct\ }Info\ \{}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ bit;}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ uint32\_t\ mask;}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ gbt\_optional\_rule;}
+\DoxyCodeLine{00070\ \ \ \ \ \};}
+\DoxyCodeLine{00071\ \ \ \ \ std::map<std::string,\ const\ Info,\ std::less<>>\ signalling,\ locked\_in,\ active;}
+\DoxyCodeLine{00072\ \};}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00076\ \textcolor{keyword}{class\ }VersionBitsCache}
+\DoxyCodeLine{00077\ \{}
+\DoxyCodeLine{00078\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00079\ \ \ \ \ Mutex\ m\_mutex;}
+\DoxyCodeLine{00080\ \ \ \ \ std::array<ThresholdConditionCache,VERSIONBITS\_NUM\_BITS>\ m\_warning\_caches\ GUARDED\_BY(m\_mutex);}
+\DoxyCodeLine{00081\ \ \ \ \ std::array<ThresholdConditionCache,Consensus::MAX\_VERSION\_BITS\_DEPLOYMENTS>\ m\_caches\ GUARDED\_BY(m\_mutex);}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00084\ \ \ \ \ BIP9Info\ Info(\textcolor{keyword}{const}\ CBlockIndex\&\ block\_index,\ \textcolor{keyword}{const}\ Consensus::Params\&\ params,\ Consensus::DeploymentPos\ \textcolor{keywordtype}{id})\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \ \ \ \ BIP9GBTStatus\ GBTStatus(\textcolor{keyword}{const}\ CBlockIndex\&\ block\_index,\ \textcolor{keyword}{const}\ Consensus::Params\&\ params)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsActiveAfter(\textcolor{keyword}{const}\ CBlockIndex*\ pindexPrev,\ \textcolor{keyword}{const}\ Consensus::Params\&\ params,\ Consensus::DeploymentPos\ pos)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00092\ \ \ \ \ int32\_t\ ComputeBlockVersion(\textcolor{keyword}{const}\ CBlockIndex*\ pindexPrev,\ \textcolor{keyword}{const}\ Consensus::Params\&\ params)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00097\ \ \ \ \ std::vector<std::pair<int,bool>>\ CheckUnknownActivations(\textcolor{keyword}{const}\ CBlockIndex*\ pindex,\ \textcolor{keyword}{const}\ CChainParams\&\ chainparams)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{keywordtype}{void}\ Clear()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00100\ \};}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_VERSIONBITS\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,433 @@
+\doxysection{bitdeque.\+h}
+\label{bitdeque_8h_source}\index{src/util/bitdeque.h@{src/util/bitdeque.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2022-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_BITDEQUE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_BITDEQUE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <bitset>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <deque>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <stdexcept>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <tuple>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{template}<\textcolor{keywordtype}{int}\ BITS\_PER\_WORD\ =\ 4096\ *\ 8>}
+\DoxyCodeLine{00022\ \textcolor{keyword}{class\ }bitdeque}
+\DoxyCodeLine{00023\ \{}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{comment}{//\ Internal\ definitions}}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keyword}{using\ }word\_type\ =\ std::bitset<BITS\_PER\_WORD>;}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keyword}{using\ }deque\_type\ =\ std::deque<word\_type>;}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keyword}{static\_assert}(BITS\_PER\_WORD\ >\ 0);}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{comment}{//\ Forward\ and\ friend\ declarations\ of\ iterator\ types.}}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{bool}\ Const>\ \textcolor{keyword}{class\ }Iterator;}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{bool}\ Const>\ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }Iterator;}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{bool}\ Const>}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keyword}{class\ }Iterator}
+\DoxyCodeLine{00036\ \ \ \ \ \{}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }deque\_iterator\ =\ std::conditional\_t<Const,\ typename\ deque\_type::const\_iterator,\ typename\ deque\_type::iterator>;}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ deque\_iterator\ m\_it;}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ m\_bitpos\{0\};}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ Iterator(\textcolor{keyword}{const}\ deque\_iterator\&\ it,\ \textcolor{keywordtype}{int}\ bitpos)\ :\ m\_it(it),\ m\_bitpos(bitpos)\ \{\}}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }bitdeque;}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }iterator\_category\ =\ std::random\_access\_iterator\_tag;}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }value\_type\ =\ bool;}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }pointer\ =\ void;}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }const\_pointer\ =\ void;}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }reference\ =\ std::conditional\_t<Const,\ bool,\ typename\ word\_type::reference>;}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }const\_reference\ =\ bool;}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }difference\_type\ =\ std::ptrdiff\_t;}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ Iterator()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ Iterator(\textcolor{keyword}{const}\ Iterator\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{bool}\ ConstArg\ =\ Const,\ \textcolor{keyword}{typename}\ =\ std::enable\_if\_t<Const\ \&\&\ ConstArg>>}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ Iterator(\textcolor{keyword}{const}\ Iterator<false>\&\ x)\ :\ m\_it(x.m\_it),\ m\_bitpos(x.m\_bitpos)\ \{\}}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ Iterator\&\ operator+=(difference\_type\ dist)}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dist\ >\ 0)\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dist\ +\ m\_bitpos\ >=\ BITS\_PER\_WORD)\ \{}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++m\_it;}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dist\ -\/=\ BITS\_PER\_WORD\ -\/\ m\_bitpos;}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_bitpos\ =\ 0;}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ jump\ =\ dist\ /\ BITS\_PER\_WORD;}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_it\ +=\ jump;}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_bitpos\ +=\ dist\ -\/\ jump\ *\ BITS\_PER\_WORD;}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (dist\ <\ 0)\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dist\ =\ -\/dist;}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dist\ >\ m\_bitpos)\ \{}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/-\/m\_it;}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dist\ -\/=\ m\_bitpos\ +\ 1;}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_bitpos\ =\ BITS\_PER\_WORD\ -\/\ 1;}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ jump\ =\ dist\ /\ BITS\_PER\_WORD;}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_it\ -\/=\ jump;}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_bitpos\ -\/=\ dist\ -\/\ jump\ *\ BITS\_PER\_WORD;}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \textcolor{keyword}{friend}\ difference\_type\ operator-\/(\textcolor{keyword}{const}\ Iterator\&\ x,\ \textcolor{keyword}{const}\ Iterator\&\ y)}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ BITS\_PER\_WORD\ *\ (x.m\_it\ -\/\ y.m\_it)\ +\ x.m\_bitpos\ -\/\ y.m\_bitpos;}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ Iterator\&\ operator=(\textcolor{keyword}{const}\ Iterator\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ Iterator\&\ operator-\/=(difference\_type\ dist)\ \{\ \textcolor{keywordflow}{return}\ operator+=(-\/dist);\ \}}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ Iterator\&\ operator++()\ \{\ ++m\_bitpos;\ \textcolor{keywordflow}{if}\ (m\_bitpos\ ==\ BITS\_PER\_WORD)\ \{\ m\_bitpos\ =\ 0;\ ++m\_it;\ \};\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ Iterator\ operator++(\textcolor{keywordtype}{int})\ \{\ \textcolor{keyword}{auto}\ ret\{*\textcolor{keyword}{this}\};\ operator++();\ \textcolor{keywordflow}{return}\ ret;\ \}}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ Iterator\&\ operator-\/-\/()\ \{\ \textcolor{keywordflow}{if}\ (m\_bitpos\ ==\ 0)\ \{\ m\_bitpos\ =\ BITS\_PER\_WORD;\ -\/-\/m\_it;\ \};\ -\/-\/m\_bitpos;\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ Iterator\ operator-\/-\/(\textcolor{keywordtype}{int})\ \{\ \textcolor{keyword}{auto}\ ret\{*\textcolor{keyword}{this}\};\ operator-\/-\/();\ \textcolor{keywordflow}{return}\ ret;\ \}}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \textcolor{keyword}{friend}\ Iterator\ operator+(Iterator\ x,\ difference\_type\ dist)\ \{\ x\ +=\ dist;\ \textcolor{keywordflow}{return}\ x;\ \}}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \textcolor{keyword}{friend}\ Iterator\ operator+(difference\_type\ dist,\ Iterator\ x)\ \{\ x\ +=\ dist;\ \textcolor{keywordflow}{return}\ x;\ \}}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \textcolor{keyword}{friend}\ Iterator\ operator-\/(Iterator\ x,\ difference\_type\ dist)\ \{\ x\ -\/=\ dist;\ \textcolor{keywordflow}{return}\ x;\ \}}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{auto}\ operator<=>(\textcolor{keyword}{const}\ Iterator\&\ x,\ \textcolor{keyword}{const}\ Iterator\&\ y)\ \{\ \textcolor{keywordflow}{return}\ std::tie(x.m\_it,\ x.m\_bitpos)\ <=>\ std::tie(y.m\_it,\ y.m\_bitpos);\ \}}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ Iterator\&\ x,\ \textcolor{keyword}{const}\ Iterator\&\ y)\ \{\ \textcolor{keywordflow}{return}\ x.m\_it\ ==\ y.m\_it\ \&\&\ x.m\_bitpos\ ==\ y.m\_bitpos;\ \}}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ reference\ operator*()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (*m\_it)[m\_bitpos];\ \}}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ reference\ operator[](difference\_type\ pos)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ *(*\textcolor{keyword}{this}\ +\ pos);\ \}}
+\DoxyCodeLine{00106\ \ \ \ \ \};}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keyword}{using\ }value\_type\ =\ bool;}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keyword}{using\ }size\_type\ =\ std::size\_t;}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keyword}{using\ }difference\_type\ =\ \textcolor{keyword}{typename}\ deque\_type::difference\_type;}
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{keyword}{using\ }reference\ =\ \textcolor{keyword}{typename}\ word\_type::reference;}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{keyword}{using\ }const\_reference\ =\ bool;}
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keyword}{using\ }iterator\ =\ Iterator<false>;}
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{keyword}{using\ }const\_iterator\ =\ Iterator<true>;}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keyword}{using\ }pointer\ =\ void;}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{keyword}{using\ }const\_pointer\ =\ void;}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keyword}{using\ }reverse\_iterator\ =\ std::reverse\_iterator<iterator>;}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keyword}{using\ }const\_reverse\_iterator\ =\ std::reverse\_iterator<const\_iterator>;}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00123\ \ \ \ \ deque\_type\ m\_deque;}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_pad\_begin;}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_pad\_end;}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keywordtype}{void}\ erase\_back(size\_type\ n)}
+\DoxyCodeLine{00133\ \ \ \ \ \{}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ >=\ \textcolor{keyword}{static\_cast<}size\_type\textcolor{keyword}{>}(BITS\_PER\_WORD\ -\/\ m\_pad\_end))\ \{}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \ \ \ \ n\ -\/=\ BITS\_PER\_WORD\ -\/\ m\_pad\_end;}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \ \ \ \ m\_pad\_end\ =\ 0;}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ \ \ \ \ m\_deque.erase(m\_deque.end()\ -\/\ 1\ -\/\ (n\ /\ BITS\_PER\_WORD),\ m\_deque.end());}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \ \ \ \ n\ \%=\ BITS\_PER\_WORD;}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n)\ \{}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ last\ =\ m\_deque.back();}
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (n)\ \{}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ last.reset(BITS\_PER\_WORD\ -\/\ 1\ -\/\ m\_pad\_end);}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++m\_pad\_end;}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/-\/n;}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00148\ \ \ \ \ \}}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{keywordtype}{void}\ extend\_back(size\_type\ n)}
+\DoxyCodeLine{00152\ \ \ \ \ \{}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ >\ \textcolor{keyword}{static\_cast<}size\_type\textcolor{keyword}{>}(m\_pad\_end))\ \{}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \ \ \ \ n\ -\/=\ m\_pad\_end\ +\ 1;}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \ \ \ \ m\_pad\_end\ =\ BITS\_PER\_WORD\ -\/\ 1;}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ \ \ \ \ m\_deque.insert(m\_deque.end(),\ 1\ +\ (n\ /\ BITS\_PER\_WORD),\ \{\});}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \ \ \ \ n\ \%=\ BITS\_PER\_WORD;}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00159\ \ \ \ \ \ \ \ \ m\_pad\_end\ -\/=\ n;}
+\DoxyCodeLine{00160\ \ \ \ \ \}}
+\DoxyCodeLine{00161\ }
+\DoxyCodeLine{00163\ \ \ \ \ \textcolor{keywordtype}{void}\ erase\_front(size\_type\ n)}
+\DoxyCodeLine{00164\ \ \ \ \ \{}
+\DoxyCodeLine{00165\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ >=\ \textcolor{keyword}{static\_cast<}size\_type\textcolor{keyword}{>}(BITS\_PER\_WORD\ -\/\ m\_pad\_begin))\ \{}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \ \ \ \ n\ -\/=\ BITS\_PER\_WORD\ -\/\ m\_pad\_begin;}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \ \ \ \ m\_pad\_begin\ =\ 0;}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \ \ \ \ m\_deque.erase(m\_deque.begin(),\ m\_deque.begin()\ +\ 1\ +\ (n\ /\ BITS\_PER\_WORD));}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ \ \ \ \ n\ \%=\ BITS\_PER\_WORD;}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n)\ \{}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ first\ =\ m\_deque.front();}
+\DoxyCodeLine{00173\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (n)\ \{}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ first.reset(m\_pad\_begin);}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++m\_pad\_begin;}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/-\/n;}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00179\ \ \ \ \ \}}
+\DoxyCodeLine{00180\ }
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{keywordtype}{void}\ extend\_front(size\_type\ n)}
+\DoxyCodeLine{00183\ \ \ \ \ \{}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ >\ \textcolor{keyword}{static\_cast<}size\_type\textcolor{keyword}{>}(m\_pad\_begin))\ \{}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ \ \ \ \ n\ -\/=\ m\_pad\_begin\ +\ 1;}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \ \ \ \ m\_pad\_begin\ =\ BITS\_PER\_WORD\ -\/\ 1;}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \ \ \ \ m\_deque.insert(m\_deque.begin(),\ 1\ +\ (n\ /\ BITS\_PER\_WORD),\ \{\});}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \ \ \ \ n\ \%=\ BITS\_PER\_WORD;}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ m\_pad\_begin\ -\/=\ n;}
+\DoxyCodeLine{00191\ \ \ \ \ \}}
+\DoxyCodeLine{00192\ }
+\DoxyCodeLine{00194\ \ \ \ \ \textcolor{keywordtype}{void}\ insert\_zeroes(size\_type\ before,\ size\_type\ count)}
+\DoxyCodeLine{00195\ \ \ \ \ \{}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ size\_type\ after\ =\ size()\ -\/\ before;}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (before\ <\ after)\ \{}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ \ \ \ \ extend\_front(count);}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \ \ \ \ std::move(begin()\ +\ count,\ begin()\ +\ count\ +\ before,\ begin());}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \ \ \ \ extend\_back(count);}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \ \ \ \ std::move\_backward(begin()\ +\ before,\ begin()\ +\ before\ +\ after,\ end());}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00204\ \ \ \ \ \}}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00208\ \ \ \ \ \textcolor{keyword}{explicit}\ bitdeque()\ :\ m\_pad\_begin\{0\},\ m\_pad\_end\{0\}\ \{\}}
+\DoxyCodeLine{00209\ }
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{keywordtype}{void}\ assign(size\_type\ count,\ \textcolor{keywordtype}{bool}\ val)}
+\DoxyCodeLine{00212\ \ \ \ \ \{}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ m\_deque.clear();}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ m\_deque.resize((count\ +\ BITS\_PER\_WORD\ -\/\ 1)\ /\ BITS\_PER\_WORD);}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ m\_pad\_begin\ =\ 0;}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ m\_pad\_end\ =\ 0;}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (val)\ \{}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ elem\ :\ m\_deque)\ elem.flip();}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (count\ \%\ BITS\_PER\_WORD)\ \{}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \ \ \ \ erase\_back(BITS\_PER\_WORD\ -\/\ (count\ \%\ BITS\_PER\_WORD));}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00223\ \ \ \ \ \}}
+\DoxyCodeLine{00224\ }
+\DoxyCodeLine{00226\ \ \ \ \ bitdeque(size\_type\ count,\ \textcolor{keywordtype}{bool}\ val)\ \{\ assign(count,\ val);\ \}}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00229\ \ \ \ \ \textcolor{keyword}{explicit}\ bitdeque(\textcolor{keywordtype}{size\_t}\ count)\ \{\ assign(count,\ \textcolor{keyword}{false});\ \}}
+\DoxyCodeLine{00230\ }
+\DoxyCodeLine{00232\ \ \ \ \ bitdeque(\textcolor{keyword}{const}\ bitdeque\&)\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00233\ }
+\DoxyCodeLine{00235\ \ \ \ \ bitdeque(bitdeque\&\&)\ noexcept\ =\ default;}
+\DoxyCodeLine{00236\ }
+\DoxyCodeLine{00238\ \ \ \ \ bitdeque\&\ operator=(const\ bitdeque\&\ other)\ =\ default;}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00241\ \ \ \ \ bitdeque\&\ operator=(bitdeque\&\&\ other)\ noexcept\ =\ default;}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{comment}{//\ Iterator\ functions.}}
+\DoxyCodeLine{00244\ \ \ \ \ iterator\ begin()\ noexcept\ \{\ \textcolor{keywordflow}{return}\ \{m\_deque.begin(),\ m\_pad\_begin\};\ \}}
+\DoxyCodeLine{00245\ \ \ \ \ iterator\ end()\ noexcept\ \{\ \textcolor{keywordflow}{return}\ iterator\{m\_deque.end(),\ 0\}\ -\/\ m\_pad\_end;\ \}}
+\DoxyCodeLine{00246\ \ \ \ \ const\_iterator\ begin()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ const\_iterator\{m\_deque.cbegin(),\ m\_pad\_begin\};\ \}}
+\DoxyCodeLine{00247\ \ \ \ \ const\_iterator\ cbegin()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ const\_iterator\{m\_deque.cbegin(),\ m\_pad\_begin\};\ \}}
+\DoxyCodeLine{00248\ \ \ \ \ const\_iterator\ end()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ const\_iterator\{m\_deque.cend(),\ 0\}\ -\/\ m\_pad\_end;\ \}}
+\DoxyCodeLine{00249\ \ \ \ \ const\_iterator\ cend()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ const\_iterator\{m\_deque.cend(),\ 0\}\ -\/\ m\_pad\_end;\ \}}
+\DoxyCodeLine{00250\ \ \ \ \ reverse\_iterator\ rbegin()\ noexcept\ \{\ \textcolor{keywordflow}{return}\ reverse\_iterator\{end()\};\ \}}
+\DoxyCodeLine{00251\ \ \ \ \ reverse\_iterator\ rend()\ noexcept\ \{\ \textcolor{keywordflow}{return}\ reverse\_iterator\{begin()\};\ \}}
+\DoxyCodeLine{00252\ \ \ \ \ const\_reverse\_iterator\ rbegin()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ const\_reverse\_iterator\{cend()\};\ \}}
+\DoxyCodeLine{00253\ \ \ \ \ const\_reverse\_iterator\ crbegin()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ const\_reverse\_iterator\{cend()\};\ \}}
+\DoxyCodeLine{00254\ \ \ \ \ const\_reverse\_iterator\ rend()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ const\_reverse\_iterator\{cbegin()\};\ \}}
+\DoxyCodeLine{00255\ \ \ \ \ const\_reverse\_iterator\ crend()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ const\_reverse\_iterator\{cbegin()\};\ \}}
+\DoxyCodeLine{00256\ }
+\DoxyCodeLine{00258\ \ \ \ \ size\_type\ size()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_deque.size()\ *\ BITS\_PER\_WORD\ -\/\ m\_pad\_begin\ -\/\ m\_pad\_end;\ \}}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00261\ \ \ \ \ \textcolor{keywordtype}{bool}\ empty()\ const\ noexcept}
+\DoxyCodeLine{00262\ \ \ \ \ \{}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_deque.size()\ ==\ 0\ ||\ (m\_deque.size()\ ==\ 1\ \&\&\ (m\_pad\_begin\ +\ m\_pad\_end\ ==\ BITS\_PER\_WORD));}
+\DoxyCodeLine{00264\ \ \ \ \ \}}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00267\ \ \ \ \ size\_type\ max\_size()\ const\ noexcept}
+\DoxyCodeLine{00268\ \ \ \ \ \{}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_deque.max\_size()\ <\ std::numeric\_limits<difference\_type>::max()\ /\ BITS\_PER\_WORD)\ \{}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_deque.max\_size()\ *\ BITS\_PER\_WORD;}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::numeric\_limits<difference\_type>::max();}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00274\ \ \ \ \ \}}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ It>}
+\DoxyCodeLine{00278\ \ \ \ \ \textcolor{keywordtype}{void}\ assign(It\ first,\ It\ last)}
+\DoxyCodeLine{00279\ \ \ \ \ \{}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ size\_type\ count\ =\ std::distance(first,\ last);}
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ assign(count,\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ it\ =\ begin();}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (first\ !=\ last)\ \{}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ \ \ \ \ *(it++)\ =\ *(first++);}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00286\ \ \ \ \ \}}
+\DoxyCodeLine{00287\ }
+\DoxyCodeLine{00289\ \ \ \ \ \textcolor{keywordtype}{void}\ assign(std::initializer\_list<bool>\ ilist)}
+\DoxyCodeLine{00290\ \ \ \ \ \{}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ assign(ilist.size(),\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ it\ =\ begin();}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ init\ =\ ilist.begin();}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (init\ !=\ ilist.end())\ \{}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \ \ \ \ *(it++)\ =\ *(init++);}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00297\ \ \ \ \ \}}
+\DoxyCodeLine{00298\ }
+\DoxyCodeLine{00300\ \ \ \ \ bitdeque\&\ operator=(std::initializer\_list<bool>\ ilist)}
+\DoxyCodeLine{00301\ \ \ \ \ \{}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ assign(ilist);}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00304\ \ \ \ \ \}}
+\DoxyCodeLine{00305\ }
+\DoxyCodeLine{00307\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ It>}
+\DoxyCodeLine{00308\ \ \ \ \ bitdeque(It\ first,\ It\ last)\ \{\ assign(first,\ last);\ \}}
+\DoxyCodeLine{00309\ }
+\DoxyCodeLine{00311\ \ \ \ \ bitdeque(std::initializer\_list<bool>\ ilist)\ \{\ assign(ilist);\ \}}
+\DoxyCodeLine{00312\ }
+\DoxyCodeLine{00313\ \ \ \ \ \textcolor{comment}{//\ Access\ an\ element\ of\ the\ container,\ with\ bounds\ checking.}}
+\DoxyCodeLine{00314\ \ \ \ \ reference\ at(size\_type\ position)}
+\DoxyCodeLine{00315\ \ \ \ \ \{}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (position\ >=\ size())\ \textcolor{keywordflow}{throw}\ std::out\_of\_range(\textcolor{stringliteral}{"{}bitdeque::at()\ out\ of\ range"{}});}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ begin()[position];}
+\DoxyCodeLine{00318\ \ \ \ \ \}}
+\DoxyCodeLine{00319\ \ \ \ \ const\_reference\ at(size\_type\ position)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00320\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (position\ >=\ size())\ \textcolor{keywordflow}{throw}\ std::out\_of\_range(\textcolor{stringliteral}{"{}bitdeque::at()\ out\ of\ range"{}});}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ cbegin()[position];}
+\DoxyCodeLine{00323\ \ \ \ \ \}}
+\DoxyCodeLine{00324\ }
+\DoxyCodeLine{00325\ \ \ \ \ \textcolor{comment}{//\ Access\ elements\ of\ the\ container\ without\ bounds\ checking.}}
+\DoxyCodeLine{00326\ \ \ \ \ reference\ operator[](size\_type\ position)\ \{\ \textcolor{keywordflow}{return}\ begin()[position];\ \}}
+\DoxyCodeLine{00327\ \ \ \ \ const\_reference\ operator[](size\_type\ position)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ cbegin()[position];\ \}}
+\DoxyCodeLine{00328\ \ \ \ \ reference\ front()\ \{\ \textcolor{keywordflow}{return}\ *begin();\ \}}
+\DoxyCodeLine{00329\ \ \ \ \ const\_reference\ front()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ *cbegin();\ \}}
+\DoxyCodeLine{00330\ \ \ \ \ reference\ back()\ \{\ \textcolor{keywordflow}{return}\ end()[-\/1];\ \}}
+\DoxyCodeLine{00331\ \ \ \ \ const\_reference\ back()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ cend()[-\/1];\ \}}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00334\ \ \ \ \ \textcolor{keywordtype}{void}\ shrink\_to\_fit()}
+\DoxyCodeLine{00335\ \ \ \ \ \{}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ m\_deque.shrink\_to\_fit();}
+\DoxyCodeLine{00337\ \ \ \ \ \}}
+\DoxyCodeLine{00338\ }
+\DoxyCodeLine{00340\ \ \ \ \ \textcolor{keywordtype}{void}\ clear()\ noexcept}
+\DoxyCodeLine{00341\ \ \ \ \ \{}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ m\_deque.clear();}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ m\_pad\_begin\ =\ m\_pad\_end\ =\ 0;}
+\DoxyCodeLine{00344\ \ \ \ \ \}}
+\DoxyCodeLine{00345\ }
+\DoxyCodeLine{00346\ \ \ \ \ \textcolor{comment}{//\ Append\ an\ element\ to\ the\ container.}}
+\DoxyCodeLine{00347\ \ \ \ \ \textcolor{keywordtype}{void}\ push\_back(\textcolor{keywordtype}{bool}\ val)}
+\DoxyCodeLine{00348\ \ \ \ \ \{}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ extend\_back(1);}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ back()\ =\ val;}
+\DoxyCodeLine{00351\ \ \ \ \ \}}
+\DoxyCodeLine{00352\ \ \ \ \ reference\ emplace\_back(\textcolor{keywordtype}{bool}\ val)}
+\DoxyCodeLine{00353\ \ \ \ \ \{}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ extend\_back(1);}
+\DoxyCodeLine{00355\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ ref\ =\ back();}
+\DoxyCodeLine{00356\ \ \ \ \ \ \ \ \ ref\ =\ val;}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ref;}
+\DoxyCodeLine{00358\ \ \ \ \ \}}
+\DoxyCodeLine{00359\ }
+\DoxyCodeLine{00360\ \ \ \ \ \textcolor{comment}{//\ Prepend\ an\ element\ to\ the\ container.}}
+\DoxyCodeLine{00361\ \ \ \ \ \textcolor{keywordtype}{void}\ push\_front(\textcolor{keywordtype}{bool}\ val)}
+\DoxyCodeLine{00362\ \ \ \ \ \{}
+\DoxyCodeLine{00363\ \ \ \ \ \ \ \ \ extend\_front(1);}
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ front()\ =\ val;}
+\DoxyCodeLine{00365\ \ \ \ \ \}}
+\DoxyCodeLine{00366\ \ \ \ \ reference\ emplace\_front(\textcolor{keywordtype}{bool}\ val)}
+\DoxyCodeLine{00367\ \ \ \ \ \{}
+\DoxyCodeLine{00368\ \ \ \ \ \ \ \ \ extend\_front(1);}
+\DoxyCodeLine{00369\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ ref\ =\ front();}
+\DoxyCodeLine{00370\ \ \ \ \ \ \ \ \ ref\ =\ val;}
+\DoxyCodeLine{00371\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ref;}
+\DoxyCodeLine{00372\ \ \ \ \ \}}
+\DoxyCodeLine{00373\ }
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{comment}{//\ Remove\ the\ last\ element\ from\ the\ container.}}
+\DoxyCodeLine{00375\ \ \ \ \ \textcolor{keywordtype}{void}\ pop\_back()}
+\DoxyCodeLine{00376\ \ \ \ \ \{}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \ \ erase\_back(1);}
+\DoxyCodeLine{00378\ \ \ \ \ \}}
+\DoxyCodeLine{00379\ }
+\DoxyCodeLine{00380\ \ \ \ \ \textcolor{comment}{//\ Remove\ the\ first\ element\ from\ the\ container.}}
+\DoxyCodeLine{00381\ \ \ \ \ \textcolor{keywordtype}{void}\ pop\_front()}
+\DoxyCodeLine{00382\ \ \ \ \ \{}
+\DoxyCodeLine{00383\ \ \ \ \ \ \ \ \ erase\_front(1);}
+\DoxyCodeLine{00384\ \ \ \ \ \}}
+\DoxyCodeLine{00385\ }
+\DoxyCodeLine{00387\ \ \ \ \ \textcolor{keywordtype}{void}\ resize(size\_type\ n)}
+\DoxyCodeLine{00388\ \ \ \ \ \{}
+\DoxyCodeLine{00389\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ <\ size())\ \{}
+\DoxyCodeLine{00390\ \ \ \ \ \ \ \ \ \ \ \ \ erase\_back(size()\ -\/\ n);}
+\DoxyCodeLine{00391\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ \ \ \ \ extend\_back(n\ -\/\ size());}
+\DoxyCodeLine{00393\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00394\ \ \ \ \ \}}
+\DoxyCodeLine{00395\ }
+\DoxyCodeLine{00396\ \ \ \ \ \textcolor{comment}{//\ Swap\ two\ containers.}}
+\DoxyCodeLine{00397\ \ \ \ \ \textcolor{keywordtype}{void}\ swap(bitdeque\&\ other)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00398\ \ \ \ \ \{}
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ std::swap(m\_deque,\ other.m\_deque);}
+\DoxyCodeLine{00400\ \ \ \ \ \ \ \ \ std::swap(m\_pad\_begin,\ other.m\_pad\_begin);}
+\DoxyCodeLine{00401\ \ \ \ \ \ \ \ \ std::swap(m\_pad\_end,\ other.m\_pad\_end);}
+\DoxyCodeLine{00402\ \ \ \ \ \}}
+\DoxyCodeLine{00403\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{void}\ swap(bitdeque\&\ b1,\ bitdeque\&\ b2)\ \textcolor{keyword}{noexcept}\ \{\ b1.swap(b2);\ \}}
+\DoxyCodeLine{00404\ }
+\DoxyCodeLine{00405\ \ \ \ \ \textcolor{comment}{//\ Erase\ elements\ from\ the\ container.}}
+\DoxyCodeLine{00406\ \ \ \ \ iterator\ erase(const\_iterator\ first,\ const\_iterator\ last)}
+\DoxyCodeLine{00407\ \ \ \ \ \{}
+\DoxyCodeLine{00408\ \ \ \ \ \ \ \ \ size\_type\ before\ =\ std::distance(cbegin(),\ first);}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ size\_type\ dist\ =\ std::distance(first,\ last);}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ size\_type\ after\ =\ std::distance(last,\ cend());}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (before\ <\ after)\ \{}
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ \ \ \ \ std::move\_backward(begin(),\ begin()\ +\ before,\ end()\ -\/\ after);}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ \ \ \ \ erase\_front(dist);}
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ begin()\ +\ before;}
+\DoxyCodeLine{00415\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00416\ \ \ \ \ \ \ \ \ \ \ \ \ std::move(end()\ -\/\ after,\ end(),\ begin()\ +\ before);}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ \ \ \ \ erase\_back(dist);}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ end()\ -\/\ after;}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00420\ \ \ \ \ \}}
+\DoxyCodeLine{00421\ }
+\DoxyCodeLine{00422\ \ \ \ \ iterator\ erase(iterator\ first,\ iterator\ last)\ \{\ \textcolor{keywordflow}{return}\ erase(const\_iterator\{first\},\ const\_iterator\{last\});\ \}}
+\DoxyCodeLine{00423\ \ \ \ \ iterator\ erase(const\_iterator\ pos)\ \{\ \textcolor{keywordflow}{return}\ erase(pos,\ pos\ +\ 1);\ \}}
+\DoxyCodeLine{00424\ \ \ \ \ iterator\ erase(iterator\ pos)\ \{\ \textcolor{keywordflow}{return}\ erase(const\_iterator\{pos\},\ const\_iterator\{pos\}\ +\ 1);\ \}}
+\DoxyCodeLine{00425\ }
+\DoxyCodeLine{00426\ \ \ \ \ \textcolor{comment}{//\ Insert\ elements\ into\ the\ container.}}
+\DoxyCodeLine{00427\ \ \ \ \ iterator\ insert(const\_iterator\ pos,\ \textcolor{keywordtype}{bool}\ val)}
+\DoxyCodeLine{00428\ \ \ \ \ \{}
+\DoxyCodeLine{00429\ \ \ \ \ \ \ \ \ size\_type\ before\ =\ pos\ -\/\ cbegin();}
+\DoxyCodeLine{00430\ \ \ \ \ \ \ \ \ insert\_zeroes(before,\ 1);}
+\DoxyCodeLine{00431\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ it\ =\ begin()\ +\ before;}
+\DoxyCodeLine{00432\ \ \ \ \ \ \ \ \ *it\ =\ val;}
+\DoxyCodeLine{00433\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ it;}
+\DoxyCodeLine{00434\ \ \ \ \ \}}
+\DoxyCodeLine{00435\ }
+\DoxyCodeLine{00436\ \ \ \ \ iterator\ emplace(const\_iterator\ pos,\ \textcolor{keywordtype}{bool}\ val)\ \{\ \textcolor{keywordflow}{return}\ insert(pos,\ val);\ \}}
+\DoxyCodeLine{00437\ }
+\DoxyCodeLine{00438\ \ \ \ \ iterator\ insert(const\_iterator\ pos,\ size\_type\ count,\ \textcolor{keywordtype}{bool}\ val)}
+\DoxyCodeLine{00439\ \ \ \ \ \{}
+\DoxyCodeLine{00440\ \ \ \ \ \ \ \ \ size\_type\ before\ =\ pos\ -\/\ cbegin();}
+\DoxyCodeLine{00441\ \ \ \ \ \ \ \ \ insert\_zeroes(before,\ count);}
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ it\_begin\ =\ begin()\ +\ before;}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ it\ =\ it\_begin;}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ it\_end\ =\ it\ +\ count;}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (it\ !=\ it\_end)\ *(it++)\ =\ val;}
+\DoxyCodeLine{00446\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ it\_begin;}
+\DoxyCodeLine{00447\ \ \ \ \ \}}
+\DoxyCodeLine{00448\ }
+\DoxyCodeLine{00449\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ It>}
+\DoxyCodeLine{00450\ \ \ \ \ iterator\ insert(const\_iterator\ pos,\ It\ first,\ It\ last)}
+\DoxyCodeLine{00451\ \ \ \ \ \{}
+\DoxyCodeLine{00452\ \ \ \ \ \ \ \ \ size\_type\ before\ =\ pos\ -\/\ cbegin();}
+\DoxyCodeLine{00453\ \ \ \ \ \ \ \ \ size\_type\ count\ =\ std::distance(first,\ last);}
+\DoxyCodeLine{00454\ \ \ \ \ \ \ \ \ insert\_zeroes(before,\ count);}
+\DoxyCodeLine{00455\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ it\_begin\ =\ begin()\ +\ before;}
+\DoxyCodeLine{00456\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ it\ =\ it\_begin;}
+\DoxyCodeLine{00457\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (first\ !=\ last)\ \{}
+\DoxyCodeLine{00458\ \ \ \ \ \ \ \ \ \ \ \ \ *(it++)\ =\ *(first++);}
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00460\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ it\_begin;}
+\DoxyCodeLine{00461\ \ \ \ \ \}}
+\DoxyCodeLine{00462\ \};}
+\DoxyCodeLine{00463\ }
+\DoxyCodeLine{00464\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_BITDEQUE\_H}}
+
+\end{DoxyCode}

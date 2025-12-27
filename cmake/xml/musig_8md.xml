@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="musig_8md" kind="file" language="Markdown">
+    <compoundname>musig.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">Notes<sp/>on<sp/>the<sp/>musig<sp/>module<sp/>API</highlight></codeline>
+<codeline><highlight class="normal">===========================</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>following<sp/>sections<sp/>contain<sp/>additional<sp/>notes<sp/>on<sp/>the<sp/>API<sp/>of<sp/>the<sp/>musig<sp/>module<sp/>(`include/secp256k1_musig.h`).</highlight></codeline>
+<codeline><highlight class="normal">A<sp/>usage<sp/>example<sp/>can<sp/>be<sp/>found<sp/>in<sp/>`examples/musig.c`.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>API<sp/>misuse</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>musig<sp/>API<sp/>is<sp/>designed<sp/>with<sp/>a<sp/>focus<sp/>on<sp/>misuse<sp/>resistance.</highlight></codeline>
+<codeline><highlight class="normal">However,<sp/>due<sp/>to<sp/>the<sp/>interactive<sp/>nature<sp/>of<sp/>the<sp/>MuSig<sp/>protocol,<sp/>there<sp/>are<sp/>additional<sp/>failure<sp/>modes<sp/>that<sp/>are<sp/>not<sp/>present<sp/>in<sp/>regular<sp/>(single-party)<sp/>Schnorr<sp/>signature<sp/>creation.</highlight></codeline>
+<codeline><highlight class="normal">While<sp/>the<sp/>results<sp/>can<sp/>be<sp/>catastrophic<sp/>(e.g.<sp/>leaking<sp/>of<sp/>the<sp/>secret<sp/>key),<sp/>it<sp/>is<sp/>unfortunately<sp/>not<sp/>possible<sp/>for<sp/>the<sp/>musig<sp/>implementation<sp/>to<sp/>prevent<sp/>all<sp/>such<sp/>failure<sp/>modes.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Therefore,<sp/>users<sp/>of<sp/>the<sp/>musig<sp/>module<sp/>must<sp/>take<sp/>great<sp/>care<sp/>to<sp/>make<sp/>sure<sp/>of<sp/>the<sp/>following:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">1.<sp/>A<sp/>unique<sp/>nonce<sp/>per<sp/>signing<sp/>session<sp/>is<sp/>generated<sp/>in<sp/>`secp256k1_musig_nonce_gen`.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>See<sp/>the<sp/>corresponding<sp/>comment<sp/>in<sp/>`include/secp256k1_musig.h`<sp/>for<sp/>how<sp/>to<sp/>ensure<sp/>that.</highlight></codeline>
+<codeline><highlight class="normal">2.<sp/>The<sp/>`secp256k1_musig_secnonce`<sp/>structure<sp/>is<sp/>never<sp/>copied<sp/>or<sp/>serialized.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>See<sp/>also<sp/>the<sp/>comment<sp/>on<sp/>`secp256k1_musig_secnonce`<sp/>in<sp/>`include/secp256k1_musig.h`.</highlight></codeline>
+<codeline><highlight class="normal">3.<sp/>Opaque<sp/>data<sp/>structures<sp/>are<sp/>never<sp/>written<sp/>to<sp/>or<sp/>read<sp/>from<sp/>directly.</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>Instead,<sp/>only<sp/>the<sp/>provided<sp/>accessor<sp/>functions<sp/>are<sp/>used.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Key<sp/>Aggregation<sp/>and<sp/>(Taproot)<sp/>Tweaking</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Given<sp/>a<sp/>set<sp/>of<sp/>public<sp/>keys,<sp/>the<sp/>aggregate<sp/>public<sp/>key<sp/>is<sp/>computed<sp/>with<sp/>`secp256k1_musig_pubkey_agg`.</highlight></codeline>
+<codeline><highlight class="normal">A<sp/>plain<sp/>tweak<sp/>can<sp/>be<sp/>added<sp/>to<sp/>the<sp/>resulting<sp/>public<sp/>key<sp/>with<sp/>`secp256k1_ec_pubkey_tweak_add`<sp/>by<sp/>setting<sp/>the<sp/>`tweak32`<sp/>argument<sp/>to<sp/>the<sp/>hash<sp/>defined<sp/>in<sp/>BIP<sp/>32.<sp/>Similarly,<sp/>a<sp/>Taproot<sp/>tweak<sp/>can<sp/>be<sp/>added<sp/>with<sp/>`secp256k1_xonly_pubkey_tweak_add`<sp/>by<sp/>setting<sp/>the<sp/>`tweak32`<sp/>argument<sp/>to<sp/>the<sp/>TapTweak<sp/>hash<sp/>defined<sp/>in<sp/>BIP<sp/>341.</highlight></codeline>
+<codeline><highlight class="normal">Both<sp/>types<sp/>of<sp/>tweaking<sp/>can<sp/>be<sp/>combined<sp/>and<sp/>invoked<sp/>multiple<sp/>times<sp/>if<sp/>the<sp/>specific<sp/>application<sp/>requires<sp/>it.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Signing</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">This<sp/>is<sp/>covered<sp/>by<sp/>`examples/musig.c`.</highlight></codeline>
+<codeline><highlight class="normal">Essentially,<sp/>the<sp/>protocol<sp/>proceeds<sp/>in<sp/>the<sp/>following<sp/>steps:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">1.<sp/>Generate<sp/>a<sp/>keypair<sp/>with<sp/>`secp256k1_keypair_create`<sp/>and<sp/>obtain<sp/>the<sp/>public<sp/>key<sp/>with<sp/>`secp256k1_keypair_pub`.</highlight></codeline>
+<codeline><highlight class="normal">2.<sp/>Call<sp/>`secp256k1_musig_pubkey_agg`<sp/>with<sp/>the<sp/>pubkeys<sp/>of<sp/>all<sp/>participants.</highlight></codeline>
+<codeline><highlight class="normal">3.<sp/>Optionally<sp/>add<sp/>a<sp/>(Taproot)<sp/>tweak<sp/>with<sp/>`secp256k1_musig_pubkey_xonly_tweak_add`<sp/>and<sp/>a<sp/>plain<sp/>tweak<sp/>with<sp/>`secp256k1_musig_pubkey_ec_tweak_add`.</highlight></codeline>
+<codeline><highlight class="normal">4.<sp/>Generate<sp/>a<sp/>pair<sp/>of<sp/>secret<sp/>and<sp/>public<sp/>nonce<sp/>with<sp/>`secp256k1_musig_nonce_gen`<sp/>and<sp/>send<sp/>the<sp/>public<sp/>nonce<sp/>to<sp/>the<sp/>other<sp/>signers.</highlight></codeline>
+<codeline><highlight class="normal">5.<sp/>Someone<sp/>(not<sp/>necessarily<sp/>the<sp/>signer)<sp/>aggregates<sp/>the<sp/>public<sp/>nonces<sp/>with<sp/>`secp256k1_musig_nonce_agg`<sp/>and<sp/>sends<sp/>it<sp/>to<sp/>the<sp/>signers.</highlight></codeline>
+<codeline><highlight class="normal">6.<sp/>Process<sp/>the<sp/>aggregate<sp/>nonce<sp/>with<sp/>`secp256k1_musig_nonce_process`.</highlight></codeline>
+<codeline><highlight class="normal">7.<sp/>Create<sp/>a<sp/>partial<sp/>signature<sp/>with<sp/>`secp256k1_musig_partial_sign`.</highlight></codeline>
+<codeline><highlight class="normal">8.<sp/>Verify<sp/>the<sp/>partial<sp/>signatures<sp/>(optional<sp/>in<sp/>some<sp/>scenarios)<sp/>with<sp/>`secp256k1_musig_partial_sig_verify`.</highlight></codeline>
+<codeline><highlight class="normal">9.<sp/>Someone<sp/>(not<sp/>necessarily<sp/>the<sp/>signer)<sp/>obtains<sp/>all<sp/>partial<sp/>signatures<sp/>and<sp/>aggregates<sp/>them<sp/>into<sp/>the<sp/>final<sp/>Schnorr<sp/>signature<sp/>using<sp/>`secp256k1_musig_partial_sig_agg`.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>aggregate<sp/>signature<sp/>can<sp/>be<sp/>verified<sp/>with<sp/>`secp256k1_schnorrsig_verify`.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Steps<sp/>1<sp/>through<sp/>5<sp/>above<sp/>can<sp/>occur<sp/>before<sp/>or<sp/>after<sp/>the<sp/>signers<sp/>are<sp/>aware<sp/>of<sp/>the<sp/>message<sp/>to<sp/>be<sp/>signed.</highlight></codeline>
+<codeline><highlight class="normal">Whenever<sp/>possible,<sp/>it<sp/>is<sp/>recommended<sp/>to<sp/>generate<sp/>the<sp/>nonces<sp/>only<sp/>after<sp/>the<sp/>message<sp/>is<sp/>known.</highlight></codeline>
+<codeline><highlight class="normal">This<sp/>provides<sp/>enhanced<sp/>defense-in-depth<sp/>measures,<sp/>protecting<sp/>against<sp/>potential<sp/>API<sp/>misuse<sp/>in<sp/>certain<sp/>scenarios.</highlight></codeline>
+<codeline><highlight class="normal">However,<sp/>it<sp/>does<sp/>require<sp/>two<sp/>rounds<sp/>of<sp/>communication<sp/>during<sp/>the<sp/>signing<sp/>process.</highlight></codeline>
+<codeline><highlight class="normal">The<sp/>alternative,<sp/>generating<sp/>the<sp/>nonces<sp/>in<sp/>a<sp/>pre-processing<sp/>step<sp/>before<sp/>the<sp/>message<sp/>is<sp/>known,<sp/>eliminates<sp/>these<sp/>additional<sp/>protective<sp/>measures<sp/>but<sp/>allows<sp/>for<sp/>non-interactive<sp/>signing.</highlight></codeline>
+<codeline><highlight class="normal">Similarly,<sp/>the<sp/>API<sp/>supports<sp/>an<sp/>alternative<sp/>protocol<sp/>flow<sp/>where<sp/>generating<sp/>the<sp/>aggregate<sp/>key<sp/>(steps<sp/>1<sp/>to<sp/>3)<sp/>is<sp/>allowed<sp/>to<sp/>happen<sp/>after<sp/>exchanging<sp/>nonces<sp/>(steps<sp/>4<sp/>to<sp/>5).</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Verification</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>participant<sp/>who<sp/>wants<sp/>to<sp/>verify<sp/>the<sp/>partial<sp/>signatures,<sp/>but<sp/>does<sp/>not<sp/>sign<sp/>itself<sp/>may<sp/>do<sp/>so<sp/>using<sp/>the<sp/>above<sp/>instructions<sp/>except<sp/>that<sp/>the<sp/>verifier<sp/>skips<sp/>steps<sp/>1,<sp/>4<sp/>and<sp/>7.</highlight></codeline>
+    </programlisting>
+    <location file="src/secp256k1/doc/musig.md"/>
+  </compounddef>
+</doxygen>

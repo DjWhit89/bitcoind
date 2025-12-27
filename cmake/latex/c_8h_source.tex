@@ -1,0 +1,276 @@
+\doxysection{c.\+h}
+\label{c_8h_source}\index{src/leveldb/include/leveldb/c.h@{src/leveldb/include/leveldb/c.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/*\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ \ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ \ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ \ C\ bindings\ for\ leveldb.\ \ May\ be\ useful\ as\ a\ stable\ ABI\ that\ can\ be}}
+\DoxyCodeLine{00006\ \textcolor{comment}{\ \ used\ by\ programs\ that\ keep\ leveldb\ in\ a\ shared\ library,\ or\ for}}
+\DoxyCodeLine{00007\ \textcolor{comment}{\ \ a\ JNI\ api.}}
+\DoxyCodeLine{00008\ \textcolor{comment}{}}
+\DoxyCodeLine{00009\ \textcolor{comment}{\ \ Does\ not\ support:}}
+\DoxyCodeLine{00010\ \textcolor{comment}{\ \ .\ getters\ for\ the\ option\ types}}
+\DoxyCodeLine{00011\ \textcolor{comment}{\ \ .\ custom\ comparators\ that\ implement\ key\ shortening}}
+\DoxyCodeLine{00012\ \textcolor{comment}{\ \ .\ custom\ iter,\ db,\ env,\ cache\ implementations\ using\ just\ the\ C\ bindings}}
+\DoxyCodeLine{00013\ \textcolor{comment}{}}
+\DoxyCodeLine{00014\ \textcolor{comment}{\ \ Some\ conventions:}}
+\DoxyCodeLine{00015\ \textcolor{comment}{}}
+\DoxyCodeLine{00016\ \textcolor{comment}{\ \ (1)\ We\ expose\ just\ opaque\ struct\ pointers\ and\ functions\ to\ clients.}}
+\DoxyCodeLine{00017\ \textcolor{comment}{\ \ This\ allows\ us\ to\ change\ internal\ representations\ without\ having\ to}}
+\DoxyCodeLine{00018\ \textcolor{comment}{\ \ recompile\ clients.}}
+\DoxyCodeLine{00019\ \textcolor{comment}{}}
+\DoxyCodeLine{00020\ \textcolor{comment}{\ \ (2)\ For\ simplicity,\ there\ is\ no\ equivalent\ to\ the\ Slice\ type.\ \ Instead,}}
+\DoxyCodeLine{00021\ \textcolor{comment}{\ \ the\ caller\ has\ to\ pass\ the\ pointer\ and\ length\ as\ separate}}
+\DoxyCodeLine{00022\ \textcolor{comment}{\ \ arguments.}}
+\DoxyCodeLine{00023\ \textcolor{comment}{}}
+\DoxyCodeLine{00024\ \textcolor{comment}{\ \ (3)\ Errors\ are\ represented\ by\ a\ null-\/terminated\ c\ string.\ \ NULL}}
+\DoxyCodeLine{00025\ \textcolor{comment}{\ \ means\ no\ error.\ \ All\ operations\ that\ can\ raise\ an\ error\ are\ passed}}
+\DoxyCodeLine{00026\ \textcolor{comment}{\ \ a\ "{}char**\ errptr"{}\ as\ the\ last\ argument.\ \ One\ of\ the\ following\ must}}
+\DoxyCodeLine{00027\ \textcolor{comment}{\ \ be\ true\ on\ entry:}}
+\DoxyCodeLine{00028\ \textcolor{comment}{\ \ \ \ \ *errptr\ ==\ NULL}}
+\DoxyCodeLine{00029\ \textcolor{comment}{\ \ \ \ \ *errptr\ points\ to\ a\ malloc()ed\ null-\/terminated\ error\ message}}
+\DoxyCodeLine{00030\ \textcolor{comment}{\ \ \ \ \ \ \ (On\ Windows,\ *errptr\ must\ have\ been\ malloc()-\/ed\ by\ this\ library.)}}
+\DoxyCodeLine{00031\ \textcolor{comment}{\ \ On\ success,\ a\ leveldb\ routine\ leaves\ *errptr\ unchanged.}}
+\DoxyCodeLine{00032\ \textcolor{comment}{\ \ On\ failure,\ leveldb\ frees\ the\ old\ value\ of\ *errptr\ and}}
+\DoxyCodeLine{00033\ \textcolor{comment}{\ \ set\ *errptr\ to\ a\ malloc()ed\ error\ message.}}
+\DoxyCodeLine{00034\ \textcolor{comment}{}}
+\DoxyCodeLine{00035\ \textcolor{comment}{\ \ (4)\ Bools\ have\ the\ type\ uint8\_t\ (0\ ==\ false;\ rest\ ==\ true)}}
+\DoxyCodeLine{00036\ \textcolor{comment}{}}
+\DoxyCodeLine{00037\ \textcolor{comment}{\ \ (5)\ All\ of\ the\ pointer\ arguments\ must\ be\ non-\/NULL.}}
+\DoxyCodeLine{00038\ \textcolor{comment}{*/}}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_C\_H\_}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_C\_H\_}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \textcolor{preprocessor}{\#ifdef\ \_\_cplusplus}}
+\DoxyCodeLine{00044\ \textcolor{keyword}{extern}\ \textcolor{stringliteral}{"{}C"{}}\ \{}
+\DoxyCodeLine{00045\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\#include\ <stdarg.h>}}
+\DoxyCodeLine{00048\ \textcolor{preprocessor}{\#include\ <stddef.h>}}
+\DoxyCodeLine{00049\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \textcolor{comment}{/*\ Exported\ types\ */}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_t\ leveldb\_t;}
+\DoxyCodeLine{00056\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_cache\_t\ leveldb\_cache\_t;}
+\DoxyCodeLine{00057\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_comparator\_t\ leveldb\_comparator\_t;}
+\DoxyCodeLine{00058\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_env\_t\ leveldb\_env\_t;}
+\DoxyCodeLine{00059\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_filelock\_t\ leveldb\_filelock\_t;}
+\DoxyCodeLine{00060\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_filterpolicy\_t\ leveldb\_filterpolicy\_t;}
+\DoxyCodeLine{00061\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_iterator\_t\ leveldb\_iterator\_t;}
+\DoxyCodeLine{00062\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_logger\_t\ leveldb\_logger\_t;}
+\DoxyCodeLine{00063\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_options\_t\ leveldb\_options\_t;}
+\DoxyCodeLine{00064\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_randomfile\_t\ leveldb\_randomfile\_t;}
+\DoxyCodeLine{00065\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_readoptions\_t\ leveldb\_readoptions\_t;}
+\DoxyCodeLine{00066\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_seqfile\_t\ leveldb\_seqfile\_t;}
+\DoxyCodeLine{00067\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_snapshot\_t\ leveldb\_snapshot\_t;}
+\DoxyCodeLine{00068\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_writablefile\_t\ leveldb\_writablefile\_t;}
+\DoxyCodeLine{00069\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_writebatch\_t\ leveldb\_writebatch\_t;}
+\DoxyCodeLine{00070\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }leveldb\_writeoptions\_t\ leveldb\_writeoptions\_t;}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \textcolor{comment}{/*\ DB\ operations\ */}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ LEVELDB\_EXPORT\ leveldb\_t*\ leveldb\_open(\textcolor{keyword}{const}\ leveldb\_options\_t*\ options,}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ name,\ \textcolor{keywordtype}{char}**\ errptr);}
+\DoxyCodeLine{00076\ }
+\DoxyCodeLine{00077\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_close(leveldb\_t*\ db);}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_put(leveldb\_t*\ db,}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ leveldb\_writeoptions\_t*\ options,}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keywordtype}{size\_t}\ keylen,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ val,}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ vallen,\ \textcolor{keywordtype}{char}**\ errptr);}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_delete(leveldb\_t*\ db,}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ leveldb\_writeoptions\_t*\ options,}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keywordtype}{size\_t}\ keylen,}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{char}**\ errptr);}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_write(leveldb\_t*\ db,}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ leveldb\_writeoptions\_t*\ options,}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ leveldb\_writebatch\_t*\ batch,\ \textcolor{keywordtype}{char}**\ errptr);}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \textcolor{comment}{/*\ Returns\ NULL\ if\ not\ found.\ \ A\ malloc()ed\ array\ otherwise.}}
+\DoxyCodeLine{00094\ \textcolor{comment}{\ \ \ Stores\ the\ length\ of\ the\ array\ in\ *vallen.\ */}}
+\DoxyCodeLine{00095\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{char}*\ leveldb\_get(leveldb\_t*\ db,}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ leveldb\_readoptions\_t*\ options,}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keywordtype}{size\_t}\ keylen,\ \textcolor{keywordtype}{size\_t}*\ vallen,}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{char}**\ errptr);}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ LEVELDB\_EXPORT\ leveldb\_iterator\_t*\ leveldb\_create\_iterator(}
+\DoxyCodeLine{00101\ \ \ \ \ leveldb\_t*\ db,\ \textcolor{keyword}{const}\ leveldb\_readoptions\_t*\ options);}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00103\ LEVELDB\_EXPORT\ \textcolor{keyword}{const}\ leveldb\_snapshot\_t*\ leveldb\_create\_snapshot(leveldb\_t*\ db);}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_release\_snapshot(}
+\DoxyCodeLine{00106\ \ \ \ \ leveldb\_t*\ db,\ \textcolor{keyword}{const}\ leveldb\_snapshot\_t*\ snapshot);}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \textcolor{comment}{/*\ Returns\ NULL\ if\ property\ name\ is\ unknown.}}
+\DoxyCodeLine{00109\ \textcolor{comment}{\ \ \ Else\ returns\ a\ pointer\ to\ a\ malloc()-\/ed\ null-\/terminated\ value.\ */}}
+\DoxyCodeLine{00110\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{char}*\ leveldb\_property\_value(leveldb\_t*\ db,}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ propname);}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00113\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_approximate\_sizes(}
+\DoxyCodeLine{00114\ \ \ \ \ leveldb\_t*\ db,\ \textcolor{keywordtype}{int}\ num\_ranges,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ \textcolor{keyword}{const}*\ range\_start\_key,}
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}*\ range\_start\_key\_len,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ \textcolor{keyword}{const}*\ range\_limit\_key,}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}*\ range\_limit\_key\_len,\ uint64\_t*\ sizes);}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_compact\_range(leveldb\_t*\ db,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ start\_key,}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ start\_key\_len,}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ limit\_key,}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ limit\_key\_len);}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \textcolor{comment}{/*\ Management\ operations\ */}}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00125\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_destroy\_db(\textcolor{keyword}{const}\ leveldb\_options\_t*\ options,}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ name,\ \textcolor{keywordtype}{char}**\ errptr);}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00128\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_repair\_db(\textcolor{keyword}{const}\ leveldb\_options\_t*\ options,}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ name,\ \textcolor{keywordtype}{char}**\ errptr);}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00131\ \textcolor{comment}{/*\ Iterator\ */}}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00133\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_iter\_destroy(leveldb\_iterator\_t*);}
+\DoxyCodeLine{00134\ LEVELDB\_EXPORT\ uint8\_t\ leveldb\_iter\_valid(\textcolor{keyword}{const}\ leveldb\_iterator\_t*);}
+\DoxyCodeLine{00135\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_iter\_seek\_to\_first(leveldb\_iterator\_t*);}
+\DoxyCodeLine{00136\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_iter\_seek\_to\_last(leveldb\_iterator\_t*);}
+\DoxyCodeLine{00137\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_iter\_seek(leveldb\_iterator\_t*,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ k,}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ klen);}
+\DoxyCodeLine{00139\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_iter\_next(leveldb\_iterator\_t*);}
+\DoxyCodeLine{00140\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_iter\_prev(leveldb\_iterator\_t*);}
+\DoxyCodeLine{00141\ LEVELDB\_EXPORT\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ leveldb\_iter\_key(\textcolor{keyword}{const}\ leveldb\_iterator\_t*,}
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}*\ klen);}
+\DoxyCodeLine{00143\ LEVELDB\_EXPORT\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ leveldb\_iter\_value(\textcolor{keyword}{const}\ leveldb\_iterator\_t*,}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}*\ vlen);}
+\DoxyCodeLine{00145\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_iter\_get\_error(\textcolor{keyword}{const}\ leveldb\_iterator\_t*,}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{char}**\ errptr);}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00148\ \textcolor{comment}{/*\ Write\ batch\ */}}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00150\ LEVELDB\_EXPORT\ leveldb\_writebatch\_t*\ leveldb\_writebatch\_create(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00151\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_writebatch\_destroy(leveldb\_writebatch\_t*);}
+\DoxyCodeLine{00152\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_writebatch\_clear(leveldb\_writebatch\_t*);}
+\DoxyCodeLine{00153\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_writebatch\_put(leveldb\_writebatch\_t*,}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keywordtype}{size\_t}\ klen,}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ val,\ \textcolor{keywordtype}{size\_t}\ vlen);}
+\DoxyCodeLine{00156\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_writebatch\_delete(leveldb\_writebatch\_t*,}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keywordtype}{size\_t}\ klen);}
+\DoxyCodeLine{00158\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_writebatch\_iterate(}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{keyword}{const}\ leveldb\_writebatch\_t*,\ \textcolor{keywordtype}{void}*\ state,}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{keywordtype}{void}\ (*put)(\textcolor{keywordtype}{void}*,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ k,\ \textcolor{keywordtype}{size\_t}\ klen,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ v,\ \textcolor{keywordtype}{size\_t}\ vlen),}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordtype}{void}\ (*deleted)(\textcolor{keywordtype}{void}*,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ k,\ \textcolor{keywordtype}{size\_t}\ klen));}
+\DoxyCodeLine{00162\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_writebatch\_append(}
+\DoxyCodeLine{00163\ \ \ \ \ leveldb\_writebatch\_t*\ destination,\ \textcolor{keyword}{const}\ leveldb\_writebatch\_t*\ source);}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00165\ \textcolor{comment}{/*\ Options\ */}}
+\DoxyCodeLine{00166\ }
+\DoxyCodeLine{00167\ LEVELDB\_EXPORT\ leveldb\_options\_t*\ leveldb\_options\_create(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00168\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_destroy(leveldb\_options\_t*);}
+\DoxyCodeLine{00169\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_comparator(leveldb\_options\_t*,}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ leveldb\_comparator\_t*);}
+\DoxyCodeLine{00171\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_filter\_policy(leveldb\_options\_t*,}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ leveldb\_filterpolicy\_t*);}
+\DoxyCodeLine{00173\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_create\_if\_missing(leveldb\_options\_t*,}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint8\_t);}
+\DoxyCodeLine{00175\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_error\_if\_exists(leveldb\_options\_t*,}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint8\_t);}
+\DoxyCodeLine{00177\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_paranoid\_checks(leveldb\_options\_t*,}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint8\_t);}
+\DoxyCodeLine{00179\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_env(leveldb\_options\_t*,\ leveldb\_env\_t*);}
+\DoxyCodeLine{00180\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_info\_log(leveldb\_options\_t*,}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ leveldb\_logger\_t*);}
+\DoxyCodeLine{00182\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_write\_buffer\_size(leveldb\_options\_t*,}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t});}
+\DoxyCodeLine{00184\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_max\_open\_files(leveldb\_options\_t*,\ \textcolor{keywordtype}{int});}
+\DoxyCodeLine{00185\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_cache(leveldb\_options\_t*,}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ leveldb\_cache\_t*);}
+\DoxyCodeLine{00187\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_block\_size(leveldb\_options\_t*,\ \textcolor{keywordtype}{size\_t});}
+\DoxyCodeLine{00188\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_block\_restart\_interval(}
+\DoxyCodeLine{00189\ \ \ \ \ leveldb\_options\_t*,\ \textcolor{keywordtype}{int});}
+\DoxyCodeLine{00190\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_max\_file\_size(leveldb\_options\_t*,}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t});}
+\DoxyCodeLine{00192\ }
+\DoxyCodeLine{00193\ \textcolor{keyword}{enum}\ \{\ leveldb\_no\_compression\ =\ 0,\ leveldb\_snappy\_compression\ =\ 1\ \};}
+\DoxyCodeLine{00194\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_options\_set\_compression(leveldb\_options\_t*,\ \textcolor{keywordtype}{int});}
+\DoxyCodeLine{00195\ }
+\DoxyCodeLine{00196\ \textcolor{comment}{/*\ Comparator\ */}}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00198\ LEVELDB\_EXPORT\ leveldb\_comparator\_t*\ leveldb\_comparator\_create(}
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{keywordtype}{void}*\ state,\ \textcolor{keywordtype}{void}\ (*destructor)(\textcolor{keywordtype}{void}*),}
+\DoxyCodeLine{00200\ \ \ \ \ \textcolor{keywordtype}{int}\ (*compare)(\textcolor{keywordtype}{void}*,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ a,\ \textcolor{keywordtype}{size\_t}\ alen,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ b,}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ blen),}
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ (*name)(\textcolor{keywordtype}{void}*));}
+\DoxyCodeLine{00203\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_comparator\_destroy(leveldb\_comparator\_t*);}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \textcolor{comment}{/*\ Filter\ policy\ */}}
+\DoxyCodeLine{00206\ }
+\DoxyCodeLine{00207\ LEVELDB\_EXPORT\ leveldb\_filterpolicy\_t*\ leveldb\_filterpolicy\_create(}
+\DoxyCodeLine{00208\ \ \ \ \ \textcolor{keywordtype}{void}*\ state,\ \textcolor{keywordtype}{void}\ (*destructor)(\textcolor{keywordtype}{void}*),}
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{keywordtype}{char}*\ (*create\_filter)(\textcolor{keywordtype}{void}*,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ \textcolor{keyword}{const}*\ key\_array,}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}*\ key\_length\_array,\ \textcolor{keywordtype}{int}\ num\_keys,}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}*\ filter\_length),}
+\DoxyCodeLine{00212\ \ \ \ \ uint8\_t\ (*key\_may\_match)(\textcolor{keywordtype}{void}*,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ key,\ \textcolor{keywordtype}{size\_t}\ length,}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ filter,\ \textcolor{keywordtype}{size\_t}\ filter\_length),}
+\DoxyCodeLine{00214\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ (*name)(\textcolor{keywordtype}{void}*));}
+\DoxyCodeLine{00215\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_filterpolicy\_destroy(leveldb\_filterpolicy\_t*);}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00217\ LEVELDB\_EXPORT\ leveldb\_filterpolicy\_t*\ leveldb\_filterpolicy\_create\_bloom(}
+\DoxyCodeLine{00218\ \ \ \ \ \textcolor{keywordtype}{int}\ bits\_per\_key);}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00220\ \textcolor{comment}{/*\ Read\ options\ */}}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00222\ LEVELDB\_EXPORT\ leveldb\_readoptions\_t*\ leveldb\_readoptions\_create(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00223\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_readoptions\_destroy(leveldb\_readoptions\_t*);}
+\DoxyCodeLine{00224\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_readoptions\_set\_verify\_checksums(}
+\DoxyCodeLine{00225\ \ \ \ \ leveldb\_readoptions\_t*,\ uint8\_t);}
+\DoxyCodeLine{00226\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_readoptions\_set\_fill\_cache(leveldb\_readoptions\_t*,}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint8\_t);}
+\DoxyCodeLine{00228\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_readoptions\_set\_snapshot(leveldb\_readoptions\_t*,}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ leveldb\_snapshot\_t*);}
+\DoxyCodeLine{00230\ }
+\DoxyCodeLine{00231\ \textcolor{comment}{/*\ Write\ options\ */}}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00233\ LEVELDB\_EXPORT\ leveldb\_writeoptions\_t*\ leveldb\_writeoptions\_create(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00234\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_writeoptions\_destroy(leveldb\_writeoptions\_t*);}
+\DoxyCodeLine{00235\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_writeoptions\_set\_sync(leveldb\_writeoptions\_t*,}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint8\_t);}
+\DoxyCodeLine{00237\ }
+\DoxyCodeLine{00238\ \textcolor{comment}{/*\ Cache\ */}}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ LEVELDB\_EXPORT\ leveldb\_cache\_t*\ leveldb\_cache\_create\_lru(\textcolor{keywordtype}{size\_t}\ capacity);}
+\DoxyCodeLine{00241\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_cache\_destroy(leveldb\_cache\_t*\ cache);}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00243\ \textcolor{comment}{/*\ Env\ */}}
+\DoxyCodeLine{00244\ }
+\DoxyCodeLine{00245\ LEVELDB\_EXPORT\ leveldb\_env\_t*\ leveldb\_create\_default\_env(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00246\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_env\_destroy(leveldb\_env\_t*);}
+\DoxyCodeLine{00247\ }
+\DoxyCodeLine{00248\ \textcolor{comment}{/*\ If\ not\ NULL,\ the\ returned\ buffer\ must\ be\ released\ using\ leveldb\_free().\ */}}
+\DoxyCodeLine{00249\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{char}*\ leveldb\_env\_get\_test\_directory(leveldb\_env\_t*);}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00251\ \textcolor{comment}{/*\ Utility\ */}}
+\DoxyCodeLine{00252\ }
+\DoxyCodeLine{00253\ \textcolor{comment}{/*\ Calls\ free(ptr).}}
+\DoxyCodeLine{00254\ \textcolor{comment}{\ \ \ REQUIRES:\ ptr\ was\ malloc()-\/ed\ and\ returned\ by\ one\ of\ the\ routines}}
+\DoxyCodeLine{00255\ \textcolor{comment}{\ \ \ in\ this\ file.\ \ Note\ that\ in\ certain\ cases\ (typically\ on\ Windows),\ you}}
+\DoxyCodeLine{00256\ \textcolor{comment}{\ \ \ may\ need\ to\ call\ this\ routine\ instead\ of\ free(ptr)\ to\ dispose\ of}}
+\DoxyCodeLine{00257\ \textcolor{comment}{\ \ \ malloc()-\/ed\ memory\ returned\ by\ this\ library.\ */}}
+\DoxyCodeLine{00258\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{void}\ leveldb\_free(\textcolor{keywordtype}{void}*\ ptr);}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00260\ \textcolor{comment}{/*\ Return\ the\ major\ version\ number\ for\ this\ release.\ */}}
+\DoxyCodeLine{00261\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{int}\ leveldb\_major\_version(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00262\ }
+\DoxyCodeLine{00263\ \textcolor{comment}{/*\ Return\ the\ minor\ version\ number\ for\ this\ release.\ */}}
+\DoxyCodeLine{00264\ LEVELDB\_EXPORT\ \textcolor{keywordtype}{int}\ leveldb\_minor\_version(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00266\ \textcolor{preprocessor}{\#ifdef\ \_\_cplusplus}}
+\DoxyCodeLine{00267\ \}\ \textcolor{comment}{/*\ end\ extern\ "{}C"{}\ */}}
+\DoxyCodeLine{00268\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00269\ }
+\DoxyCodeLine{00270\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ STORAGE\_LEVELDB\_INCLUDE\_C\_H\_\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

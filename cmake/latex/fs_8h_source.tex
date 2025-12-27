@@ -1,0 +1,196 @@
+\doxysection{fs.\+h}
+\label{fs_8h_source}\index{src/util/fs.h@{src/util/fs.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2017-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_FS\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_FS\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <tinyformat.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <cstdio>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <filesystem>}\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <iomanip>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <ios>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <ostream>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <string\_view>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <system\_error>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{namespace\ }fs\ \{}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{using\ namespace\ }std::filesystem;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{class\ }path\ :\ \textcolor{keyword}{public}\ std::filesystem::path}
+\DoxyCodeLine{00034\ \{}
+\DoxyCodeLine{00035\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keyword}{using\ }std::filesystem::path::path;}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{comment}{//\ Convenience\ method\ for\ accessing\ standard\ path\ type\ without\ needing\ a\ cast.}}
+\DoxyCodeLine{00039\ \ \ \ \ std::filesystem::path\&\ std\_path()\ \{\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keyword}{const}\ std::filesystem::path\&\ std\_path()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{comment}{//\ Allow\ path\ objects\ arguments\ for\ compatibility.}}
+\DoxyCodeLine{00043\ \ \ \ \ path(std::filesystem::path\ path)\ :\ std::filesystem::path::path(std::move(path))\ \{\}}
+\DoxyCodeLine{00044\ \ \ \ \ path\&\ operator=(std::filesystem::path\ path)\ \{\ std::filesystem::path::operator=(std::move(path));\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00045\ \ \ \ \ path\&\ operator/=(\textcolor{keyword}{const}\ std::filesystem::path\&\ path)\ \{\ std::filesystem::path::operator/=(path);\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{comment}{//\ Allow\ literal\ string\ arguments,\ which\ are\ safe\ as\ long\ as\ the\ literals\ are\ ASCII.}}
+\DoxyCodeLine{00048\ \ \ \ \ path(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ c)\ :\ std::filesystem::path(c)\ \{\}}
+\DoxyCodeLine{00049\ \ \ \ \ path\&\ operator=(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ c)\ \{\ std::filesystem::path::operator=(c);\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00050\ \ \ \ \ path\&\ operator/=(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ c)\ \{\ std::filesystem::path::operator/=(c);\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00051\ \ \ \ \ path\&\ append(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ c)\ \{\ std::filesystem::path::append(c);\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{comment}{//\ Disallow\ std::string\ arguments\ to\ avoid\ locale-\/dependent\ decoding\ on\ windows.}}
+\DoxyCodeLine{00054\ \ \ \ \ path(std::string)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00055\ \ \ \ \ path\&\ operator=(std::string)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00056\ \ \ \ \ path\&\ operator/=(std::string)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00057\ \ \ \ \ path\&\ append(std::string)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{comment}{//\ Disallow\ std::string\ conversion\ method\ to\ avoid\ locale-\/dependent\ encoding\ on\ windows.}}
+\DoxyCodeLine{00060\ \ \ \ \ std::string\ string()\ \textcolor{keyword}{const}\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{comment}{//\ Disallow\ implicit\ string\ conversion\ to\ ensure\ code\ is\ portable.}}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{comment}{//\ \`{}string\_type`\ may\ be\ \`{}string`\ or\ \`{}wstring`\ depending\ on\ the\ platform,\ so}}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{comment}{//\ using\ this\ conversion\ could\ result\ in\ code\ that\ compiles\ on\ unix\ but}}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{comment}{//\ fails\ to\ compile\ on\ windows,\ or\ vice\ versa.}}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keyword}{operator}\ string\_type()\ \textcolor{keyword}{const}\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00074\ \ \ \ \ std::string\ utf8string()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00075\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::u8string\&\ utf8\_str\{std::filesystem::path::u8string()\};}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::string\{utf8\_str.begin(),\ utf8\_str.end()\};}
+\DoxyCodeLine{00078\ \ \ \ \ \}}
+\DoxyCodeLine{00079\ \};}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ path\ u8path(std::string\_view\ utf8\_str)}
+\DoxyCodeLine{00082\ \{}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordflow}{return}\ std::filesystem::path(std::u8string\{utf8\_str.begin(),\ utf8\_str.end()\});}
+\DoxyCodeLine{00084\ \}}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \textcolor{comment}{//\ Disallow\ implicit\ std::string\ conversion\ for\ absolute\ to\ avoid}}
+\DoxyCodeLine{00087\ \textcolor{comment}{//\ locale-\/dependent\ encoding\ on\ windows.}}
+\DoxyCodeLine{00088\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ path\ absolute(\textcolor{keyword}{const}\ path\&\ p)}
+\DoxyCodeLine{00089\ \{}
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{keywordflow}{return}\ std::filesystem::absolute(p);}
+\DoxyCodeLine{00091\ \}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \textcolor{comment}{//\ Disallow\ implicit\ std::string\ conversion\ for\ exists\ to\ avoid}}
+\DoxyCodeLine{00094\ \textcolor{comment}{//\ locale-\/dependent\ encoding\ on\ windows.}}
+\DoxyCodeLine{00095\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ exists(\textcolor{keyword}{const}\ path\&\ p)}
+\DoxyCodeLine{00096\ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keywordflow}{return}\ std::filesystem::exists(p);}
+\DoxyCodeLine{00098\ \}}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \textcolor{comment}{//\ Allow\ explicit\ quoted\ stream\ I/O.}}
+\DoxyCodeLine{00101\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{auto}\ quoted(\textcolor{keyword}{const}\ std::string\&\ s)}
+\DoxyCodeLine{00102\ \{}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keywordflow}{return}\ std::quoted(s,\ \textcolor{charliteral}{'"{}'},\ \textcolor{charliteral}{'\&'});}
+\DoxyCodeLine{00104\ \}}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \textcolor{comment}{//\ Allow\ safe\ path\ append\ operations.}}
+\DoxyCodeLine{00107\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ path\ operator/(path\ p1,\ \textcolor{keyword}{const}\ path\&\ p2)}
+\DoxyCodeLine{00108\ \{}
+\DoxyCodeLine{00109\ \ \ \ \ p1\ /=\ p2;}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordflow}{return}\ p1;}
+\DoxyCodeLine{00111\ \}}
+\DoxyCodeLine{00112\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ path\ operator/(path\ p1,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ p2)}
+\DoxyCodeLine{00113\ \{}
+\DoxyCodeLine{00114\ \ \ \ \ p1\ /=\ p2;}
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{keywordflow}{return}\ p1;}
+\DoxyCodeLine{00116\ \}}
+\DoxyCodeLine{00117\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ path\ operator+(path\ p1,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ p2)}
+\DoxyCodeLine{00118\ \{}
+\DoxyCodeLine{00119\ \ \ \ \ p1\ +=\ p2;}
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keywordflow}{return}\ p1;}
+\DoxyCodeLine{00121\ \}}
+\DoxyCodeLine{00122\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ path\ operator+(path\ p1,\ path::value\_type\ p2)}
+\DoxyCodeLine{00123\ \{}
+\DoxyCodeLine{00124\ \ \ \ \ p1\ +=\ p2;}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keywordflow}{return}\ p1;}
+\DoxyCodeLine{00126\ \}}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00128\ \textcolor{comment}{//\ Disallow\ unsafe\ path\ append\ operations.}}
+\DoxyCodeLine{00129\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ path\ operator/(path\ p1,\ T\ p2)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00130\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ path\ operator+(path\ p1,\ T\ p2)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \textcolor{comment}{//\ Disallow\ implicit\ std::string\ conversion\ for\ copy\_file}}
+\DoxyCodeLine{00133\ \textcolor{comment}{//\ to\ avoid\ locale-\/dependent\ encoding\ on\ Windows.}}
+\DoxyCodeLine{00134\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ copy\_file(\textcolor{keyword}{const}\ path\&\ from,\ \textcolor{keyword}{const}\ path\&\ to,\ copy\_options\ options)}
+\DoxyCodeLine{00135\ \{}
+\DoxyCodeLine{00136\ \ \ \ \ \textcolor{keywordflow}{return}\ std::filesystem::copy\_file(from,\ to,\ options);}
+\DoxyCodeLine{00137\ \}}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00157\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ std::string\ PathToString(\textcolor{keyword}{const}\ path\&\ path)}
+\DoxyCodeLine{00158\ \{}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{comment}{//\ Implementation\ note:\ On\ Windows,\ the\ std::filesystem::path(string)}}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{comment}{//\ constructor\ and\ std::filesystem::path::string()\ method\ are\ not\ safe\ to}}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{comment}{//\ use\ here,\ because\ these\ methods\ encode\ the\ path\ using\ C++'s\ narrow}}
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{comment}{//\ multibyte\ encoding,\ which\ on\ Windows\ corresponds\ to\ the\ current\ "{}code}}
+\DoxyCodeLine{00163\ \ \ \ \ \textcolor{comment}{//\ page"{},\ which\ is\ unpredictable\ and\ typically\ not\ able\ to\ represent\ all}}
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{comment}{//\ valid\ paths.\ So\ fs::path::utf8string()\ and}}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{comment}{//\ fs::u8path()\ functions\ are\ used\ instead\ on\ Windows.\ On}}
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{comment}{//\ POSIX,\ u8string/utf8string/u8path\ functions\ are\ not\ safe\ to\ use\ because\ paths\ are}}
+\DoxyCodeLine{00167\ \ \ \ \ \textcolor{comment}{//\ not\ always\ valid\ UTF-\/8,\ so\ plain\ string\ methods\ which\ do\ not\ transform}}
+\DoxyCodeLine{00168\ \ \ \ \ \textcolor{comment}{//\ the\ path\ there\ are\ used.}}
+\DoxyCodeLine{00169\ \textcolor{preprocessor}{\#ifdef\ WIN32}}
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{keywordflow}{return}\ path.utf8string();}
+\DoxyCodeLine{00171\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_same\_v<path::string\_type,\ std::string>,\ \textcolor{stringliteral}{"{}PathToString\ not\ implemented\ on\ this\ platform"{}});}
+\DoxyCodeLine{00173\ \ \ \ \ \textcolor{keywordflow}{return}\ path.std::filesystem::path::string();}
+\DoxyCodeLine{00174\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00175\ \}}
+\DoxyCodeLine{00176\ }
+\DoxyCodeLine{00180\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ path\ PathFromString(\textcolor{keyword}{const}\ std::string\&\ \textcolor{keywordtype}{string})}
+\DoxyCodeLine{00181\ \{}
+\DoxyCodeLine{00182\ \textcolor{preprocessor}{\#ifdef\ WIN32}}
+\DoxyCodeLine{00183\ \ \ \ \ \textcolor{keywordflow}{return}\ u8path(\textcolor{keywordtype}{string});}
+\DoxyCodeLine{00184\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00185\ \ \ \ \ \textcolor{keywordflow}{return}\ std::filesystem::path(\textcolor{keywordtype}{string});}
+\DoxyCodeLine{00186\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00187\ \}}
+\DoxyCodeLine{00188\ \}\ \textcolor{comment}{//\ namespace\ fs}}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00191\ \textcolor{keyword}{namespace\ }fsbridge\ \{}
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{keyword}{using\ }FopenFn\ =\ std::function<FILE*(\textcolor{keyword}{const}\ fs::path\&,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*)>;}
+\DoxyCodeLine{00193\ \ \ \ \ FILE\ *fopen(\textcolor{keyword}{const}\ fs::path\&\ p,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *mode);}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00204\ \ \ \ \ fs::path\ AbsPathJoin(\textcolor{keyword}{const}\ fs::path\&\ base,\ \textcolor{keyword}{const}\ fs::path\&\ path);}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keyword}{class\ }FileLock}
+\DoxyCodeLine{00207\ \ \ \ \ \{}
+\DoxyCodeLine{00208\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ FileLock()\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ FileLock(\textcolor{keyword}{const}\ FileLock\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ FileLock(FileLock\&\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \textcolor{keyword}{explicit}\ FileLock(\textcolor{keyword}{const}\ fs::path\&\ file);}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \string~FileLock();}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ TryLock();}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ std::string\ GetReason()\ \{\ \textcolor{keywordflow}{return}\ reason;\ \}}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00217\ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ std::string\ reason;}
+\DoxyCodeLine{00219\ \textcolor{preprocessor}{\#ifndef\ WIN32}}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ fd\ =\ -\/1;}
+\DoxyCodeLine{00221\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}*\ hFile\ =\ (\textcolor{keywordtype}{void}*)-\/1;\ \textcolor{comment}{//\ INVALID\_HANDLE\_VALUE}}
+\DoxyCodeLine{00223\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00224\ \ \ \ \ \};}
+\DoxyCodeLine{00225\ \};}
+\DoxyCodeLine{00226\ }
+\DoxyCodeLine{00227\ \textcolor{comment}{//\ Disallow\ path\ operator<<\ formatting\ in\ tinyformat\ to\ avoid\ locale-\/dependent}}
+\DoxyCodeLine{00228\ \textcolor{comment}{//\ encoding\ on\ windows.}}
+\DoxyCodeLine{00229\ \textcolor{keyword}{namespace\ }tinyformat\ \{}
+\DoxyCodeLine{00230\ \textcolor{keyword}{template}<>\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ formatValue(std::ostream\&,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*,\ \textcolor{keywordtype}{int},\ \textcolor{keyword}{const}\ std::filesystem::path\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00231\ \textcolor{keyword}{template}<>\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ formatValue(std::ostream\&,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*,\ \textcolor{keywordtype}{int},\ \textcolor{keyword}{const}\ fs::path\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00232\ \}\ \textcolor{comment}{//\ namespace\ tinyformat}}
+\DoxyCodeLine{00233\ }
+\DoxyCodeLine{00234\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_FS\_H}}
+
+\end{DoxyCode}

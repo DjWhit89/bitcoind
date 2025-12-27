@@ -1,0 +1,230 @@
+\doxysection{cuckoocache.\+h}
+\label{cuckoocache_8h_source}\index{src/cuckoocache.h@{src/cuckoocache.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2016\ Jeremy\ Rubin}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_CUCKOOCACHE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_CUCKOOCACHE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <util/fastrange.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <cmath>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00030\ \textcolor{keyword}{namespace\ }CuckooCache}
+\DoxyCodeLine{00031\ \{}
+\DoxyCodeLine{00044\ \textcolor{keyword}{class\ }bit\_packed\_atomic\_flags}
+\DoxyCodeLine{00045\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ std::unique\_ptr<std::atomic<uint8\_t>[]>\ mem;}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00050\ \ \ \ \ bit\_packed\_atomic\_flags()\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keyword}{explicit}\ bit\_packed\_atomic\_flags(uint32\_t\ size)}
+\DoxyCodeLine{00064\ \ \ \ \ \{}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ pad\ out\ the\ size\ if\ needed}}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ size\ =\ (size\ +\ 7)\ /\ 8;}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ mem.reset(\textcolor{keyword}{new}\ std::atomic<uint8\_t>[size]);}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (uint32\_t\ i\ =\ 0;\ i\ <\ size;\ ++i)}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ mem[i].store(0xFF);}
+\DoxyCodeLine{00070\ \ \ \ \ \};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ setup(uint32\_t\ b)}
+\DoxyCodeLine{00082\ \ \ \ \ \{}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ bit\_packed\_atomic\_flags\ d(b);}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ std::swap(mem,\ d.mem);}
+\DoxyCodeLine{00085\ \ \ \ \ \}}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ bit\_set(uint32\_t\ s)}
+\DoxyCodeLine{00094\ \ \ \ \ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ mem[s\ >>\ 3].fetch\_or(uint8\_t(1\ <<\ (s\ \&\ 7)),\ std::memory\_order\_relaxed);}
+\DoxyCodeLine{00096\ \ \ \ \ \}}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ bit\_unset(uint32\_t\ s)}
+\DoxyCodeLine{00105\ \ \ \ \ \{}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ mem[s\ >>\ 3].fetch\_and(uint8\_t(\string~(1\ <<\ (s\ \&\ 7))),\ std::memory\_order\_relaxed);}
+\DoxyCodeLine{00107\ \ \ \ \ \}}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ bit\_is\_set(uint32\_t\ s)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00115\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (1\ <<\ (s\ \&\ 7))\ \&\ mem[s\ >>\ 3].load(std::memory\_order\_relaxed);}
+\DoxyCodeLine{00117\ \ \ \ \ \}}
+\DoxyCodeLine{00118\ \};}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00160\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Element,\ \textcolor{keyword}{typename}\ Hash>}
+\DoxyCodeLine{00161\ \textcolor{keyword}{class\ }cache}
+\DoxyCodeLine{00162\ \{}
+\DoxyCodeLine{00163\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00165\ \ \ \ \ std::vector<Element>\ table;}
+\DoxyCodeLine{00166\ }
+\DoxyCodeLine{00168\ \ \ \ \ uint32\_t\ size\{0\};}
+\DoxyCodeLine{00169\ }
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keyword}{mutable}\ bit\_packed\_atomic\_flags\ collection\_flags;}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keyword}{mutable}\ std::vector<bool>\ epoch\_flags;}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00185\ \ \ \ \ uint32\_t\ epoch\_heuristic\_counter\{0\};}
+\DoxyCodeLine{00186\ }
+\DoxyCodeLine{00195\ \ \ \ \ uint32\_t\ epoch\_size\{0\};}
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00200\ \ \ \ \ uint8\_t\ depth\_limit\{0\};}
+\DoxyCodeLine{00201\ }
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keyword}{const}\ Hash\ hash\_function;}
+\DoxyCodeLine{00207\ }
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{keyword}{inline}\ std::array<uint32\_t,\ 8>\ compute\_hashes(\textcolor{keyword}{const}\ Element\&\ e)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00241\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{\{FastRange32(hash\_function.template\ \textcolor{keyword}{operator}()<0>(e),\ size),}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FastRange32(hash\_function.template\ \textcolor{keyword}{operator}()<1>(e),\ size),}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FastRange32(hash\_function.template\ \textcolor{keyword}{operator}()<2>(e),\ size),}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FastRange32(hash\_function.template\ \textcolor{keyword}{operator}()<3>(e),\ size),}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FastRange32(hash\_function.template\ \textcolor{keyword}{operator}()<4>(e),\ size),}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FastRange32(hash\_function.template\ \textcolor{keyword}{operator}()<5>(e),\ size),}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FastRange32(hash\_function.template\ \textcolor{keyword}{operator}()<6>(e),\ size),}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FastRange32(hash\_function.template\ \textcolor{keyword}{operator}()<7>(e),\ size)\}\};}
+\DoxyCodeLine{00250\ \ \ \ \ \}}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00254\ \ \ \ \ \textcolor{keyword}{constexpr}\ uint32\_t\ invalid()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00255\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \string~(uint32\_t)0;}
+\DoxyCodeLine{00257\ \ \ \ \ \}}
+\DoxyCodeLine{00258\ }
+\DoxyCodeLine{00263\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ allow\_erase(uint32\_t\ n)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00264\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ collection\_flags.bit\_set(n);}
+\DoxyCodeLine{00266\ \ \ \ \ \}}
+\DoxyCodeLine{00267\ }
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ please\_keep(uint32\_t\ n)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00273\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ collection\_flags.bit\_unset(n);}
+\DoxyCodeLine{00275\ \ \ \ \ \}}
+\DoxyCodeLine{00276\ }
+\DoxyCodeLine{00286\ \ \ \ \ \textcolor{keywordtype}{void}\ epoch\_check()}
+\DoxyCodeLine{00287\ \ \ \ \ \{}
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (epoch\_heuristic\_counter\ !=\ 0)\ \{}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \ \ \ \ -\/-\/epoch\_heuristic\_counter;}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ count\ the\ number\ of\ elements\ from\ the\ latest\ epoch\ which}}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ have\ not\ been\ erased.}}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ uint32\_t\ epoch\_unused\_count\ =\ 0;}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (uint32\_t\ i\ =\ 0;\ i\ <\ size;\ ++i)}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ \ \ \ \ epoch\_unused\_count\ +=\ epoch\_flags[i]\ \&\&}
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ !collection\_flags.bit\_is\_set(i);}
+\DoxyCodeLine{00298\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ there\ are\ more\ non-\/deleted\ entries\ in\ the\ current\ epoch\ than\ the}}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ epoch\ size,\ then\ allow\_erase\ on\ all\ elements\ in\ the\ old\ epoch\ (marked}}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ false)\ and\ move\ all\ elements\ in\ the\ current\ epoch\ to\ the\ old\ epoch}}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ but\ do\ not\ call\ allow\_erase\ on\ their\ indices.}}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (epoch\_unused\_count\ >=\ epoch\_size)\ \{}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (uint32\_t\ i\ =\ 0;\ i\ <\ size;\ ++i)}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (epoch\_flags[i])}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ epoch\_flags[i]\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{00307\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ allow\_erase(i);}
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ \ \ \ \ epoch\_heuristic\_counter\ =\ epoch\_size;}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ reset\ the\ epoch\_heuristic\_counter\ to\ next\ do\ a\ scan\ when\ worst}}
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ case\ behavior\ (no\ intermittent\ erases)\ would\ exceed\ epoch\ size,}}
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ with\ a\ reasonable\ minimum\ scan\ size.}}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Ordinarily,\ we\ would\ have\ to\ sanity\ check\ std::min(epoch\_size,}}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ epoch\_unused\_count),\ but\ we\ already\ know\ that\ \`{}epoch\_unused\_count}}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ <\ epoch\_size`\ in\ this\ branch}}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \ \ \ \ epoch\_heuristic\_counter\ =\ std::max(1u,\ std::max(epoch\_size\ /\ 16,}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ epoch\_size\ -\/\ epoch\_unused\_count));}
+\DoxyCodeLine{00318\ \ \ \ \ \}}
+\DoxyCodeLine{00319\ }
+\DoxyCodeLine{00320\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00324\ \ \ \ \ cache()\ :\ table(),\ collection\_flags(0),\ epoch\_flags(),\ hash\_function()}
+\DoxyCodeLine{00325\ \ \ \ \ \{}
+\DoxyCodeLine{00326\ \ \ \ \ \}}
+\DoxyCodeLine{00327\ }
+\DoxyCodeLine{00336\ \ \ \ \ uint32\_t\ setup(uint32\_t\ new\_size)}
+\DoxyCodeLine{00337\ \ \ \ \ \{}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ depth\_limit\ must\ be\ at\ least\ one\ otherwise\ errors\ can\ occur.}}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ size\ =\ std::max<uint32\_t>(2,\ new\_size);}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ depth\_limit\ =\ \textcolor{keyword}{static\_cast<}uint8\_t\textcolor{keyword}{>}(std::log2(\textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{float}\textcolor{keyword}{>}(size)));}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ table.resize(size);}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ collection\_flags.setup(size);}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ epoch\_flags.resize(size);}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Set\ to\ 45\%\ as\ described\ above}}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ epoch\_size\ =\ std::max(uint32\_t\{1\},\ (45\ *\ size)\ /\ 100);}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Initially\ set\ to\ wait\ for\ a\ whole\ epoch}}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ epoch\_heuristic\_counter\ =\ epoch\_size;}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ size;}
+\DoxyCodeLine{00349\ \ \ \ \ \}}
+\DoxyCodeLine{00350\ }
+\DoxyCodeLine{00364\ \ \ \ \ std::pair<uint32\_t,\ size\_t>\ setup\_bytes(\textcolor{keywordtype}{size\_t}\ bytes)}
+\DoxyCodeLine{00365\ \ \ \ \ \{}
+\DoxyCodeLine{00366\ \ \ \ \ \ \ \ \ uint32\_t\ requested\_num\_elems(std::min<size\_t>(}
+\DoxyCodeLine{00367\ \ \ \ \ \ \ \ \ \ \ \ \ bytes\ /\ \textcolor{keyword}{sizeof}(Element),}
+\DoxyCodeLine{00368\ \ \ \ \ \ \ \ \ \ \ \ \ std::numeric\_limits<uint32\_t>::max()));}
+\DoxyCodeLine{00369\ }
+\DoxyCodeLine{00370\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ num\_elems\ =\ setup(requested\_num\_elems);}
+\DoxyCodeLine{00371\ }
+\DoxyCodeLine{00372\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ approx\_size\_bytes\ =\ num\_elems\ *\ \textcolor{keyword}{sizeof}(Element);}
+\DoxyCodeLine{00373\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::make\_pair(num\_elems,\ approx\_size\_bytes);}
+\DoxyCodeLine{00374\ \ \ \ \ \}}
+\DoxyCodeLine{00375\ }
+\DoxyCodeLine{00397\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ insert(Element\ e)}
+\DoxyCodeLine{00398\ \ \ \ \ \{}
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ epoch\_check();}
+\DoxyCodeLine{00400\ \ \ \ \ \ \ \ \ uint32\_t\ last\_loc\ =\ invalid();}
+\DoxyCodeLine{00401\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ last\_epoch\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00402\ \ \ \ \ \ \ \ \ std::array<uint32\_t,\ 8>\ locs\ =\ compute\_hashes(e);}
+\DoxyCodeLine{00403\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ sure\ we\ have\ not\ already\ inserted\ this\ element}}
+\DoxyCodeLine{00404\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ we\ have,\ make\ sure\ that\ it\ does\ not\ get\ deleted}}
+\DoxyCodeLine{00405\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ uint32\_t\ loc\ :\ locs)}
+\DoxyCodeLine{00406\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (table[loc]\ ==\ e)\ \{}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ please\_keep(loc);}
+\DoxyCodeLine{00408\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ epoch\_flags[loc]\ =\ last\_epoch;}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (uint8\_t\ depth\ =\ 0;\ depth\ <\ depth\_limit;\ ++depth)\ \{}
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ First\ try\ to\ insert\ to\ an\ empty\ slot,\ if\ one\ exists}}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ uint32\_t\ loc\ :\ locs)\ \{}
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!collection\_flags.bit\_is\_set(loc))}
+\DoxyCodeLine{00415\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00416\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ table[loc]\ =\ std::move(e);}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ please\_keep(loc);}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ epoch\_flags[loc]\ =\ last\_epoch;}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00435\ \ \ \ \ \ \ \ \ \ \ \ \ last\_loc\ =\ locs[(1\ +\ (std::find(locs.begin(),\ locs.end(),\ last\_loc)\ -\/\ locs.begin()))\ \&\ 7];}
+\DoxyCodeLine{00436\ \ \ \ \ \ \ \ \ \ \ \ \ std::swap(table[last\_loc],\ e);}
+\DoxyCodeLine{00437\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Can't\ std::swap\ a\ std::vector<bool>::reference\ and\ a\ bool\&.}}
+\DoxyCodeLine{00438\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ epoch\ =\ last\_epoch;}
+\DoxyCodeLine{00439\ \ \ \ \ \ \ \ \ \ \ \ \ last\_epoch\ =\ epoch\_flags[last\_loc];}
+\DoxyCodeLine{00440\ \ \ \ \ \ \ \ \ \ \ \ \ epoch\_flags[last\_loc]\ =\ epoch;}
+\DoxyCodeLine{00441\ }
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Recompute\ the\ locs\ -\/-\/\ unfortunately\ happens\ one\ too\ many\ times!}}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ \ \ \ \ locs\ =\ compute\_hashes(e);}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00445\ \ \ \ \ \}}
+\DoxyCodeLine{00446\ }
+\DoxyCodeLine{00474\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ contains(\textcolor{keyword}{const}\ Element\&\ e,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ erase)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00475\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00476\ \ \ \ \ \ \ \ \ std::array<uint32\_t,\ 8>\ locs\ =\ compute\_hashes(e);}
+\DoxyCodeLine{00477\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ uint32\_t\ loc\ :\ locs)}
+\DoxyCodeLine{00478\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (table[loc]\ ==\ e)\ \{}
+\DoxyCodeLine{00479\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (erase)}
+\DoxyCodeLine{00480\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ allow\_erase(loc);}
+\DoxyCodeLine{00481\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00482\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00483\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00484\ \ \ \ \ \}}
+\DoxyCodeLine{00485\ \};}
+\DoxyCodeLine{00486\ \}\ \textcolor{comment}{//\ namespace\ CuckooCache}}
+\DoxyCodeLine{00487\ }
+\DoxyCodeLine{00488\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_CUCKOOCACHE\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,28 @@
+var class_auto_file =
+[
+    [ "AutoFile", "class_auto_file.html#a43aa4d585018ad287077d401419797ee", null ],
+    [ "~AutoFile", "class_auto_file.html#a524ad34fda6d010c73d204af7095c336", null ],
+    [ "AutoFile", "class_auto_file.html#abe53a9738cda00fd628876dbb34a9acf", null ],
+    [ "Commit", "class_auto_file.html#a44c78e17dec2b3af95f850baaee2683a", null ],
+    [ "detail_fread", "class_auto_file.html#a61ba6c0e76b2b050faa524b522509daf", null ],
+    [ "fclose", "class_auto_file.html#a8b9c3a533b9c6429d63aa0a970fb214c", null ],
+    [ "feof", "class_auto_file.html#a7c34ccaabb1d83651fe273a7b00f67b7", null ],
+    [ "ignore", "class_auto_file.html#aa2a43811b952c482fddf43749813eb7c", null ],
+    [ "IsNull", "class_auto_file.html#ac4d637a0dec45d546495c1660c9f6047", null ],
+    [ "operator<<", "class_auto_file.html#a379f7b26bd1298d423f1e686d1e51e16", null ],
+    [ "operator=", "class_auto_file.html#ae03c48e113e16f7737b0865a919be658", null ],
+    [ "operator>>", "class_auto_file.html#ad5d73be8cc40e8c5afc36ca4b31ac126", null ],
+    [ "read", "class_auto_file.html#a5be91c0a88a93021e18e46b5c111ee5a", null ],
+    [ "release", "class_auto_file.html#a684abe07f318c64b8dc4150123c677e3", null ],
+    [ "seek", "class_auto_file.html#a03fb78f27224a0aa7099b686212303bd", null ],
+    [ "SetObfuscation", "class_auto_file.html#a8e9a257e9d3441e49edbf225d6502174", null ],
+    [ "size", "class_auto_file.html#aefa4cbcbdc75e346ec1ffadacbc0a72b", null ],
+    [ "tell", "class_auto_file.html#a497f97b52a69efb2c54d21ccb31ff787", null ],
+    [ "Truncate", "class_auto_file.html#a98e9b7b1b24494780aec892d21cd2531", null ],
+    [ "write", "class_auto_file.html#af6cb91d791a456788d46419f8f06604e", null ],
+    [ "write_buffer", "class_auto_file.html#ac104be40550ee3d33be3d7297289fd2d", null ],
+    [ "m_file", "class_auto_file.html#a5ab7244bcdce786ebba7cf8bfedd75ee", null ],
+    [ "m_obfuscation", "class_auto_file.html#ab04e139a69723e8d99c8729d46550b5b", null ],
+    [ "m_position", "class_auto_file.html#a5bb91a099cb682e02501b81f68bf86bf", null ],
+    [ "m_was_written", "class_auto_file.html#a6ffc0f0895b09ee493acbb8b7d722f6f", null ]
+];

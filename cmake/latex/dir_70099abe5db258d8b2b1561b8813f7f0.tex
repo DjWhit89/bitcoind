@@ -1,0 +1,305 @@
+\doxysection{src/minisketch Directory Reference}
+\label{dir_70099abe5db258d8b2b1561b8813f7f0}\index{src/minisketch Directory Reference@{src/minisketch Directory Reference}}
+\doxysubsubsection*{Directories}
+\begin{DoxyCompactItemize}
+\item 
+directory \textbf{ doc}
+\item 
+directory \textbf{ include}
+\item 
+directory \textbf{ src}
+\item 
+directory \textbf{ tests}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\doxysubsection{Minisketch\+: a library for [BCH]({\texttt{https\+://en.\+wikipedia.\+org/wiki/\+BCH\+\_\+code}})-\/based set reconciliation}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md88}
+
+
+{\ttfamily libminisketch} is an optimized standalone MIT-\/licensed library with C API for constructing and decoding {\itshape set sketches}, which can be used for compact set reconciliation and other applications. It is an implementation of the Pin\+Sketch\textsuperscript{\doxyref{[1]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote1}} algorithm. An explanation of the algorithm can be found \doxysectref{here}{p.}{md_src_2minisketch_2doc_2math}{0}.\doxysubsection{Sketches for set reconciliation}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md89}
+Sketches, as produced by this library, can be seen as "{}set checksums"{} with two peculiar properties\+:
+\begin{DoxyItemize}
+\item Sketches have a predetermined capacity, and when the number of elements in the set is not higher than the capacity, {\ttfamily libminisketch} will always recover the entire set from the sketch. A sketch of {\itshape b}-\/bit elements with capacity {\itshape c} can be stored in {\itshape bc} bits.
+\item The sketches of two sets can be combined by adding them (XOR) to obtain a sketch of the {\texttt{symmetric difference}} between the two sets ({\itshape i.\+e.}, all elements that occur in one but not both input sets).
+\end{DoxyItemize}
+
+This makes them appropriate for a very bandwidth-\/efficient set reconciliation protocol. If Alice and Bob each have a set of elements, and they suspect that the sets largely but not entirely overlap, they can use the following protocol to let both parties learn all the elements\+:
+\begin{DoxyItemize}
+\item Alice and Bob both compute a sketch of their set elements.
+\item Alice sends her sketch to Bob.
+\item Bob combines the two sketches, and obtains a sketch of the symmetric difference.
+\item Bob tries to recover the elements from the difference sketch.
+\item Bob sends every element in the difference that he has to Alice.
+\end{DoxyItemize}
+
+This will always succeed when the size of the difference (elements that Alice has but Bob doesn\textquotesingle{}t plus elements that Bob has but Alice doesn\textquotesingle{}t) does not exceed the capacity of the sketch that Alice sent. The interesting part is that this works regardless of the actual set sizes—only the difference matters.
+
+If the elements are large, it may be preferable to compute the sketches over {\itshape hashes} of the set elements. In that case an additional step is added to the protocol, where Bob also sends the hash of every element he does not have to Alice, who responds with the requested elements.
+
+The doc/ directory has additional \doxysectref{tips for designing reconciliation protocols using libminisketch}{p.}{md_src_2minisketch_2doc_2protocoltips}{0}.\doxysubsection{Evaluation}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md90}
+ 
+
+ 
+
+{\bfseries{The first graph}} above shows a benchmark of {\ttfamily libminisketch} against three other set reconciliation algorithms/implementations. The benchmarks were performed using a single core on a system with an Intel Core i7-\/7820\+HQ CPU with clock speed locked at 2.\+4 GHz. The diagram shows the time needed for merging of two sketches and decoding the result. The creation of a sketch on the same machine takes around 5 ns per capacity and per set element. The other implementations are\+:
+\begin{DoxyItemize}
+\item {\texttt{{\ttfamily pinsketch}}}, the original Pin\+Sketch implementation.
+\item {\texttt{{\ttfamily cpisync}}}, a software project which implements a number of set reconciliation algorithms and protocols. The included benchmark analyzes the non-\/probabilistic version of the original CPISync algorithm\textsuperscript{\doxyref{[5]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote5}} only.
+\item A high-\/performance custom IBLT implementation using 4 hash functions and 32-\/bit checksums.
+\end{DoxyItemize}
+
+For the largest sizes currently of interest to the authors, such as a set of capacity 4096 with 1024 differences, {\ttfamily libminisketch} is forty-\/nine times faster than {\ttfamily pinsketch} and over eight thousand times faster than {\ttfamily cpisync}. {\ttfamily libminisketch} is fast enough on realistic set sizes for use on high-\/traffic network servers where computational resources are limited.
+
+Even where performance is latency-\/limited, small minisketches can be fast enough to improve performance. On the above i7-\/7820\+HQ, a set of 2500 30-\/bit entries with a difference of 20 elements can be communicated in less time with a minisketch than sending the raw set so long as the communications bandwidth is 1 gigabit per second or less; an eight-\/element difference can be communicated in better than one-\/fifth the time on a gigabit link.
+
+{\bfseries{The second graph}} above shows the performance of the same algorithms on the same system, but this time keeping the capacity constant at 128, while varying the number of differences to reconcile between 1 and 128. It shows how {\ttfamily cpisync}\textquotesingle{}s reconciliation speed is mostly dependent on capacity, while {\ttfamily pinsketch}/{\ttfamily libminisketch} are more dependent on number of differences.
+
+{\bfseries{The third graph}} above shows the size overhead of a typical IBLT scheme over the other algorithms (which are near-\/optimal bandwidth), for various levels of failure probability. IBLT takes tens of times the bandwidth of {\ttfamily libminisketch} sketches when the set difference size is small and the required failure rate is low.
+
+{\bfseries{The fourth graph}} above shows the effect of the field size on speed in {\ttfamily libminisketch}. The three lines correspond to\+:
+\begin{DoxyItemize}
+\item CLMUL 64-\/bit\+: Intel Core i7-\/7820\+HQ system at 2.\+4 GHz
+\item Generic 64-\/bit\+: POWER9 CP9\+M06 system at 2.\+8 GHz (Talos II)
+\item Generic 32-\/bit\+: Cortex-\/\+A53 at 1.\+2 GHz (Raspberry Pi 3B)
+\end{DoxyItemize}
+
+It shows how CLMUL implementations are faster for certain fields (specifically, field sizes for which an irreducible polynomial of the form $\ast$x\textsuperscript{b} + x + 1$\ast$ over {\itshape GF(2)} exists, and to a lesser extent, fields which are a multiple of 8 bits). It also shows how (for now) a significant performance drop exists for fields larger than 32 bits on 32-\/bit platforms. Note that the three lines are not at the same scale (the Raspberry Pi 3B is around 10x slower for 32-\/bit fields than the Core i7; the POWER9 is around 1.\+3x slower).
+
+Below we compare the Pin\+Sketch algorithm (which {\ttfamily libminisketch} is an implementation of) with other set reconciliation algorithms\+:
+
+
+\begin{DoxyTable}{6}{}{}{1}
+\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Algorithm  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}\doxyref{Sketch}{p.}{class_sketch} size  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Decode success  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Decoding complexity  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Difference type  &\SetCell{c,bg=\tableheadbgcolor,font=\bfseries}Secure sketch  \\
+CPISync\textsuperscript{\doxyref{[2]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote2}}  &{\itshape (b+1)c}  &Always  &$\ast$O(n\textsuperscript{3})$\ast$  &Both  &Yes  \\
+Pin\+Sketch\textsuperscript{\doxyref{[1]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote1}}  &{\itshape bc}  &Always  &$\ast$O(n\textsuperscript{2})$\ast$  &Symmetric only  &Yes  \\
+IBLT\textsuperscript{\doxyref{[6]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote1}\doxyref{[7]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote1}}  &{\itshape {$\alpha$}bc} (see graph 3)  &Probabilistic  &{\itshape O(n)}  &Depends  &No  \\
+\end{DoxyTable}
+
+
+
+\begin{DoxyItemize}
+\item {\bfseries{\doxyref{Sketch}{p.}{class_sketch} size\+:}} This column shows the size in bits of a sketch designed for reconciling {\itshape c} different {\itshape b}-\/bit elements. Pin\+Sketch and CPISync have a near-\/optimal\textsuperscript{\doxyref{[11]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote11}} communication overhead, which in practice means the sketch size is very close (or equal to) {\itshape bc} bits. That is the same size as would be needed to transfer the elements of the difference naively (which is remarkable, as the difference isn\textquotesingle{}t even known by the sender). For IBLT there is an overhead factor {\itshape {$\alpha$}}, which depends on various design parameters, but is often between {\itshape 2} and {\itshape 10}.
+\item {\bfseries{Decode success\+:}} Whenever a sketch is designed with a capacity not lower than the actual difference size, CPISync and Pin\+Sketch guarantee that decoding of the difference will always succeed. IBLT always has a chance of failure, though that chance can be made arbitrarily small by increasing the communication overhead.
+\item {\bfseries{Decoding complexity\+:}} The space savings achieved by near-\/optimal algorithms come at a cost in performance, as their asymptotic decode complexity is quadratic or cubic, while IBLT is linear. This means that using near-\/optimal algorithms can be too expensive for applications where the difference is sufficiently large.
+\item {\bfseries{Difference type\+:}} Pin\+Sketch can only compute the symmetric difference from a merged sketch, while CPISync and IBLT can distinguish which side certain elements were missing on. When the decoder has access to one of the sets, this generally doesn\textquotesingle{}t matter, as he can look up each of the elements in the symmetric difference with one of the sets.
+\item {\bfseries{Secure sketch\+:}} Whether the sketch satisfies the definition of a secure sketch\textsuperscript{\doxyref{[1]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote1}}, which implies a minimal amount about a set can be extracted from a sketch by anyone who does not know most of the elements already. This makes the algorithm appropriate for applications like fingerprint authentication.
+\end{DoxyItemize}\doxysubsection{Building with Autotools}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md91}
+The build system is very rudimentary for now, and {\texttt{improvements}} are welcome.
+
+The following may work and produce a {\ttfamily libminisketch.\+a} file you can link against\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{git\ clone\ https://github.com/bitcoin-\/core/minisketch}
+\DoxyCodeLine{cd\ minisketch}
+\DoxyCodeLine{./autogen.sh\ \&\&\ ./configure\ \&\&\ make}
+
+\end{DoxyCode}
+\doxysubsection{Building with CMake}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md92}
+To maintain a pristine source tree, CMake encourages performing an out-\/of-\/source build by using a separate dedicated build directory.\doxysubsubsection{Building on POSIX systems}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md93}
+The following commands will produce the same {\ttfamily libminisketch.\+a} file as in the example above\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cmake\ -\/B\ build\ -\/DCMAKE\_CXX\_FLAGS="{}-\/g\ -\/O2"{}\ \ \#\ Generate\ a\ build\ system\ in\ subdirectory\ "{}build"{}}
+\DoxyCodeLine{cmake\ -\/-\/build\ build\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Run\ the\ actual\ build\ process}
+\DoxyCodeLine{ctest\ -\/-\/test-\/dir\ build\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Run\ the\ test\ suite}
+\DoxyCodeLine{sudo\ cmake\ -\/-\/install\ build\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \#\ Install\ the\ library\ into\ the\ system\ (optional)}
+
+\end{DoxyCode}
+
+
+Run {\ttfamily cmake -\/\doxyref{B}{p.}{util__tests_8cpp_a111da81ae5883147168bbb8366377b10} build -\/LH} or {\ttfamily ccmake -\/\doxyref{B}{p.}{util__tests_8cpp_a111da81ae5883147168bbb8366377b10} build} to see the full list of configurable build options.\doxysubsubsection{Cross compiling}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md94}
+The following example works on modern Ubuntu/\+Debian systems\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{sudo\ apt\ install\ g++-\/mingw-\/w64-\/x86-\/64-\/posix}
+\DoxyCodeLine{cmake\ -\/B\ build\ -\/DCMAKE\_SYSTEM\_NAME=Windows\ -\/DCMAKE\_CXX\_COMPILER=x86\_64-\/w64-\/mingw32-\/g++-\/posix}
+\DoxyCodeLine{cmake\ -\/-\/build\ build}
+
+\end{DoxyCode}
+\doxysubsubsection{Building on Windows}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md95}
+The following example assumes the use of Visual Studio 2022 and CMake v3.\+21 or newer.
+
+In "{}\+Developer Command Prompt for VS 2022"{}\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cmake\ -\/B\ build}
+\DoxyCodeLine{cmake\ -\/-\/build\ build\ -\/-\/config\ Release}
+
+\end{DoxyCode}
+\doxysubsection{Usage}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md96}
+In this section Alice and Bob are trying to find the difference between their sets. Alice has the set {\itshape [3000 ... 3009]}, while Bob has {\itshape [3002 ... 3011]}.
+
+First, Alice creates a sketch\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{preprocessor}{\#include\ <stdio.h>}}
+\DoxyCodeLine{\textcolor{preprocessor}{\#include\ <assert.h>}}
+\DoxyCodeLine{\textcolor{preprocessor}{\#include\ "{}../include/minisketch.h"{}}}
+\DoxyCodeLine{\textcolor{keywordtype}{int}\ main(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ minisketch\ *sketch\_a\ =\ minisketch\_create(12,\ 0,\ 4);}
+
+\end{DoxyCode}
+
+
+The arguments are\+:
+\begin{DoxyItemize}
+\item The field size {\itshape b}, which specifies the size of the elements being reconciled. With a field size {\itshape b}, the supported range of set elements is the integers from {\itshape 1} to $\ast$2\textsuperscript{b$\ast$ {\itshape -\/ 1}, inclusive. Note that elements cannot be zero.}
+\item \textsuperscript{The implementation number. Implementation {\itshape 0} is always supported, but more efficient algorithms may be available on some hardware. The serialized form of a sketch is independent of the implementation, so different implementations can interoperate.}
+\item \textsuperscript{The capacity {\itshape c}, which specifies how many differences the resulting sketch can reconcile.}
+\end{DoxyItemize}
+
+\textsuperscript{Then Alice adds her elements to her sketch. Note that adding the same element a second time removes it again, as sketches have set semantics, not multiset semantics.}
+
+\textsuperscript{
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 3000;\ i\ <\ 3010;\ ++i)\ \{}
+\DoxyCodeLine{\ \ minisketch\_add\_uint64(sketch\_a,\ i);}
+\DoxyCodeLine{\}}
+
+\end{DoxyCode}
+}
+
+\textsuperscript{The next step is serializing the sketch into a byte array\+:}
+
+\textsuperscript{
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{keywordtype}{size\_t}\ sersize\ =\ minisketch\_serialized\_size(sketch\_a);}
+\DoxyCodeLine{assert(sersize\ ==\ 12\ *\ 4\ /\ 8);\ \textcolor{comment}{//\ 4\ 12-\/bit\ values\ is\ 6\ bytes.}}
+\DoxyCodeLine{\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *buffer\_a\ =\ malloc(sersize);}
+\DoxyCodeLine{minisketch\_serialize(sketch\_a,\ buffer\_a);}
+\DoxyCodeLine{minisketch\_destroy(sketch\_a);}
+
+\end{DoxyCode}
+}
+
+\textsuperscript{The contents of the buffer can then be submitted to Bob, who can create his own sketch\+:}
+
+\textsuperscript{
+\begin{DoxyCode}{0}
+\DoxyCodeLine{minisketch\ *sketch\_b\ =\ minisketch\_create(12,\ 0,\ 4);\ \textcolor{comment}{//\ Bob's\ own\ sketch}}
+\DoxyCodeLine{\textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 3002;\ i\ <\ 3012;\ ++i)\ \{}
+\DoxyCodeLine{\ \ minisketch\_add\_uint64(sketch\_b,\ i);}
+\DoxyCodeLine{\}}
+
+\end{DoxyCode}
+}
+
+\textsuperscript{After Bob receives Alice\textquotesingle{}s serialized sketch, he can reconcile\+:}
+
+\textsuperscript{
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\ \ sketch\_a\ =\ minisketch\_create(12,\ 0,\ 4);\ \ \ \ \ \textcolor{comment}{//\ Alice's\ sketch}}
+\DoxyCodeLine{\ \ minisketch\_deserialize(sketch\_a,\ buffer\_a);\ \textcolor{comment}{//\ Load\ Alice's\ sketch}}
+\DoxyCodeLine{\ \ free(buffer\_a);}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ \textcolor{comment}{//\ Merge\ the\ elements\ from\ sketch\_a\ into\ sketch\_b.\ The\ result\ is\ a\ sketch\_b}}
+\DoxyCodeLine{\ \ \textcolor{comment}{//\ which\ contains\ all\ elements\ that\ occurred\ in\ Alice's\ or\ Bob's\ sets,\ but\ not}}
+\DoxyCodeLine{\ \ \textcolor{comment}{//\ in\ both.}}
+\DoxyCodeLine{\ \ minisketch\_merge(sketch\_b,\ sketch\_a);}
+\DoxyCodeLine{}
+\DoxyCodeLine{\ \ uint64\_t\ differences[4];}
+\DoxyCodeLine{\ \ ssize\_t\ num\_differences\ =\ minisketch\_decode(sketch\_b,\ 4,\ differences);}
+\DoxyCodeLine{\ \ minisketch\_destroy(sketch\_a);}
+\DoxyCodeLine{\ \ minisketch\_destroy(sketch\_b);}
+\DoxyCodeLine{\ \ \textcolor{keywordflow}{if}\ (num\_differences\ <\ 0)\ \{}
+\DoxyCodeLine{\ \ \ \ printf(\textcolor{stringliteral}{"{}More\ than\ 4\ differences!\(\backslash\)n"{}});}
+\DoxyCodeLine{\ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{\ \ \ \ ssize\_t\ i;}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ num\_differences;\ ++i)\ \{}
+\DoxyCodeLine{\ \ \ \ \ \ printf(\textcolor{stringliteral}{"{}\%u\ is\ in\ only\ one\ of\ the\ two\ sets\(\backslash\)n"{}},\ (\textcolor{keywordtype}{unsigned})differences[i]);}
+\DoxyCodeLine{\ \ \ \ \}}
+\DoxyCodeLine{\ \ \}}
+\DoxyCodeLine{\}}
+
+\end{DoxyCode}
+}
+
+\textsuperscript{In this example Bob would see output such as\+:}
+
+\textsuperscript{
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\$\ gcc\ -\/std=c99\ -\/Wall\ -\/Wextra\ -\/o\ example\ ./doc/example.c\ -\/Lsrc/\ -\/lminisketch\ -\/lstdc++\ \&\&\ ./example}
+\DoxyCodeLine{3000\ is\ in\ only\ one\ of\ the\ two\ sets}
+\DoxyCodeLine{3011\ is\ in\ only\ one\ of\ the\ two\ sets}
+\DoxyCodeLine{3001\ is\ in\ only\ one\ of\ the\ two\ sets}
+\DoxyCodeLine{3010\ is\ in\ only\ one\ of\ the\ two\ sets}
+
+\end{DoxyCode}
+}
+
+\textsuperscript{The order of the output is arbitrary and will differ on different runs of \doxyref{minisketch\+\_\+decode()}{p.}{minisketch_8h_a20adb9ea07329cdceb1f7254aee870b0}.}
+
+\textsuperscript{}\doxysubsection{\textsuperscript{Applications}}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md97}
+\textsuperscript{}
+
+\textsuperscript{Communications efficient set reconciliation has been proposed to optimize Bitcoin transaction distribution\textsuperscript{\doxyref{[8]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote8}}, which would allow Bitcoin nodes to have many more peers while reducing bandwidth usage. It could also be used for Bitcoin block distribution\textsuperscript{\doxyref{[9]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote9}}, particularly for very low bandwidth links such as satellite. A similar approach (CPISync) is used by PGP SKS keyservers to synchronize their databases efficiently. Secure sketches can also be used as helper data to reliably extract a consistent cryptographic key from fuzzy biometric data while leaking minimal information\textsuperscript{\doxyref{[1]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote1}}. They can be combined with {\texttt{dcnets}} to create cryptographic multiparty anonymous communication\textsuperscript{\doxyref{[10]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote10}}.}
+
+\textsuperscript{}\doxysubsection{\textsuperscript{Implementation notes}}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md98}
+\textsuperscript{}
+
+\textsuperscript{{\ttfamily libminisketch} is written in C++11, but has a {\texttt{C API}} for compatibility reasons.}
+
+\textsuperscript{Specific algorithms and optimizations used\+:
+\begin{DoxyItemize}
+\item Finite field implementations\+:
+\begin{DoxyItemize}
+\item A generic implementation using C unsigned integer bit operations, and one using the {\texttt{CLMUL instruction}} where available. The latter has specializations for different classes of fields that permit optimizations (those with trinomial irreducible polynomials, and those whose size is a multiple of 8 bits).
+\item Precomputed tables for (repeated) squaring, and for solving equations of the form $\ast$x\textsuperscript{2} + x = a$\ast$\textsuperscript{\doxyref{[2]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote2}}.
+\item Inverses are computed using an {\texttt{exponentiation ladder}}\textsuperscript{\doxyref{[12]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote12}} on systems where multiplications are relatively fast, and using an {\texttt{extended GCD algorithm}} otherwise.
+\item Repeated multiplications are accelerated using runtime precomputations on systems where multiplications are relatively slow.
+\item The serialization of field elements always represents them as bits that are coefficients of the lowest-\/weight (using lexicographic order as tie breaker) irreducible polynomials over {\itshape GF(2)} (see \doxysectref{this list}{p.}{md_src_2minisketch_2doc_2moduli}{0}), but for some implementations they are converted to a different representation internally.
+\end{DoxyItemize}
+\item The sketch algorithms are specialized for each separate field implementation, permitting inlining and specific optimizations while avoiding dynamic allocations and branching costs.
+\item Decoding of sketches uses the {\texttt{Berlekamp-\/\+Massey algorithm}}\textsuperscript{\doxyref{[3]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote3}} to compute the characteristic polynomial.
+\item Finding the roots of polynomials is done using the Berlekamp trace algorithm with explicit formula for quadratic polynomials\textsuperscript{\doxyref{[4]}{p.}{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote4}}. The root finding is randomized to prevent adversarial inputs that intentionally trigger worst-\/case decode time.
+\item A (possibly) novel optimization combines a test for unique roots with the Berlekamp trace algorithm.
+\end{DoxyItemize}}
+
+\textsuperscript{Some improvements that are still TODO\+:
+\begin{DoxyItemize}
+\item Explicit formulas for the roots of polynomials of higher degree than 2
+\item Subquadratic multiplication and modulus algorithms
+\item The {\texttt{Half-\/\+GCD algorithm}} for faster GCDs
+\item An interface for incremental decoding\+: most of the computation in most failed decodes can be reused when attempting to decode a longer sketch of the same set
+\item Platform specific optimizations for platforms other than x86
+\item Avoid using slow uint64\+\_\+t for calculations on 32-\/bit hosts
+\item Optional IBLT / Hybrid and set entropy coder under the same interface
+\end{DoxyItemize}}
+
+\textsuperscript{}\doxysubsection{\textsuperscript{References}}\label{dir_70099abe5db258d8b2b1561b8813f7f0_autotoc_md99}
+\textsuperscript{}
+
+\textsuperscript{
+\begin{DoxyItemize}
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote1}%
+[1] Dodis, Ostrovsky, Reyzin and Smith. {\itshape Fuzzy Extractors\+: How to Generate Strong Keys from Biometrics and Other Noisy Data.} SIAM Journal on Computing, volume 38, number 1, pages 97-\/139, 2008). {\texttt{[URL]}} {\texttt{[PDF]}}
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote5}%
+[5] A. Trachtenberg, D. Starobinski and S. Agarwal. {\itshape Fast PDA synchronization using characteristic polynomial interpolation.} Proceedings, Twenty-\/\+First Annual Joint Conference of the IEEE Computer and Communications Societies, New York, NY, USA, 2002, pp. 1510-\/1519 vol.\+3. {\texttt{[PDF]}}
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote2}%
+[2] Cherly, Jørgen, Luis Gallardo, Leonid Vaserstein, and Ethel Wheland. {\itshape Solving quadratic equations over polynomial rings of characteristic two.} Publicacions Matemàtiques (1998)\+: 131-\/142. {\texttt{[PDF]}}
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote3}%
+[3] J. Massey. {\itshape Shift-\/register synthesis and BCH decoding.} IEEE Transactions on Information Theory, vol. 15, no. 1, pp. 122-\/127, January 1969. {\texttt{[PDF]}}
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote4}%
+[4] Bhaskar Biswas, Vincent Herbert. {\itshape Efficient Root Finding of Polynomials over Fields of Characteristic 2.} 2009. hal-\/00626997. {\texttt{[URL]}} {\texttt{[PDF]}}
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote6}%
+[6] Eppstein, David, Michael T. Goodrich, Frank Uyeda, and George Varghese. {\itshape What\textquotesingle{}s the difference?\+: efficient set reconciliation without prior context.} ACM SIGCOMM Computer Communication Review, vol. 41, no. 4, pp. 218-\/229. ACM, 2011. {\texttt{[PDF]}}
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote7}%
+[7] Goodrich, Michael T. and Michael Mitzenmacher. {\itshape Invertible bloom lookup tables.} 2011 49th Annual Allerton Conference on Communication, Control, and Computing (Allerton) (2011)\+: 792-\/799. {\texttt{[PDF]}}
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote8}%
+[8] Maxwell, Gregory F. {\itshape {\texttt{Blocksonly mode BW savings, the limits of efficient block xfer, and better relay}}} Bitcointalk 2016, {\itshape {\texttt{Technical notes on mempool synchronizing relay}}} \#bitcoin-\/wizards 2016.
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote9}%
+[9] Maxwell, Gregory F. {\itshape {\texttt{Block network coding}}} Bitcoin Wiki 2014, {\itshape {\texttt{Technical notes on efficient block xfer}}} \#bitcoin-\/wizards 2015.
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote10}%
+[10] Ruffing, Tim, Moreno-\/\+Sanchez, Pedro, Aniket, Kate, {\itshape P2P Mixing and Unlinkable Bitcoin Transactions} NDSS Symposium 2017 {\texttt{[URL]}} {\texttt{[PDF]}}
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote11}%
+[11] Y. Misky, A. Trachtenberg, R. Zippel. {\itshape Set Reconciliation with Nearly Optimal Communication Complexity.} Cornell University, 2000. {\texttt{[URL]}} {\texttt{[PDF]}}
+\item \label{dir_70099abe5db258d8b2b1561b8813f7f0_myfootnote12}%
+[12] Itoh, Toshiya, and Shigeo Tsujii. "{}\+A fast algorithm for computing multiplicative inverses in GF (2m) using normal bases."{} Information and computation 78, no. 3 (1988)\+: 171-\/177. {\texttt{[URL]}} 
+\end{DoxyItemize}}

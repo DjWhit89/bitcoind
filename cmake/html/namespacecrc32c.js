@@ -1,0 +1,27 @@
+var namespacecrc32c =
+[
+    [ "ExtendTest", "classcrc32c_1_1_extend_test.html", null ],
+    [ "PortableTestTraits", "structcrc32c_1_1_portable_test_traits.html", null ],
+    [ "ApiTestTraits", "structcrc32c_1_1_api_test_traits.html", null ],
+    [ "crc32c_extend", "namespacecrc32c.html#ad0cc0f4318379b347b7b79c881e8e314", null ],
+    [ "crc32c_value", "namespacecrc32c.html#a2c5320926e7d27fd62614362ae5bed82", null ],
+    [ "Extend", "namespacecrc32c.html#a51f5e44ad327ee6dbee0147d7cfce65f", null ],
+    [ "ExtendPortable", "namespacecrc32c.html#ac6a04520ff4937197eb87baa6ec9f055", null ],
+    [ "INSTANTIATE_TYPED_TEST_SUITE_P", "namespacecrc32c.html#a884b68ed9686f7e47f8d3003bdfe8010", null ],
+    [ "INSTANTIATE_TYPED_TEST_SUITE_P", "namespacecrc32c.html#ad4f5ea7c9db53bdc70555d095b8a86e4", null ],
+    [ "ReadUint32LE", "namespacecrc32c.html#a7c99d6bc11f0b069b4d40435de3f4d93", null ],
+    [ "ReadUint64LE", "namespacecrc32c.html#a5040ba2ecc1c044c3b1a55895af9e521", null ],
+    [ "REGISTER_TYPED_TEST_SUITE_P", "namespacecrc32c.html#a5f8b02b8867ac479cffc2b51051e9a3a", null ],
+    [ "RequestPrefetch", "namespacecrc32c.html#accd41e1a1e7b4bd902940b13f1af538c", null ],
+    [ "RoundUp", "namespacecrc32c.html#a640273c0d2496066f01667b493faf215", null ],
+    [ "RoundUp", "namespacecrc32c.html#af9139f4da8e1629ddb2adf4c2dc79a1c", null ],
+    [ "TEST", "namespacecrc32c.html#a143ec98d629eb5b50fe7e18fd8e2af53", null ],
+    [ "TEST", "namespacecrc32c.html#a06102a6d235062675414a17110165968", null ],
+    [ "TEST", "namespacecrc32c.html#aa9bae142cc24604b8dd082c1e8e371a9", null ],
+    [ "TEST", "namespacecrc32c.html#ae260a4fbaa5d6cbb8ab173b120fb7b15", null ],
+    [ "TYPED_TEST_P", "namespacecrc32c.html#a867fe5f2e7ceedc5592a33e5a931e56f", null ],
+    [ "TYPED_TEST_P", "namespacecrc32c.html#a3907be688d86359626bd09dcf81cab8d", null ],
+    [ "TYPED_TEST_P", "namespacecrc32c.html#a14905727d5a36e038d14ecf6163123a4", null ],
+    [ "TYPED_TEST_P", "namespacecrc32c.html#a4b0ef8605ab89833f8f6777240930b39", null ],
+    [ "TYPED_TEST_SUITE_P", "namespacecrc32c.html#ab85db5bae5f3d210d1721a617f74c03a", null ]
+];

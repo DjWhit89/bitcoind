@@ -1,0 +1,338 @@
+\doxysection{blockstorage.\+h}
+\label{blockstorage_8h_source}\index{src/node/blockstorage.h@{src/node/blockstorage.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_NODE\_BLOCKSTORAGE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_NODE\_BLOCKSTORAGE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <chain.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <dbwrapper.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <flatfile.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <kernel/blockmanager\_opts.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <kernel/chainparams.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <kernel/cs\_main.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <kernel/messagestartchars.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <primitives/block.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <streams.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <util/expected.h>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <util/fs.h>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <util/hasher.h>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <util/obfuscation.h>}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#include\ <iosfwd>}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00038\ \textcolor{preprocessor}{\#include\ <span>}}
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \textcolor{keyword}{class\ }BlockValidationState;}
+\DoxyCodeLine{00045\ \textcolor{keyword}{class\ }CBlockUndo;}
+\DoxyCodeLine{00046\ \textcolor{keyword}{class\ }Chainstate;}
+\DoxyCodeLine{00047\ \textcolor{keyword}{class\ }ChainstateManager;}
+\DoxyCodeLine{00048\ \textcolor{keyword}{namespace\ }Consensus\ \{}
+\DoxyCodeLine{00049\ \textcolor{keyword}{struct\ }Params;}
+\DoxyCodeLine{00050\ \}}
+\DoxyCodeLine{00051\ \textcolor{keyword}{namespace\ }util\ \{}
+\DoxyCodeLine{00052\ \textcolor{keyword}{class\ }SignalInterrupt;}
+\DoxyCodeLine{00053\ \}\ \textcolor{comment}{//\ namespace\ util}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{namespace\ }kernel\ \{}
+\DoxyCodeLine{00056\ \textcolor{keyword}{class\ }CBlockFileInfo}
+\DoxyCodeLine{00057\ \{}
+\DoxyCodeLine{00058\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00059\ \ \ \ \ uint32\_t\ nBlocks\{\};\ \ \ \ \ \ }
+\DoxyCodeLine{00060\ \ \ \ \ uint32\_t\ nSize\{\};\ \ \ \ \ \ \ \ }
+\DoxyCodeLine{00061\ \ \ \ \ uint32\_t\ nUndoSize\{\};\ \ \ \ }
+\DoxyCodeLine{00062\ \ \ \ \ uint32\_t\ nHeightFirst\{\};\ }
+\DoxyCodeLine{00063\ \ \ \ \ uint32\_t\ nHeightLast\{\};\ \ }
+\DoxyCodeLine{00064\ \ \ \ \ uint64\_t\ nTimeFirst\{\};\ \ \ }
+\DoxyCodeLine{00065\ \ \ \ \ uint64\_t\ nTimeLast\{\};\ \ \ \ }
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \ \ SERIALIZE\_METHODS(CBlockFileInfo,\ obj)}
+\DoxyCodeLine{00068\ \ \ \ \ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ READWRITE(VARINT(obj.nBlocks));}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ READWRITE(VARINT(obj.nSize));}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ READWRITE(VARINT(obj.nUndoSize));}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ READWRITE(VARINT(obj.nHeightFirst));}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ READWRITE(VARINT(obj.nHeightLast));}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ READWRITE(VARINT(obj.nTimeFirst));}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ READWRITE(VARINT(obj.nTimeLast));}
+\DoxyCodeLine{00076\ \ \ \ \ \}}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ \ \ CBlockFileInfo()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \ \ \ \ std::string\ ToString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordtype}{void}\ AddBlock(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nHeightIn,\ uint64\_t\ nTimeIn)}
+\DoxyCodeLine{00084\ \ \ \ \ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nBlocks\ ==\ 0\ ||\ nHeightFirst\ >\ nHeightIn)}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ nHeightFirst\ =\ nHeightIn;}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nBlocks\ ==\ 0\ ||\ nTimeFirst\ >\ nTimeIn)}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ nTimeFirst\ =\ nTimeIn;}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ nBlocks++;}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nHeightIn\ >\ nHeightLast)}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ nHeightLast\ =\ nHeightIn;}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nTimeIn\ >\ nTimeLast)}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ nTimeLast\ =\ nTimeIn;}
+\DoxyCodeLine{00094\ \ \ \ \ \}}
+\DoxyCodeLine{00095\ \};}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00098\ \textcolor{keyword}{class\ }BlockTreeDB\ :\ \textcolor{keyword}{public}\ CDBWrapper}
+\DoxyCodeLine{00099\ \{}
+\DoxyCodeLine{00100\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{keyword}{using\ }CDBWrapper::CDBWrapper;}
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{keywordtype}{void}\ WriteBatchSync(\textcolor{keyword}{const}\ std::vector<std::pair<int,\ const\ CBlockFileInfo*>>\&\ fileInfo,\ \textcolor{keywordtype}{int}\ nLastFile,\ \textcolor{keyword}{const}\ std::vector<const\ CBlockIndex*>\&\ blockinfo);}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReadBlockFileInfo(\textcolor{keywordtype}{int}\ nFile,\ CBlockFileInfo\&\ info);}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReadLastBlockFile(\textcolor{keywordtype}{int}\&\ nFile);}
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{keywordtype}{void}\ WriteReindexing(\textcolor{keywordtype}{bool}\ fReindexing);}
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{keywordtype}{void}\ ReadReindexing(\textcolor{keywordtype}{bool}\&\ fReindexing);}
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keywordtype}{void}\ WriteFlag(\textcolor{keyword}{const}\ std::string\&\ name,\ \textcolor{keywordtype}{bool}\ fValue);}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReadFlag(\textcolor{keyword}{const}\ std::string\&\ name,\ \textcolor{keywordtype}{bool}\&\ fValue);}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadBlockIndexGuts(\textcolor{keyword}{const}\ Consensus::Params\&\ consensusParams,\ std::function<CBlockIndex*(\textcolor{keyword}{const}\ uint256\&)>\ insertBlockIndex,\ \textcolor{keyword}{const}\ util::SignalInterrupt\&\ interrupt)}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00111\ \};}
+\DoxyCodeLine{00112\ \}\ \textcolor{comment}{//\ namespace\ kernel}}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00114\ \textcolor{keyword}{namespace\ }node\ \{}
+\DoxyCodeLine{00115\ \textcolor{keyword}{using\ }kernel::CBlockFileInfo;}
+\DoxyCodeLine{00116\ \textcolor{keyword}{using\ }kernel::BlockTreeDB;}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00119\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ BLOCKFILE\_CHUNK\_SIZE\ =\ 0x1000000;\ \textcolor{comment}{//\ 16\ MiB}}
+\DoxyCodeLine{00121\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ UNDOFILE\_CHUNK\_SIZE\ =\ 0x100000;\ \textcolor{comment}{//\ 1\ MiB}}
+\DoxyCodeLine{00123\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ MAX\_BLOCKFILE\_SIZE\ =\ 0x8000000;\ \textcolor{comment}{//\ 128\ MiB}}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00126\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint32\_t\ STORAGE\_HEADER\_BYTES\{std::tuple\_size\_v<MessageStartChars>\ +\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{unsigned}\ int)\};}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00129\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint32\_t\ UNDO\_DATA\_DISK\_OVERHEAD\{STORAGE\_HEADER\_BYTES\ +\ uint256::size()\};}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00131\ \textcolor{comment}{//\ Because\ validation\ code\ takes\ pointers\ to\ the\ map's\ CBlockIndex\ objects,\ if}}
+\DoxyCodeLine{00132\ \textcolor{comment}{//\ we\ ever\ switch\ to\ another\ associative\ container,\ we\ need\ to\ either\ use\ a}}
+\DoxyCodeLine{00133\ \textcolor{comment}{//\ container\ that\ has\ stable\ addressing\ (true\ of\ all\ std\ associative}}
+\DoxyCodeLine{00134\ \textcolor{comment}{//\ containers),\ or\ make\ the\ key\ a\ \`{}std::unique\_ptr<CBlockIndex>`}}
+\DoxyCodeLine{00135\ \textcolor{keyword}{using\ }BlockMap\ =\ std::unordered\_map<uint256,\ CBlockIndex,\ BlockHasher>;}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \textcolor{keyword}{struct\ }CBlockIndexWorkComparator\ \{}
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator()(\textcolor{keyword}{const}\ CBlockIndex*\ pa,\ \textcolor{keyword}{const}\ CBlockIndex*\ pb)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00139\ \};}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00141\ \textcolor{keyword}{struct\ }CBlockIndexHeightOnlyComparator\ \{}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{comment}{/*\ Only\ compares\ the\ height\ of\ two\ block\ indices,\ doesn't\ try\ to\ tie-\/break\ */}}
+\DoxyCodeLine{00143\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator()(\textcolor{keyword}{const}\ CBlockIndex*\ pa,\ \textcolor{keyword}{const}\ CBlockIndex*\ pb)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00144\ \};}
+\DoxyCodeLine{00145\ }
+\DoxyCodeLine{00146\ \textcolor{keyword}{struct\ }PruneLockInfo\ \{}
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordtype}{int}\ height\_first\{std::numeric\_limits<int>::max()\};\ }
+\DoxyCodeLine{00148\ \};}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00150\ \textcolor{keyword}{enum}\ BlockfileType\ \{}
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{comment}{//\ Values\ used\ as\ array\ indexes\ -\/\ do\ not\ change\ carelessly.}}
+\DoxyCodeLine{00152\ \ \ \ \ NORMAL\ =\ 0,}
+\DoxyCodeLine{00153\ \ \ \ \ ASSUMED\ =\ 1,}
+\DoxyCodeLine{00154\ \ \ \ \ NUM\_TYPES\ =\ 2,}
+\DoxyCodeLine{00155\ \};}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ std::ostream\&\ operator<<(std::ostream\&\ os,\ \textcolor{keyword}{const}\ BlockfileType\&\ type);}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00159\ \textcolor{keyword}{struct\ }BlockfileCursor\ \{}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{comment}{//\ The\ latest\ blockfile\ number.}}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordtype}{int}\ file\_num\{0\};}
+\DoxyCodeLine{00162\ }
+\DoxyCodeLine{00163\ \ \ \ \ \textcolor{comment}{//\ Track\ the\ height\ of\ the\ highest\ block\ in\ file\_num\ whose\ undo}}
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{comment}{//\ data\ has\ been\ written.\ Block\ data\ is\ written\ to\ block\ files\ in\ download}}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{comment}{//\ order,\ but\ is\ written\ to\ undo\ files\ in\ validation\ order,\ which\ is}}
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{comment}{//\ usually\ in\ order\ by\ height.\ To\ avoid\ wasting\ disk\ space,\ undo\ files\ will}}
+\DoxyCodeLine{00167\ \ \ \ \ \textcolor{comment}{//\ be\ trimmed\ whenever\ the\ corresponding\ block\ file\ is\ finalized\ and}}
+\DoxyCodeLine{00168\ \ \ \ \ \textcolor{comment}{//\ the\ height\ of\ the\ highest\ block\ written\ to\ the\ block\ file\ equals\ the}}
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{comment}{//\ height\ of\ the\ highest\ block\ written\ to\ the\ undo\ file.\ This\ is\ a}}
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{comment}{//\ heuristic\ and\ can\ sometimes\ preemptively\ trim\ undo\ files\ that\ will\ write}}
+\DoxyCodeLine{00171\ \ \ \ \ \textcolor{comment}{//\ more\ data\ later,\ and\ sometimes\ fail\ to\ trim\ undo\ files\ that\ can't\ have}}
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{comment}{//\ more\ data\ written\ later.}}
+\DoxyCodeLine{00173\ \ \ \ \ \textcolor{keywordtype}{int}\ undo\_height\{0\};}
+\DoxyCodeLine{00174\ \};}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ std::ostream\&\ operator<<(std::ostream\&\ os,\ \textcolor{keyword}{const}\ BlockfileCursor\&\ cursor);}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00178\ \textcolor{keyword}{enum\ class}\ ReadRawError\ \{}
+\DoxyCodeLine{00179\ \ \ \ \ IO,}
+\DoxyCodeLine{00180\ \ \ \ \ BadPartRange,}
+\DoxyCodeLine{00181\ \};}
+\DoxyCodeLine{00182\ }
+\DoxyCodeLine{00190\ \textcolor{keyword}{class\ }BlockManager}
+\DoxyCodeLine{00191\ \{}
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{keyword}{friend}\ Chainstate;}
+\DoxyCodeLine{00193\ \ \ \ \ \textcolor{keyword}{friend}\ ChainstateManager;}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00195\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{keyword}{const}\ CChainParams\&\ GetParams()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_opts.chainparams;\ \}}
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keyword}{const}\ Consensus::Params\&\ GetConsensus()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_opts.chainparams.GetConsensus();\ \}}
+\DoxyCodeLine{00203\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadBlockIndex(\textcolor{keyword}{const}\ std::optional<uint256>\&\ snapshot\_blockhash)}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00207\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ FlushBlockFile(\textcolor{keywordtype}{int}\ blockfile\_num,\ \textcolor{keywordtype}{bool}\ fFinalize,\ \textcolor{keywordtype}{bool}\ finalize\_undo);}
+\DoxyCodeLine{00208\ }
+\DoxyCodeLine{00210\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ FlushUndoFile(\textcolor{keywordtype}{int}\ block\_file,\ \textcolor{keywordtype}{bool}\ finalize\ =\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00221\ \ \ \ \ [[nodiscard]]\ FlatFilePos\ FindNextBlockPos(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nAddSize,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nHeight,\ uint64\_t\ nTime);}
+\DoxyCodeLine{00222\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ FlushChainstateBlockFile(\textcolor{keywordtype}{int}\ tip\_height);}
+\DoxyCodeLine{00223\ \ \ \ \ \textcolor{keywordtype}{bool}\ FindUndoPos(BlockValidationState\&\ state,\ \textcolor{keywordtype}{int}\ nFile,\ FlatFilePos\&\ pos,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nAddSize);}
+\DoxyCodeLine{00224\ }
+\DoxyCodeLine{00225\ \ \ \ \ AutoFile\ OpenUndoFile(\textcolor{keyword}{const}\ FlatFilePos\&\ pos,\ \textcolor{keywordtype}{bool}\ fReadOnly\ =\ \textcolor{keyword}{false})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00226\ }
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{comment}{/*\ Calculate\ the\ block/rev\ files\ to\ delete\ based\ on\ height\ specified\ by\ user\ with\ RPC\ command\ pruneblockchain\ */}}
+\DoxyCodeLine{00228\ \ \ \ \ \textcolor{keywordtype}{void}\ FindFilesToPruneManual(}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ std::set<int>\&\ setFilesToPrune,}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ nManualPruneHeight,}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Chainstate\&\ chain);}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00249\ \ \ \ \ \textcolor{keywordtype}{void}\ FindFilesToPrune(}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ std::set<int>\&\ setFilesToPrune,}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ last\_prune,}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Chainstate\&\ chain,}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ ChainstateManager\&\ chainman);}
+\DoxyCodeLine{00254\ }
+\DoxyCodeLine{00255\ \ \ \ \ RecursiveMutex\ cs\_LastBlockFile;}
+\DoxyCodeLine{00256\ }
+\DoxyCodeLine{00267\ \ \ \ \ std::array<std::optional<BlockfileCursor>,\ BlockfileType::NUM\_TYPES>}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ m\_blockfile\_cursors\ GUARDED\_BY(cs\_LastBlockFile)\ =\ \{}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \ \ \ \ BlockfileCursor\{\},}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \ \ \ \ std::nullopt,}
+\DoxyCodeLine{00271\ \ \ \ \ \};}
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{keywordtype}{int}\ MaxBlockfileNum()\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_LastBlockFile)}
+\DoxyCodeLine{00273\ \ \ \ \ \{}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ BlockfileCursor\ empty\_cursor;}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ normal\ =\ m\_blockfile\_cursors[BlockfileType::NORMAL].value\_or(empty\_cursor);}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ assumed\ =\ m\_blockfile\_cursors[BlockfileType::ASSUMED].value\_or(empty\_cursor);}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::max(normal.file\_num,\ assumed.file\_num);}
+\DoxyCodeLine{00278\ \ \ \ \ \}}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00284\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_check\_for\_pruning\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00285\ }
+\DoxyCodeLine{00286\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ m\_prune\_mode;}
+\DoxyCodeLine{00287\ }
+\DoxyCodeLine{00288\ \ \ \ \ \textcolor{keyword}{const}\ Obfuscation\ m\_obfuscation;}
+\DoxyCodeLine{00289\ }
+\DoxyCodeLine{00296\ \ \ \ \ std::unordered\_map<std::string,\ PruneLockInfo>\ m\_prune\_locks\ GUARDED\_BY(::cs\_main);}
+\DoxyCodeLine{00297\ }
+\DoxyCodeLine{00298\ \ \ \ \ BlockfileType\ BlockfileTypeForHeight(\textcolor{keywordtype}{int}\ height);}
+\DoxyCodeLine{00299\ }
+\DoxyCodeLine{00300\ \ \ \ \ \textcolor{keyword}{const}\ kernel::BlockManagerOpts\ m\_opts;}
+\DoxyCodeLine{00301\ }
+\DoxyCodeLine{00302\ \ \ \ \ \textcolor{keyword}{const}\ FlatFileSeq\ m\_block\_file\_seq;}
+\DoxyCodeLine{00303\ \ \ \ \ \textcolor{keyword}{const}\ FlatFileSeq\ m\_undo\_file\_seq;}
+\DoxyCodeLine{00304\ }
+\DoxyCodeLine{00305\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00306\ \ \ \ \ std::vector<CBlockFileInfo>\ m\_blockfile\_info;}
+\DoxyCodeLine{00307\ }
+\DoxyCodeLine{00309\ \ \ \ \ std::set<CBlockIndex*>\ m\_dirty\_blockindex;}
+\DoxyCodeLine{00310\ }
+\DoxyCodeLine{00312\ \ \ \ \ std::set<int>\ m\_dirty\_fileinfo;}
+\DoxyCodeLine{00313\ }
+\DoxyCodeLine{00314\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00315\ \ \ \ \ \textcolor{keyword}{using\ }Options\ =\ kernel::BlockManagerOpts;}
+\DoxyCodeLine{00316\ \ \ \ \ \textcolor{keyword}{using\ }ReadRawBlockResult\ =\ util::Expected<std::vector<std::byte>,\ ReadRawError>;}
+\DoxyCodeLine{00317\ }
+\DoxyCodeLine{00318\ \ \ \ \ \textcolor{keyword}{explicit}\ BlockManager(\textcolor{keyword}{const}\ util::SignalInterrupt\&\ interrupt,\ Options\ opts);}
+\DoxyCodeLine{00319\ }
+\DoxyCodeLine{00320\ \ \ \ \ \textcolor{keyword}{const}\ util::SignalInterrupt\&\ m\_interrupt;}
+\DoxyCodeLine{00321\ \ \ \ \ std::atomic<bool>\ m\_importing\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00322\ }
+\DoxyCodeLine{00329\ \ \ \ \ std::atomic\_bool\ m\_blockfiles\_indexed\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00330\ }
+\DoxyCodeLine{00331\ \ \ \ \ BlockMap\ m\_block\_index\ GUARDED\_BY(cs\_main);}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00345\ \ \ \ \ std::optional<int>\ m\_snapshot\_height;}
+\DoxyCodeLine{00346\ }
+\DoxyCodeLine{00347\ \ \ \ \ std::vector<CBlockIndex*>\ GetAllBlockIndices()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00348\ }
+\DoxyCodeLine{00353\ \ \ \ \ std::multimap<CBlockIndex*,\ CBlockIndex*>\ m\_blocks\_unlinked;}
+\DoxyCodeLine{00354\ }
+\DoxyCodeLine{00355\ \ \ \ \ std::unique\_ptr<BlockTreeDB>\ m\_block\_tree\_db\ GUARDED\_BY(::cs\_main);}
+\DoxyCodeLine{00356\ }
+\DoxyCodeLine{00357\ \ \ \ \ \textcolor{keywordtype}{void}\ WriteBlockIndexDB()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00358\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadBlockIndexDB(const\ std::optional<uint256>\&\ snapshot\_blockhash)}
+\DoxyCodeLine{00359\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00360\ }
+\DoxyCodeLine{00366\ \ \ \ \ \textcolor{keywordtype}{void}\ ScanAndUnlinkAlreadyPrunedFiles()\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00367\ }
+\DoxyCodeLine{00368\ \ \ \ \ CBlockIndex*\ AddToBlockIndex(const\ CBlockHeader\&\ block,\ CBlockIndex*\&\ best\_header)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00370\ \ \ \ \ CBlockIndex*\ InsertBlockIndex(const\ uint256\&\ hash)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00371\ }
+\DoxyCodeLine{00373\ \ \ \ \ \textcolor{keywordtype}{void}\ PruneOneBlockFile(const\ \textcolor{keywordtype}{int}\ fileNumber)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00374\ }
+\DoxyCodeLine{00375\ \ \ \ \ CBlockIndex*\ LookupBlockIndex(const\ uint256\&\ hash)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00376\ \ \ \ \ const\ CBlockIndex*\ LookupBlockIndex(const\ uint256\&\ hash)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_main);}
+\DoxyCodeLine{00377\ }
+\DoxyCodeLine{00379\ \ \ \ \ CBlockFileInfo*\ GetBlockFileInfo(\textcolor{keywordtype}{size\_t}\ n);}
+\DoxyCodeLine{00380\ }
+\DoxyCodeLine{00381\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteBlockUndo(const\ CBlockUndo\&\ blockundo,\ BlockValidationState\&\ state,\ CBlockIndex\&\ block)}
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00383\ }
+\DoxyCodeLine{00392\ \ \ \ \ FlatFilePos\ WriteBlock(const\ CBlock\&\ block,\ \textcolor{keywordtype}{int}\ nHeight);}
+\DoxyCodeLine{00393\ }
+\DoxyCodeLine{00400\ \ \ \ \ \textcolor{keywordtype}{void}\ UpdateBlockInfo(const\ CBlock\&\ block,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nHeight,\ const\ FlatFilePos\&\ pos);}
+\DoxyCodeLine{00401\ }
+\DoxyCodeLine{00403\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ IsPruneMode()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_prune\_mode;\ \}}
+\DoxyCodeLine{00404\ }
+\DoxyCodeLine{00406\ \ \ \ \ [[nodiscard]]\ uint64\_t\ GetPruneTarget()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_opts.prune\_target;\ \}}
+\DoxyCodeLine{00407\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ PRUNE\_TARGET\_MANUAL\{std::numeric\_limits<uint64\_t>::max()\};}
+\DoxyCodeLine{00408\ }
+\DoxyCodeLine{00409\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ LoadingBlocks()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_importing\ ||\ !m\_blockfiles\_indexed;\ \}}
+\DoxyCodeLine{00410\ }
+\DoxyCodeLine{00412\ \ \ \ \ uint64\_t\ CalculateCurrentUsage();}
+\DoxyCodeLine{00413\ }
+\DoxyCodeLine{00417\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckBlockDataAvailability(\textcolor{keyword}{const}\ CBlockIndex\&\ upper\_block,\ \textcolor{keyword}{const}\ CBlockIndex\&\ lower\_block)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00418\ }
+\DoxyCodeLine{00441\ \ \ \ \ \textcolor{keyword}{const}\ CBlockIndex\&\ GetFirstBlock(}
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CBlockIndex\&\ upper\_block\ LIFETIMEBOUND,}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ uint32\_t\ status\_mask,}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ CBlockIndex*\ lower\_block\ LIFETIMEBOUND\ =\ \textcolor{keyword}{nullptr}}
+\DoxyCodeLine{00445\ \ \ \ \ )\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00446\ }
+\DoxyCodeLine{00448\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_have\_pruned\ =\ false;}
+\DoxyCodeLine{00449\ }
+\DoxyCodeLine{00451\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsBlockPruned(const\ CBlockIndex\&\ block)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00452\ }
+\DoxyCodeLine{00454\ \ \ \ \ \textcolor{keywordtype}{void}\ UpdatePruneLock(const\ std::\textcolor{keywordtype}{string}\&\ name,\ const\ PruneLockInfo\&\ lock\_info)\ EXCLUSIVE\_LOCKS\_REQUIRED(::cs\_main);}
+\DoxyCodeLine{00455\ }
+\DoxyCodeLine{00457\ \ \ \ \ AutoFile\ OpenBlockFile(const\ FlatFilePos\&\ pos,\ \textcolor{keywordtype}{bool}\ fReadOnly)\ const;}
+\DoxyCodeLine{00458\ }
+\DoxyCodeLine{00460\ \ \ \ \ fs::path\ GetBlockPosFilename(const\ FlatFilePos\&\ pos)\ const;}
+\DoxyCodeLine{00461\ }
+\DoxyCodeLine{00465\ \ \ \ \ \textcolor{keywordtype}{void}\ UnlinkPrunedFiles(const\ std::set<\textcolor{keywordtype}{int}>\&\ setFilesToPrune)\ const;}
+\DoxyCodeLine{00466\ }
+\DoxyCodeLine{00468\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReadBlock(CBlock\&\ block,\ const\ FlatFilePos\&\ pos,\ const\ std::optional<uint256>\&\ expected\_hash)\ const;}
+\DoxyCodeLine{00469\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReadBlock(CBlock\&\ block,\ const\ CBlockIndex\&\ index)\ const;}
+\DoxyCodeLine{00470\ \ \ \ \ ReadRawBlockResult\ ReadRawBlock(const\ FlatFilePos\&\ pos,\ std::optional<std::pair<\textcolor{keywordtype}{size\_t},\ \textcolor{keywordtype}{size\_t}>>\ block\_part\ =\ std::nullopt)\ const;}
+\DoxyCodeLine{00471\ }
+\DoxyCodeLine{00472\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReadBlockUndo(CBlockUndo\&\ blockundo,\ const\ CBlockIndex\&\ index)\ const;}
+\DoxyCodeLine{00473\ }
+\DoxyCodeLine{00474\ \ \ \ \ \textcolor{keywordtype}{void}\ CleanupBlockRevFiles()\ const;}
+\DoxyCodeLine{00475\ \};}
+\DoxyCodeLine{00476\ }
+\DoxyCodeLine{00477\ \textcolor{comment}{//\ Calls\ ActivateBestChain()\ even\ if\ no\ blocks\ are\ imported.}}
+\DoxyCodeLine{00478\ \textcolor{keywordtype}{void}\ ImportBlocks(ChainstateManager\&\ chainman,\ std::span<const\ fs::path>\ import\_paths);}
+\DoxyCodeLine{00479\ \}\ \textcolor{comment}{//\ namespace\ node}}
+\DoxyCodeLine{00480\ }
+\DoxyCodeLine{00481\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_NODE\_BLOCKSTORAGE\_H}}
+
+\end{DoxyCode}

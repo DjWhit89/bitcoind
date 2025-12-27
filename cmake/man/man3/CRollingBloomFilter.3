@@ -1,0 +1,76 @@
+.TH "CRollingBloomFilter" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+CRollingBloomFilter
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <bloom\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBCRollingBloomFilter\fP (const unsigned int nElements, const double nFPRate)"
+.br
+.ti -1c
+.RI "void \fBinsert\fP (std::span< const unsigned char > vKey)"
+.br
+.ti -1c
+.RI "bool \fBcontains\fP (std::span< const unsigned char > vKey) const"
+.br
+.ti -1c
+.RI "void \fBreset\fP ()"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+RollingBloomFilter is a probabilistic "keep track of most recently inserted" set\&. Construct it with the number of items to keep track of, and a false-positive rate\&. Unlike \fBCBloomFilter\fP, by default nTweak is set to a cryptographically secure random value for you\&. Similarly rather than \fBclear()\fP the method \fBreset()\fP is provided, which also changes nTweak to decrease the impact of false-positives\&.
+
+.PP
+contains(item) will always return true if item was one of the last N to 1\&.5*N \fBinsert()\fP'ed \&.\&.\&. but may also return true for items that were not inserted\&.
+
+.PP
+It needs around 1\&.8 bytes per element per factor 0\&.1 of false positive rate\&. For example, if we want 1000 elements, we'd need:
+.IP "\(bu" 2
+~1800 bytes for a false positive rate of 0\&.1
+.IP "\(bu" 2
+~3600 bytes for a false positive rate of 0\&.01
+.IP "\(bu" 2
+~5400 bytes for a false positive rate of 0\&.001
+.PP
+
+.PP
+If we make these simplifying assumptions:
+.IP "\(bu" 2
+logFpRate / log(0\&.5) doesn't get rounded or clamped in the nHashFuncs calculation
+.IP "\(bu" 2
+nElements is even, so that nEntriesPerGeneration == nElements / 2
+.PP
+
+.PP
+Then we get a more accurate estimate for filter bytes: 
+.PP
+.nf
+3/(log(256)*log(2)) * log(1/fpRate) * nElements
+
+.fi
+.PP
+ 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBCRollingBloomFilter\fP (const unsigned int nElements, const double nFPRate)"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "bool contains (std::span< const unsigned char > vKey) const"
+
+.SS "void insert (std::span< const unsigned char > vKey)"
+
+.SS "void reset ()"
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

@@ -1,0 +1,142 @@
+.TH "md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+md_src_2secp256k1_2_c_o_n_t_r_i_b_u_t_i_n_g \- Contributing to libsecp256k1 
+.PP
+
+.SH "Scope"
+.PP
+libsecp256k1 is a library for elliptic curve cryptography on the curve secp256k1, not a general-purpose cryptography library\&. The library primarily serves the needs of the Bitcoin Core project but provides additional functionality for the benefit of the wider Bitcoin ecosystem\&.
+.SH "Adding new functionality or modules"
+.PP
+The libsecp256k1 project welcomes contributions in the form of new functionality or modules, provided they are within the project's scope\&.
+
+.PP
+It is the responsibility of the contributors to convince the maintainers that the proposed functionality is within the project's scope, high-quality and maintainable\&. Contributors are recommended to provide the following in addition to the new code:
+
+.PP
+.IP "\(bu" 2
+\fBSpecification:\fP A specification can help significantly in reviewing the new code as it provides documentation and context\&. It may justify various design decisions, give a motivation and outline security goals\&. If the specification contains pseudocode, a reference implementation or test vectors, these can be used to compare with the proposed libsecp256k1 code\&.
+.IP "\(bu" 2
+\fBSecurity Arguments:\fP In addition to a defining the security goals, it should be argued that the new functionality meets these goals\&. Depending on the nature of the new functionality, a wide range of security arguments are acceptable, ranging from being "obviously secure" to rigorous proofs of security\&.
+.IP "\(bu" 2
+\fBRelevance Arguments:\fP The relevance of the new functionality for the Bitcoin ecosystem should be argued by outlining clear use cases\&.
+.PP
+
+.PP
+These are not the only factors taken into account when considering to add new functionality\&. The proposed new libsecp256k1 code must be of high quality, including API documentation and tests, as well as featuring a misuse-resistant API design\&.
+
+.PP
+We recommend reaching out to other contributors (see \fBCommunication Channels\fP) and get feedback before implementing new functionality\&.
+.SH "Communication channels"
+.PP
+Most communication about libsecp256k1 occurs on the GitHub repository: in issues, pull request or on the discussion board\&.
+
+.PP
+Additionally, there is an IRC channel dedicated to libsecp256k1, with biweekly meetings (see channel topic)\&. The channel is \fR#secp256k1\fP on Libera Chat\&. The easiest way to participate on IRC is with the web client, \fRweb\&.libera\&.chat\fP\&. Chat history logs can be found at https://gnusha.org/secp256k1/\&.
+.SH "Contributor workflow & peer review"
+.PP
+The Contributor Workflow & Peer Review in libsecp256k1 are similar to Bitcoin Core's workflow and review processes described in its \fRCONTRIBUTING\&.md\fP\&.
+.SS "Coding conventions"
+In addition, libsecp256k1 tries to maintain the following coding conventions:
+
+.PP
+.IP "\(bu" 2
+No runtime heap allocation (e\&.g\&., no \fRmalloc\fP) unless explicitly requested by the caller (via \fR\fBsecp256k1_context_create\fP\fP or \fRsecp256k1_scratch_space_create\fP, for example)\&. Moreover, it should be possible to use the library without any heap allocations\&.
+.IP "\(bu" 2
+The tests should cover all lines and branches of the library (see \fBTest coverage\fP)\&.
+.IP "\(bu" 2
+Operations involving secret data should be tested for being constant time with respect to the secrets (see \fRsrc/ctime_tests\&.c\fP)\&.
+.IP "\(bu" 2
+Local variables containing secret data should be cleared explicitly to try to delete secrets from memory\&.
+.IP "\(bu" 2
+Use \fRsecp256k1_memcmp_var\fP instead of \fRmemcmp\fP (see \fR#823\fP)\&.
+.IP "\(bu" 2
+As a rule of thumb, the default values for configuration options should target standard desktop machines and align with Bitcoin Core's defaults, and the tests should mostly exercise the default configuration (see \fR#1549\fP)\&.
+.PP
+.SS "Style conventions"
+.IP "\(bu" 2
+Commits should be atomic and diffs should be easy to read\&. For this reason, do not mix any formatting fixes or code moves with actual code changes\&. Make sure each individual commit is hygienic: that it builds successfully on its own without warnings, errors, regressions, or test failures\&.
+.IP "\(bu" 2
+New code should adhere to the style of existing, in particular surrounding, code\&. Other than that, we do not enforce strict rules for code formatting\&.
+.IP "\(bu" 2
+The code conforms to C89\&. Most notably, that means that only \fR/* \&.\&.\&. */\fP comments are allowed (no \fR//\fP line comments)\&. Moreover, any declarations in a \fR{ \&.\&.\&. }\fP block (e\&.g\&., a function) must appear at the beginning of the block before any statements\&. When you would like to declare a variable in the middle of a block, you can open a new block: 
+.PP
+.nf
+void secp256k_foo(void) {
+    unsigned int x;              /* declaration */
+    int y = 2*x;                 /* declaration */
+    x = 17;                      /* statement */
+    {
+        int a, b;                /* declaration */
+        a = x + y;               /* statement */
+        secp256k_bar(x, &b);     /* statement */
+    }
+}
+
+.fi
+.PP
+
+.IP "\(bu" 2
+Use \fRunsigned int\fP instead of just \fRunsigned\fP\&.
+.IP "\(bu" 2
+Use \fRvoid *ptr\fP instead of \fRvoid* ptr\fP\&.
+.IP "\(bu" 2
+Arguments of the publicly-facing API must have a specific order defined in \fRinclude/secp256k1\&.h\fP\&.
+.IP "\(bu" 2
+User-facing comment lines in headers should be limited to 80 chars if possible\&.
+.IP "\(bu" 2
+All identifiers in file scope should start with \fRsecp256k1_\fP\&.
+.IP "\(bu" 2
+Avoid trailing whitespace\&.
+.IP "\(bu" 2
+Use the constants \fR\fBEXIT_SUCCESS\fP\fP/\fREXIT_FAILURE\fP (defined in \fRstdlib\&.h\fP) to indicate program execution status for examples and other binaries\&.
+.PP
+.SS "Tests"
+.SS "Coverage"
+This library aims to have full coverage of reachable lines and branches\&.
+
+.PP
+To create a test coverage report, configure with \fR--enable-coverage\fP (use of GCC is necessary): 
+.PP
+.nf
+$ \&./configure --enable-coverage
+
+.fi
+.PP
+
+.PP
+Run the tests: 
+.PP
+.nf
+$ make check
+
+.fi
+.PP
+
+.PP
+To create a report, \fRgcovr\fP is recommended, as it includes branch coverage reporting: 
+.PP
+.nf
+$ gcovr --gcov-ignore-parse-errors=all --merge-mode-functions=separate --exclude 'src/bench*' --exclude 'src/modules/\&.*/bench_impl\&.h' --print-summary
+
+.fi
+.PP
+
+.PP
+To create a HTML report with coloured and annotated source code: 
+.PP
+.nf
+$ mkdir -p coverage
+$ gcovr --gcov-ignore-parse-errors=all --merge-mode-functions=separate --exclude 'src/bench*' --exclude 'src/modules/\&.*/bench_impl\&.h' --html --html-details -o coverage/coverage\&.html
+
+.fi
+.PP
+
+.PP
+On \fRgcovr\fP >=8\&.3, \fR--gcov-ignore-parse-errors=all\fP can be replaced with \fR--gcov-suspicious-hits-threshold=140737488355330\fP\&.
+.SS "Exhaustive tests"
+There are tests of several functions in which a small group replaces secp256k1\&. These tests are \fIexhaustive\fP since they provide all elements and scalars of the small group as input arguments (see \fRsrc/tests_exhaustive\&.c\fP)\&.
+.SS "Benchmarks"
+See \fRsrc/bench*\&.c\fP for examples of benchmarks\&. 

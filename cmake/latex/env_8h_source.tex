@@ -1,0 +1,402 @@
+\doxysection{env.\+h}
+\label{env_8h_source}\index{src/leveldb/include/leveldb/env.h@{src/leveldb/include/leveldb/env.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ An\ Env\ is\ an\ interface\ used\ by\ the\ leveldb\ implementation\ to\ access}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//\ operating\ system\ functionality\ like\ the\ filesystem\ etc.\ \ Callers}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//\ may\ wish\ to\ provide\ a\ custom\ Env\ object\ when\ opening\ a\ database\ to}}
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ get\ fine\ gain\ control;\ e.g.,\ to\ rate\ limit\ file\ system\ operations.}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//\ All\ Env\ implementations\ are\ safe\ for\ concurrent\ access\ from}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//\ multiple\ threads\ without\ any\ external\ synchronization.}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_ENV\_H\_}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_ENV\_H\_}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <stdarg.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}leveldb/status.h"{}}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#if\ defined(\_WIN32)}}
+\DoxyCodeLine{00026\ \textcolor{comment}{//\ The\ leveldb::Env\ class\ below\ contains\ a\ DeleteFile\ method.}}
+\DoxyCodeLine{00027\ \textcolor{comment}{//\ At\ the\ same\ time,\ <windows.h>,\ a\ fairly\ popular\ header}}
+\DoxyCodeLine{00028\ \textcolor{comment}{//\ file\ for\ Windows\ applications,\ defines\ a\ DeleteFile\ macro.}}
+\DoxyCodeLine{00029\ \textcolor{comment}{//}}
+\DoxyCodeLine{00030\ \textcolor{comment}{//\ Without\ any\ intervention\ on\ our\ part,\ the\ result\ of\ this}}
+\DoxyCodeLine{00031\ \textcolor{comment}{//\ unfortunate\ coincidence\ is\ that\ the\ name\ of\ the}}
+\DoxyCodeLine{00032\ \textcolor{comment}{//\ leveldb::Env::DeleteFile\ method\ seen\ by\ the\ compiler\ depends\ on}}
+\DoxyCodeLine{00033\ \textcolor{comment}{//\ whether\ <windows.h>\ was\ included\ before\ or\ after\ the\ LevelDB}}
+\DoxyCodeLine{00034\ \textcolor{comment}{//\ headers.}}
+\DoxyCodeLine{00035\ \textcolor{comment}{//}}
+\DoxyCodeLine{00036\ \textcolor{comment}{//\ To\ avoid\ headaches,\ we\ undefined\ DeleteFile\ (if\ defined)\ and}}
+\DoxyCodeLine{00037\ \textcolor{comment}{//\ redefine\ it\ at\ the\ bottom\ of\ this\ file.\ This\ way\ <windows.h>}}
+\DoxyCodeLine{00038\ \textcolor{comment}{//\ can\ be\ included\ before\ this\ file\ (or\ not\ at\ all)\ and\ the}}
+\DoxyCodeLine{00039\ \textcolor{comment}{//\ exported\ method\ will\ always\ be\ leveldb::Env::DeleteFile.}}
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#if\ defined(DeleteFile)}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#undef\ DeleteFile}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#define\ LEVELDB\_DELETEFILE\_UNDEFINED}}
+\DoxyCodeLine{00043\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ defined(DeleteFile)}}
+\DoxyCodeLine{00044\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ defined(\_WIN32)}}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \textcolor{keyword}{class\ }FileLock;}
+\DoxyCodeLine{00049\ \textcolor{keyword}{class\ }Logger;}
+\DoxyCodeLine{00050\ \textcolor{keyword}{class\ }RandomAccessFile;}
+\DoxyCodeLine{00051\ \textcolor{keyword}{class\ }SequentialFile;}
+\DoxyCodeLine{00052\ \textcolor{keyword}{class\ }Slice;}
+\DoxyCodeLine{00053\ \textcolor{keyword}{class\ }WritableFile;}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ Env\ \{}
+\DoxyCodeLine{00056\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00057\ \ \ Env()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ Env(\textcolor{keyword}{const}\ Env\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00060\ \ \ Env\&\ operator=(\textcolor{keyword}{const}\ Env\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \ \ \textcolor{keyword}{virtual}\ \string~Env();}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \ \ \textcolor{comment}{//\ Return\ a\ default\ environment\ suitable\ for\ the\ current\ operating}}
+\DoxyCodeLine{00065\ \ \ \textcolor{comment}{//\ system.\ \ Sophisticated\ users\ may\ wish\ to\ provide\ their\ own\ Env}}
+\DoxyCodeLine{00066\ \ \ \textcolor{comment}{//\ implementation\ instead\ of\ relying\ on\ this\ default\ environment.}}
+\DoxyCodeLine{00067\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00068\ \ \ \textcolor{comment}{//\ The\ result\ of\ Default()\ belongs\ to\ leveldb\ and\ must\ never\ be\ deleted.}}
+\DoxyCodeLine{00069\ \ \ \textcolor{keyword}{static}\ Env*\ Default();}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \textcolor{comment}{//\ Create\ an\ object\ that\ sequentially\ reads\ the\ file\ with\ the\ specified\ name.}}
+\DoxyCodeLine{00072\ \ \ \textcolor{comment}{//\ On\ success,\ stores\ a\ pointer\ to\ the\ new\ file\ in\ *result\ and\ returns\ OK.}}
+\DoxyCodeLine{00073\ \ \ \textcolor{comment}{//\ On\ failure\ stores\ nullptr\ in\ *result\ and\ returns\ non-\/OK.\ \ If\ the\ file\ does}}
+\DoxyCodeLine{00074\ \ \ \textcolor{comment}{//\ not\ exist,\ returns\ a\ non-\/OK\ status.\ \ Implementations\ should\ return\ a}}
+\DoxyCodeLine{00075\ \ \ \textcolor{comment}{//\ NotFound\ status\ when\ the\ file\ does\ not\ exist.}}
+\DoxyCodeLine{00076\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00077\ \ \ \textcolor{comment}{//\ The\ returned\ file\ will\ only\ be\ accessed\ by\ one\ thread\ at\ a\ time.}}
+\DoxyCodeLine{00078\ \ \ \textcolor{keyword}{virtual}\ Status\ NewSequentialFile(\textcolor{keyword}{const}\ std::string\&\ fname,}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SequentialFile**\ result)\ =\ 0;}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ \textcolor{comment}{//\ Create\ an\ object\ supporting\ random-\/access\ reads\ from\ the\ file\ with\ the}}
+\DoxyCodeLine{00082\ \ \ \textcolor{comment}{//\ specified\ name.\ \ On\ success,\ stores\ a\ pointer\ to\ the\ new\ file\ in}}
+\DoxyCodeLine{00083\ \ \ \textcolor{comment}{//\ *result\ and\ returns\ OK.\ \ On\ failure\ stores\ nullptr\ in\ *result\ and}}
+\DoxyCodeLine{00084\ \ \ \textcolor{comment}{//\ returns\ non-\/OK.\ \ If\ the\ file\ does\ not\ exist,\ returns\ a\ non-\/OK}}
+\DoxyCodeLine{00085\ \ \ \textcolor{comment}{//\ status.\ \ Implementations\ should\ return\ a\ NotFound\ status\ when\ the\ file\ does}}
+\DoxyCodeLine{00086\ \ \ \textcolor{comment}{//\ not\ exist.}}
+\DoxyCodeLine{00087\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00088\ \ \ \textcolor{comment}{//\ The\ returned\ file\ may\ be\ concurrently\ accessed\ by\ multiple\ threads.}}
+\DoxyCodeLine{00089\ \ \ \textcolor{keyword}{virtual}\ Status\ NewRandomAccessFile(\textcolor{keyword}{const}\ std::string\&\ fname,}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ RandomAccessFile**\ result)\ =\ 0;}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \ \ \textcolor{comment}{//\ Create\ an\ object\ that\ writes\ to\ a\ new\ file\ with\ the\ specified}}
+\DoxyCodeLine{00093\ \ \ \textcolor{comment}{//\ name.\ \ Deletes\ any\ existing\ file\ with\ the\ same\ name\ and\ creates\ a}}
+\DoxyCodeLine{00094\ \ \ \textcolor{comment}{//\ new\ file.\ \ On\ success,\ stores\ a\ pointer\ to\ the\ new\ file\ in}}
+\DoxyCodeLine{00095\ \ \ \textcolor{comment}{//\ *result\ and\ returns\ OK.\ \ On\ failure\ stores\ nullptr\ in\ *result\ and}}
+\DoxyCodeLine{00096\ \ \ \textcolor{comment}{//\ returns\ non-\/OK.}}
+\DoxyCodeLine{00097\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00098\ \ \ \textcolor{comment}{//\ The\ returned\ file\ will\ only\ be\ accessed\ by\ one\ thread\ at\ a\ time.}}
+\DoxyCodeLine{00099\ \ \ \textcolor{keyword}{virtual}\ Status\ NewWritableFile(\textcolor{keyword}{const}\ std::string\&\ fname,}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WritableFile**\ result)\ =\ 0;}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00102\ \ \ \textcolor{comment}{//\ Create\ an\ object\ that\ either\ appends\ to\ an\ existing\ file,\ or}}
+\DoxyCodeLine{00103\ \ \ \textcolor{comment}{//\ writes\ to\ a\ new\ file\ (if\ the\ file\ does\ not\ exist\ to\ begin\ with).}}
+\DoxyCodeLine{00104\ \ \ \textcolor{comment}{//\ On\ success,\ stores\ a\ pointer\ to\ the\ new\ file\ in\ *result\ and}}
+\DoxyCodeLine{00105\ \ \ \textcolor{comment}{//\ returns\ OK.\ \ On\ failure\ stores\ nullptr\ in\ *result\ and\ returns}}
+\DoxyCodeLine{00106\ \ \ \textcolor{comment}{//\ non-\/OK.}}
+\DoxyCodeLine{00107\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00108\ \ \ \textcolor{comment}{//\ The\ returned\ file\ will\ only\ be\ accessed\ by\ one\ thread\ at\ a\ time.}}
+\DoxyCodeLine{00109\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00110\ \ \ \textcolor{comment}{//\ May\ return\ an\ IsNotSupportedError\ error\ if\ this\ Env\ does}}
+\DoxyCodeLine{00111\ \ \ \textcolor{comment}{//\ not\ allow\ appending\ to\ an\ existing\ file.\ \ Users\ of\ Env\ (including}}
+\DoxyCodeLine{00112\ \ \ \textcolor{comment}{//\ the\ leveldb\ implementation)\ must\ be\ prepared\ to\ deal\ with}}
+\DoxyCodeLine{00113\ \ \ \textcolor{comment}{//\ an\ Env\ that\ does\ not\ support\ appending.}}
+\DoxyCodeLine{00114\ \ \ \textcolor{keyword}{virtual}\ Status\ NewAppendableFile(\textcolor{keyword}{const}\ std::string\&\ fname,}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WritableFile**\ result);}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ the\ named\ file\ exists.}}
+\DoxyCodeLine{00118\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ FileExists(\textcolor{keyword}{const}\ std::string\&\ fname)\ =\ 0;}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00120\ \ \ \textcolor{comment}{//\ Store\ in\ *result\ the\ names\ of\ the\ children\ of\ the\ specified\ directory.}}
+\DoxyCodeLine{00121\ \ \ \textcolor{comment}{//\ The\ names\ are\ relative\ to\ "{}dir"{}.}}
+\DoxyCodeLine{00122\ \ \ \textcolor{comment}{//\ Original\ contents\ of\ *results\ are\ dropped.}}
+\DoxyCodeLine{00123\ \ \ \textcolor{keyword}{virtual}\ Status\ GetChildren(\textcolor{keyword}{const}\ std::string\&\ dir,}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<std::string>*\ result)\ =\ 0;}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \ \ \textcolor{comment}{//\ Delete\ the\ named\ file.}}
+\DoxyCodeLine{00127\ \ \ \textcolor{keyword}{virtual}\ Status\ DeleteFile(\textcolor{keyword}{const}\ std::string\&\ fname)\ =\ 0;}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00129\ \ \ \textcolor{comment}{//\ Create\ the\ specified\ directory.}}
+\DoxyCodeLine{00130\ \ \ \textcolor{keyword}{virtual}\ Status\ CreateDir(\textcolor{keyword}{const}\ std::string\&\ dirname)\ =\ 0;}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \ \ \textcolor{comment}{//\ Delete\ the\ specified\ directory.}}
+\DoxyCodeLine{00133\ \ \ \textcolor{keyword}{virtual}\ Status\ DeleteDir(\textcolor{keyword}{const}\ std::string\&\ dirname)\ =\ 0;}
+\DoxyCodeLine{00134\ }
+\DoxyCodeLine{00135\ \ \ \textcolor{comment}{//\ Store\ the\ size\ of\ fname\ in\ *file\_size.}}
+\DoxyCodeLine{00136\ \ \ \textcolor{keyword}{virtual}\ Status\ GetFileSize(\textcolor{keyword}{const}\ std::string\&\ fname,\ uint64\_t*\ file\_size)\ =\ 0;}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \ \ \textcolor{comment}{//\ Rename\ file\ src\ to\ target.}}
+\DoxyCodeLine{00139\ \ \ \textcolor{keyword}{virtual}\ Status\ RenameFile(\textcolor{keyword}{const}\ std::string\&\ src,}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ target)\ =\ 0;}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00142\ \ \ \textcolor{comment}{//\ Lock\ the\ specified\ file.\ \ Used\ to\ prevent\ concurrent\ access\ to}}
+\DoxyCodeLine{00143\ \ \ \textcolor{comment}{//\ the\ same\ db\ by\ multiple\ processes.\ \ On\ failure,\ stores\ nullptr\ in}}
+\DoxyCodeLine{00144\ \ \ \textcolor{comment}{//\ *lock\ and\ returns\ non-\/OK.}}
+\DoxyCodeLine{00145\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00146\ \ \ \textcolor{comment}{//\ On\ success,\ stores\ a\ pointer\ to\ the\ object\ that\ represents\ the}}
+\DoxyCodeLine{00147\ \ \ \textcolor{comment}{//\ acquired\ lock\ in\ *lock\ and\ returns\ OK.\ \ The\ caller\ should\ call}}
+\DoxyCodeLine{00148\ \ \ \textcolor{comment}{//\ UnlockFile(*lock)\ to\ release\ the\ lock.\ \ If\ the\ process\ exits,}}
+\DoxyCodeLine{00149\ \ \ \textcolor{comment}{//\ the\ lock\ will\ be\ automatically\ released.}}
+\DoxyCodeLine{00150\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00151\ \ \ \textcolor{comment}{//\ If\ somebody\ else\ already\ holds\ the\ lock,\ finishes\ immediately}}
+\DoxyCodeLine{00152\ \ \ \textcolor{comment}{//\ with\ a\ failure.\ \ I.e.,\ this\ call\ does\ not\ wait\ for\ existing\ locks}}
+\DoxyCodeLine{00153\ \ \ \textcolor{comment}{//\ to\ go\ away.}}
+\DoxyCodeLine{00154\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00155\ \ \ \textcolor{comment}{//\ May\ create\ the\ named\ file\ if\ it\ does\ not\ already\ exist.}}
+\DoxyCodeLine{00156\ \ \ \textcolor{keyword}{virtual}\ Status\ LockFile(\textcolor{keyword}{const}\ std::string\&\ fname,\ FileLock**\ lock)\ =\ 0;}
+\DoxyCodeLine{00157\ }
+\DoxyCodeLine{00158\ \ \ \textcolor{comment}{//\ Release\ the\ lock\ acquired\ by\ a\ previous\ successful\ call\ to\ LockFile.}}
+\DoxyCodeLine{00159\ \ \ \textcolor{comment}{//\ REQUIRES:\ lock\ was\ returned\ by\ a\ successful\ LockFile()\ call}}
+\DoxyCodeLine{00160\ \ \ \textcolor{comment}{//\ REQUIRES:\ lock\ has\ not\ already\ been\ unlocked.}}
+\DoxyCodeLine{00161\ \ \ \textcolor{keyword}{virtual}\ Status\ UnlockFile(FileLock*\ lock)\ =\ 0;}
+\DoxyCodeLine{00162\ }
+\DoxyCodeLine{00163\ \ \ \textcolor{comment}{//\ Arrange\ to\ run\ "{}(*function)(arg)"{}\ once\ in\ a\ background\ thread.}}
+\DoxyCodeLine{00164\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00165\ \ \ \textcolor{comment}{//\ "{}function"{}\ may\ run\ in\ an\ unspecified\ thread.\ \ Multiple\ functions}}
+\DoxyCodeLine{00166\ \ \ \textcolor{comment}{//\ added\ to\ the\ same\ Env\ may\ run\ concurrently\ in\ different\ threads.}}
+\DoxyCodeLine{00167\ \ \ \textcolor{comment}{//\ I.e.,\ the\ caller\ may\ not\ assume\ that\ background\ work\ items\ are}}
+\DoxyCodeLine{00168\ \ \ \textcolor{comment}{//\ serialized.}}
+\DoxyCodeLine{00169\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Schedule(\textcolor{keywordtype}{void}\ (*function)(\textcolor{keywordtype}{void}*\ arg),\ \textcolor{keywordtype}{void}*\ arg)\ =\ 0;}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00171\ \ \ \textcolor{comment}{//\ Start\ a\ new\ thread,\ invoking\ "{}function(arg)"{}\ within\ the\ new\ thread.}}
+\DoxyCodeLine{00172\ \ \ \textcolor{comment}{//\ When\ "{}function(arg)"{}\ returns,\ the\ thread\ will\ be\ destroyed.}}
+\DoxyCodeLine{00173\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ StartThread(\textcolor{keywordtype}{void}\ (*function)(\textcolor{keywordtype}{void}*\ arg),\ \textcolor{keywordtype}{void}*\ arg)\ =\ 0;}
+\DoxyCodeLine{00174\ }
+\DoxyCodeLine{00175\ \ \ \textcolor{comment}{//\ *path\ is\ set\ to\ a\ temporary\ directory\ that\ can\ be\ used\ for\ testing.\ It\ may}}
+\DoxyCodeLine{00176\ \ \ \textcolor{comment}{//\ or\ may\ not\ have\ just\ been\ created.\ The\ directory\ may\ or\ may\ not\ differ}}
+\DoxyCodeLine{00177\ \ \ \textcolor{comment}{//\ between\ runs\ of\ the\ same\ process,\ but\ subsequent\ calls\ will\ return\ the}}
+\DoxyCodeLine{00178\ \ \ \textcolor{comment}{//\ same\ directory.}}
+\DoxyCodeLine{00179\ \ \ \textcolor{keyword}{virtual}\ Status\ GetTestDirectory(std::string*\ path)\ =\ 0;}
+\DoxyCodeLine{00180\ }
+\DoxyCodeLine{00181\ \ \ \textcolor{comment}{//\ Create\ and\ return\ a\ log\ file\ for\ storing\ informational\ messages.}}
+\DoxyCodeLine{00182\ \ \ \textcolor{keyword}{virtual}\ Status\ NewLogger(\textcolor{keyword}{const}\ std::string\&\ fname,\ Logger**\ result)\ =\ 0;}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00184\ \ \ \textcolor{comment}{//\ Returns\ the\ number\ of\ micro-\/seconds\ since\ some\ fixed\ point\ in\ time.\ Only}}
+\DoxyCodeLine{00185\ \ \ \textcolor{comment}{//\ useful\ for\ computing\ deltas\ of\ time.}}
+\DoxyCodeLine{00186\ \ \ \textcolor{keyword}{virtual}\ uint64\_t\ NowMicros()\ =\ 0;}
+\DoxyCodeLine{00187\ }
+\DoxyCodeLine{00188\ \ \ \textcolor{comment}{//\ Sleep/delay\ the\ thread\ for\ the\ prescribed\ number\ of\ micro-\/seconds.}}
+\DoxyCodeLine{00189\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ SleepForMicroseconds(\textcolor{keywordtype}{int}\ micros)\ =\ 0;}
+\DoxyCodeLine{00190\ \};}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00192\ \textcolor{comment}{//\ A\ file\ abstraction\ for\ reading\ sequentially\ through\ a\ file}}
+\DoxyCodeLine{00193\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ SequentialFile\ \{}
+\DoxyCodeLine{00194\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00195\ \ \ SequentialFile()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00196\ }
+\DoxyCodeLine{00197\ \ \ SequentialFile(\textcolor{keyword}{const}\ SequentialFile\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00198\ \ \ SequentialFile\&\ operator=(\textcolor{keyword}{const}\ SequentialFile\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \ \ \textcolor{keyword}{virtual}\ \string~SequentialFile();}
+\DoxyCodeLine{00201\ }
+\DoxyCodeLine{00202\ \ \ \textcolor{comment}{//\ Read\ up\ to\ "{}n"{}\ bytes\ from\ the\ file.\ \ "{}scratch[0..n-\/1]"{}\ may\ be}}
+\DoxyCodeLine{00203\ \ \ \textcolor{comment}{//\ written\ by\ this\ routine.\ \ Sets\ "{}*result"{}\ to\ the\ data\ that\ was}}
+\DoxyCodeLine{00204\ \ \ \textcolor{comment}{//\ read\ (including\ if\ fewer\ than\ "{}n"{}\ bytes\ were\ successfully\ read).}}
+\DoxyCodeLine{00205\ \ \ \textcolor{comment}{//\ May\ set\ "{}*result"{}\ to\ point\ at\ data\ in\ "{}scratch[0..n-\/1]"{},\ so}}
+\DoxyCodeLine{00206\ \ \ \textcolor{comment}{//\ "{}scratch[0..n-\/1]"{}\ must\ be\ live\ when\ "{}*result"{}\ is\ used.}}
+\DoxyCodeLine{00207\ \ \ \textcolor{comment}{//\ If\ an\ error\ was\ encountered,\ returns\ a\ non-\/OK\ status.}}
+\DoxyCodeLine{00208\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00209\ \ \ \textcolor{comment}{//\ REQUIRES:\ External\ synchronization}}
+\DoxyCodeLine{00210\ \ \ \textcolor{keyword}{virtual}\ Status\ Read(\textcolor{keywordtype}{size\_t}\ n,\ Slice*\ result,\ \textcolor{keywordtype}{char}*\ scratch)\ =\ 0;}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \ \ \textcolor{comment}{//\ Skip\ "{}n"{}\ bytes\ from\ the\ file.\ This\ is\ guaranteed\ to\ be\ no}}
+\DoxyCodeLine{00213\ \ \ \textcolor{comment}{//\ slower\ that\ reading\ the\ same\ data,\ but\ may\ be\ faster.}}
+\DoxyCodeLine{00214\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00215\ \ \ \textcolor{comment}{//\ If\ end\ of\ file\ is\ reached,\ skipping\ will\ stop\ at\ the\ end\ of\ the}}
+\DoxyCodeLine{00216\ \ \ \textcolor{comment}{//\ file,\ and\ Skip\ will\ return\ OK.}}
+\DoxyCodeLine{00217\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00218\ \ \ \textcolor{comment}{//\ REQUIRES:\ External\ synchronization}}
+\DoxyCodeLine{00219\ \ \ \textcolor{keyword}{virtual}\ Status\ Skip(uint64\_t\ n)\ =\ 0;}
+\DoxyCodeLine{00220\ }
+\DoxyCodeLine{00221\ \ \ \textcolor{comment}{//\ Get\ a\ name\ for\ the\ file,\ only\ for\ error\ reporting}}
+\DoxyCodeLine{00222\ \ \ \textcolor{keyword}{virtual}\ std::string\ GetName()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00223\ \};}
+\DoxyCodeLine{00224\ }
+\DoxyCodeLine{00225\ \textcolor{comment}{//\ A\ file\ abstraction\ for\ randomly\ reading\ the\ contents\ of\ a\ file.}}
+\DoxyCodeLine{00226\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ RandomAccessFile\ \{}
+\DoxyCodeLine{00227\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00228\ \ \ RandomAccessFile()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00230\ \ \ RandomAccessFile(\textcolor{keyword}{const}\ RandomAccessFile\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00231\ \ \ RandomAccessFile\&\ operator=(\textcolor{keyword}{const}\ RandomAccessFile\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00233\ \ \ \textcolor{keyword}{virtual}\ \string~RandomAccessFile();}
+\DoxyCodeLine{00234\ }
+\DoxyCodeLine{00235\ \ \ \textcolor{comment}{//\ Read\ up\ to\ "{}n"{}\ bytes\ from\ the\ file\ starting\ at\ "{}offset"{}.}}
+\DoxyCodeLine{00236\ \ \ \textcolor{comment}{//\ "{}scratch[0..n-\/1]"{}\ may\ be\ written\ by\ this\ routine.\ \ Sets\ "{}*result"{}}}
+\DoxyCodeLine{00237\ \ \ \textcolor{comment}{//\ to\ the\ data\ that\ was\ read\ (including\ if\ fewer\ than\ "{}n"{}\ bytes\ were}}
+\DoxyCodeLine{00238\ \ \ \textcolor{comment}{//\ successfully\ read).\ \ May\ set\ "{}*result"{}\ to\ point\ at\ data\ in}}
+\DoxyCodeLine{00239\ \ \ \textcolor{comment}{//\ "{}scratch[0..n-\/1]"{},\ so\ "{}scratch[0..n-\/1]"{}\ must\ be\ live\ when}}
+\DoxyCodeLine{00240\ \ \ \textcolor{comment}{//\ "{}*result"{}\ is\ used.\ \ If\ an\ error\ was\ encountered,\ returns\ a\ non-\/OK}}
+\DoxyCodeLine{00241\ \ \ \textcolor{comment}{//\ status.}}
+\DoxyCodeLine{00242\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00243\ \ \ \textcolor{comment}{//\ Safe\ for\ concurrent\ use\ by\ multiple\ threads.}}
+\DoxyCodeLine{00244\ \ \ \textcolor{keyword}{virtual}\ Status\ Read(uint64\_t\ offset,\ \textcolor{keywordtype}{size\_t}\ n,\ Slice*\ result,}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{char}*\ scratch)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00246\ }
+\DoxyCodeLine{00247\ \ \ \textcolor{comment}{//\ Get\ a\ name\ for\ the\ file,\ only\ for\ error\ reporting}}
+\DoxyCodeLine{00248\ \ \ \textcolor{keyword}{virtual}\ std::string\ GetName()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00249\ \};}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00251\ \textcolor{comment}{//\ A\ file\ abstraction\ for\ sequential\ writing.\ \ The\ implementation}}
+\DoxyCodeLine{00252\ \textcolor{comment}{//\ must\ provide\ buffering\ since\ callers\ may\ append\ small\ fragments}}
+\DoxyCodeLine{00253\ \textcolor{comment}{//\ at\ a\ time\ to\ the\ file.}}
+\DoxyCodeLine{00254\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ WritableFile\ \{}
+\DoxyCodeLine{00255\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00256\ \ \ WritableFile()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00257\ }
+\DoxyCodeLine{00258\ \ \ WritableFile(\textcolor{keyword}{const}\ WritableFile\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00259\ \ \ WritableFile\&\ operator=(\textcolor{keyword}{const}\ WritableFile\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00260\ }
+\DoxyCodeLine{00261\ \ \ \textcolor{keyword}{virtual}\ \string~WritableFile();}
+\DoxyCodeLine{00262\ }
+\DoxyCodeLine{00263\ \ \ \textcolor{keyword}{virtual}\ Status\ Append(\textcolor{keyword}{const}\ Slice\&\ data)\ =\ 0;}
+\DoxyCodeLine{00264\ \ \ \textcolor{keyword}{virtual}\ Status\ Close()\ =\ 0;}
+\DoxyCodeLine{00265\ \ \ \textcolor{keyword}{virtual}\ Status\ Flush()\ =\ 0;}
+\DoxyCodeLine{00266\ \ \ \textcolor{keyword}{virtual}\ Status\ Sync()\ =\ 0;}
+\DoxyCodeLine{00267\ }
+\DoxyCodeLine{00268\ \ \ \textcolor{comment}{//\ Get\ a\ name\ for\ the\ file,\ only\ for\ error\ reporting}}
+\DoxyCodeLine{00269\ \ \ \textcolor{keyword}{virtual}\ std::string\ GetName()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00270\ \};}
+\DoxyCodeLine{00271\ }
+\DoxyCodeLine{00272\ \textcolor{comment}{//\ An\ interface\ for\ writing\ log\ messages.}}
+\DoxyCodeLine{00273\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ Logger\ \{}
+\DoxyCodeLine{00274\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00275\ \ \ Logger()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00276\ }
+\DoxyCodeLine{00277\ \ \ Logger(\textcolor{keyword}{const}\ Logger\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00278\ \ \ Logger\&\ operator=(\textcolor{keyword}{const}\ Logger\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00280\ \ \ \textcolor{keyword}{virtual}\ \string~Logger();}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00282\ \ \ \textcolor{comment}{//\ Write\ an\ entry\ to\ the\ log\ file\ with\ the\ specified\ format.}}
+\DoxyCodeLine{00283\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Logv(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ format,\ va\_list\ ap)\ =\ 0;}
+\DoxyCodeLine{00284\ \};}
+\DoxyCodeLine{00285\ }
+\DoxyCodeLine{00286\ \textcolor{comment}{//\ Identifies\ a\ locked\ file.}}
+\DoxyCodeLine{00287\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ FileLock\ \{}
+\DoxyCodeLine{00288\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00289\ \ \ FileLock()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00290\ }
+\DoxyCodeLine{00291\ \ \ FileLock(\textcolor{keyword}{const}\ FileLock\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00292\ \ \ FileLock\&\ operator=(\textcolor{keyword}{const}\ FileLock\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00293\ }
+\DoxyCodeLine{00294\ \ \ \textcolor{keyword}{virtual}\ \string~FileLock();}
+\DoxyCodeLine{00295\ \};}
+\DoxyCodeLine{00296\ }
+\DoxyCodeLine{00297\ \textcolor{comment}{//\ Log\ the\ specified\ data\ to\ *info\_log\ if\ info\_log\ is\ non-\/null.}}
+\DoxyCodeLine{00298\ \textcolor{keywordtype}{void}\ Log(Logger*\ info\_log,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ format,\ ...)}
+\DoxyCodeLine{00299\ \textcolor{preprocessor}{\#if\ defined(\_\_GNUC\_\_)\ ||\ defined(\_\_clang\_\_)}}
+\DoxyCodeLine{00300\ \ \ \ \ \_\_attribute\_\_((\_\_format\_\_(\_\_printf\_\_,\ 2,\ 3)))}
+\DoxyCodeLine{00301\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00302\ \ \ \ \ ;}
+\DoxyCodeLine{00303\ }
+\DoxyCodeLine{00304\ \textcolor{comment}{//\ A\ utility\ routine:\ write\ "{}data"{}\ to\ the\ named\ file.}}
+\DoxyCodeLine{00305\ LEVELDB\_EXPORT\ Status\ WriteStringToFile(Env*\ env,\ \textcolor{keyword}{const}\ Slice\&\ data,}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ fname);}
+\DoxyCodeLine{00307\ }
+\DoxyCodeLine{00308\ \textcolor{comment}{//\ A\ utility\ routine:\ read\ contents\ of\ named\ file\ into\ *data}}
+\DoxyCodeLine{00309\ LEVELDB\_EXPORT\ Status\ ReadFileToString(Env*\ env,\ \textcolor{keyword}{const}\ std::string\&\ fname,}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::string*\ data);}
+\DoxyCodeLine{00311\ }
+\DoxyCodeLine{00312\ \textcolor{comment}{//\ An\ implementation\ of\ Env\ that\ forwards\ all\ calls\ to\ another\ Env.}}
+\DoxyCodeLine{00313\ \textcolor{comment}{//\ May\ be\ useful\ to\ clients\ who\ wish\ to\ override\ just\ part\ of\ the}}
+\DoxyCodeLine{00314\ \textcolor{comment}{//\ functionality\ of\ another\ Env.}}
+\DoxyCodeLine{00315\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ EnvWrapper\ :\ \textcolor{keyword}{public}\ Env\ \{}
+\DoxyCodeLine{00316\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00317\ \ \ \textcolor{comment}{//\ Initialize\ an\ EnvWrapper\ that\ delegates\ all\ calls\ to\ *t.}}
+\DoxyCodeLine{00318\ \ \ \textcolor{keyword}{explicit}\ EnvWrapper(Env*\ t)\ :\ target\_(t)\ \{\}}
+\DoxyCodeLine{00319\ \ \ \textcolor{keyword}{virtual}\ \string~EnvWrapper();}
+\DoxyCodeLine{00320\ }
+\DoxyCodeLine{00321\ \ \ \textcolor{comment}{//\ Return\ the\ target\ to\ which\ this\ Env\ forwards\ all\ calls.}}
+\DoxyCodeLine{00322\ \ \ Env*\ target()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ target\_;\ \}}
+\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00324\ \ \ \textcolor{comment}{//\ The\ following\ text\ is\ boilerplate\ that\ forwards\ all\ methods\ to\ target().}}
+\DoxyCodeLine{00325\ \ \ Status\ NewSequentialFile(\textcolor{keyword}{const}\ std::string\&\ f,\ SequentialFile**\ r)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00326\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>NewSequentialFile(f,\ r);}
+\DoxyCodeLine{00327\ \ \ \}}
+\DoxyCodeLine{00328\ \ \ Status\ NewRandomAccessFile(\textcolor{keyword}{const}\ std::string\&\ f,}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ RandomAccessFile**\ r)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00330\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>NewRandomAccessFile(f,\ r);}
+\DoxyCodeLine{00331\ \ \ \}}
+\DoxyCodeLine{00332\ \ \ Status\ NewWritableFile(\textcolor{keyword}{const}\ std::string\&\ f,\ WritableFile**\ r)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00333\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>NewWritableFile(f,\ r);}
+\DoxyCodeLine{00334\ \ \ \}}
+\DoxyCodeLine{00335\ \ \ Status\ NewAppendableFile(\textcolor{keyword}{const}\ std::string\&\ f,\ WritableFile**\ r)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00336\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>NewAppendableFile(f,\ r);}
+\DoxyCodeLine{00337\ \ \ \}}
+\DoxyCodeLine{00338\ \ \ \textcolor{keywordtype}{bool}\ FileExists(\textcolor{keyword}{const}\ std::string\&\ f)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00339\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>FileExists(f);}
+\DoxyCodeLine{00340\ \ \ \}}
+\DoxyCodeLine{00341\ \ \ Status\ GetChildren(\textcolor{keyword}{const}\ std::string\&\ dir,}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<std::string>*\ r)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00343\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>GetChildren(dir,\ r);}
+\DoxyCodeLine{00344\ \ \ \}}
+\DoxyCodeLine{00345\ \ \ Status\ DeleteFile(\textcolor{keyword}{const}\ std::string\&\ f)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00346\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>DeleteFile(f);}
+\DoxyCodeLine{00347\ \ \ \}}
+\DoxyCodeLine{00348\ \ \ Status\ CreateDir(\textcolor{keyword}{const}\ std::string\&\ d)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00349\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>CreateDir(d);}
+\DoxyCodeLine{00350\ \ \ \}}
+\DoxyCodeLine{00351\ \ \ Status\ DeleteDir(\textcolor{keyword}{const}\ std::string\&\ d)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>DeleteDir(d);}
+\DoxyCodeLine{00353\ \ \ \}}
+\DoxyCodeLine{00354\ \ \ Status\ GetFileSize(\textcolor{keyword}{const}\ std::string\&\ f,\ uint64\_t*\ s)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00355\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>GetFileSize(f,\ s);}
+\DoxyCodeLine{00356\ \ \ \}}
+\DoxyCodeLine{00357\ \ \ Status\ RenameFile(\textcolor{keyword}{const}\ std::string\&\ s,\ \textcolor{keyword}{const}\ std::string\&\ t)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00358\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>RenameFile(s,\ t);}
+\DoxyCodeLine{00359\ \ \ \}}
+\DoxyCodeLine{00360\ \ \ Status\ LockFile(\textcolor{keyword}{const}\ std::string\&\ f,\ FileLock**\ l)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00361\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>LockFile(f,\ l);}
+\DoxyCodeLine{00362\ \ \ \}}
+\DoxyCodeLine{00363\ \ \ Status\ UnlockFile(FileLock*\ l)\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ target\_-\/>UnlockFile(l);\ \}}
+\DoxyCodeLine{00364\ \ \ \textcolor{keywordtype}{void}\ Schedule(\textcolor{keywordtype}{void}\ (*f)(\textcolor{keywordtype}{void}*),\ \textcolor{keywordtype}{void}*\ a)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00365\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>Schedule(f,\ a);}
+\DoxyCodeLine{00366\ \ \ \}}
+\DoxyCodeLine{00367\ \ \ \textcolor{keywordtype}{void}\ StartThread(\textcolor{keywordtype}{void}\ (*f)(\textcolor{keywordtype}{void}*),\ \textcolor{keywordtype}{void}*\ a)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00368\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>StartThread(f,\ a);}
+\DoxyCodeLine{00369\ \ \ \}}
+\DoxyCodeLine{00370\ \ \ Status\ GetTestDirectory(std::string*\ path)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00371\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>GetTestDirectory(path);}
+\DoxyCodeLine{00372\ \ \ \}}
+\DoxyCodeLine{00373\ \ \ Status\ NewLogger(\textcolor{keyword}{const}\ std::string\&\ fname,\ Logger**\ result)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keywordflow}{return}\ target\_-\/>NewLogger(fname,\ result);}
+\DoxyCodeLine{00375\ \ \ \}}
+\DoxyCodeLine{00376\ \ \ uint64\_t\ NowMicros()\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ target\_-\/>NowMicros();\ \}}
+\DoxyCodeLine{00377\ \ \ \textcolor{keywordtype}{void}\ SleepForMicroseconds(\textcolor{keywordtype}{int}\ micros)\textcolor{keyword}{\ override\ }\{}
+\DoxyCodeLine{00378\ \ \ \ \ target\_-\/>SleepForMicroseconds(micros);}
+\DoxyCodeLine{00379\ \ \ \}}
+\DoxyCodeLine{00380\ }
+\DoxyCodeLine{00381\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00382\ \ \ Env*\ target\_;}
+\DoxyCodeLine{00383\ \};}
+\DoxyCodeLine{00384\ }
+\DoxyCodeLine{00385\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00386\ }
+\DoxyCodeLine{00387\ \textcolor{comment}{//\ Redefine\ DeleteFile\ if\ necessary.}}
+\DoxyCodeLine{00388\ \textcolor{preprocessor}{\#if\ defined(\_WIN32)\ \&\&\ defined(LEVELDB\_DELETEFILE\_UNDEFINED)}}
+\DoxyCodeLine{00389\ \textcolor{preprocessor}{\#if\ defined(UNICODE)}}
+\DoxyCodeLine{00390\ \textcolor{preprocessor}{\#define\ DeleteFile\ DeleteFileW}}
+\DoxyCodeLine{00391\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00392\ \textcolor{preprocessor}{\#define\ DeleteFile\ DeleteFileA}}
+\DoxyCodeLine{00393\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ defined(UNICODE)}}
+\DoxyCodeLine{00394\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ defined(\_WIN32)\ \&\&\ defined(LEVELDB\_DELETEFILE\_UNDEFINED)}}
+\DoxyCodeLine{00395\ }
+\DoxyCodeLine{00396\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_INCLUDE\_ENV\_H\_}}
+
+\end{DoxyCode}

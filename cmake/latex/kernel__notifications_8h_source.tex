@@ -1,0 +1,77 @@
+\doxysection{kernel\+\_\+notifications.\+h}
+\label{kernel__notifications_8h_source}\index{src/node/kernel\_notifications.h@{src/node/kernel\_notifications.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2023-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_NODE\_KERNEL\_NOTIFICATIONS\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_NODE\_KERNEL\_NOTIFICATIONS\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <kernel/notifications\_interface.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <threadsafety.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{keyword}{class\ }ArgsManager;}
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }CBlockIndex;}
+\DoxyCodeLine{00020\ \textcolor{keyword}{enum\ class}\ SynchronizationState;}
+\DoxyCodeLine{00021\ \textcolor{keyword}{struct\ }bilingual\_str;}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{namespace\ }kernel\ \{}
+\DoxyCodeLine{00024\ \textcolor{keyword}{enum\ class}\ Warning;}
+\DoxyCodeLine{00025\ \}\ \textcolor{comment}{//\ namespace\ kernel}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{namespace\ }node\ \{}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{keyword}{class\ }Warnings;}
+\DoxyCodeLine{00030\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{int}\ DEFAULT\_STOPATHEIGHT\{0\};}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{class\ }KernelNotifications\ :\ \textcolor{keyword}{public}\ kernel::Notifications}
+\DoxyCodeLine{00033\ \{}
+\DoxyCodeLine{00034\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00035\ \ \ \ \ KernelNotifications(\textcolor{keyword}{const}\ std::function<\textcolor{keywordtype}{bool}()>\&\ shutdown\_request,\ std::atomic<int>\&\ exit\_status,\ node::Warnings\&\ warnings)}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ :\ m\_shutdown\_request(shutdown\_request),\ m\_exit\_status\{exit\_status\},\ m\_warnings\{warnings\}\ \{\}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \ \ [[nodiscard]]\ kernel::InterruptResult\ blockTip(SynchronizationState\ state,\ \textcolor{keyword}{const}\ CBlockIndex\&\ index,\ \textcolor{keywordtype}{double}\ verification\_progress)\ \textcolor{keyword}{override}\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_tip\_block\_mutex);}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordtype}{void}\ headerTip(SynchronizationState\ state,\ int64\_t\ height,\ int64\_t\ timestamp,\ \textcolor{keywordtype}{bool}\ presync)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordtype}{void}\ progress(\textcolor{keyword}{const}\ bilingual\_str\&\ title,\ \textcolor{keywordtype}{int}\ progress\_percent,\ \textcolor{keywordtype}{bool}\ resume\_possible)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordtype}{void}\ warningSet(kernel::Warning\ \textcolor{keywordtype}{id},\ \textcolor{keyword}{const}\ bilingual\_str\&\ message)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{void}\ warningUnset(kernel::Warning\ \textcolor{keywordtype}{id})\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keywordtype}{void}\ flushError(\textcolor{keyword}{const}\ bilingual\_str\&\ message)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordtype}{void}\ fatalError(\textcolor{keyword}{const}\ bilingual\_str\&\ message)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_stop\_at\_height\{DEFAULT\_STOPATHEIGHT\};}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_shutdown\_on\_fatal\_error\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \ \ Mutex\ m\_tip\_block\_mutex;}
+\DoxyCodeLine{00058\ \ \ \ \ std::condition\_variable\ m\_tip\_block\_cv\ GUARDED\_BY(m\_tip\_block\_mutex);}
+\DoxyCodeLine{00062\ \ \ \ \ std::optional<uint256>\ TipBlock()\ EXCLUSIVE\_LOCKS\_REQUIRED(m\_tip\_block\_mutex);}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ private:}
+\DoxyCodeLine{00065\ \ \ \ \ const\ std::function<\textcolor{keywordtype}{bool}()>\&\ m\_shutdown\_request;}
+\DoxyCodeLine{00066\ \ \ \ \ std::atomic<\textcolor{keywordtype}{int}>\&\ m\_exit\_status;}
+\DoxyCodeLine{00067\ \ \ \ \ node::Warnings\&\ m\_warnings;}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \ \ std::optional<uint256>\ m\_tip\_block\ GUARDED\_BY(m\_tip\_block\_mutex);}
+\DoxyCodeLine{00070\ \};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \textcolor{keywordtype}{void}\ ReadNotificationArgs(const\ ArgsManager\&\ args,\ KernelNotifications\&\ notifications);}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \}\ \textcolor{comment}{//\ namespace\ node}}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_NODE\_KERNEL\_NOTIFICATIONS\_H}}
+
+\end{DoxyCode}

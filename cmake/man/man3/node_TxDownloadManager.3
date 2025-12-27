@@ -1,0 +1,137 @@
+.TH "TxDownloadManager" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+TxDownloadManager
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <txdownloadman\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBTxDownloadManager\fP (const \fBTxDownloadOptions\fP &options)"
+.br
+.ti -1c
+.RI "\fB~TxDownloadManager\fP ()"
+.br
+.ti -1c
+.RI "void \fBActiveTipChange\fP ()"
+.br
+.ti -1c
+.RI "void \fBBlockConnected\fP (const std::shared_ptr< const \fBCBlock\fP > &pblock)"
+.br
+.ti -1c
+.RI "void \fBBlockDisconnected\fP ()"
+.br
+.ti -1c
+.RI "void \fBConnectedPeer\fP (\fBNodeId\fP nodeid, const \fBTxDownloadConnectionInfo\fP &info)"
+.br
+.ti -1c
+.RI "void \fBDisconnectedPeer\fP (\fBNodeId\fP nodeid)"
+.br
+.ti -1c
+.RI "bool \fBAddTxAnnouncement\fP (\fBNodeId\fP peer, const \fBGenTxid\fP &gtxid, std::chrono::microseconds now)"
+.br
+.ti -1c
+.RI "std::vector< \fBGenTxid\fP > \fBGetRequestsToSend\fP (\fBNodeId\fP nodeid, std::chrono::microseconds current_time)"
+.br
+.ti -1c
+.RI "void \fBReceivedNotFound\fP (\fBNodeId\fP nodeid, const std::vector< \fBGenTxid\fP > &gtxids)"
+.br
+.ti -1c
+.RI "void \fBMempoolAcceptedTx\fP (const \fBCTransactionRef\fP &tx)"
+.br
+.ti -1c
+.RI "\fBRejectedTxTodo\fP \fBMempoolRejectedTx\fP (const \fBCTransactionRef\fP &ptx, const \fBTxValidationState\fP &state, \fBNodeId\fP nodeid, bool first_time_failure)"
+.br
+.ti -1c
+.RI "void \fBMempoolRejectedPackage\fP (const \fBPackage\fP &package)"
+.br
+.ti -1c
+.RI "std::pair< bool, std::optional< \fBPackageToValidate\fP > > \fBReceivedTx\fP (\fBNodeId\fP nodeid, const \fBCTransactionRef\fP &ptx)"
+.br
+.ti -1c
+.RI "bool \fBHaveMoreWork\fP (\fBNodeId\fP nodeid) const"
+.br
+.ti -1c
+.RI "\fBCTransactionRef\fP \fBGetTxToReconsider\fP (\fBNodeId\fP nodeid)"
+.br
+.ti -1c
+.RI "void \fBCheckIsEmpty\fP () const"
+.br
+.ti -1c
+.RI "void \fBCheckIsEmpty\fP (\fBNodeId\fP nodeid) const"
+.br
+.ti -1c
+.RI "std::vector< \fBTxOrphanage::OrphanInfo\fP > \fBGetOrphanTransactions\fP () const"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Class responsible for deciding what transactions to request and, once downloaded, whether and how to validate them\&. It is also responsible for deciding what transaction packages to validate and how to resolve orphan transactions\&. Its data structures include \fBTxRequestTracker\fP for scheduling requests, rolling bloom filters for remembering transactions that have already been {accepted, rejected, confirmed}, an orphanage, and a registry of each peer's transaction relay-related information\&.
+
+.PP
+Caller needs to interact with \fBTxDownloadManager\fP:
+.IP "\(bu" 2
+ValidationInterface callbacks\&.
+.IP "\(bu" 2
+When a potential transaction relay peer connects or disconnects\&.
+.IP "\(bu" 2
+When a transaction or package is accepted or rejected from mempool
+.IP "\(bu" 2
+When a inv, notfound, or tx message is received
+.IP "\(bu" 2
+To get instructions for which getdata messages to send
+.PP
+
+.PP
+This class is not thread-safe\&. Access must be synchronized using an external mutex\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "TxDownloadManager (const \fBTxDownloadOptions\fP & options)\fR [explicit]\fP"
+
+.SS "~\fBTxDownloadManager\fP ()\fR [default]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "void ActiveTipChange ()"
+
+.SS "bool AddTxAnnouncement (\fBNodeId\fP peer, const \fBGenTxid\fP & gtxid, std::chrono::microseconds now)"
+Consider adding this tx hash to txrequest\&. Should be called whenever a new inv has been received\&. Also called internally when a transaction is missing parents so that we can request them\&. Returns true if this was a dropped inv (p2p_inv=true and we already have the tx), false otherwise\&. 
+.SS "void BlockConnected (const std::shared_ptr< const \fBCBlock\fP > & pblock)"
+
+.SS "void BlockDisconnected ()"
+
+.SS "void CheckIsEmpty () const"
+Check that all data structures are empty\&. 
+.SS "void CheckIsEmpty (\fBNodeId\fP nodeid) const"
+Check that all data structures that track per-peer information have nothing for this peer\&. 
+.SS "void ConnectedPeer (\fBNodeId\fP nodeid, const \fBTxDownloadConnectionInfo\fP & info)"
+Creates a new PeerInfo\&. Saves the connection info to calculate tx announcement delays later\&. 
+.SS "void DisconnectedPeer (\fBNodeId\fP nodeid)"
+Deletes all txrequest announcements and orphans for a given peer\&. 
+.SS "std::vector< \fBTxOrphanage::OrphanInfo\fP > GetOrphanTransactions () const"
+\fBWrapper\fP for \fBTxOrphanage::GetOrphanTransactions\fP 
+.SS "std::vector< \fBGenTxid\fP > GetRequestsToSend (\fBNodeId\fP nodeid, std::chrono::microseconds current_time)"
+Get getdata requests to send\&. 
+.SS "\fBCTransactionRef\fP GetTxToReconsider (\fBNodeId\fP nodeid)"
+Returns next orphan tx to consider, or nullptr if none exist\&. 
+.SS "bool HaveMoreWork (\fBNodeId\fP nodeid) const"
+Whether there are any orphans to reconsider for this peer\&. 
+.SS "void MempoolAcceptedTx (const \fBCTransactionRef\fP & tx)"
+Respond to successful transaction submission to mempool 
+.SS "void MempoolRejectedPackage (const \fBPackage\fP & package)"
+Respond to package rejected from mempool 
+.SS "\fBRejectedTxTodo\fP MempoolRejectedTx (const \fBCTransactionRef\fP & ptx, const \fBTxValidationState\fP & state, \fBNodeId\fP nodeid, bool first_time_failure)"
+Respond to transaction rejected from mempool 
+.SS "void ReceivedNotFound (\fBNodeId\fP nodeid, const std::vector< \fBGenTxid\fP > & gtxids)"
+Should be called when a notfound for a tx has been received\&. 
+.SS "std::pair< bool, std::optional< \fBPackageToValidate\fP > > ReceivedTx (\fBNodeId\fP nodeid, const \fBCTransactionRef\fP & ptx)"
+Marks a tx as ReceivedResponse in txrequest and checks whether AlreadyHaveTx\&. Return a bool indicating whether this tx should be validated\&. If false, optionally, a \fBPackageToValidate\fP\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

@@ -1,0 +1,131 @@
+\doxysection{hsort\+\_\+impl.\+h}
+\label{hsort__impl_8h_source}\index{src/secp256k1/src/hsort\_impl.h@{src/secp256k1/src/hsort\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2021\ Russell\ O'Connor,\ Jonas\ Nick\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_HSORT\_IMPL\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_HSORT\_IMPL\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}hsort.h"{}}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{comment}{/*\ An\ array\ is\ a\ heap\ when,\ for\ all\ non-\/zero\ indexes\ i,\ the\ element\ at\ index\ i}}
+\DoxyCodeLine{00013\ \textcolor{comment}{\ *\ compares\ as\ less\ than\ or\ equal\ to\ the\ element\ at\ index\ parent(i)\ =\ (i-\/1)/2.}}
+\DoxyCodeLine{00014\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{size\_t}\ secp256k1\_heap\_child1(\textcolor{keywordtype}{size\_t}\ i)\ \{}
+\DoxyCodeLine{00017\ \ \ \ \ VERIFY\_CHECK(i\ <=\ (SIZE\_MAX\ -\/\ 1)/2);}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordflow}{return}\ 2*i\ +\ 1;}
+\DoxyCodeLine{00019\ \}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{size\_t}\ secp256k1\_heap\_child2(\textcolor{keywordtype}{size\_t}\ i)\ \{}
+\DoxyCodeLine{00022\ \ \ \ \ VERIFY\_CHECK(i\ <=\ SIZE\_MAX/2\ -\/\ 1);}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordflow}{return}\ secp256k1\_heap\_child1(i)+1;}
+\DoxyCodeLine{00024\ \}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_heap\_swap64(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *a,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *b,\ \textcolor{keywordtype}{size\_t}\ len)\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tmp[64];}
+\DoxyCodeLine{00028\ \ \ \ \ VERIFY\_CHECK(len\ <=\ 64);}
+\DoxyCodeLine{00029\ \ \ \ \ memcpy(tmp,\ a,\ len);}
+\DoxyCodeLine{00030\ \ \ \ \ memmove(a,\ b,\ len);}
+\DoxyCodeLine{00031\ \ \ \ \ memcpy(b,\ tmp,\ len);}
+\DoxyCodeLine{00032\ \}}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_heap\_swap(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *arr,\ \textcolor{keywordtype}{size\_t}\ i,\ \textcolor{keywordtype}{size\_t}\ j,\ \textcolor{keywordtype}{size\_t}\ stride)\ \{}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *a\ =\ arr\ +\ i*stride;}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *b\ =\ arr\ +\ j*stride;}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ len\ =\ stride;}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordflow}{while}\ (64\ <\ len)\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ secp256k1\_heap\_swap64(a\ +\ (len\ -\/\ 64),\ b\ +\ (len\ -\/\ 64),\ 64);}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ len\ -\/=\ 64;}
+\DoxyCodeLine{00041\ \ \ \ \ \}}
+\DoxyCodeLine{00042\ \ \ \ \ secp256k1\_heap\_swap64(a,\ b,\ len);}
+\DoxyCodeLine{00043\ \}}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00045\ \textcolor{comment}{/*\ This\ function\ accepts\ an\ array\ arr\ containing\ heap\_size\ elements,\ each\ of}}
+\DoxyCodeLine{00046\ \textcolor{comment}{\ *\ size\ stride.\ The\ elements\ in\ the\ array\ at\ indices\ >i\ satisfy\ the\ max-\/heap}}
+\DoxyCodeLine{00047\ \textcolor{comment}{\ *\ property,\ i.e.,\ for\ any\ element\ at\ index\ j\ (where\ j\ >\ i),\ all\ of\ its\ children}}
+\DoxyCodeLine{00048\ \textcolor{comment}{\ *\ are\ smaller\ than\ the\ element\ itself.\ The\ purpose\ of\ the\ function\ is\ to\ update}}
+\DoxyCodeLine{00049\ \textcolor{comment}{\ *\ the\ array\ so\ that\ all\ elements\ at\ indices\ >=i\ satisfy\ the\ max-\/heap}}
+\DoxyCodeLine{00050\ \textcolor{comment}{\ *\ property.\ */}}
+\DoxyCodeLine{00051\ \textcolor{keyword}{static}\ SECP256K1\_INLINE\ \textcolor{keywordtype}{void}\ secp256k1\_heap\_down(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *arr,\ \textcolor{keywordtype}{size\_t}\ i,\ \textcolor{keywordtype}{size\_t}\ heap\_size,\ \textcolor{keywordtype}{size\_t}\ stride,}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ (*cmp)(\textcolor{keyword}{const}\ \textcolor{keywordtype}{void}\ *,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{void}\ *,\ \textcolor{keywordtype}{void}\ *),\ \textcolor{keywordtype}{void}\ *cmp\_data)\ \{}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordflow}{while}\ (i\ <\ heap\_size/2)\ \{}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(i\ <=\ SIZE\_MAX/2\ -\/\ 1);}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Proof:}}
+\DoxyCodeLine{00056\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ i\ <\ heap\_size/2}}
+\DoxyCodeLine{00057\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ i\ +\ 1\ <=\ heap\_size/2}}
+\DoxyCodeLine{00058\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ 2*i\ +\ 2\ <=\ heap\_size\ <=\ SIZE\_MAX}}
+\DoxyCodeLine{00059\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ 2*i\ <=\ SIZE\_MAX\ -\/\ 2}}
+\DoxyCodeLine{00060\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ */}}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_heap\_child1(i)\ <\ heap\_size);}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Proof:}}
+\DoxyCodeLine{00064\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ i\ <\ heap\_size/2}}
+\DoxyCodeLine{00065\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ i\ +\ 1\ <=\ heap\_size/2}}
+\DoxyCodeLine{00066\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ 2*i\ +\ 2\ <=\ heap\_size}}
+\DoxyCodeLine{00067\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ 2*i\ +\ 1\ <\ heap\_size}}
+\DoxyCodeLine{00068\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ child1(i)\ <\ heap\_size}}
+\DoxyCodeLine{00069\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ */}}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Let\ [x]\ be\ notation\ for\ the\ contents\ at\ arr[x*stride].}}
+\DoxyCodeLine{00072\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00073\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ If\ [child1(i)]\ >\ [i]\ and\ [child2(i)]\ >\ [i],}}
+\DoxyCodeLine{00074\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ \ \ swap\ [i]\ with\ the\ larger\ child\ to\ ensure\ the\ new\ parent\ is\ larger}}
+\DoxyCodeLine{00075\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ \ \ than\ both\ children.\ When\ [child1(i)]\ ==\ [child2(i)],\ swap\ [i]\ with}}
+\DoxyCodeLine{00076\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ \ \ [child2(i)].}}
+\DoxyCodeLine{00077\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ Else\ if\ [child1(i)]\ >\ [i],\ swap\ [i]\ with\ [child1(i)].}}
+\DoxyCodeLine{00078\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ Else\ if\ [child2(i)]\ >\ [i],\ swap\ [i]\ with\ [child2(i)].}}
+\DoxyCodeLine{00079\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ */}}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_heap\_child2(i)\ <\ heap\_size}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&\&\ 0\ <=\ cmp(arr\ +\ secp256k1\_heap\_child2(i)*stride,\ arr\ +\ secp256k1\_heap\_child1(i)*stride,\ cmp\_data))\ \{}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (0\ <\ cmp(arr\ +\ secp256k1\_heap\_child2(i)*stride,\ arr\ +\ i*stride,\ cmp\_data))\ \{}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_heap\_swap(arr,\ i,\ secp256k1\_heap\_child2(i),\ stride);}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ i\ =\ secp256k1\_heap\_child2(i);}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ At\ this\ point\ we\ have\ [child2(i)]\ >=\ [child1(i)]\ and\ we\ have}}
+\DoxyCodeLine{00087\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ [child2(i)]\ <=\ [i],\ and\ thus\ [child1(i)]\ <=\ [i]\ which\ means}}
+\DoxyCodeLine{00088\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *\ that\ the\ next\ comparison\ can\ be\ skipped.\ */}}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (0\ <\ cmp(arr\ +\ secp256k1\_heap\_child1(i)*stride,\ arr\ +\ \ \ \ \ \ \ \ \ i*stride,\ cmp\_data))\ \{}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_heap\_swap(arr,\ i,\ secp256k1\_heap\_child1(i),\ stride);}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ i\ =\ secp256k1\_heap\_child1(i);}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00097\ \ \ \ \ \}}
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{comment}{/*\ heap\_size/2\ <=\ i}}
+\DoxyCodeLine{00099\ \textcolor{comment}{\ \ \ \ \ *\ heap\_size/2\ <\ i\ +\ 1}}
+\DoxyCodeLine{00100\ \textcolor{comment}{\ \ \ \ \ *\ heap\_size\ <\ 2*i\ +\ 2}}
+\DoxyCodeLine{00101\ \textcolor{comment}{\ \ \ \ \ *\ heap\_size\ <=\ 2*i\ +\ 1}}
+\DoxyCodeLine{00102\ \textcolor{comment}{\ \ \ \ \ *\ heap\_size\ <=\ child1(i)}}
+\DoxyCodeLine{00103\ \textcolor{comment}{\ \ \ \ \ *\ Thus\ child1(i)\ and\ child2(i)\ are\ now\ out\ of\ bounds\ and\ we\ are\ at\ a\ leaf.}}
+\DoxyCodeLine{00104\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00105\ \}}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \textcolor{comment}{/*\ In-\/place\ heap\ sort.\ */}}
+\DoxyCodeLine{00108\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_hsort(\textcolor{keywordtype}{void}\ *ptr,\ \textcolor{keywordtype}{size\_t}\ count,\ \textcolor{keywordtype}{size\_t}\ size,}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ (*cmp)(\textcolor{keyword}{const}\ \textcolor{keywordtype}{void}\ *,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{void}\ *,\ \textcolor{keywordtype}{void}\ *),}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ *cmp\_data)\ \{}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i;}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ count/2;\ 0\ <\ i;\ -\/-\/i)\ \{}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ secp256k1\_heap\_down(ptr,\ i-\/1,\ count,\ size,\ cmp,\ cmp\_data);}
+\DoxyCodeLine{00115\ \ \ \ \ \}}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ count;\ 1\ <\ i;\ -\/-\/i)\ \{}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Extract\ the\ largest\ value\ from\ the\ heap\ */}}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ secp256k1\_heap\_swap(ptr,\ 0,\ i-\/1,\ size);}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Repair\ the\ heap\ condition\ */}}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ secp256k1\_heap\_down(ptr,\ 0,\ i-\/1,\ size,\ cmp,\ cmp\_data);}
+\DoxyCodeLine{00122\ \ \ \ \ \}}
+\DoxyCodeLine{00123\ \}}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00125\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

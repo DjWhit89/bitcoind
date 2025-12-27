@@ -1,0 +1,369 @@
+\doxysection{logging.\+h}
+\label{logging_8h_source}\index{src/logging.h@{src/logging.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_LOGGING\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_LOGGING\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <crypto/siphash.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <threadsafety.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <tinyformat.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <util/fs.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/string.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <util/time.h>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <list>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <mutex>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <source\_location>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <unordered\_set>}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_LOGTIMEMICROS\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00031\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_LOGIPS\ \ \ \ \ \ \ \ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00032\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_LOGTIMESTAMPS\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00033\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_LOGTHREADNAMES\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00034\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_LOGSOURCELOCATIONS\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00035\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ DEFAULT\_LOGLEVELALWAYS\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00036\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *\ \textcolor{keyword}{const}\ DEFAULT\_DEBUGLOGFILE;}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{bool}\ fLogIPs;}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00041\ \textcolor{keyword}{class\ }SourceLocation}
+\DoxyCodeLine{00042\ \{}
+\DoxyCodeLine{00043\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00047\ \ \ \ \ SourceLocation(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ func,}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::source\_location\ loc\ =\ std::source\_location::current())}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ :\ m\_func\{func\},\ m\_loc\{loc\}\ \{\}}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \ \ std::string\_view\ file\_name()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_loc.file\_name();\ \}}
+\DoxyCodeLine{00052\ \ \ \ \ std::uint\_least32\_t\ line()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_loc.line();\ \}}
+\DoxyCodeLine{00053\ \ \ \ \ std::string\_view\ function\_name\_short()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_func;\ \}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00056\ \ \ \ \ std::string\_view\ m\_func;}
+\DoxyCodeLine{00057\ \ \ \ \ std::source\_location\ m\_loc;}
+\DoxyCodeLine{00058\ \};}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \textcolor{keyword}{struct\ }SourceLocationEqual\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator()(\textcolor{keyword}{const}\ SourceLocation\&\ lhs,\ \textcolor{keyword}{const}\ SourceLocation\&\ rhs)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00062\ \ \ \ \ \{}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ lhs.line()\ ==\ rhs.line()\ \&\&\ std::string\_view(lhs.file\_name())\ ==\ std::string\_view(rhs.file\_name());}
+\DoxyCodeLine{00064\ \ \ \ \ \}}
+\DoxyCodeLine{00065\ \};}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \textcolor{keyword}{struct\ }SourceLocationHasher\ \{}
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ operator()(\textcolor{keyword}{const}\ SourceLocation\&\ s)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00069\ \ \ \ \ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Use\ CSipHasher(0,\ 0)\ as\ a\ simple\ way\ to\ get\ uniform\ distribution.}}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ size\_t(CSipHasher(0,\ 0)}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ .Write(s.line())}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ .Write(MakeUCharSpan(std::string\_view\{s.file\_name()\}))}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ .Finalize());}
+\DoxyCodeLine{00075\ \ \ \ \ \}}
+\DoxyCodeLine{00076\ \};}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \textcolor{keyword}{struct\ }LogCategory\ \{}
+\DoxyCodeLine{00079\ \ \ \ \ std::string\ category;}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keywordtype}{bool}\ active;}
+\DoxyCodeLine{00081\ \};}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \textcolor{keyword}{namespace\ }BCLog\ \{}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keyword}{using\ }CategoryMask\ =\ uint64\_t;}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keyword}{enum}\ LogFlags\ :\ CategoryMask\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ NONE\ \ \ \ \ \ \ \ =\ CategoryMask\{0\},}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ NET\ \ \ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ \ 0),}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ TOR\ \ \ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ \ 1),}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ MEMPOOL\ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ \ 2),}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ HTTP\ \ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ \ 3),}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ BENCH\ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ \ 4),}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ ZMQ\ \ \ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ \ 5),}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ WALLETDB\ \ \ \ =\ (CategoryMask\{1\}\ <<\ \ 6),}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ RPC\ \ \ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ \ 7),}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ ESTIMATEFEE\ =\ (CategoryMask\{1\}\ <<\ \ 8),}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ ADDRMAN\ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ \ 9),}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ SELECTCOINS\ =\ (CategoryMask\{1\}\ <<\ 10),}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ REINDEX\ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 11),}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ CMPCTBLOCK\ \ =\ (CategoryMask\{1\}\ <<\ 12),}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ RAND\ \ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 13),}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ PRUNE\ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 14),}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ PROXY\ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 15),}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ MEMPOOLREJ\ \ =\ (CategoryMask\{1\}\ <<\ 16),}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ LIBEVENT\ \ \ \ =\ (CategoryMask\{1\}\ <<\ 17),}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ COINDB\ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 18),}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ QT\ \ \ \ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 19),}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ LEVELDB\ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 20),}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ VALIDATION\ \ =\ (CategoryMask\{1\}\ <<\ 21),}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ I2P\ \ \ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 22),}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ IPC\ \ \ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 23),}
+\DoxyCodeLine{00111\ \#ifdef\ DEBUG\_LOCKCONTENTION}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ LOCK\ \ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 24),}
+\DoxyCodeLine{00113\ \#endif}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ BLOCKSTORAGE\ =\ (CategoryMask\{1\}\ <<\ 25),}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ TXRECONCILIATION\ =\ (CategoryMask\{1\}\ <<\ 26),}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ SCAN\ \ \ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 27),}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ TXPACKAGES\ \ =\ (CategoryMask\{1\}\ <<\ 28),}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ KERNEL\ \ \ \ \ \ =\ (CategoryMask\{1\}\ <<\ 29),}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ ALL\ \ \ \ \ \ \ \ \ =\ \string~NONE,}
+\DoxyCodeLine{00120\ \ \ \ \ \};}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keyword}{enum\ class}\ Level\ \{}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ Trace\ =\ 0,\ \textcolor{comment}{//\ High-\/volume\ or\ detailed\ logging\ for\ development/debugging}}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ Debug,\ \ \ \ \ \textcolor{comment}{//\ Reasonably\ noisy\ logging,\ but\ still\ usable\ in\ production}}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ Info,\ \ \ \ \ \ \textcolor{comment}{//\ Default}}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ Warning,}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ Error,}
+\DoxyCodeLine{00127\ \ \ \ \ \};}
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ DEFAULT\_LOG\_LEVEL\{Level::Debug\};}
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ DEFAULT\_MAX\_LOG\_BUFFER\{1'000'000\};\ \textcolor{comment}{//\ buffer\ up\ to\ 1MB\ of\ log\ data\ prior\ to\ StartLogging}}
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keyword}{constexpr}\ uint64\_t\ RATELIMIT\_MAX\_BYTES\{1024\ *\ 1024\};\ \textcolor{comment}{//\ maximum\ number\ of\ bytes\ per\ source\ location\ that\ can\ be\ logged\ within\ the\ RATELIMIT\_WINDOW}}
+\DoxyCodeLine{00131\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ RATELIMIT\_WINDOW\{1h\};\ \textcolor{comment}{//\ time\ window\ after\ which\ log\ ratelimit\ stats\ are\ reset}}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ DEFAULT\_LOGRATELIMIT\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{keyword}{class\ }LogRateLimiter}
+\DoxyCodeLine{00136\ \ \ \ \ \{}
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \textcolor{keyword}{struct\ }Stats\ \{}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ m\_available\_bytes;}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ m\_dropped\_bytes\{0\};}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ \ \ \ \ Stats(uint64\_t\ max\_bytes)\ :\ m\_available\_bytes\{max\_bytes\}\ \{\}}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ Consume(uint64\_t\ bytes);}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00150\ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ \textcolor{keyword}{mutable}\ StdMutex\ m\_mutex;}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ std::unordered\_map<SourceLocation,\ Stats,\ SourceLocationHasher,\ SourceLocationEqual>\ m\_source\_locations\ GUARDED\_BY(m\_mutex);}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ std::atomic<bool>\ m\_suppression\_active\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ LogRateLimiter(uint64\_t\ max\_bytes,\ std::chrono::seconds\ reset\_window);}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00160\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }SchedulerFunction\ =\ std::function<void(std::function<\textcolor{keywordtype}{void}()>,\ std::chrono::milliseconds)>;}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ std::shared\_ptr<LogRateLimiter>\ Create(}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \ \ \ \ SchedulerFunction\&\&\ scheduler\_func,}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ max\_bytes,}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ \ \ \ \ std::chrono::seconds\ reset\_window);}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ m\_max\_bytes;}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::chrono::seconds\ m\_reset\_window;}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum\ class}\ Status\ \{}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ \ \ \ \ UNSUPPRESSED,\ \ \ \ \ \textcolor{comment}{//\ string\ fits\ within\ the\ limit}}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \ \ \ \ NEWLY\_SUPPRESSED,\ \textcolor{comment}{//\ suppression\ has\ started\ since\ this\ string}}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ \ \ \ \ STILL\_SUPPRESSED,\ \textcolor{comment}{//\ suppression\ is\ still\ ongoing}}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ [[nodiscard]]\ Status\ Consume(}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ SourceLocation\&\ source\_loc,}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ str)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ Reset()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex);}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ SuppressionsActive()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_suppression\_active;\ \}}
+\DoxyCodeLine{00192\ \ \ \ \ \};}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00194\ \ \ \ \ \textcolor{keyword}{class\ }Logger}
+\DoxyCodeLine{00195\ \ \ \ \ \{}
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \textcolor{keyword}{struct\ }BufferedLog\ \{}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ \ \ \ \ SystemClock::time\_point\ now;}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \ \ \ \ std::chrono::seconds\ mocktime;}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ str,\ threadname;}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \ \ \ \ SourceLocation\ source\_loc;}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \ \ \ \ LogFlags\ category;}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ \ \ \ \ Level\ level;}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \textcolor{keyword}{mutable}\ StdMutex\ m\_cs;\ \textcolor{comment}{//\ Can\ not\ use\ Mutex\ from\ sync.h\ because\ in\ debug\ mode\ it\ would\ cause\ a\ deadlock\ when\ a\ potential\ deadlock\ was\ detected}}
+\DoxyCodeLine{00208\ }
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ FILE*\ m\_fileout\ GUARDED\_BY(m\_cs)\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ std::list<BufferedLog>\ m\_msgs\_before\_open\ GUARDED\_BY(m\_cs);}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_buffering\ GUARDED\_BY(m\_cs)\ =\ \textcolor{keyword}{true};\ }
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_max\_buffer\_memusage\ GUARDED\_BY(m\_cs)\{DEFAULT\_MAX\_LOG\_BUFFER\};}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_cur\_buffer\_memusage\ GUARDED\_BY(m\_cs)\{0\};}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_buffer\_lines\_discarded\ GUARDED\_BY(m\_cs)\{0\};}
+\DoxyCodeLine{00215\ }
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ std::shared\_ptr<LogRateLimiter>\ m\_limiter\ GUARDED\_BY(m\_cs);}
+\DoxyCodeLine{00218\ }
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ std::unordered\_map<LogFlags,\ Level>\ m\_category\_log\_levels\ GUARDED\_BY(m\_cs);}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ std::atomic<Level>\ m\_log\_level\{DEFAULT\_LOG\_LEVEL\};}
+\DoxyCodeLine{00225\ }
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ std::atomic<CategoryMask>\ m\_categories\{BCLog::NONE\};}
+\DoxyCodeLine{00228\ }
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ FormatLogStrInPlace(std::string\&\ str,\ LogFlags\ category,\ Level\ level,\ \textcolor{keyword}{const}\ SourceLocation\&\ source\_loc,\ std::string\_view\ threadname,\ SystemClock::time\_point\ now,\ std::chrono::seconds\ mocktime)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00230\ }
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ std::string\ LogTimestampStr(SystemClock::time\_point\ now,\ std::chrono::seconds\ mocktime)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ std::list<std::function<void(\textcolor{keyword}{const}\ std::string\&)>>\ m\_print\_callbacks\ GUARDED\_BY(m\_cs)\ \{\};}
+\DoxyCodeLine{00235\ }
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ LogPrintStr\_(std::string\_view\ str,\ SourceLocation\&\&\ source\_loc,\ BCLog::LogFlags\ category,\ BCLog::Level\ level,\ \textcolor{keywordtype}{bool}\ should\_ratelimit)}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(m\_cs);}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ std::string\ GetLogPrefix(LogFlags\ category,\ Level\ level)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00241\ }
+\DoxyCodeLine{00242\ \ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_print\_to\_console\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_print\_to\_file\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00245\ }
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_log\_timestamps\ =\ DEFAULT\_LOGTIMESTAMPS;}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_log\_time\_micros\ =\ DEFAULT\_LOGTIMEMICROS;}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_log\_threadnames\ =\ DEFAULT\_LOGTHREADNAMES;}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_log\_sourcelocations\ =\ DEFAULT\_LOGSOURCELOCATIONS;}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_always\_print\_category\_level\ =\ DEFAULT\_LOGLEVELALWAYS;}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ fs::path\ m\_file\_path;}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ std::atomic<bool>\ m\_reopen\_file\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00254\ }
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ LogPrintStr(std::string\_view\ str,\ SourceLocation\&\&\ source\_loc,\ BCLog::LogFlags\ category,\ BCLog::Level\ level,\ \textcolor{keywordtype}{bool}\ should\_ratelimit)}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs);}
+\DoxyCodeLine{00258\ }
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ Enabled()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs)}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ \ \ \ \ StdLockGuard\ scoped\_lock(m\_cs);}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_buffering\ ||\ m\_print\_to\_console\ ||\ m\_print\_to\_file\ ||\ !m\_print\_callbacks.empty();}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ std::list<std::function<void(\textcolor{keyword}{const}\ std::string\&)>>::iterator\ PushBackCallback(std::function<\textcolor{keywordtype}{void}(\textcolor{keyword}{const}\ std::string\&)>\ fun)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs)}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \ \ \ \ StdLockGuard\ scoped\_lock(m\_cs);}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \ \ \ \ m\_print\_callbacks.push\_back(std::move(fun));}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/-\/m\_print\_callbacks.end();}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00273\ }
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ DeleteCallback(std::list<std::function<\textcolor{keywordtype}{void}(\textcolor{keyword}{const}\ std::string\&)>>::iterator\ it)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs)}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ \ \ \ \ StdLockGuard\ scoped\_lock(m\_cs);}
+\DoxyCodeLine{00278\ \ \ \ \ \ \ \ \ \ \ \ \ m\_print\_callbacks.erase(it);}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00280\ }
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ NumConnections()}
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ \ \ \ \ StdLockGuard\ scoped\_lock(m\_cs);}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_print\_callbacks.size();}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00286\ }
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ StartLogging()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs);}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ DisconnectTestLogger()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs);}
+\DoxyCodeLine{00291\ }
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ SetRateLimiting(std::shared\_ptr<LogRateLimiter>\ limiter)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs)}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \ \ \ \ StdLockGuard\ scoped\_lock(m\_cs);}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \ \ \ \ m\_limiter\ =\ std::move(limiter);}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00297\ }
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ DisableLogging()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs);}
+\DoxyCodeLine{00305\ }
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ ShrinkDebugFile();}
+\DoxyCodeLine{00307\ }
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ std::unordered\_map<LogFlags,\ Level>\ CategoryLevels()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs)}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \ \ \ \ StdLockGuard\ scoped\_lock(m\_cs);}
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_category\_log\_levels;}
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ SetCategoryLogLevel(\textcolor{keyword}{const}\ std::unordered\_map<LogFlags,\ Level>\&\ levels)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs)}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ \ \ \ \ StdLockGuard\ scoped\_lock(m\_cs);}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \ \ \ \ m\_category\_log\_levels\ =\ levels;}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ AddCategoryLogLevel(LogFlags\ category,\ Level\ level)}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ \ \ \ \ StdLockGuard\ scoped\_lock(m\_cs);}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \ \ \ \ m\_category\_log\_levels[category]\ =\ level;}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00323\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ SetCategoryLogLevel(std::string\_view\ category\_str,\ std::string\_view\ level\_str)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs);}
+\DoxyCodeLine{00324\ }
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \ \ Level\ LogLevel()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_log\_level.load();\ \}}
+\DoxyCodeLine{00326\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ SetLogLevel(Level\ level)\ \{\ m\_log\_level\ =\ level;\ \}}
+\DoxyCodeLine{00327\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ SetLogLevel(std::string\_view\ level);}
+\DoxyCodeLine{00328\ }
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ CategoryMask\ GetCategoryMask()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_categories.load();\ \}}
+\DoxyCodeLine{00330\ }
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ EnableCategory(LogFlags\ flag);}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ EnableCategory(std::string\_view\ str);}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ DisableCategory(LogFlags\ flag);}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ DisableCategory(std::string\_view\ str);}
+\DoxyCodeLine{00335\ }
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ WillLogCategory(LogFlags\ category)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ WillLogCategoryLevel(LogFlags\ category,\ Level\ level)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_cs);}
+\DoxyCodeLine{00338\ }
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ std::vector<LogCategory>\ LogCategoriesList()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ std::string\ LogCategoriesString()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00343\ \textcolor{keyword}{\ \ \ \ \ \ \ \ }\{}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ util::Join(LogCategoriesList(),\ \textcolor{stringliteral}{"{},\ "{}},\ [\&](\textcolor{keyword}{const}\ LogCategory\&\ i)\ \{\ \textcolor{keywordflow}{return}\ i.category;\ \});}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00346\ }
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ std::string\ LogLevelsString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00349\ }
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ std::string\ LogLevelToStr(BCLog::Level\ level);}
+\DoxyCodeLine{00352\ }
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ DefaultShrinkDebugFile()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00354\ \ \ \ \ \};}
+\DoxyCodeLine{00355\ }
+\DoxyCodeLine{00356\ \}\ \textcolor{comment}{//\ namespace\ BCLog}}
+\DoxyCodeLine{00357\ }
+\DoxyCodeLine{00358\ BCLog::Logger\&\ LogInstance();}
+\DoxyCodeLine{00359\ }
+\DoxyCodeLine{00361\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ LogAcceptCategory(BCLog::LogFlags\ category,\ BCLog::Level\ level)}
+\DoxyCodeLine{00362\ \{}
+\DoxyCodeLine{00363\ \ \ \ \ \textcolor{keywordflow}{return}\ LogInstance().WillLogCategoryLevel(category,\ level);}
+\DoxyCodeLine{00364\ \}}
+\DoxyCodeLine{00365\ }
+\DoxyCodeLine{00367\ \textcolor{keywordtype}{bool}\ GetLogCategory(BCLog::LogFlags\&\ flag,\ std::string\_view\ str);}
+\DoxyCodeLine{00368\ }
+\DoxyCodeLine{00369\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00370\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ LogPrintFormatInternal(SourceLocation\&\&\ source\_loc,\ BCLog::LogFlags\ flag,\ BCLog::Level\ level,\ \textcolor{keywordtype}{bool}\ should\_ratelimit,\ util::ConstevalFormatString<\textcolor{keyword}{sizeof}...(Args)>\ fmt,\ \textcolor{keyword}{const}\ Args\&...\ args)}
+\DoxyCodeLine{00371\ \{}
+\DoxyCodeLine{00372\ \ \ \ \ \textcolor{keywordflow}{if}\ (LogInstance().Enabled())\ \{}
+\DoxyCodeLine{00373\ \ \ \ \ \ \ \ \ std::string\ log\_msg;}
+\DoxyCodeLine{00374\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \ \ \ \ \ \ log\_msg\ =\ tfm::format(fmt,\ args...);}
+\DoxyCodeLine{00376\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (tinyformat::format\_error\&\ fmterr)\ \{}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \ \ \ \ \ \ log\_msg\ =\ \textcolor{stringliteral}{"{}Error\ \(\backslash\)"{}"{}}\ +\ std::string\{fmterr.what()\}\ +\ \textcolor{stringliteral}{"{}\(\backslash\)"{}\ while\ formatting\ log\ message:\ "{}}\ +\ fmt.fmt;}
+\DoxyCodeLine{00378\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00379\ \ \ \ \ \ \ \ \ LogInstance().LogPrintStr(log\_msg,\ std::move(source\_loc),\ flag,\ level,\ should\_ratelimit);}
+\DoxyCodeLine{00380\ \ \ \ \ \}}
+\DoxyCodeLine{00381\ \}}
+\DoxyCodeLine{00382\ }
+\DoxyCodeLine{00383\ \textcolor{comment}{//\ Allow\ \_\_func\_\_\ to\ be\ used\ in\ any\ context\ without\ warnings:}}
+\DoxyCodeLine{00384\ \textcolor{comment}{//\ NOLINTNEXTLINE(bugprone-\/lambda-\/function-\/name)}}
+\DoxyCodeLine{00385\ \textcolor{preprocessor}{\#define\ LogPrintLevel\_(category,\ level,\ should\_ratelimit,\ ...)\ LogPrintFormatInternal(SourceLocation\{\_\_func\_\_\},\ category,\ level,\ should\_ratelimit,\ \_\_VA\_ARGS\_\_)}}
+\DoxyCodeLine{00386\ }
+\DoxyCodeLine{00387\ \textcolor{comment}{//\ Log\ unconditionally.\ Uses\ basic\ rate\ limiting\ to\ mitigate\ disk\ filling\ attacks.}}
+\DoxyCodeLine{00388\ \textcolor{comment}{//\ Be\ conservative\ when\ using\ functions\ that\ unconditionally\ log\ to\ debug.log!}}
+\DoxyCodeLine{00389\ \textcolor{comment}{//\ It\ should\ not\ be\ the\ case\ that\ an\ inbound\ peer\ can\ fill\ up\ a\ user's\ storage}}
+\DoxyCodeLine{00390\ \textcolor{comment}{//\ with\ debug.log\ entries.}}
+\DoxyCodeLine{00391\ \textcolor{preprocessor}{\#define\ LogInfo(...)\ LogPrintLevel\_(BCLog::LogFlags::ALL,\ BCLog::Level::Info,\ }\textcolor{comment}{/*should\_ratelimit=*/}\textcolor{preprocessor}{true,\ \_\_VA\_ARGS\_\_)}}
+\DoxyCodeLine{00392\ \textcolor{preprocessor}{\#define\ LogWarning(...)\ LogPrintLevel\_(BCLog::LogFlags::ALL,\ BCLog::Level::Warning,\ }\textcolor{comment}{/*should\_ratelimit=*/}\textcolor{preprocessor}{true,\ \_\_VA\_ARGS\_\_)}}
+\DoxyCodeLine{00393\ \textcolor{preprocessor}{\#define\ LogError(...)\ LogPrintLevel\_(BCLog::LogFlags::ALL,\ BCLog::Level::Error,\ }\textcolor{comment}{/*should\_ratelimit=*/}\textcolor{preprocessor}{true,\ \_\_VA\_ARGS\_\_)}}
+\DoxyCodeLine{00394\ }
+\DoxyCodeLine{00395\ \textcolor{comment}{//\ Use\ a\ macro\ instead\ of\ a\ function\ for\ conditional\ logging\ to\ prevent}}
+\DoxyCodeLine{00396\ \textcolor{comment}{//\ evaluating\ arguments\ when\ logging\ for\ the\ category\ is\ not\ enabled.}}
+\DoxyCodeLine{00397\ }
+\DoxyCodeLine{00398\ \textcolor{comment}{//\ Log\ by\ prefixing\ the\ output\ with\ the\ passed\ category\ name\ and\ severity\ level.\ This\ logs\ conditionally\ if}}
+\DoxyCodeLine{00399\ \textcolor{comment}{//\ the\ category\ is\ allowed.\ No\ rate\ limiting\ is\ applied,\ because\ users\ specifying\ -\/debug\ are\ assumed\ to\ be}}
+\DoxyCodeLine{00400\ \textcolor{comment}{//\ developers\ or\ power\ users\ who\ are\ aware\ that\ -\/debug\ may\ cause\ excessive\ disk\ usage\ due\ to\ logging.}}
+\DoxyCodeLine{00401\ \textcolor{preprocessor}{\#define\ detail\_LogIfCategoryAndLevelEnabled(category,\ level,\ ...)\ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00402\ \textcolor{preprocessor}{\ \ \ \ do\ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00403\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ if\ (LogAcceptCategory((category),\ (level)))\ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00404\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \ \ \ \ bool\ rate\_limit\{level\ >=\ BCLog::Level::Info\};\ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00405\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \ \ \ \ Assume(!rate\_limit);}\textcolor{comment}{/*Only\ called\ with\ the\ levels\ below*/}\textcolor{preprocessor}{\ \(\backslash\)}}
+\DoxyCodeLine{00406\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \ \ \ \ LogPrintLevel\_(category,\ level,\ rate\_limit,\ \_\_VA\_ARGS\_\_);\ \(\backslash\)}}
+\DoxyCodeLine{00407\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00408\ \textcolor{preprocessor}{\ \ \ \ \}\ while\ (0)}}
+\DoxyCodeLine{00409\ }
+\DoxyCodeLine{00410\ \textcolor{comment}{//\ Log\ conditionally,\ prefixing\ the\ output\ with\ the\ passed\ category\ name.}}
+\DoxyCodeLine{00411\ \textcolor{preprocessor}{\#define\ LogDebug(category,\ ...)\ detail\_LogIfCategoryAndLevelEnabled(category,\ BCLog::Level::Debug,\ \_\_VA\_ARGS\_\_)}}
+\DoxyCodeLine{00412\ \textcolor{preprocessor}{\#define\ LogTrace(category,\ ...)\ detail\_LogIfCategoryAndLevelEnabled(category,\ BCLog::Level::Trace,\ \_\_VA\_ARGS\_\_)}}
+\DoxyCodeLine{00413\ }
+\DoxyCodeLine{00414\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_LOGGING\_H}}
+
+\end{DoxyCode}

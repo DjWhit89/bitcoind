@@ -1,0 +1,490 @@
+.TH "src/validation.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/validation.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <bitcoin\-build\-config\&.h>\fP
+.br
+\fR#include <validation\&.h>\fP
+.br
+\fR#include <arith_uint256\&.h>\fP
+.br
+\fR#include <chain\&.h>\fP
+.br
+\fR#include <checkqueue\&.h>\fP
+.br
+\fR#include <clientversion\&.h>\fP
+.br
+\fR#include <consensus/amount\&.h>\fP
+.br
+\fR#include <consensus/consensus\&.h>\fP
+.br
+\fR#include <consensus/merkle\&.h>\fP
+.br
+\fR#include <consensus/tx_check\&.h>\fP
+.br
+\fR#include <consensus/tx_verify\&.h>\fP
+.br
+\fR#include <consensus/validation\&.h>\fP
+.br
+\fR#include <cuckoocache\&.h>\fP
+.br
+\fR#include <flatfile\&.h>\fP
+.br
+\fR#include <hash\&.h>\fP
+.br
+\fR#include <kernel/chainparams\&.h>\fP
+.br
+\fR#include <kernel/coinstats\&.h>\fP
+.br
+\fR#include <kernel/disconnected_transactions\&.h>\fP
+.br
+\fR#include <kernel/mempool_entry\&.h>\fP
+.br
+\fR#include <kernel/messagestartchars\&.h>\fP
+.br
+\fR#include <kernel/notifications_interface\&.h>\fP
+.br
+\fR#include <kernel/types\&.h>\fP
+.br
+\fR#include <kernel/warning\&.h>\fP
+.br
+\fR#include <logging\&.h>\fP
+.br
+\fR#include <logging/timer\&.h>\fP
+.br
+\fR#include <node/blockstorage\&.h>\fP
+.br
+\fR#include <node/utxo_snapshot\&.h>\fP
+.br
+\fR#include <policy/ephemeral_policy\&.h>\fP
+.br
+\fR#include <policy/policy\&.h>\fP
+.br
+\fR#include <policy/rbf\&.h>\fP
+.br
+\fR#include <policy/settings\&.h>\fP
+.br
+\fR#include <policy/truc_policy\&.h>\fP
+.br
+\fR#include <pow\&.h>\fP
+.br
+\fR#include <primitives/block\&.h>\fP
+.br
+\fR#include <primitives/transaction\&.h>\fP
+.br
+\fR#include <random\&.h>\fP
+.br
+\fR#include <script/script\&.h>\fP
+.br
+\fR#include <script/sigcache\&.h>\fP
+.br
+\fR#include <signet\&.h>\fP
+.br
+\fR#include <tinyformat\&.h>\fP
+.br
+\fR#include <txdb\&.h>\fP
+.br
+\fR#include <txmempool\&.h>\fP
+.br
+\fR#include <uint256\&.h>\fP
+.br
+\fR#include <undo\&.h>\fP
+.br
+\fR#include <util/check\&.h>\fP
+.br
+\fR#include <util/fs\&.h>\fP
+.br
+\fR#include <util/fs_helpers\&.h>\fP
+.br
+\fR#include <util/hasher\&.h>\fP
+.br
+\fR#include <util/moneystr\&.h>\fP
+.br
+\fR#include <util/rbf\&.h>\fP
+.br
+\fR#include <util/result\&.h>\fP
+.br
+\fR#include <util/signalinterrupt\&.h>\fP
+.br
+\fR#include <util/strencodings\&.h>\fP
+.br
+\fR#include <util/string\&.h>\fP
+.br
+\fR#include <util/time\&.h>\fP
+.br
+\fR#include <util/trace\&.h>\fP
+.br
+\fR#include <util/translation\&.h>\fP
+.br
+\fR#include <validationinterface\&.h>\fP
+.br
+\fR#include <algorithm>\fP
+.br
+\fR#include <cassert>\fP
+.br
+\fR#include <chrono>\fP
+.br
+\fR#include <deque>\fP
+.br
+\fR#include <numeric>\fP
+.br
+\fR#include <optional>\fP
+.br
+\fR#include <ranges>\fP
+.br
+\fR#include <span>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <tuple>\fP
+.br
+\fR#include <utility>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBPerBlockConnectTrace\fP"
+.br
+.ti -1c
+.RI "class \fBConnectTrace\fP"
+.br
+.ti -1c
+.RI "struct \fBStopHashingException\fP"
+.br
+.ti -1c
+.RI "class \fBNotifications\fP"
+.br
+.ti -1c
+.RI "struct \fBCBlockIndexHeightOnlyComparator\fP"
+.br
+.ti -1c
+.RI "struct \fBCBlockIndexWorkComparator\fP"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "using \fBFopenFn\fP"
+.br
+.ti -1c
+.RI "using \fBBlockMap\fP"
+.br
+.in -1c
+.SS "Enumerations"
+
+.in +1c
+.ti -1c
+.RI "enum class \fBCoinStatsHashType\fP "
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBTRACEPOINT_SEMAPHORE\fP (validation, block_connected)"
+.br
+.ti -1c
+.RI "\fBTRACEPOINT_SEMAPHORE\fP (utxocache, flush)"
+.br
+.ti -1c
+.RI "\fBTRACEPOINT_SEMAPHORE\fP (mempool, replaced)"
+.br
+.ti -1c
+.RI "\fBTRACEPOINT_SEMAPHORE\fP (mempool, rejected)"
+.br
+.ti -1c
+.RI "bool \fBCheckInputScripts\fP (const \fBCTransaction\fP &tx, \fBTxValidationState\fP &state, const \fBCCoinsViewCache\fP &inputs, \fBscript_verify_flags\fP \fBflags\fP, bool cacheSigStore, bool cacheFullScriptStore, \fBPrecomputedTransactionData\fP &txdata, \fBValidationCache\fP &validation_cache, std::vector< \fBCScriptCheck\fP > *pvChecks=nullptr) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBcs_main\fP)"
+.br
+.ti -1c
+.RI "bool \fBCheckFinalTxAtTip\fP (const \fBCBlockIndex\fP &active_chain_tip, const \fBCTransaction\fP &tx)"
+.br
+.ti -1c
+.RI "std::optional< \fBLockPoints\fP > \fBCalculateLockPointsAtTip\fP (\fBCBlockIndex\fP *tip, const \fBCCoinsView\fP &coins_view, const \fBCTransaction\fP &tx)"
+.br
+.ti -1c
+.RI "bool \fBCheckSequenceLocksAtTip\fP (\fBCBlockIndex\fP *tip, const \fBLockPoints\fP &lock_points)"
+.br
+.ti -1c
+.RI "\fBAssertLockHeld\fP (\fBpool\&.cs\fP)"
+.br
+.ti -1c
+.RI "\fBassert\fP (!tx\&.IsCoinBase())"
+.br
+.ti -1c
+.RI "\fBfor\fP (const \fBCTxIn\fP &txin :tx\&.vin)"
+.br
+.ti -1c
+.RI "return \fBCheckInputScripts\fP (tx, state, view, \fBflags\fP, true, true, txdata, validation_cache)"
+.br
+.ti -1c
+.RI "\fBMempoolAcceptResult\fP \fBAcceptToMemoryPool\fP (\fBChainstate\fP &active_chainstate, const \fBCTransactionRef\fP &tx, int64_t accept_time, bool bypass_limits, bool test_accept)"
+.br
+.ti -1c
+.RI "\fBPackageMempoolAcceptResult\fP \fBProcessNewPackage\fP (\fBChainstate\fP &active_chainstate, \fBCTxMemPool\fP &pool, const \fBPackage\fP &package, bool test_accept, const std::optional< \fBCFeeRate\fP > &client_maxfeerate)"
+.br
+.ti -1c
+.RI "\fBCAmount\fP \fBGetBlockSubsidy\fP (int \fBnHeight\fP, const \fBConsensus::Params\fP &consensusParams)"
+.br
+.ti -1c
+.RI "void \fBUpdateCoins\fP (const \fBCTransaction\fP &tx, \fBCCoinsViewCache\fP &inputs, \fBCTxUndo\fP &txundo, int \fBnHeight\fP)"
+.br
+.ti -1c
+.RI "bool \fBFatalError\fP (\fBNotifications\fP &notifications, \fBBlockValidationState\fP &state, const \fBbilingual_str\fP &message)"
+.br
+.ti -1c
+.RI "int \fBApplyTxInUndo\fP (\fBCoin\fP &&undo, \fBCCoinsViewCache\fP &view, const \fBCOutPoint\fP &out)"
+.br
+.ti -1c
+.RI "\fBscript_verify_flags\fP \fBGetBlockScriptFlags\fP (const \fBCBlockIndex\fP &block_index, const \fBChainstateManager\fP &chainman)"
+.br
+.ti -1c
+.RI "bool \fBCheckBlock\fP (const \fBCBlock\fP &block, \fBBlockValidationState\fP &state, const \fBConsensus::Params\fP &consensusParams, bool fCheckPOW, bool fCheckMerkleRoot)"
+.br
+.ti -1c
+.RI "bool \fBHasValidProofOfWork\fP (const std::vector< \fBCBlockHeader\fP > &headers, const \fBConsensus::Params\fP &consensusParams)"
+.br
+.ti -1c
+.RI "bool \fBIsBlockMutated\fP (const \fBCBlock\fP &block, bool check_witness_root)"
+.br
+.ti -1c
+.RI "\fBarith_uint256\fP \fBCalculateClaimedHeadersWork\fP (std::span< const \fBCBlockHeader\fP > headers)"
+.br
+.ti -1c
+.RI "\fBBlockValidationState\fP \fBTestBlockValidity\fP (\fBChainstate\fP &chainstate, const \fBCBlock\fP &block, const bool check_pow, const bool check_merkle_root)"
+.br
+.ti -1c
+.RI "void \fBPruneBlockFilesManual\fP (\fBChainstate\fP &active_chainstate, int nManualPruneHeight)"
+.br
+.ti -1c
+.RI "bool \fBIsBIP30Repeat\fP (const \fBCBlockIndex\fP &block_index)"
+.br
+.ti -1c
+.RI "bool \fBIsBIP30Unspendable\fP (const \fBuint256\fP &block_hash, int block_height)"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "const std::vector< std::string > \fBCHECKLEVEL_DOC\fP"
+.br
+.ti -1c
+.RI "static bool pool \fBcs\fP"
+.br
+.in -1c
+.SH "Typedef Documentation"
+.PP 
+.SS "using \fBBlockMap\fP"
+
+.SS "using \fBFopenFn\fP"
+
+.SH "Enumeration Type Documentation"
+.PP 
+.SS "enum class \fBCoinStatsHashType\fP\fR [strong]\fP"
+
+.SH "Function Documentation"
+.PP 
+.SS "\fBMempoolAcceptResult\fP AcceptToMemoryPool (\fBChainstate\fP & active_chainstate, const \fBCTransactionRef\fP & tx, int64_t accept_time, bool bypass_limits, bool test_accept)"
+Try to add a transaction to the mempool\&. This is an internal function and is exposed only for testing\&. Client code should use \fBChainstateManager::ProcessTransaction()\fP
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIactive_chainstate\fP Reference to the active chainstate\&. 
+.br
+\fItx\fP The transaction to submit for mempool acceptance\&. 
+.br
+\fIaccept_time\fP The timestamp for adding the transaction to the mempool\&. It is also used to determine when the entry expires\&. 
+.br
+\fIbypass_limits\fP When true, don't enforce mempool fee and capacity limits, and set entry_sequence to zero\&. 
+.br
+\fItest_accept\fP When true, run validation checks but don't submit to mempool\&.
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+a \fBMempoolAcceptResult\fP indicating whether the transaction was accepted/rejected with reason\&. 
+.RE
+.PP
+
+.SS "int ApplyTxInUndo (\fBCoin\fP && undo, \fBCCoinsViewCache\fP & view, const \fBCOutPoint\fP & out)"
+Restore the UTXO in a \fBCoin\fP at a given \fBCOutPoint\fP 
+.PP
+\fBParameters\fP
+.RS 4
+\fIundo\fP The \fBCoin\fP to be restored\&. 
+.br
+\fIview\fP The coins view to which to apply the changes\&. 
+.br
+\fIout\fP The out point that corresponds to the tx input\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A \fBDisconnectResult\fP as an int 
+.RE
+.PP
+
+.SS "assert (!tx\&. IsCoinBase())"
+
+.SS "AssertLockHeld (pool\&. cs)"
+
+.SS "\fBarith_uint256\fP CalculateClaimedHeadersWork (std::span< const \fBCBlockHeader\fP > headers)"
+Return the sum of the claimed work on a given set of headers\&. No verification of PoW is done\&. 
+.SS "std::optional< \fBLockPoints\fP > CalculateLockPointsAtTip (\fBCBlockIndex\fP * tip, const \fBCCoinsView\fP & coins_view, const \fBCTransaction\fP & tx)"
+
+.SS "bool CheckBlock (const \fBCBlock\fP & block, \fBBlockValidationState\fP & state, const \fBConsensus::Params\fP & consensusParams, bool fCheckPOW = \fRtrue\fP, bool fCheckMerkleRoot = \fRtrue\fP)"
+Functions for validating blocks and updating the block tree Context-independent validity checks 
+.SS "bool CheckFinalTxAtTip (const \fBCBlockIndex\fP & active_chain_tip, const \fBCTransaction\fP & tx)"
+
+.SS "bool CheckInputScripts (const \fBCTransaction\fP & tx, \fBTxValidationState\fP & state, const \fBCCoinsViewCache\fP & inputs, \fBscript_verify_flags\fP flags, bool cacheSigStore, bool cacheFullScriptStore, \fBPrecomputedTransactionData\fP & txdata, \fBValidationCache\fP & validation_cache, std::vector< \fBCScriptCheck\fP > * pvChecks)"
+Check whether all of this transaction's input scripts succeed\&.
+
+.PP
+This involves ECDSA signature checks so can be computationally intensive\&. This function should only be called after the cheap sanity checks in CheckTxInputs passed\&.
+
+.PP
+If pvChecks is not nullptr, script checks are pushed onto it instead of being performed inline\&. Any script checks which are not necessary (eg due to script execution cache hits) are, obviously, not pushed onto pvChecks/run\&.
+
+.PP
+Setting cacheSigStore/cacheFullScriptStore to false will remove elements from the corresponding cache which are matched\&. This is useful for checking blocks where we will likely never need the cache entry again\&.
+
+.PP
+Note that we may set state\&.reason to NOT_STANDARD for extra soft-fork flags in flags, block-checking callers should probably reset it to CONSENSUS in such cases\&.
+
+.PP
+Non-static (and redeclared) in \fBsrc/test/txvalidationcache_tests\&.cpp\fP 
+.SS "return CheckInputScripts (tx , state , view , \fBflags\fP , true , true , txdata , validation_cache )"
+
+.SS "bool CheckSequenceLocksAtTip (\fBCBlockIndex\fP * tip, const \fBLockPoints\fP & lock_points)"
+Check if transaction will be BIP68 final in the next block to be created on top of tip\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItip\fP \fBChain\fP tip to check tx sequence locks against\&. For example, the tip of the current active chain\&. 
+.br
+\fIlock_points\fP \fBLockPoints\fP containing the height and time at which this transaction is final\&. Simulates calling \fBSequenceLocks()\fP with data from the tip passed in\&. The \fBLockPoints\fP should not be considered valid if CheckSequenceLocksAtTip returns false\&. 
+.RE
+.PP
+
+.SS "bool FatalError (\fBNotifications\fP & notifications, \fBBlockValidationState\fP & state, const \fBbilingual_str\fP & message)"
+
+.SS "for (const \fBCTxIn\fP &txin :tx\&. vin)"
+
+.SS "\fBscript_verify_flags\fP GetBlockScriptFlags (const \fBCBlockIndex\fP & block_index, const \fBChainstateManager\fP & chainman)"
+
+.SS "\fBCAmount\fP GetBlockSubsidy (int nHeight, const \fBConsensus::Params\fP & consensusParams)"
+
+.SS "bool HasValidProofOfWork (const std::vector< \fBCBlockHeader\fP > & headers, const \fBConsensus::Params\fP & consensusParams)"
+Check with the proof of work on each blockheader matches the value in nBits 
+.SS "bool IsBIP30Repeat (const \fBCBlockIndex\fP & block_index)"
+Identifies blocks that overwrote an existing coinbase output in the UTXO set (see BIP30) 
+.SS "bool IsBIP30Unspendable (const \fBuint256\fP & block_hash, int block_height)"
+Identifies blocks which coinbase output was subsequently overwritten in the UTXO set (see BIP30) 
+.SS "bool IsBlockMutated (const \fBCBlock\fP & block, bool check_witness_root)"
+Check if a block has been mutated (with respect to its merkle root and witness commitments)\&. 
+.SS "\fBPackageMempoolAcceptResult\fP ProcessNewPackage (\fBChainstate\fP & active_chainstate, \fBCTxMemPool\fP & pool, const \fBPackage\fP & txns, bool test_accept, const std::optional< \fBCFeeRate\fP > & client_maxfeerate)"
+Validate (and maybe submit) a package to the mempool\&. See doc/policy/packages\&.md for full details on package validation rules\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fItest_accept\fP When true, run validation checks but don't submit to mempool\&. 
+.br
+\fIclient_maxfeerate\fP If exceeded by an individual transaction, rest of (sub)package evaluation is aborted\&. Only for sanity checks against local submission of transactions\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+a \fBPackageMempoolAcceptResult\fP which includes a \fBMempoolAcceptResult\fP for each transaction\&. If a transaction fails, validation will exit early and some results may be missing\&. It is also possible for the package to be partially submitted\&. 
+.RE
+.PP
+
+.SS "void PruneBlockFilesManual (\fBChainstate\fP & active_chainstate, int nManualPruneHeight)"
+Prune block files up to a given height 
+.SS "\fBBlockValidationState\fP TestBlockValidity (\fBChainstate\fP & chainstate, const \fBCBlock\fP & block, bool check_pow, bool check_merkle_root)"
+Verify a block, including transactions\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock\fP The block we want to process\&. Must connect to the current tip\&. 
+.br
+\fIchainstate\fP The chainstate to connect to\&. 
+.br
+\fIcheck_pow\fP perform proof-of-work check, nBits in the header is always checked 
+.br
+\fIcheck_merkle_root\fP check the merkle root
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+Valid or Invalid state\&. This doesn't currently return an Error state, and shouldn't unless there is something wrong with the existing chainstate\&. (This is different from functions like AcceptBlock which can fail trying to save new data\&.)
+.RE
+.PP
+For signets the challenge verification is skipped when check_pow is false\&. At this point ProcessNewBlock would call AcceptBlock(), but we don't want to store the block or its header\&. Run individual checks instead:
+.IP "\(bu" 2
+skip AcceptBlockHeader() because:
+.IP "  \(bu" 4
+we don't want to update the block index
+.IP "  \(bu" 4
+we do not care about duplicates
+.IP "  \(bu" 4
+we already ran CheckBlockHeader() via \fBCheckBlock()\fP
+.IP "  \(bu" 4
+we already checked for prev-blk-not-found
+.IP "  \(bu" 4
+we know the tip is valid, so no need to check bad-prevblk
+.PP
+
+.IP "\(bu" 2
+we already ran \fBCheckBlock()\fP
+.IP "\(bu" 2
+do run ContextualCheckBlockHeader()
+.IP "\(bu" 2
+do run ContextualCheckBlock()
+.PP
+
+.SS "TRACEPOINT_SEMAPHORE (mempool , rejected )"
+
+.SS "TRACEPOINT_SEMAPHORE (mempool , replaced )"
+
+.SS "TRACEPOINT_SEMAPHORE (utxocache , flush )"
+
+.SS "TRACEPOINT_SEMAPHORE (validation , block_connected )"
+
+.SS "void UpdateCoins (const \fBCTransaction\fP & tx, \fBCCoinsViewCache\fP & inputs, \fBCTxUndo\fP & txundo, int nHeight)"
+
+.SH "Variable Documentation"
+.PP 
+.SS "const std::vector<std::string> CHECKLEVEL_DOC"
+\fBInitial value:\fP
+.nf
+{
+    "level 0 reads the blocks from disk",
+    "level 1 verifies block validity",
+    "level 2 verifies undo data",
+    "level 3 checks disconnection of tip blocks",
+    "level 4 tries to reconnect the blocks",
+    "each level includes the checks of the previous levels",
+}
+.PP
+.fi
+Documentation for argument 'checklevel'\&. 
+.SS "bool pool cs"
+\fBInitial value:\fP
+.nf
+{
+    AssertLockHeld(cs_main)
+.PP
+.fi
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

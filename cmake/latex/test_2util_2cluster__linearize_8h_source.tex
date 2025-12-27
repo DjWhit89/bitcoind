@@ -1,0 +1,340 @@
+\doxysection{cluster\+\_\+linearize.\+h}
+\label{test_2util_2cluster__linearize_8h_source}\index{src/test/util/cluster\_linearize.h@{src/test/util/cluster\_linearize.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_TEST\_UTIL\_CLUSTER\_LINEARIZE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_TEST\_UTIL\_CLUSTER\_LINEARIZE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <cluster\_linearize.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <streams.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <util/bitset.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <util/feefrac.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <numeric>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{keyword}{namespace\ }\{}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{using\ namespace\ }cluster\_linearize;}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{using\ }TestBitSet\ =\ BitSet<32>;}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \textcolor{keyword}{struct\ }DepGraphFormatter}
+\DoxyCodeLine{00100\ \{}
+\DoxyCodeLine{00102\ \ \ \ \ [[maybe\_unused]]\ \textcolor{keyword}{static}\ uint64\_t\ SignedToUnsigned(int64\_t\ x)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00103\ \ \ \ \ \{}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (x\ <\ 0)\ \{}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 2\ *\ uint64\_t(-\/(x\ +\ 1))\ +\ 1;}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 2\ *\ uint64\_t(x);}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00109\ \ \ \ \ \}}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00112\ \ \ \ \ [[maybe\_unused]]\ \textcolor{keyword}{static}\ int64\_t\ UnsignedToSigned(uint64\_t\ x)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00113\ \ \ \ \ \{}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (x\ \&\ 1)\ \{}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ -\/int64\_t(x\ /\ 2)\ -\/\ 1;}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ int64\_t(x\ /\ 2);}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00119\ \ \ \ \ \}}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ Ser(Stream\&\ s,\ \textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph)}
+\DoxyCodeLine{00123\ \ \ \ \ \{}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ std::vector<DepGraphIndex>\ topo\_order;}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ topo\_order.reserve(depgraph.TxCount());}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ i\ :\ depgraph.Positions())\ topo\_order.push\_back(i);}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ std::sort(topo\_order.begin(),\ topo\_order.end(),\ [\&](DepGraphIndex\ a,\ DepGraphIndex\ b)\ \{}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \ \ \ \ auto\ anc\_a\ =\ depgraph.Ancestors(a).Count(),\ anc\_b\ =\ depgraph.Ancestors(b).Count();}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \ \ \ \ if\ (anc\_a\ !=\ anc\_b)\ return\ anc\_a\ <\ anc\_b;}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ \ \ \ \ return\ a\ <\ b;}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ \});}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ SetType\ done;}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Loop\ over\ the\ transactions\ in\ topological\ order.}}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ topo\_idx\ =\ 0;\ topo\_idx\ <\ topo\_order.size();\ ++topo\_idx)\ \{}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \ \ \ \ DepGraphIndex\ idx\ =\ topo\_order[topo\_idx];}
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ size,\ which\ must\ be\ larger\ than\ 0.}}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ VARINT\_MODE(depgraph.FeeRate(idx).size,\ VarIntMode::NONNEGATIVE\_SIGNED);}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ fee,\ encoded\ as\ an\ unsigned\ varint\ (odd=negative,\ even=non-\/negative).}}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ VARINT(SignedToUnsigned(depgraph.FeeRate(idx).fee));}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ dependency\ information.}}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ \ \ \ \ SetType\ written\_parents;}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ diff\ =\ 0;\ }
+\DoxyCodeLine{00149\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ dep\_dist\ =\ 0;\ dep\_dist\ <\ topo\_idx;\ ++dep\_dist)\ \{}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DepGraphIndex\ dep\_idx\ =\ topo\_order[topo\_idx\ -\/\ 1\ -\/\ dep\_dist];}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Ignore\ transactions\ which\ are\ already\ known\ to\ be\ ancestors.}}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (depgraph.Descendants(dep\_idx).Overlaps(written\_parents))\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (depgraph.Ancestors(idx)[dep\_idx])\ \{}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ When\ an\ actual\ parent\ is\ encountered,\ encode\ how\ many\ non-\/parents\ were\ skipped}}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ before\ it.}}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ VARINT(diff);}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ diff\ =\ 0;}
+\DoxyCodeLine{00159\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ written\_parents.Set(dep\_idx);}
+\DoxyCodeLine{00160\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00161\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ When\ a\ non-\/parent\ is\ encountered,\ increment\ the\ skip\ counter.}}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++diff;}
+\DoxyCodeLine{00163\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00164\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00165\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Write\ position\ information.}}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ add\_holes\ =\ SetType::Fill(idx)\ -\/\ done\ -\/\ depgraph.Positions();}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (add\_holes.None())\ \{}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ new\ transaction\ is\ to\ be\ inserted\ N\ positions\ back\ from\ the\ end\ of\ the}}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ cluster.\ Emit\ N\ to\ indicate\ that\ that\ many\ insertion\ choices\ are\ skipped.}}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ skips\ =\ (done\ -\/\ SetType::Fill(idx)).Count();}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ VARINT(diff\ +\ skips);}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00173\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ new\ transaction\ is\ to\ be\ appended\ at\ the\ end\ of\ the\ cluster,\ after\ N\ holes.}}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Emit\ current\_cluster\_size\ +\ N,\ to\ indicate\ all\ insertion\ choices\ are\ skipped,}}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ plus\ N\ possibilities\ for\ the\ number\ of\ holes.}}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ VARINT(diff\ +\ done.Count()\ +\ add\_holes.Count());}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ done\ |=\ add\_holes;}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ \ \ \ \ done.Set(idx);}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00181\ }
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Output\ a\ final\ 0\ to\ denote\ the\ end\ of\ the\ graph.}}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ s\ <<\ uint8\_t\{0\};}
+\DoxyCodeLine{00184\ \ \ \ \ \}}
+\DoxyCodeLine{00185\ }
+\DoxyCodeLine{00186\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{00187\ \ \ \ \ \textcolor{keywordtype}{void}\ Unser(Stream\&\ s,\ DepGraph<SetType>\&\ depgraph)}
+\DoxyCodeLine{00188\ \ \ \ \ \{}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ DepGraph<SetType>\ topo\_depgraph;}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ std::vector<DepGraphIndex>\ reordering;}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ DepGraphIndex\ total\_size\{0\};}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ transactions\ in\ topological\ order.}}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ \ \ \ \ FeeFrac\ new\_feerate;\ }
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \ \ \ \ SetType\ new\_ancestors;\ }
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ diff\{0\};\ }
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ read\_error\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ size.\ Size\ 0\ signifies\ the\ end\ of\ the\ DepGraph.}}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int32\_t\ size;}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ VARINT\_MODE(size,\ VarIntMode::NONNEGATIVE\_SIGNED);}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ size\ \&=\ 0x3FFFFF;\ \textcolor{comment}{//\ Enough\ for\ size\ up\ to\ 4M.}}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(0x3FFFFF\ >=\ 4000000);}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (size\ ==\ 0\ ||\ topo\_depgraph.TxCount()\ ==\ SetType::Size())\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ fee,\ encoded\ as\ an\ unsigned\ varint\ (odd=negative,\ even=non-\/negative).}}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ coded\_fee;}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ VARINT(coded\_fee);}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ coded\_fee\ \&=\ 0xFFFFFFFFFFFFF;\ \textcolor{comment}{//\ Enough\ for\ fee\ between\ -\/21M...21M\ BTC.}}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(0xFFFFFFFFFFFFF\ >\ uint64\_t\{2\}\ *\ 21000000\ *\ 100000000);}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ new\_feerate\ =\ \{UnsignedToSigned(coded\_fee),\ size\};}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Read\ dependency\ information.}}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ topo\_idx\ =\ reordering.size();}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ VARINT(diff);}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ dep\_dist\ =\ 0;\ dep\_dist\ <\ topo\_idx;\ ++dep\_dist)\ \{}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DepGraphIndex\ dep\_topo\_idx\ =\ topo\_idx\ -\/\ 1\ -\/\ dep\_dist;}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Ignore\ transactions\ which\ are\ already\ known\ ancestors\ of\ topo\_idx.}}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (new\_ancestors[dep\_topo\_idx])\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (diff\ ==\ 0)\ \{}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ When\ the\ skip\ counter\ has\ reached\ 0,\ add\ an\ actual\ dependency.}}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ new\_ancestors\ |=\ topo\_depgraph.Ancestors(dep\_topo\_idx);}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ And\ read\ the\ number\ of\ skips\ after\ it.}}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ s\ >>\ VARINT(diff);}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Otherwise,\ dep\_topo\_idx\ is\ not\ a\ parent.\ Decrement\ and\ continue.}}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/-\/diff;}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::ios\_base::failure\&)\ \{}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Continue\ even\ if\ a\ read\ error\ was\ encountered.}}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ read\_error\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Construct\ a\ new\ transaction\ whenever\ we\ made\ it\ past\ the\ new\_feerate\ construction.}}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (new\_feerate.IsEmpty())\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \ \ \ \ assert(reordering.size()\ <\ SetType::Size());}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ topo\_idx\ =\ topo\_depgraph.AddTransaction(new\_feerate);}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \ \ \ \ topo\_depgraph.AddDependencies(new\_ancestors,\ topo\_idx);}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (total\_size\ <\ SetType::Size())\ \{}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Normal\ case.}}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ diff\ \%=\ SetType::Size();}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (diff\ <=\ total\_size)\ \{}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Insert\ the\ new\ transaction\ at\ distance\ diff\ back\ from\ the\ end.}}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ pos\ :\ reordering)\ \{}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pos\ +=\ (pos\ >=\ total\_size\ -\/\ diff);}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ reordering.push\_back(total\_size++\ -\/\ diff);}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Append\ diff\ -\/\ total\_size\ holes\ at\ the\ end,\ plus\ the\ new\ transaction.}}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ total\_size\ =\ diff;}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ reordering.push\_back(total\_size++);}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ In\ case\ total\_size\ ==\ SetType::Size,\ it\ is\ not\ possible\ to\ insert\ the\ new}}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ transaction\ without\ exceeding\ SetType's\ size.\ Instead,\ interpret\ diff\ as\ an}}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ index\ into\ the\ holes,\ and\ overwrite\ a\ position\ there.\ This\ branch\ is\ never\ used}}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ when\ deserializing\ the\ output\ of\ the\ serializer,\ but\ gives\ meaning\ to\ otherwise}}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ invalid\ input.}}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ diff\ \%=\ (SetType::Size()\ -\/\ reordering.size());}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SetType\ holes\ =\ SetType::Fill(SetType::Size());}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ pos\ :\ reordering)\ holes.Reset(pos);}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ pos\ :\ holes)\ \{}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (diff\ ==\ 0)\ \{}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ reordering.push\_back(pos);}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/-\/diff;}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Stop\ if\ a\ read\ error\ was\ encountered\ during\ deserialization.}}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (read\_error)\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00278\ }
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Construct\ the\ original\ cluster\ order\ depgraph.}}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ depgraph\ =\ DepGraph(topo\_depgraph,\ reordering,\ total\_size);}
+\DoxyCodeLine{00281\ \ \ \ \ \}}
+\DoxyCodeLine{00282\ \};}
+\DoxyCodeLine{00283\ }
+\DoxyCodeLine{00285\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{00286\ \textcolor{keywordtype}{void}\ SanityCheck(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph)}
+\DoxyCodeLine{00287\ \{}
+\DoxyCodeLine{00288\ \ \ \ \ \textcolor{comment}{//\ Verify\ Positions\ and\ PositionRange\ consistency.}}
+\DoxyCodeLine{00289\ \ \ \ \ DepGraphIndex\ num\_positions\{0\};}
+\DoxyCodeLine{00290\ \ \ \ \ DepGraphIndex\ position\_range\{0\};}
+\DoxyCodeLine{00291\ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ i\ :\ depgraph.Positions())\ \{}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ ++num\_positions;}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ position\_range\ =\ i\ +\ 1;}
+\DoxyCodeLine{00294\ \ \ \ \ \}}
+\DoxyCodeLine{00295\ \ \ \ \ assert(num\_positions\ ==\ depgraph.TxCount());}
+\DoxyCodeLine{00296\ \ \ \ \ assert(position\_range\ ==\ depgraph.PositionRange());}
+\DoxyCodeLine{00297\ \ \ \ \ assert(position\_range\ >=\ num\_positions);}
+\DoxyCodeLine{00298\ \ \ \ \ assert(position\_range\ <=\ SetType::Size());}
+\DoxyCodeLine{00299\ \ \ \ \ \textcolor{comment}{//\ Consistency\ check\ between\ ancestors\ internally.}}
+\DoxyCodeLine{00300\ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ i\ :\ depgraph.Positions())\ \{}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Transactions\ include\ themselves\ as\ ancestors.}}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ assert(depgraph.Ancestors(i)[i]);}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ a\ is\ an\ ancestor\ of\ b,\ then\ b's\ ancestors\ must\ include\ all\ of\ a's\ ancestors.}}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ a\ :\ depgraph.Ancestors(i))\ \{}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ \ \ \ \ assert(depgraph.Ancestors(i).IsSupersetOf(depgraph.Ancestors(a)));}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00307\ \ \ \ \ \}}
+\DoxyCodeLine{00308\ \ \ \ \ \textcolor{comment}{//\ Consistency\ check\ between\ ancestors\ and\ descendants.}}
+\DoxyCodeLine{00309\ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ i\ :\ depgraph.Positions())\ \{}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ j\ :\ depgraph.Positions())\ \{}
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ \ \ \ \ assert(depgraph.Ancestors(i)[j]\ ==\ depgraph.Descendants(j)[i]);}
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ No\ transaction\ is\ a\ parent\ or\ child\ of\ itself.}}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ parents\ =\ depgraph.GetReducedParents(i);}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ children\ =\ depgraph.GetReducedChildren(i);}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ assert(!parents[i]);}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ assert(!children[i]);}
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Parents\ of\ a\ transaction\ do\ not\ have\ ancestors\ inside\ those\ parents\ (except\ itself).}}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Note\ that\ even\ the\ transaction\ itself\ may\ be\ missing\ (if\ it\ is\ part\ of\ a\ cycle).}}
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ parent\ :\ parents)\ \{}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \ \ \ \ assert((depgraph.Ancestors(parent)\ \&\ parents).IsSubsetOf(SetType::Singleton(parent)));}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00323\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Similar\ for\ children\ and\ descendants.}}
+\DoxyCodeLine{00324\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ child\ :\ children)\ \{}
+\DoxyCodeLine{00325\ \ \ \ \ \ \ \ \ \ \ \ \ assert((depgraph.Descendants(child)\ \&\ children).IsSubsetOf(SetType::Singleton(child)));}
+\DoxyCodeLine{00326\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00327\ \ \ \ \ \}}
+\DoxyCodeLine{00328\ \ \ \ \ \textcolor{keywordflow}{if}\ (depgraph.IsAcyclic())\ \{}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ DepGraph\ is\ acyclic,\ serialize\ +\ deserialize\ must\ roundtrip.}}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ std::vector<unsigned\ char>\ ser;}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ VectorWriter\ writer(ser,\ 0);}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ writer\ <<\ Using<DepGraphFormatter>(depgraph);}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ SpanReader\ reader(ser);}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ DepGraph<SetType>\ decoded\_depgraph;}
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ reader\ >>\ Using<DepGraphFormatter>(decoded\_depgraph);}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ assert(depgraph\ ==\ decoded\_depgraph);}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ assert(reader.empty());}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ It\ must\ also\ deserialize\ correctly\ without\ the\ terminal\ 0\ byte\ (as\ the\ deserializer}}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ will\ upon\ EOF\ still\ return\ what\ it\ read\ so\ far).}}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ assert(ser.size()\ >=\ 1\ \&\&\ ser.back()\ ==\ 0);}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ ser.pop\_back();}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ reader\ =\ SpanReader\{ser\};}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ decoded\_depgraph\ =\ \{\};}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ reader\ >>\ Using<DepGraphFormatter>(decoded\_depgraph);}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ assert(depgraph\ ==\ decoded\_depgraph);}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ assert(reader.empty());}
+\DoxyCodeLine{00347\ }
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ In\ acyclic\ graphs,\ the\ union\ of\ parents\ with\ parents\ of\ parents\ etc.\ yields\ the}}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ full\ ancestor\ set\ (and\ similar\ for\ children\ and\ descendants).}}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ std::vector<SetType>\ parents(depgraph.PositionRange()),\ children(depgraph.PositionRange());}
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ i\ :\ depgraph.Positions())\ \{}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ \ \ \ \ parents[i]\ =\ depgraph.GetReducedParents(i);}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ \ \ \ \ children[i]\ =\ depgraph.GetReducedChildren(i);}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00355\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ i\ :\ depgraph.Positions())\ \{}
+\DoxyCodeLine{00356\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Initialize\ the\ set\ of\ ancestors\ with\ just\ the\ current\ transaction\ itself.}}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ \ \ \ \ SetType\ ancestors\ =\ SetType::Singleton(i);}
+\DoxyCodeLine{00358\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Iteratively\ add\ parents\ of\ all\ transactions\ in\ the\ ancestor\ set\ to\ itself.}}
+\DoxyCodeLine{00359\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00360\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ old\_ancestors\ =\ ancestors;}
+\DoxyCodeLine{00361\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ j\ :\ ancestors)\ ancestors\ |=\ parents[j];}
+\DoxyCodeLine{00362\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Stop\ when\ no\ more\ changes\ are\ being\ made.}}
+\DoxyCodeLine{00363\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (old\_ancestors\ ==\ ancestors)\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00365\ \ \ \ \ \ \ \ \ \ \ \ \ assert(ancestors\ ==\ depgraph.Ancestors(i));}
+\DoxyCodeLine{00366\ }
+\DoxyCodeLine{00367\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Initialize\ the\ set\ of\ descendants\ with\ just\ the\ current\ transaction\ itself.}}
+\DoxyCodeLine{00368\ \ \ \ \ \ \ \ \ \ \ \ \ SetType\ descendants\ =\ SetType::Singleton(i);}
+\DoxyCodeLine{00369\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Iteratively\ add\ children\ of\ all\ transactions\ in\ the\ descendant\ set\ to\ itself.}}
+\DoxyCodeLine{00370\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00371\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ old\_descendants\ =\ descendants;}
+\DoxyCodeLine{00372\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ j\ :\ descendants)\ descendants\ |=\ children[j];}
+\DoxyCodeLine{00373\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Stop\ when\ no\ more\ changes\ are\ being\ made.}}
+\DoxyCodeLine{00374\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (old\_descendants\ ==\ descendants)\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00376\ \ \ \ \ \ \ \ \ \ \ \ \ assert(descendants\ ==\ depgraph.Descendants(i));}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00378\ \ \ \ \ \}}
+\DoxyCodeLine{00379\ \}}
+\DoxyCodeLine{00380\ }
+\DoxyCodeLine{00382\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{00383\ \textcolor{keywordtype}{void}\ SanityCheck(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph,\ std::span<const\ DepGraphIndex>\ linearization)}
+\DoxyCodeLine{00384\ \{}
+\DoxyCodeLine{00385\ \ \ \ \ \textcolor{comment}{//\ Check\ completeness.}}
+\DoxyCodeLine{00386\ \ \ \ \ assert(linearization.size()\ ==\ depgraph.TxCount());}
+\DoxyCodeLine{00387\ \ \ \ \ SetType\ done;}
+\DoxyCodeLine{00388\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ i\ :\ linearization)\ \{}
+\DoxyCodeLine{00389\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Check\ transaction\ position\ is\ in\ range.}}
+\DoxyCodeLine{00390\ \ \ \ \ \ \ \ \ assert(depgraph.Positions()[i]);}
+\DoxyCodeLine{00391\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Check\ topology\ and\ lack\ of\ duplicates.}}
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ assert((depgraph.Ancestors(i)\ -\/\ done)\ ==\ SetType::Singleton(i));}
+\DoxyCodeLine{00393\ \ \ \ \ \ \ \ \ done.Set(i);}
+\DoxyCodeLine{00394\ \ \ \ \ \}}
+\DoxyCodeLine{00395\ \}}
+\DoxyCodeLine{00396\ }
+\DoxyCodeLine{00397\ \textcolor{keyword}{inline}\ uint64\_t\ MaxOptimalLinearizationIters(DepGraphIndex\ cluster\_count)}
+\DoxyCodeLine{00398\ \{}
+\DoxyCodeLine{00399\ \ \ \ \ \textcolor{comment}{//\ These\ are\ the\ largest\ numbers\ seen\ returned\ as\ cost\ by\ Linearize(),\ in\ a\ large\ randomized}}
+\DoxyCodeLine{00400\ \ \ \ \ \textcolor{comment}{//\ trial.\ There\ exist\ almost\ certainly\ far\ worse\ cases,\ but\ they\ are\ unlikely\ to\ be}}
+\DoxyCodeLine{00401\ \ \ \ \ \textcolor{comment}{//\ encountered\ in\ randomized\ tests.\ The\ purpose\ of\ these\ numbers\ is\ guaranteeing\ that\ for}}
+\DoxyCodeLine{00402\ \ \ \ \ \textcolor{comment}{//\ *some*\ reasonable\ cost\ bound,\ optimal\ linearizations\ are\ always\ found.}}
+\DoxyCodeLine{00403\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint64\_t\ ITERS[65]\ =\ \{}
+\DoxyCodeLine{00404\ \ \ \ \ \ \ \ \ 0,}
+\DoxyCodeLine{00405\ \ \ \ \ \ \ \ \ 0,\ 2,\ 8,\ 21,\ 51,\ 96,\ 162,\ 200,}
+\DoxyCodeLine{00406\ \ \ \ \ \ \ \ \ 273,\ 323,\ 413,\ 506,\ 602,\ 788,\ 883,\ 948,}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ 1153,\ 1187,\ 1367,\ 1619,\ 1854,\ 2271,\ 2257,\ 2707,}
+\DoxyCodeLine{00408\ \ \ \ \ \ \ \ \ 2904,\ 3275,\ 3342,\ 4209,\ 4648,\ 4146,\ 4273,\ 4905,}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ 5358,\ 5767,\ 5977,\ 6777,\ 7812,\ 7689,\ 8478,\ 8425,}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ 9561,\ 11765,\ 10743,\ 11806,\ 12812,\ 12838,\ 15421,\ 16778,}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ 16661,\ 19393,\ 17995,\ 23947,\ 23314,\ 24564,\ 26209,\ 29267,}
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ 24719,\ 31065,\ 31794,\ 29185,\ 32465,\ 35432,\ 39986,\ 36865}
+\DoxyCodeLine{00413\ \ \ \ \ \};}
+\DoxyCodeLine{00414\ \ \ \ \ assert(cluster\_count\ <\ std::size(ITERS));}
+\DoxyCodeLine{00415\ \ \ \ \ \textcolor{comment}{//\ Multiply\ the\ table\ number\ by\ two,\ to\ account\ for\ the\ fact\ that\ they\ are\ not\ absolutes.}}
+\DoxyCodeLine{00416\ \ \ \ \ \textcolor{keywordflow}{return}\ ITERS[cluster\_count]\ *\ 2;}
+\DoxyCodeLine{00417\ \}}
+\DoxyCodeLine{00418\ }
+\DoxyCodeLine{00419\ \}\ \textcolor{comment}{//\ namespace}}
+\DoxyCodeLine{00420\ }
+\DoxyCodeLine{00421\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_TEST\_UTIL\_CLUSTER\_LINEARIZE\_H}}
+
+\end{DoxyCode}

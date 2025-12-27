@@ -1,0 +1,190 @@
+.TH "src/rpc/rawtransaction.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/rpc/rawtransaction.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <base58\&.h>\fP
+.br
+\fR#include <chain\&.h>\fP
+.br
+\fR#include <coins\&.h>\fP
+.br
+\fR#include <consensus/amount\&.h>\fP
+.br
+\fR#include <consensus/validation\&.h>\fP
+.br
+\fR#include <core_io\&.h>\fP
+.br
+\fR#include <index/txindex\&.h>\fP
+.br
+\fR#include <key_io\&.h>\fP
+.br
+\fR#include <node/blockstorage\&.h>\fP
+.br
+\fR#include <node/coin\&.h>\fP
+.br
+\fR#include <node/context\&.h>\fP
+.br
+\fR#include <node/psbt\&.h>\fP
+.br
+\fR#include <node/transaction\&.h>\fP
+.br
+\fR#include <node/types\&.h>\fP
+.br
+\fR#include <policy/packages\&.h>\fP
+.br
+\fR#include <policy/policy\&.h>\fP
+.br
+\fR#include <policy/rbf\&.h>\fP
+.br
+\fR#include <primitives/transaction\&.h>\fP
+.br
+\fR#include <psbt\&.h>\fP
+.br
+\fR#include <random\&.h>\fP
+.br
+\fR#include <rpc/blockchain\&.h>\fP
+.br
+\fR#include <rpc/rawtransaction_util\&.h>\fP
+.br
+\fR#include <rpc/server\&.h>\fP
+.br
+\fR#include <rpc/server_util\&.h>\fP
+.br
+\fR#include <rpc/util\&.h>\fP
+.br
+\fR#include <script/script\&.h>\fP
+.br
+\fR#include <script/sign\&.h>\fP
+.br
+\fR#include <script/signingprovider\&.h>\fP
+.br
+\fR#include <script/solver\&.h>\fP
+.br
+\fR#include <uint256\&.h>\fP
+.br
+\fR#include <undo\&.h>\fP
+.br
+\fR#include <util/bip32\&.h>\fP
+.br
+\fR#include <util/check\&.h>\fP
+.br
+\fR#include <util/strencodings\&.h>\fP
+.br
+\fR#include <util/string\&.h>\fP
+.br
+\fR#include <util/vector\&.h>\fP
+.br
+\fR#include <validation\&.h>\fP
+.br
+\fR#include <validationinterface\&.h>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include <numeric>\fP
+.br
+\fR#include <univalue\&.h>\fP
+.br
+
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBPartiallySignedTransaction\fP \fBProcessPSBT\fP (const std::string &psbt_string, const std::any &context, const \fBHidingSigningProvider\fP &provider, std::optional< int > sighash_type, bool finalize)"
+.br
+.ti -1c
+.RI "\fBRPCHelpMan\fP \fBdescriptorprocesspsbt\fP ()"
+.br
+.ti -1c
+.RI "void \fBRegisterRawTransactionRPCCommands\fP (\fBCRPCTable\fP &t)"
+.br
+.ti -1c
+.RI "\fBPSBTAnalysis\fP \fBAnalyzePSBT\fP (\fBPartiallySignedTransaction\fP psbtx)"
+.br
+.ti -1c
+.RI "void \fBFindCoins\fP (const \fBNodeContext\fP &\fBnode\fP, std::map< \fBCOutPoint\fP, \fBCoin\fP > &coins)"
+.br
+.ti -1c
+.RI "\fBCTransactionRef\fP \fBGetTransaction\fP (const \fBCBlockIndex\fP *const block_index, const \fBCTxMemPool\fP *const mempool, const \fBTxid\fP &hash, const \fBBlockManager\fP &blockman, \fBuint256\fP &hashBlock)"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "const \fBRPCResult\fP \fBdecodepsbt_inputs\fP"
+.br
+.ti -1c
+.RI "const \fBRPCResult\fP \fBdecodepsbt_outputs\fP"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "\fBPSBTAnalysis\fP AnalyzePSBT (\fBPartiallySignedTransaction\fP psbtx)"
+Provides helpful miscellaneous information about where a PSBT is in the signing workflow\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIpsbtx\fP the PSBT to analyze 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+A \fBPSBTAnalysis\fP with information about the provided PSBT\&. 
+.RE
+.PP
+
+.SS "\fBRPCHelpMan\fP descriptorprocesspsbt ()"
+
+.SS "void FindCoins (const \fBNodeContext\fP & node, std::map< \fBCOutPoint\fP, \fBCoin\fP > & coins)"
+Look up unspent output information\&. Returns coins in the mempool and in the current chain UTXO set\&. Iterates through all the keys in the map and populates the values\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fInode\fP The node context to use for lookup 
+.br
+\fIcoins\fP map to fill 
+.RE
+.PP
+
+.SS "\fBCTransactionRef\fP GetTransaction (const \fBCBlockIndex\fP *const block_index, const \fBCTxMemPool\fP *const mempool, const \fBTxid\fP & hash, const \fBBlockManager\fP & blockman, \fBuint256\fP & hashBlock)"
+Return transaction with a given hash\&. If mempool is provided and block_index is not provided, check it first for the tx\&. If -txindex is available, check it next for the tx\&. Finally, if block_index is provided, check for tx by reading entire block from disk\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIblock_index\fP The block to read from disk, or nullptr 
+.br
+\fImempool\fP If provided, check mempool for tx 
+.br
+\fIhash\fP The txid 
+.br
+\fIblockman\fP Used to access and read blocks from disk 
+.br
+\fIhashBlock\fP The block hash, if the tx was found via -txindex or block_index 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+The tx if found, otherwise nullptr 
+.RE
+.PP
+
+.SS "\fBPartiallySignedTransaction\fP ProcessPSBT (const std::string & psbt_string, const std::any & context, const \fBHidingSigningProvider\fP & provider, std::optional< int > sighash_type, bool finalize)"
+
+.SS "void RegisterRawTransactionRPCCommands (\fBCRPCTable\fP & t)"
+
+.SH "Variable Documentation"
+.PP 
+.SS "const \fBRPCResult\fP decodepsbt_inputs"
+
+.SS "const \fBRPCResult\fP decodepsbt_outputs"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

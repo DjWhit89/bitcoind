@@ -1,0 +1,109 @@
+.TH "src/rpc/request.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/rpc/request.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <rpc/request\&.h>\fP
+.br
+\fR#include <common/args\&.h>\fP
+.br
+\fR#include <logging\&.h>\fP
+.br
+\fR#include <random\&.h>\fP
+.br
+\fR#include <rpc/protocol\&.h>\fP
+.br
+\fR#include <util/fs\&.h>\fP
+.br
+\fR#include <util/fs_helpers\&.h>\fP
+.br
+\fR#include <util/strencodings\&.h>\fP
+.br
+\fR#include <fstream>\fP
+.br
+\fR#include <stdexcept>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBUniValue\fP \fBJSONRPCRequestObj\fP (const std::string &strMethod, const \fBUniValue\fP &params, const \fBUniValue\fP &id)"
+.br
+.ti -1c
+.RI "\fBUniValue\fP \fBJSONRPCReplyObj\fP (\fBUniValue\fP result, \fBUniValue\fP error, std::optional< \fBUniValue\fP > id, \fBJSONRPCVersion\fP jsonrpc_version)"
+.br
+.ti -1c
+.RI "\fBUniValue\fP \fBJSONRPCError\fP (int code, const std::string &message)"
+.br
+.ti -1c
+.RI "\fBGenerateAuthCookieResult\fP \fBGenerateAuthCookie\fP (const std::optional< fs::perms > &cookie_perms, std::string &user, std::string &pass)"
+.br
+.ti -1c
+.RI "bool \fBGetAuthCookie\fP (std::string *cookie_out)"
+.br
+.ti -1c
+.RI "void \fBDeleteAuthCookie\fP ()"
+.br
+.ti -1c
+.RI "std::vector< \fBUniValue\fP > \fBJSONRPCProcessBatchReply\fP (const \fBUniValue\fP &in)"
+.br
+.in -1c
+.SH "Function Documentation"
+.PP 
+.SS "void DeleteAuthCookie ()"
+Delete RPC authentication cookie from disk 
+.SS "\fBGenerateAuthCookieResult\fP GenerateAuthCookie (const std::optional< fs::perms > & cookie_perms, std::string & user, std::string & pass)"
+Generate a new RPC authentication cookie and write it to disk 
+.PP
+\fBParameters\fP
+.RS 4
+\fIcookie_perms\fP Filesystem permissions to use for the cookie file\&. 
+.br
+\fIuser\fP Generated username, only set if \fROK\fP is returned\&. 
+.br
+\fIpass\fP Generated password, only set if \fROK\fP is returned\&. 
+.RE
+.PP
+\fBReturn values\fP
+.RS 4
+\fI\fBGenerateAuthCookieResult::DISABLED\fP\fP Authentication via cookie is disabled\&. 
+.br
+\fIGenerateAuthCookieResult::ERROR\fP Error occurred, auth data could not be saved to disk\&. 
+.br
+\fI\fBGenerateAuthCookieResult::OK\fP\fP Auth data was generated, saved to disk and in \fRuser\fP and \fRpass\fP\&. 
+.RE
+.PP
+the umask determines what permissions are used to create this file - these are set to 0077 in \fBcommon/system\&.cpp\fP\&.
+.SS "bool GetAuthCookie (std::string * cookie_out)"
+Read the RPC authentication cookie from disk 
+.SS "\fBUniValue\fP JSONRPCError (int code, const std::string & message)"
+
+.SS "std::vector< \fBUniValue\fP > JSONRPCProcessBatchReply (const \fBUniValue\fP & in)"
+Parse JSON-RPC batch reply into a vector 
+.SS "\fBUniValue\fP JSONRPCReplyObj (\fBUniValue\fP result, \fBUniValue\fP error, std::optional< \fBUniValue\fP > id, \fBJSONRPCVersion\fP jsonrpc_version)"
+
+.SS "\fBUniValue\fP JSONRPCRequestObj (const std::string & strMethod, const \fBUniValue\fP & params, const \fBUniValue\fP & id)"
+JSON-RPC protocol\&. Bitcoin speaks version 1\&.0 for maximum compatibility, but uses JSON-RPC 1\&.1/2\&.0 standards for parts of the 1\&.0 standard that were unspecified (HTTP errors and contents of 'error')\&.
+
+.PP
+1\&.0 spec: https://www.jsonrpc.org/specification_v1 1\&.2 spec: https://jsonrpc.org/historical/json-rpc-over-http.html
+
+.PP
+If the server receives a request with the JSON-RPC 2\&.0 marker \fR{"jsonrpc": "2\&.0"}\fP then Bitcoin will respond with a strictly specified response\&. It will only return an HTTP error code if an actual HTTP error is encountered such as the endpoint is not found (404) or the request is not formatted correctly (500)\&. Otherwise the HTTP code is always OK (200) and RPC errors will be included in the response body\&.
+
+.PP
+2\&.0 spec: https://www.jsonrpc.org/specification
+
+.PP
+Also see https://www.simple-is-better.org/rpc/#differences-between-1-0-and-2-0 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

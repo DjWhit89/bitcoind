@@ -1,0 +1,268 @@
+.TH "src/psbt.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/psbt.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <common/types\&.h>\fP
+.br
+\fR#include <node/transaction\&.h>\fP
+.br
+\fR#include <policy/feerate\&.h>\fP
+.br
+\fR#include <primitives/transaction\&.h>\fP
+.br
+\fR#include <pubkey\&.h>\fP
+.br
+\fR#include <script/keyorigin\&.h>\fP
+.br
+\fR#include <script/sign\&.h>\fP
+.br
+\fR#include <script/signingprovider\&.h>\fP
+.br
+\fR#include <span\&.h>\fP
+.br
+\fR#include <streams\&.h>\fP
+.br
+\fR#include <optional>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBPSBTProprietary\fP"
+.br
+.ti -1c
+.RI "struct \fBPSBTInput\fP"
+.br
+.ti -1c
+.RI "struct \fBPSBTOutput\fP"
+.br
+.ti -1c
+.RI "struct \fBPartiallySignedTransaction\fP"
+.br
+.in -1c
+.SS "Namespaces"
+
+.in +1c
+.ti -1c
+.RI "namespace \fBnode\fP"
+.br
+.in -1c
+.SS "Enumerations"
+
+.in +1c
+.ti -1c
+.RI "enum class \fBPSBTRole\fP { \fBCREATOR\fP, \fBUPDATER\fP, \fBSIGNER\fP, \fBFINALIZER\fP, \fBEXTRACTOR\fP }"
+.br
+.ti -1c
+.RI "enum class \fBPSBTError\fP "
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "template<typename Stream, typename\&.\&.\&. X> void \fBSerializeToVector\fP (Stream &s, const \fBX\fP &\&.\&.\&. \fBargs\fP)"
+.br
+.ti -1c
+.RI "template<typename Stream, typename\&.\&.\&. X> void \fBUnserializeFromVector\fP (Stream &s, \fBX\fP &&\&.\&.\&. \fBargs\fP)"
+.br
+.ti -1c
+.RI "template<typename Stream> \fBKeyOriginInfo\fP \fBDeserializeKeyOrigin\fP (Stream &s, uint64_t length)"
+.br
+.ti -1c
+.RI "template<typename Stream> void \fBDeserializeHDKeypath\fP (Stream &s, \fBKeyOriginInfo\fP &hd_keypath)"
+.br
+.ti -1c
+.RI "template<typename Stream> void \fBDeserializeHDKeypaths\fP (Stream &s, const std::vector< unsigned char > &key, std::map< \fBCPubKey\fP, \fBKeyOriginInfo\fP > &hd_keypaths)"
+.br
+.ti -1c
+.RI "template<typename Stream> void \fBSerializeKeyOrigin\fP (Stream &s, \fBKeyOriginInfo\fP hd_keypath)"
+.br
+.ti -1c
+.RI "template<typename Stream> void \fBSerializeHDKeypath\fP (Stream &s, \fBKeyOriginInfo\fP hd_keypath)"
+.br
+.ti -1c
+.RI "template<typename Stream> void \fBSerializeHDKeypaths\fP (Stream &s, const std::map< \fBCPubKey\fP, \fBKeyOriginInfo\fP > &hd_keypaths, \fBCompactSizeWriter\fP type)"
+.br
+.ti -1c
+.RI "template<typename Stream> void \fBDeserializeMuSig2ParticipantPubkeys\fP (Stream &s, \fBSpanReader\fP &skey, std::map< \fBCPubKey\fP, std::vector< \fBCPubKey\fP > > &out, std::string context)"
+.br
+.ti -1c
+.RI "template<typename Stream> void \fBDeserializeMuSig2ParticipantDataIdentifier\fP (Stream &skey, \fBCPubKey\fP &agg_pub, \fBCPubKey\fP &part_pub, \fBuint256\fP &leaf_hash)"
+.br
+.ti -1c
+.RI "std::string \fBPSBTRoleName\fP (\fBPSBTRole\fP role)"
+.br
+.ti -1c
+.RI "\fBPrecomputedTransactionData\fP \fBPrecomputePSBTData\fP (const \fBPartiallySignedTransaction\fP &psbt)"
+.br
+.ti -1c
+.RI "bool \fBPSBTInputSigned\fP (const \fBPSBTInput\fP &input)"
+.br
+.ti -1c
+.RI "bool \fBPSBTInputSignedAndVerified\fP (const \fBPartiallySignedTransaction\fP psbt, unsigned int input_index, const \fBPrecomputedTransactionData\fP *txdata)"
+.br
+.ti -1c
+.RI "\fBPSBTError\fP \fBSignPSBTInput\fP (const \fBSigningProvider\fP &provider, \fBPartiallySignedTransaction\fP &psbt, int index, const \fBPrecomputedTransactionData\fP *txdata, std::optional< int > sighash=std::nullopt, \fBSignatureData\fP *out_sigdata=nullptr, bool finalize=true)"
+.br
+.ti -1c
+.RI "void \fBRemoveUnnecessaryTransactions\fP (\fBPartiallySignedTransaction\fP &psbtx)"
+.br
+.ti -1c
+.RI "size_t \fBCountPSBTUnsignedInputs\fP (const \fBPartiallySignedTransaction\fP &psbt)"
+.br
+.ti -1c
+.RI "void \fBUpdatePSBTOutput\fP (const \fBSigningProvider\fP &provider, \fBPartiallySignedTransaction\fP &psbt, int index)"
+.br
+.ti -1c
+.RI "bool \fBFinalizePSBT\fP (\fBPartiallySignedTransaction\fP &psbtx)"
+.br
+.ti -1c
+.RI "bool \fBFinalizeAndExtractPSBT\fP (\fBPartiallySignedTransaction\fP &psbtx, \fBCMutableTransaction\fP &result)"
+.br
+.ti -1c
+.RI "bool \fBCombinePSBTs\fP (\fBPartiallySignedTransaction\fP &out, const std::vector< \fBPartiallySignedTransaction\fP > &psbtxs)"
+.br
+.ti -1c
+.RI "bool \fBDecodeBase64PSBT\fP (\fBPartiallySignedTransaction\fP &decoded_psbt, const std::string &base64_psbt, std::string &error)"
+.br
+.RI "Decode a base64ed PSBT into a \fBPartiallySignedTransaction\fP\&. "
+.ti -1c
+.RI "bool \fBDecodeRawPSBT\fP (\fBPartiallySignedTransaction\fP &decoded_psbt, std::span< const std::byte > raw_psbt, std::string &error)"
+.br
+.RI "Decode a raw (binary blob) PSBT into a \fBPartiallySignedTransaction\fP\&. "
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "const std::streamsize \fBMAX_FILE_SIZE_PSBT\fP = 100000000"
+.br
+.in -1c
+.SH "Enumeration Type Documentation"
+.PP 
+.SS "enum class \fBPSBTError\fP\fR [strong]\fP"
+
+.SS "enum class \fBPSBTRole\fP\fR [strong]\fP"
+
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BICREATOR \fP
+.TP
+\f(BIUPDATER \fP
+.TP
+\f(BISIGNER \fP
+.TP
+\f(BIFINALIZER \fP
+.TP
+\f(BIEXTRACTOR \fP
+.SH "Function Documentation"
+.PP 
+.SS "bool CombinePSBTs (\fBPartiallySignedTransaction\fP & out, const std::vector< \fBPartiallySignedTransaction\fP > & psbtxs)\fR [nodiscard]\fP"
+Combines PSBTs with the same underlying transaction, resulting in a single PSBT with all partial signatures from each input\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIout\fP the combined PSBT, if successful 
+.br
+\fIpsbtxs\fP the PSBTs to combine 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+True if we successfully combined the transactions, false if they were not compatible 
+.RE
+.PP
+
+.SS "size_t CountPSBTUnsignedInputs (const \fBPartiallySignedTransaction\fP & psbt)"
+Counts the unsigned inputs of a PSBT\&. 
+.SS "bool DecodeBase64PSBT (\fBPartiallySignedTransaction\fP & decoded_psbt, const std::string & base64_psbt, std::string & error)\fR [nodiscard]\fP"
+
+.PP
+Decode a base64ed PSBT into a \fBPartiallySignedTransaction\fP\&. 
+.SS "bool DecodeRawPSBT (\fBPartiallySignedTransaction\fP & decoded_psbt, std::span< const std::byte > raw_psbt, std::string & error)\fR [nodiscard]\fP"
+
+.PP
+Decode a raw (binary blob) PSBT into a \fBPartiallySignedTransaction\fP\&. 
+.SS "template<typename Stream> void DeserializeHDKeypath (Stream & s, \fBKeyOriginInfo\fP & hd_keypath)"
+
+.SS "template<typename Stream> void DeserializeHDKeypaths (Stream & s, const std::vector< unsigned char > & key, std::map< \fBCPubKey\fP, \fBKeyOriginInfo\fP > & hd_keypaths)"
+
+.SS "template<typename Stream> \fBKeyOriginInfo\fP DeserializeKeyOrigin (Stream & s, uint64_t length)"
+
+.SS "template<typename Stream> void DeserializeMuSig2ParticipantDataIdentifier (Stream & skey, \fBCPubKey\fP & agg_pub, \fBCPubKey\fP & part_pub, \fBuint256\fP & leaf_hash)"
+
+.SS "template<typename Stream> void DeserializeMuSig2ParticipantPubkeys (Stream & s, \fBSpanReader\fP & skey, std::map< \fBCPubKey\fP, std::vector< \fBCPubKey\fP > > & out, std::string context)"
+
+.SS "bool FinalizeAndExtractPSBT (\fBPartiallySignedTransaction\fP & psbtx, \fBCMutableTransaction\fP & result)"
+Finalizes a PSBT if possible, and extracts it to a \fBCMutableTransaction\fP if it could be finalized\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIpsbtx\fP \fBPartiallySignedTransaction\fP 
+.br
+\fIresult\fP \fBCMutableTransaction\fP representing the complete transaction, if successful 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+True if we successfully extracted the transaction, false otherwise 
+.RE
+.PP
+
+.SS "bool FinalizePSBT (\fBPartiallySignedTransaction\fP & psbtx)"
+Finalizes a PSBT if possible, combining partial signatures\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIpsbtx\fP \fBPartiallySignedTransaction\fP to finalize return True if the PSBT is now complete, false otherwise 
+.RE
+.PP
+
+.SS "\fBPrecomputedTransactionData\fP PrecomputePSBTData (const \fBPartiallySignedTransaction\fP & psbt)"
+Compute a \fBPrecomputedTransactionData\fP object from a psbt\&. 
+.SS "bool PSBTInputSigned (const \fBPSBTInput\fP & input)"
+Checks whether a \fBPSBTInput\fP is already signed by checking for non-null finalized fields\&. 
+.SS "bool PSBTInputSignedAndVerified (const \fBPartiallySignedTransaction\fP psbt, unsigned int input_index, const \fBPrecomputedTransactionData\fP * txdata)"
+Checks whether a \fBPSBTInput\fP is already signed by doing script verification using final fields\&. 
+.SS "std::string PSBTRoleName (\fBPSBTRole\fP role)"
+
+.SS "void RemoveUnnecessaryTransactions (\fBPartiallySignedTransaction\fP & psbtx)"
+Reduces the size of the PSBT by dropping unnecessary \fRnon_witness_utxos\fP (i\&.e\&. complete previous transactions) from a psbt when all inputs are segwit v1\&. 
+.SS "template<typename Stream> void SerializeHDKeypath (Stream & s, \fBKeyOriginInfo\fP hd_keypath)"
+
+.SS "template<typename Stream> void SerializeHDKeypaths (Stream & s, const std::map< \fBCPubKey\fP, \fBKeyOriginInfo\fP > & hd_keypaths, \fBCompactSizeWriter\fP type)"
+
+.SS "template<typename Stream> void SerializeKeyOrigin (Stream & s, \fBKeyOriginInfo\fP hd_keypath)"
+
+.SS "template<typename Stream, typename\&.\&.\&. X> void SerializeToVector (Stream & s, const \fBX\fP &\&.\&.\&. args)"
+
+.SS "\fBPSBTError\fP SignPSBTInput (const \fBSigningProvider\fP & provider, \fBPartiallySignedTransaction\fP & psbt, int index, const \fBPrecomputedTransactionData\fP * txdata, std::optional< int > sighash = \fRstd::nullopt\fP, \fBSignatureData\fP * out_sigdata = \fRnullptr\fP, bool finalize = \fRtrue\fP)\fR [nodiscard]\fP"
+Signs a \fBPSBTInput\fP, verifying that all provided data matches what is being signed\&.
+
+.PP
+txdata should be the output of PrecomputePSBTData (which can be shared across multiple SignPSBTInput calls)\&. If it is nullptr, a dummy signature will be created\&. 
+.SS "template<typename Stream, typename\&.\&.\&. X> void UnserializeFromVector (Stream & s, \fBX\fP &&\&.\&.\&. args)"
+
+.SS "void UpdatePSBTOutput (const \fBSigningProvider\fP & provider, \fBPartiallySignedTransaction\fP & psbt, int index)"
+Updates a \fBPSBTOutput\fP with information from provider\&.
+
+.PP
+This fills in the redeem_script, witness_script, and hd_keypaths where possible\&. 
+.SH "Variable Documentation"
+.PP 
+.SS "const std::streamsize MAX_FILE_SIZE_PSBT = 100000000"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

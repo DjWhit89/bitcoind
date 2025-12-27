@@ -1,0 +1,251 @@
+\doxysection{Sat\+Info Struct Reference}
+\label{structminiscript_1_1internal_1_1_sat_info}\index{SatInfo@{SatInfo}}
+
+
+{\ttfamily \#include $<$miniscript.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+constexpr \textbf{ Sat\+Info} () noexcept
+\item 
+constexpr \textbf{ Sat\+Info} (int32\+\_\+t in\+\_\+netdiff, int32\+\_\+t in\+\_\+exec) noexcept
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ Empty} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ Push} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ Hash} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ Nop} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ If} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ Binary\+Op} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ OP\+\_\+\+DUP} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ OP\+\_\+\+IFDUP} (bool nonzero) noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ OP\+\_\+\+EQUALVERIFY} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ OP\+\_\+\+EQUAL} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ OP\+\_\+\+SIZE} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ OP\+\_\+\+CHECKSIG} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ OP\+\_\+0\+NOTEQUAL} () noexcept
+\item 
+static constexpr \textbf{ Sat\+Info} \textbf{ OP\+\_\+\+VERIFY} () noexcept
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Data Fields}
+\begin{DoxyCompactItemize}
+\item 
+const bool \textbf{ valid}
+\begin{DoxyCompactList}\small\item\em Whether a canonical satisfaction/dissatisfaction is possible at all. \end{DoxyCompactList}\item 
+const int32\+\_\+t \textbf{ netdiff}
+\begin{DoxyCompactList}\small\item\em How much higher the stack size at start of execution can be compared to at the end. \end{DoxyCompactList}\item 
+const int32\+\_\+t \textbf{ exec}
+\begin{DoxyCompactList}\small\item\em Mow much higher the stack size can be during execution compared to at the end. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsubsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+constexpr friend \textbf{ Sat\+Info} \textbf{ operator$\vert$} (const \textbf{ Sat\+Info} \&a, const \textbf{ Sat\+Info} \&b) noexcept
+\item 
+constexpr friend \textbf{ Sat\+Info} \textbf{ operator+} (const \textbf{ Sat\+Info} \&a, const \textbf{ Sat\+Info} \&b) noexcept
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+A data structure to help the calculation of stack size limits.
+
+Conceptually, every \doxyref{Sat\+Info}{p.}{structminiscript_1_1internal_1_1_sat_info} object corresponds to a (possibly empty) set of script execution traces (sequences of opcodes).
+\begin{DoxyItemize}
+\item \doxyref{Sat\+Info}{p.}{structminiscript_1_1internal_1_1_sat_info}\{\} corresponds to the empty set.
+\item \doxyref{Sat\+Info}{p.}{structminiscript_1_1internal_1_1_sat_info}\{n, e\} corresponds to a single trace whose net effect is removing n elements from the stack (may be negative for a net increase), and reaches a maximum of e stack elements more than it ends with.
+\item operator$\vert$ is the union operation\+: (a $\vert$ b) corresponds to the union of the traces in a and the traces in b.
+\item operator+ is the concatenation operator\+: (a + b) corresponds to the set of traces formed by concatenating any trace in a with any trace in b.
+\end{DoxyItemize}
+
+Its fields are\+:
+\begin{DoxyItemize}
+\item valid is true if the set is non-\/empty.
+\item netdiff (if valid) is the largest difference between stack size at the beginning and at the end of the script across all traces in the set.
+\item exec (if valid) is the largest difference between stack size anywhere during execution and at the end of the script, across all traces in the set (note that this is not necessarily due to the same trace as the one that resulted in the value for netdiff).
+\end{DoxyItemize}
+
+This allows us to build up stack size limits for any script efficiently, by starting from the individual opcodes miniscripts correspond to, using concatenation to construct scripts, and using the union operation to choose between execution branches. Since any top-\/level script satisfaction ends with a single stack element, we know that for a full script\+:
+\begin{DoxyItemize}
+\item netdiff+1 is the maximal initial stack size (relevant for P2\+WSH stack limits).
+\item exec+1 is the maximal stack size reached during execution (relevant for P2\+TR stack limits).
+\end{DoxyItemize}
+
+Mathematically, \doxyref{Sat\+Info}{p.}{structminiscript_1_1internal_1_1_sat_info} forms a semiring\+:
+\begin{DoxyItemize}
+\item operator$\vert$ is the semiring addition operator, with identity \doxyref{Sat\+Info}{p.}{structminiscript_1_1internal_1_1_sat_info}\{\}, and which is commutative and associative.
+\item operator+ is the semiring multiplication operator, with identity \doxyref{Sat\+Info}{p.}{structminiscript_1_1internal_1_1_sat_info}\{0\}, and which is associative.
+\item operator+ is distributive over operator$\vert$, so (a + (b $\vert$ c)) = (a+b $\vert$ a+c). This means we do not need to actually materialize all possible full execution traces over the whole script (which may be exponential in the length of the script); instead we can use the union operation at the individual subexpression level, and concatenate the result with subexpressions before and after it.
+\item It is not a commutative semiring, because a+b can differ from b+a. For example, "{}\+OP\+\_\+1 OP\+\_\+\+DROP"{} has exec=1, while "{}\+OP\+\_\+\+DROP OP\+\_\+1"{} has exec=0. 
+\end{DoxyItemize}
+
+\label{doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{SatInfo@{SatInfo}!SatInfo@{SatInfo}}
+\index{SatInfo@{SatInfo}!SatInfo@{SatInfo}}
+\doxysubsubsection{SatInfo()\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_af10f0313be8243e466f920d0a160780a} 
+Sat\+Info (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+Empty script set. \index{SatInfo@{SatInfo}!SatInfo@{SatInfo}}
+\index{SatInfo@{SatInfo}!SatInfo@{SatInfo}}
+\doxysubsubsection{SatInfo()\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a1f4b5960bc698c101f6c235b1d305d9e} 
+Sat\+Info (\begin{DoxyParamCaption}\item[{int32\+\_\+t}]{in\+\_\+netdiff}{, }\item[{int32\+\_\+t}]{in\+\_\+exec}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+Script set with a single script in it, with specified netdiff and exec. 
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{SatInfo@{SatInfo}!BinaryOp@{BinaryOp}}
+\index{BinaryOp@{BinaryOp}!SatInfo@{SatInfo}}
+\doxysubsubsection{BinaryOp()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a7dc623f111412da8f0af7b72d35677dd} 
+constexpr \textbf{ Sat\+Info} Binary\+Op (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+A script consisting of just a binary operator (OP\+\_\+\+BOOLAND, OP\+\_\+\+BOOLOR, OP\+\_\+\+ADD). \index{SatInfo@{SatInfo}!Empty@{Empty}}
+\index{Empty@{Empty}!SatInfo@{SatInfo}}
+\doxysubsubsection{Empty()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_affb91b657e5534aad945a7471229f7d7} 
+constexpr \textbf{ Sat\+Info} Empty (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+The empty script. \index{SatInfo@{SatInfo}!Hash@{Hash}}
+\index{Hash@{Hash}!SatInfo@{SatInfo}}
+\doxysubsubsection{Hash()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a23eb70003565940d5ea55d66962567a6} 
+constexpr \textbf{ Sat\+Info} Hash (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+A script consisting of a single hash opcode. \index{SatInfo@{SatInfo}!If@{If}}
+\index{If@{If}!SatInfo@{SatInfo}}
+\doxysubsubsection{If()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a9d2a6a580d1cfcf8ccd6f37ccc77a4c4} 
+constexpr \textbf{ Sat\+Info} If (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+A script consisting of just OP\+\_\+\+IF or OP\+\_\+\+NOTIF. Note that OP\+\_\+\+ELSE and OP\+\_\+\+ENDIF have no stack effect. \index{SatInfo@{SatInfo}!Nop@{Nop}}
+\index{Nop@{Nop}!SatInfo@{SatInfo}}
+\doxysubsubsection{Nop()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_af0eb6dae90d1de93dfd98f13a54df679} 
+constexpr \textbf{ Sat\+Info} Nop (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+A script consisting of just a repurposed nop (OP\+\_\+\+CHECKLOCKTIMEVERIFY, OP\+\_\+\+CHECKSEQUENCEVERIFY). \index{SatInfo@{SatInfo}!OP\_0NOTEQUAL@{OP\_0NOTEQUAL}}
+\index{OP\_0NOTEQUAL@{OP\_0NOTEQUAL}!SatInfo@{SatInfo}}
+\doxysubsubsection{OP\_0NOTEQUAL()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a8f7d0b90d59bf91227d155d0001a04f6} 
+constexpr \textbf{ Sat\+Info} OP\+\_\+0\+NOTEQUAL (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+\index{SatInfo@{SatInfo}!OP\_CHECKSIG@{OP\_CHECKSIG}}
+\index{OP\_CHECKSIG@{OP\_CHECKSIG}!SatInfo@{SatInfo}}
+\doxysubsubsection{OP\_CHECKSIG()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a6cd87424bec47dedf5e27714e8a2de99} 
+constexpr \textbf{ Sat\+Info} OP\+\_\+\+CHECKSIG (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+\index{SatInfo@{SatInfo}!OP\_DUP@{OP\_DUP}}
+\index{OP\_DUP@{OP\_DUP}!SatInfo@{SatInfo}}
+\doxysubsubsection{OP\_DUP()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a71c12572fae94321b34447fd1cf2edab} 
+constexpr \textbf{ Sat\+Info} OP\+\_\+\+DUP (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+\index{SatInfo@{SatInfo}!OP\_EQUAL@{OP\_EQUAL}}
+\index{OP\_EQUAL@{OP\_EQUAL}!SatInfo@{SatInfo}}
+\doxysubsubsection{OP\_EQUAL()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_ad3905d9d59e91511876100f78817ae32} 
+constexpr \textbf{ Sat\+Info} OP\+\_\+\+EQUAL (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+\index{SatInfo@{SatInfo}!OP\_EQUALVERIFY@{OP\_EQUALVERIFY}}
+\index{OP\_EQUALVERIFY@{OP\_EQUALVERIFY}!SatInfo@{SatInfo}}
+\doxysubsubsection{OP\_EQUALVERIFY()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a6a9fdc1723585a3076cf87aaa28eeeb2} 
+constexpr \textbf{ Sat\+Info} OP\+\_\+\+EQUALVERIFY (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+\index{SatInfo@{SatInfo}!OP\_IFDUP@{OP\_IFDUP}}
+\index{OP\_IFDUP@{OP\_IFDUP}!SatInfo@{SatInfo}}
+\doxysubsubsection{OP\_IFDUP()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a83934e4f301a52f43e57703bf8923fe2} 
+constexpr \textbf{ Sat\+Info} OP\+\_\+\+IFDUP (\begin{DoxyParamCaption}\item[{bool}]{nonzero}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+\index{SatInfo@{SatInfo}!OP\_SIZE@{OP\_SIZE}}
+\index{OP\_SIZE@{OP\_SIZE}!SatInfo@{SatInfo}}
+\doxysubsubsection{OP\_SIZE()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a24ceb5f4ffce10dcb26a714953834c69} 
+constexpr \textbf{ Sat\+Info} OP\+\_\+\+SIZE (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+\index{SatInfo@{SatInfo}!OP\_VERIFY@{OP\_VERIFY}}
+\index{OP\_VERIFY@{OP\_VERIFY}!SatInfo@{SatInfo}}
+\doxysubsubsection{OP\_VERIFY()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a710f8790064b1e9c8a69ea4c7368b253} 
+constexpr \textbf{ Sat\+Info} OP\+\_\+\+VERIFY (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+\index{SatInfo@{SatInfo}!Push@{Push}}
+\index{Push@{Push}!SatInfo@{SatInfo}}
+\doxysubsubsection{Push()}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a60dbe310ea0d40424129d064396a97d0} 
+constexpr \textbf{ Sat\+Info} Push (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}, {\ttfamily [noexcept]}}
+
+A script consisting of a single push opcode. 
+
+\label{doc-related-members}
+\doxysubsection{Friends And Related Symbol Documentation}
+\index{SatInfo@{SatInfo}!operator+@{operator+}}
+\index{operator+@{operator+}!SatInfo@{SatInfo}}
+\doxysubsubsection{operator+}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_af62f878db59d2bd84ffa0aa4c837f1ae} 
+friend \textbf{ Sat\+Info} operator+ (\begin{DoxyParamCaption}\item[{const \textbf{ Sat\+Info} \&}]{a}{, }\item[{const \textbf{ Sat\+Info} \&}]{b}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+Script set concatenation. \index{SatInfo@{SatInfo}!operator\texttt{"|}@{operator\texttt{"|}}}
+\index{operator\texttt{"|}@{operator\texttt{"|}}!SatInfo@{SatInfo}}
+\doxysubsubsection{operator\texttt{"|}}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a668a7f47f14b98d0a4c136a3532821cc} 
+friend \textbf{ Sat\+Info} operator$\vert$ (\begin{DoxyParamCaption}\item[{const \textbf{ Sat\+Info} \&}]{a}{, }\item[{const \textbf{ Sat\+Info} \&}]{b}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+Script set union. 
+
+\label{doc-variable-members}
+\doxysubsection{Field Documentation}
+\index{SatInfo@{SatInfo}!exec@{exec}}
+\index{exec@{exec}!SatInfo@{SatInfo}}
+\doxysubsubsection{exec}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a2214206d3468fe6bf7adf8eda88c020b} 
+const int32\+\_\+t exec}
+
+
+
+Mow much higher the stack size can be during execution compared to at the end. 
+
+\index{SatInfo@{SatInfo}!netdiff@{netdiff}}
+\index{netdiff@{netdiff}!SatInfo@{SatInfo}}
+\doxysubsubsection{netdiff}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_afd64521b34141c10ddfc4637abf4311a} 
+const int32\+\_\+t netdiff}
+
+
+
+How much higher the stack size at start of execution can be compared to at the end. 
+
+\index{SatInfo@{SatInfo}!valid@{valid}}
+\index{valid@{valid}!SatInfo@{SatInfo}}
+\doxysubsubsection{valid}
+{\footnotesize\ttfamily \label{structminiscript_1_1internal_1_1_sat_info_a5b0918f63047c26bbab6146642fc4ebb} 
+const bool valid}
+
+
+
+Whether a canonical satisfaction/dissatisfaction is possible at all. 
+
+
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/script/\textbf{ miniscript.\+h}\end{DoxyCompactItemize}

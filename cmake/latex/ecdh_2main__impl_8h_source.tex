@@ -1,0 +1,80 @@
+\doxysection{main\+\_\+impl.\+h}
+\label{ecdh_2main__impl_8h_source}\index{src/secp256k1/src/modules/ecdh/main\_impl.h@{src/secp256k1/src/modules/ecdh/main\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2015\ Andrew\ Poelstra\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_MODULE\_ECDH\_MAIN\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_MODULE\_ECDH\_MAIN\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1\_ecdh.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}../../ecmult\_const\_impl.h"{}}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ ecdh\_hash\_function\_sha256(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *output,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *x32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *y32,\ \textcolor{keywordtype}{void}\ *data)\ \{}
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ version\ =\ (y32[31]\ \&\ 0x01)\ |\ 0x02;}
+\DoxyCodeLine{00015\ \ \ \ \ secp256k1\_sha256\ sha;}
+\DoxyCodeLine{00016\ \ \ \ \ (void)data;}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \ \ \ \ secp256k1\_sha256\_initialize(\&sha);}
+\DoxyCodeLine{00019\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ \&version,\ 1);}
+\DoxyCodeLine{00020\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ x32,\ 32);}
+\DoxyCodeLine{00021\ \ \ \ \ secp256k1\_sha256\_finalize(\&sha,\ output);}
+\DoxyCodeLine{00022\ \ \ \ \ secp256k1\_sha256\_clear(\&sha);}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00025\ \}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{const}\ secp256k1\_ecdh\_hash\_function\ secp256k1\_ecdh\_hash\_function\_sha256\ =\ ecdh\_hash\_function\_sha256;}
+\DoxyCodeLine{00028\ \textcolor{keyword}{const}\ secp256k1\_ecdh\_hash\_function\ secp256k1\_ecdh\_hash\_function\_default\ =\ ecdh\_hash\_function\_sha256;}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{keywordtype}{int}\ secp256k1\_ecdh(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *output,\ \textcolor{keyword}{const}\ secp256k1\_pubkey\ *point,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *scalar,\ secp256k1\_ecdh\_hash\_function\ hashfp,\ \textcolor{keywordtype}{void}\ *data)\ \{}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keywordtype}{int}\ ret\ =\ 0;}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordtype}{int}\ overflow\ =\ 0;}
+\DoxyCodeLine{00033\ \ \ \ \ secp256k1\_gej\ res;}
+\DoxyCodeLine{00034\ \ \ \ \ secp256k1\_ge\ pt;}
+\DoxyCodeLine{00035\ \ \ \ \ secp256k1\_scalar\ s;}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ x[32];}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ y[32];}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00040\ \ \ \ \ ARG\_CHECK(output\ !=\ NULL);}
+\DoxyCodeLine{00041\ \ \ \ \ ARG\_CHECK(point\ !=\ NULL);}
+\DoxyCodeLine{00042\ \ \ \ \ ARG\_CHECK(scalar\ !=\ NULL);}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordflow}{if}\ (hashfp\ ==\ NULL)\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ hashfp\ =\ secp256k1\_ecdh\_hash\_function\_default;}
+\DoxyCodeLine{00046\ \ \ \ \ \}}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \ \ secp256k1\_pubkey\_load(ctx,\ \&pt,\ point);}
+\DoxyCodeLine{00049\ \ \ \ \ secp256k1\_scalar\_set\_b32(\&s,\ scalar,\ \&overflow);}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \ \ overflow\ |=\ secp256k1\_scalar\_is\_zero(\&s);}
+\DoxyCodeLine{00052\ \ \ \ \ secp256k1\_scalar\_cmov(\&s,\ \&secp256k1\_scalar\_one,\ overflow);}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \ \ secp256k1\_ecmult\_const(\&res,\ \&pt,\ \&s);}
+\DoxyCodeLine{00055\ \ \ \ \ secp256k1\_ge\_set\_gej(\&pt,\ \&res);}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{comment}{/*\ Compute\ a\ hash\ of\ the\ point\ */}}
+\DoxyCodeLine{00058\ \ \ \ \ secp256k1\_fe\_normalize(\&pt.x);}
+\DoxyCodeLine{00059\ \ \ \ \ secp256k1\_fe\_normalize(\&pt.y);}
+\DoxyCodeLine{00060\ \ \ \ \ secp256k1\_fe\_get\_b32(x,\ \&pt.x);}
+\DoxyCodeLine{00061\ \ \ \ \ secp256k1\_fe\_get\_b32(y,\ \&pt.y);}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \ \ ret\ =\ hashfp(output,\ x,\ y,\ data);}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \ \ secp256k1\_memclear\_explicit(x,\ \textcolor{keyword}{sizeof}(x));}
+\DoxyCodeLine{00066\ \ \ \ \ secp256k1\_memclear\_explicit(y,\ \textcolor{keyword}{sizeof}(y));}
+\DoxyCodeLine{00067\ \ \ \ \ secp256k1\_scalar\_clear(\&s);}
+\DoxyCodeLine{00068\ \ \ \ \ secp256k1\_ge\_clear(\&pt);}
+\DoxyCodeLine{00069\ \ \ \ \ secp256k1\_gej\_clear(\&res);}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordflow}{return}\ !!ret\ \&\ !overflow;}
+\DoxyCodeLine{00072\ \}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_MODULE\_ECDH\_MAIN\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

@@ -1,0 +1,136 @@
+\doxysection{mini\+\_\+miner.\+h}
+\label{mini__miner_8h_source}\index{src/node/mini\_miner.h@{src/node/mini\_miner.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2022-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_NODE\_MINI\_MINER\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_NODE\_MINI\_MINER\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }CFeeRate;}
+\DoxyCodeLine{00020\ \textcolor{keyword}{class\ }CTxMemPool;}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{namespace\ }node\ \{}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{comment}{//\ Container\ for\ tracking\ updates\ to\ ancestor\ feerate\ as\ we\ include\ ancestors\ in\ the\ "{}block"{}}}
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }MiniMinerMempoolEntry}
+\DoxyCodeLine{00026\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keyword}{const}\ CTransactionRef\ tx;}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keyword}{const}\ int64\_t\ vsize\_individual;}
+\DoxyCodeLine{00029\ \ \ \ \ int64\_t\ vsize\_with\_ancestors;}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keyword}{const}\ CAmount\ fee\_individual;}
+\DoxyCodeLine{00031\ \ \ \ \ CAmount\ fee\_with\_ancestors;}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{comment}{//\ This\ class\ must\ be\ constructed\ while\ holding\ mempool.cs.\ After\ construction,\ the\ object's}}
+\DoxyCodeLine{00034\ \textcolor{comment}{//\ methods\ can\ be\ called\ without\ holding\ that\ lock.}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keyword}{explicit}\ MiniMinerMempoolEntry(\textcolor{keyword}{const}\ CTransactionRef\&\ tx\_in,}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int64\_t\ vsize\_self,}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ int64\_t\ vsize\_ancestor,}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CAmount\ fee\_self,}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CAmount\ fee\_ancestor):}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ tx\{tx\_in\},}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ vsize\_individual\{vsize\_self\},}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ vsize\_with\_ancestors\{vsize\_ancestor\},}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ fee\_individual\{fee\_self\},}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ fee\_with\_ancestors\{fee\_ancestor\}}
+\DoxyCodeLine{00047\ \ \ \ \ \{\ \}}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \ \ CAmount\ GetModifiedFee()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ fee\_individual;\ \}}
+\DoxyCodeLine{00050\ \ \ \ \ CAmount\ GetModFeesWithAncestors()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ fee\_with\_ancestors;\ \}}
+\DoxyCodeLine{00051\ \ \ \ \ int64\_t\ GetTxSize()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ vsize\_individual;\ \}}
+\DoxyCodeLine{00052\ \ \ \ \ int64\_t\ GetSizeWithAncestors()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ vsize\_with\_ancestors;\ \}}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{const}\ CTransaction\&\ GetTx()\ const\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ *tx;\ \}}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keywordtype}{void}\ UpdateAncestorState(int64\_t\ vsize\_change,\ CAmount\ fee\_change)\ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ vsize\_with\_ancestors\ +=\ vsize\_change;}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ fee\_with\_ancestors\ +=\ fee\_change;}
+\DoxyCodeLine{00057\ \ \ \ \ \}}
+\DoxyCodeLine{00058\ \};}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \textcolor{comment}{//\ Comparator\ needed\ for\ std::set<MockEntryMap::iterator>}}
+\DoxyCodeLine{00061\ \textcolor{keyword}{struct\ }IteratorComparator}
+\DoxyCodeLine{00062\ \{}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator()(\textcolor{keyword}{const}\ I\&\ a,\ \textcolor{keyword}{const}\ I\&\ b)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00065\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a-\/>first\ <\ b-\/>first;}
+\DoxyCodeLine{00067\ \ \ \ \ \}}
+\DoxyCodeLine{00068\ \};}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00078\ \textcolor{keyword}{class\ }MiniMiner}
+\DoxyCodeLine{00079\ \{}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{comment}{//\ When\ true,\ a\ caller\ may\ use\ CalculateBumpFees().\ Becomes\ false\ if\ we\ failed\ to\ retrieve}}
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{comment}{//\ mempool\ entries\ (i.e.\ cluster\ size\ too\ large)\ or\ bump\ fees\ have\ already\ been\ calculated.}}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_ready\_to\_calculate\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{comment}{//\ Set\ once\ per\ lifetime,\ fill\ in\ during\ initialization.}}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{comment}{//\ txids\ of\ to-\/be-\/replaced\ transactions}}
+\DoxyCodeLine{00086\ \ \ \ \ std::set<Txid>\ m\_to\_be\_replaced;}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{comment}{//\ If\ multiple\ argument\ outpoints\ correspond\ to\ the\ same\ transaction,\ cache\ them\ together\ in}}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{comment}{//\ a\ single\ entry\ indexed\ by\ txid.\ Then\ we\ can\ just\ work\ with\ txids\ since\ all\ outpoints\ from}}
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{comment}{//\ the\ same\ tx\ will\ have\ the\ same\ bumpfee.\ Excludes\ non-\/mempool\ transactions.}}
+\DoxyCodeLine{00091\ \ \ \ \ std::map<Txid,\ std::vector<COutPoint>>\ m\_requested\_outpoints\_by\_txid;}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{comment}{//\ Txid\ to\ a\ number\ representing\ the\ order\ in\ which\ this\ transaction\ was\ included\ (smaller}}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{comment}{//\ number\ =\ included\ earlier).\ \ Transactions\ included\ in\ an\ ancestor\ set\ together\ have\ the\ same}}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{comment}{//\ sequence\ number.}}
+\DoxyCodeLine{00096\ \ \ \ \ std::map<Txid,\ uint32\_t>\ m\_inclusion\_order;}
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{comment}{//\ What\ we're\ trying\ to\ calculate.\ Outpoint\ to\ the\ fee\ needed\ to\ bring\ the\ transaction\ to\ the\ target\ feerate.}}
+\DoxyCodeLine{00098\ \ \ \ \ std::map<COutPoint,\ CAmount>\ m\_bump\_fees;}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{comment}{//\ The\ constructed\ block\ template}}
+\DoxyCodeLine{00101\ \ \ \ \ std::set<Txid>\ m\_in\_block;}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{comment}{//\ Information\ on\ the\ current\ status\ of\ the\ block}}
+\DoxyCodeLine{00104\ \ \ \ \ CAmount\ m\_total\_fees\{0\};}
+\DoxyCodeLine{00105\ \ \ \ \ int32\_t\ m\_total\_vsize\{0\};}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00108\ \ \ \ \ std::map<Txid,\ MiniMinerMempoolEntry>\ m\_entries\_by\_txid;}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keyword}{using\ }MockEntryMap\ =\ \textcolor{keyword}{decltype}(m\_entries\_by\_txid);}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00112\ \ \ \ \ std::vector<MockEntryMap::iterator>\ m\_entries;}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00115\ \ \ \ \ std::map<Txid,\ std::vector<MockEntryMap::iterator>>\ m\_descendant\_set\_by\_txid;}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keywordtype}{void}\ DeleteAncestorPackage(\textcolor{keyword}{const}\ std::set<MockEntryMap::iterator,\ IteratorComparator>\&\ ancestors);}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keywordtype}{void}\ SanityCheck()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsReadyToCalculate()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_ready\_to\_calculate;\ \}}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{keywordtype}{void}\ BuildMockTemplate(std::optional<CFeeRate>\ target\_feerate);}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00132\ \ \ \ \ std::set<Txid>\ GetMockTemplateTxids()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_in\_block;\ \}}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00138\ \ \ \ \ MiniMiner(\textcolor{keyword}{const}\ CTxMemPool\&\ mempool,\ \textcolor{keyword}{const}\ std::vector<COutPoint>\&\ outpoints);}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00150\ \ \ \ \ MiniMiner(\textcolor{keyword}{const}\ std::vector<MiniMinerMempoolEntry>\&\ manual\_entries,}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::map<Txid,\ std::set<Txid>>\&\ descendant\_caches);}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00157\ \ \ \ \ std::map<COutPoint,\ CAmount>\ CalculateBumpFees(\textcolor{keyword}{const}\ CFeeRate\&\ target\_feerate);}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00162\ \ \ \ \ std::optional<CAmount>\ CalculateTotalBumpFees(\textcolor{keyword}{const}\ CFeeRate\&\ target\_feerate);}
+\DoxyCodeLine{00163\ }
+\DoxyCodeLine{00168\ \ \ \ \ std::map<Txid,\ uint32\_t>\ Linearize();}
+\DoxyCodeLine{00169\ \};}
+\DoxyCodeLine{00170\ \}\ \textcolor{comment}{//\ namespace\ node}}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00172\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_NODE\_MINI\_MINER\_H}}
+
+\end{DoxyCode}

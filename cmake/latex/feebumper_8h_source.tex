@@ -1,0 +1,112 @@
+\doxysection{feebumper.\+h}
+\label{feebumper_8h_source}\index{src/wallet/feebumper.h@{src/wallet/feebumper.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2017-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_WALLET\_FEEBUMPER\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_WALLET\_FEEBUMPER\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <consensus/consensus.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <script/interpreter.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{keyword}{class\ }uint256;}
+\DoxyCodeLine{00013\ \textcolor{keyword}{enum\ class}\ FeeEstimateMode;}
+\DoxyCodeLine{00014\ \textcolor{keyword}{struct\ }bilingual\_str;}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00017\ \textcolor{keyword}{class\ }CCoinControl;}
+\DoxyCodeLine{00018\ \textcolor{keyword}{class\ }CWallet;}
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }CWalletTx;}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{namespace\ }feebumper\ \{}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{enum\ class}\ Result}
+\DoxyCodeLine{00024\ \{}
+\DoxyCodeLine{00025\ \ \ \ \ OK,}
+\DoxyCodeLine{00026\ \ \ \ \ INVALID\_ADDRESS\_OR\_KEY,}
+\DoxyCodeLine{00027\ \ \ \ \ INVALID\_REQUEST,}
+\DoxyCodeLine{00028\ \ \ \ \ INVALID\_PARAMETER,}
+\DoxyCodeLine{00029\ \ \ \ \ WALLET\_ERROR,}
+\DoxyCodeLine{00030\ \ \ \ \ MISC\_ERROR,}
+\DoxyCodeLine{00031\ \};}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00034\ \textcolor{keywordtype}{bool}\ TransactionCanBeBumped(\textcolor{keyword}{const}\ CWallet\&\ wallet,\ \textcolor{keyword}{const}\ Txid\&\ txid);}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00049\ Result\ CreateRateBumpTransaction(CWallet\&\ wallet,}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keyword}{const}\ Txid\&\ txid,}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keyword}{const}\ CCoinControl\&\ coin\_control,}
+\DoxyCodeLine{00052\ \ \ \ \ std::vector<bilingual\_str>\&\ errors,}
+\DoxyCodeLine{00053\ \ \ \ \ CAmount\&\ old\_fee,}
+\DoxyCodeLine{00054\ \ \ \ \ CAmount\&\ new\_fee,}
+\DoxyCodeLine{00055\ \ \ \ \ CMutableTransaction\&\ mtx,}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{bool}\ require\_mine,}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keyword}{const}\ std::vector<CTxOut>\&\ outputs,}
+\DoxyCodeLine{00058\ \ \ \ \ std::optional<uint32\_t>\ original\_change\_index\ =\ std::nullopt);}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00063\ \textcolor{keywordtype}{bool}\ SignTransaction(CWallet\&\ wallet,\ CMutableTransaction\&\ mtx);}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00069\ Result\ CommitTransaction(CWallet\&\ wallet,}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keyword}{const}\ Txid\&\ txid,}
+\DoxyCodeLine{00071\ \ \ \ \ CMutableTransaction\&\&\ mtx,}
+\DoxyCodeLine{00072\ \ \ \ \ std::vector<bilingual\_str>\&\ errors,}
+\DoxyCodeLine{00073\ \ \ \ \ Txid\&\ bumped\_txid);}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \textcolor{keyword}{struct\ }SignatureWeights}
+\DoxyCodeLine{00076\ \{}
+\DoxyCodeLine{00077\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_sigs\_count\{0\};}
+\DoxyCodeLine{00079\ \ \ \ \ int64\_t\ m\_sigs\_weight\{0\};}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keywordtype}{void}\ AddSigWeight(\textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ weight,\ \textcolor{keyword}{const}\ SigVersion\ sigversion)}
+\DoxyCodeLine{00083\ \ \ \ \ \{}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{switch}\ (sigversion)\ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ SigVersion::BASE:}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ m\_sigs\_weight\ +=\ weight\ *\ WITNESS\_SCALE\_FACTOR;}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ m\_sigs\_count\ +=\ 1\ *\ WITNESS\_SCALE\_FACTOR;}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ SigVersion::WITNESS\_V0:}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ m\_sigs\_weight\ +=\ weight;}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ m\_sigs\_count++;}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ SigVersion::TAPROOT:}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{case}\ SigVersion::TAPSCRIPT:}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ assert(\textcolor{keyword}{false});}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00097\ \ \ \ \ \}}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ \ \ int64\_t\ GetWeightDiffToMax()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00100\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Note:\ the\ witness\ scaling\ factor\ is\ already\ accounted\ for\ because\ the\ count\ is\ multiplied\ by\ it.}}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (\textcolor{comment}{/*\ max\ signature\ size=*/}\ 72\ *\ m\_sigs\_count)\ -\/\ m\_sigs\_weight;}
+\DoxyCodeLine{00103\ \ \ \ \ \}}
+\DoxyCodeLine{00104\ \};}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \textcolor{keyword}{class\ }SignatureWeightChecker\ :\ \textcolor{keyword}{public}\ DeferringSignatureChecker}
+\DoxyCodeLine{00107\ \{}
+\DoxyCodeLine{00108\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00109\ \ \ \ \ SignatureWeights\&\ m\_weights;}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00111\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00112\ \ \ \ \ SignatureWeightChecker(SignatureWeights\&\ weights,\ \textcolor{keyword}{const}\ BaseSignatureChecker\&\ checker)\ :\ DeferringSignatureChecker(checker),\ m\_weights(weights)\ \{\}}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keywordtype}{bool}\ CheckECDSASignature(\textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ sig,\ \textcolor{keyword}{const}\ std::vector<unsigned\ char>\&\ pubkey,\ \textcolor{keyword}{const}\ CScript\&\ script,\ SigVersion\ sigversion)\textcolor{keyword}{\ const\ override}}
+\DoxyCodeLine{00115\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_checker.CheckECDSASignature(sig,\ pubkey,\ script,\ sigversion))\ \{}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \ \ \ \ m\_weights.AddSigWeight(sig.size(),\ sigversion);}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00121\ \ \ \ \ \}}
+\DoxyCodeLine{00122\ \};}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \}\ \textcolor{comment}{//\ namespace\ feebumper}}
+\DoxyCodeLine{00125\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00127\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_WALLET\_FEEBUMPER\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,226 @@
+\doxysection{key.\+h}
+\label{key_8h_source}\index{src/key.h@{src/key.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Copyright\ (c)\ 2017\ The\ Zcash\ developers}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_KEY\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ BITCOIN\_KEY\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <musig.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <pubkey.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <support/allocators/secure.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <stdexcept>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{typedef}\ std::vector<unsigned\ char,\ secure\_allocator<unsigned\ char>\ >\ CPrivKey;}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{size\_t}\ ECDH\_SECRET\_SIZE\ =\ CSHA256::OUTPUT\_SIZE;}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{comment}{//\ Used\ to\ represent\ ECDH\ shared\ secret\ (ECDH\_SECRET\_SIZE\ bytes)}}
+\DoxyCodeLine{00030\ \textcolor{keyword}{using\ }ECDHSecret\ =\ std::array<std::byte,\ ECDH\_SECRET\_SIZE>;}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{class\ }KeyPair;}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00035\ \textcolor{keyword}{class\ }CKey}
+\DoxyCodeLine{00036\ \{}
+\DoxyCodeLine{00037\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ SIZE\ \ \ \ \ \ \ \ \ \ \ \ =\ 279;}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ COMPRESSED\_SIZE\ =\ 214;}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keyword}{static\_assert}(}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ SIZE\ >=\ COMPRESSED\_SIZE,}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}COMPRESSED\_SIZE\ is\ larger\ than\ SIZE"{}});}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keyword}{using\ }KeyType\ =\ std::array<unsigned\ char,\ 32>;}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordtype}{bool}\ fCompressed\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00059\ \ \ \ \ secure\_unique\_ptr<KeyType>\ keydata;}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordtype}{bool}\ \textcolor{keyword}{static}\ Check(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ vch);}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keywordtype}{void}\ MakeKeyData()}
+\DoxyCodeLine{00065\ \ \ \ \ \{}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!keydata)\ keydata\ =\ make\_secure\_unique<KeyType>();}
+\DoxyCodeLine{00067\ \ \ \ \ \}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordtype}{void}\ ClearKeyData()}
+\DoxyCodeLine{00070\ \ \ \ \ \{}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ keydata.reset();}
+\DoxyCodeLine{00072\ \ \ \ \ \}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00075\ \ \ \ \ CKey()\ noexcept\ =\ default;}
+\DoxyCodeLine{00076\ \ \ \ \ CKey(CKey\&\&)\ noexcept\ =\ default;}
+\DoxyCodeLine{00077\ \ \ \ \ CKey\&\ operator=(CKey\&\&)\ noexcept\ =\ default;}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ \ \ CKey\&\ operator=(const\ CKey\&\ other)}
+\DoxyCodeLine{00080\ \ \ \ \ \{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{this}\ !=\ \&other)\ \{}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (other.keydata)\ \{}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MakeKeyData();}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *keydata\ =\ *other.keydata;}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ClearKeyData();}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ fCompressed\ =\ other.fCompressed;}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00091\ \ \ \ \ \}}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \ \ \ \ CKey(\textcolor{keyword}{const}\ CKey\&\ other)\ \{\ *\textcolor{keyword}{this}\ =\ other;\ \}}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ CKey\&\ a,\ \textcolor{keyword}{const}\ CKey\&\ b)}
+\DoxyCodeLine{00096\ \ \ \ \ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a.fCompressed\ ==\ b.fCompressed\ \&\&}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ a.size()\ ==\ b.size()\ \&\&}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ memcmp(a.data(),\ b.data(),\ a.size())\ ==\ 0;}
+\DoxyCodeLine{00100\ \ \ \ \ \}}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keywordtype}{void}\ Set(\textcolor{keyword}{const}\ T\ pbegin,\ \textcolor{keyword}{const}\ T\ pend,\ \textcolor{keywordtype}{bool}\ fCompressedIn)}
+\DoxyCodeLine{00105\ \ \ \ \ \{}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keywordtype}{size\_t}(pend\ -\/\ pbegin)\ !=\ std::tuple\_size\_v<KeyType>)\ \{}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \ \ \ \ ClearKeyData();}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (Check(UCharCast(\&pbegin[0])))\ \{}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \ \ \ \ MakeKeyData();}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \ \ \ \ memcpy(keydata-\/>data(),\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*)\&pbegin[0],\ keydata-\/>size());}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \ \ \ \ fCompressed\ =\ fCompressedIn;}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \ \ \ \ ClearKeyData();}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00115\ \ \ \ \ \}}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ size()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ keydata\ ?\ keydata-\/>size()\ :\ 0;\ \}}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keyword}{const}\ std::byte*\ data()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ keydata\ ?\ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }std::byte*\textcolor{keyword}{>}(keydata-\/>data())\ :\ \textcolor{keyword}{nullptr};\ \}}
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keyword}{const}\ std::byte*\ begin()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ data();\ \}}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keyword}{const}\ std::byte*\ end()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ data()\ +\ size();\ \}}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsValid()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ !!keydata;\ \}}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsCompressed()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ fCompressed;\ \}}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keywordtype}{void}\ MakeNewKey(\textcolor{keywordtype}{bool}\ fCompressed);}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00136\ \ \ \ \ CPrivKey\ GetPrivKey()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00142\ \ \ \ \ CPubKey\ GetPubKey()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{keywordtype}{bool}\ Sign(\textcolor{keyword}{const}\ uint256\&\ hash,\ std::vector<unsigned\ char>\&\ vchSig,\ \textcolor{keywordtype}{bool}\ grind\ =\ \textcolor{keyword}{true},\ uint32\_t\ test\_case\ =\ 0)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00157\ \ \ \ \ \textcolor{keywordtype}{bool}\ SignCompact(\textcolor{keyword}{const}\ uint256\&\ hash,\ std::vector<unsigned\ char>\&\ vchSig)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keywordtype}{bool}\ SignSchnorr(\textcolor{keyword}{const}\ uint256\&\ hash,\ std::span<unsigned\ char>\ sig,\ \textcolor{keyword}{const}\ uint256*\ merkle\_root,\ \textcolor{keyword}{const}\ uint256\&\ aux)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00177\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ Derive(CKey\&\ keyChild,\ ChainCode\ \&ccChild,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nChild,\ \textcolor{keyword}{const}\ ChainCode\&\ cc)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00183\ \ \ \ \ \textcolor{keywordtype}{bool}\ VerifyPubKey(\textcolor{keyword}{const}\ CPubKey\&\ vchPubKey)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00186\ \ \ \ \ \textcolor{keywordtype}{bool}\ Load(\textcolor{keyword}{const}\ CPrivKey\&\ privkey,\ \textcolor{keyword}{const}\ CPubKey\&\ vchPubKey,\ \textcolor{keywordtype}{bool}\ fSkipCheck);}
+\DoxyCodeLine{00187\ }
+\DoxyCodeLine{00196\ \ \ \ \ EllSwiftPubKey\ EllSwiftCreate(std::span<const\ std::byte>\ entropy)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00205\ \ \ \ \ ECDHSecret\ ComputeBIP324ECDHSecret(\textcolor{keyword}{const}\ EllSwiftPubKey\&\ their\_ellswift,}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ EllSwiftPubKey\&\ our\_ellswift,}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ initiating)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00223\ \ \ \ \ KeyPair\ ComputeKeyPair(\textcolor{keyword}{const}\ uint256*\ merkle\_root)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00224\ }
+\DoxyCodeLine{00225\ \ \ \ \ std::vector<uint8\_t>\ CreateMuSig2Nonce(MuSig2SecNonce\&\ secnonce,\ \textcolor{keyword}{const}\ uint256\&\ sighash,\ \textcolor{keyword}{const}\ CPubKey\&\ aggregate\_pubkey,\ \textcolor{keyword}{const}\ std::vector<CPubKey>\&\ pubkeys);}
+\DoxyCodeLine{00226\ \ \ \ \ std::optional<uint256>\ CreateMuSig2PartialSig(\textcolor{keyword}{const}\ uint256\&\ hash,\ \textcolor{keyword}{const}\ CPubKey\&\ aggregate\_pubkey,\ \textcolor{keyword}{const}\ std::vector<CPubKey>\&\ pubkeys,\ \textcolor{keyword}{const}\ std::map<CPubKey,\ std::vector<uint8\_t>>\&\ pubnonces,\ MuSig2SecNonce\&\ secnonce,\ \textcolor{keyword}{const}\ std::vector<std::pair<uint256,\ bool>>\&\ tweaks);}
+\DoxyCodeLine{00227\ \};}
+\DoxyCodeLine{00228\ }
+\DoxyCodeLine{00229\ CKey\ GenerateRandomKey(\textcolor{keywordtype}{bool}\ compressed\ =\ \textcolor{keyword}{true})\ noexcept;}
+\DoxyCodeLine{00230\ }
+\DoxyCodeLine{00231\ struct\ CExtKey\ \{}
+\DoxyCodeLine{00232\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ nDepth;}
+\DoxyCodeLine{00233\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ vchFingerprint[4];}
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nChild;}
+\DoxyCodeLine{00235\ \ \ \ \ ChainCode\ chaincode;}
+\DoxyCodeLine{00236\ \ \ \ \ CKey\ key;}
+\DoxyCodeLine{00237\ }
+\DoxyCodeLine{00238\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ CExtKey\&\ a,\ \textcolor{keyword}{const}\ CExtKey\&\ b)}
+\DoxyCodeLine{00239\ \ \ \ \ \{}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a.nDepth\ ==\ b.nDepth\ \&\&}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \ \ \ \ memcmp(a.vchFingerprint,\ b.vchFingerprint,\ \textcolor{keyword}{sizeof}(vchFingerprint))\ ==\ 0\ \&\&}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \ \ \ \ a.nChild\ ==\ b.nChild\ \&\&}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \ \ \ \ a.chaincode\ ==\ b.chaincode\ \&\&}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \ \ \ \ a.key\ ==\ b.key;}
+\DoxyCodeLine{00245\ \ \ \ \ \}}
+\DoxyCodeLine{00246\ }
+\DoxyCodeLine{00247\ \ \ \ \ CExtKey()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00248\ \ \ \ \ CExtKey(\textcolor{keyword}{const}\ CExtPubKey\&\ xpub,\ \textcolor{keyword}{const}\ CKey\&\ key\_in)\ :\ nDepth(xpub.nDepth),\ nChild(xpub.nChild),\ chaincode(xpub.chaincode),\ key(key\_in)}
+\DoxyCodeLine{00249\ \ \ \ \ \{}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ std::copy(xpub.vchFingerprint,\ xpub.vchFingerprint\ +\ \textcolor{keyword}{sizeof}(xpub.vchFingerprint),\ vchFingerprint);}
+\DoxyCodeLine{00251\ \ \ \ \ \}}
+\DoxyCodeLine{00252\ }
+\DoxyCodeLine{00253\ \ \ \ \ \textcolor{keywordtype}{void}\ Encode(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ code[BIP32\_EXTKEY\_SIZE])\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00254\ \ \ \ \ \textcolor{keywordtype}{void}\ Decode(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ code[BIP32\_EXTKEY\_SIZE]);}
+\DoxyCodeLine{00255\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ Derive(CExtKey\&\ out,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nChild)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00256\ \ \ \ \ CExtPubKey\ Neuter()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00257\ \ \ \ \ \textcolor{keywordtype}{void}\ SetSeed(std::span<const\ std::byte>\ seed);}
+\DoxyCodeLine{00258\ \};}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00271\ \textcolor{keyword}{class\ }KeyPair}
+\DoxyCodeLine{00272\ \{}
+\DoxyCodeLine{00273\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00274\ \ \ \ \ KeyPair()\ noexcept\ =\ default;}
+\DoxyCodeLine{00275\ \ \ \ \ KeyPair(KeyPair\&\&)\ noexcept\ =\ default;}
+\DoxyCodeLine{00276\ \ \ \ \ KeyPair\&\ operator=(KeyPair\&\&)\ noexcept\ =\ default;}
+\DoxyCodeLine{00277\ \ \ \ \ KeyPair\&\ operator=(const\ KeyPair\&\ other)}
+\DoxyCodeLine{00278\ \ \ \ \ \{}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\textcolor{keyword}{this}\ !=\ \&other)\ \{}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (other.m\_keypair)\ \{}
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MakeKeyPairData();}
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *m\_keypair\ =\ *other.m\_keypair;}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ClearKeyPairData();}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00288\ \ \ \ \ \}}
+\DoxyCodeLine{00289\ }
+\DoxyCodeLine{00290\ \ \ \ \ KeyPair(\textcolor{keyword}{const}\ KeyPair\&\ other)\ \{\ *\textcolor{keyword}{this}\ =\ other;\ \}}
+\DoxyCodeLine{00291\ }
+\DoxyCodeLine{00292\ \ \ \ \ \textcolor{keyword}{friend}\ KeyPair\ CKey::ComputeKeyPair(\textcolor{keyword}{const}\ uint256*\ merkle\_root)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00293\ \ \ \ \ [[nodiscard]]\ \textcolor{keywordtype}{bool}\ SignSchnorr(\textcolor{keyword}{const}\ uint256\&\ hash,\ std::span<unsigned\ char>\ sig,\ \textcolor{keyword}{const}\ uint256\&\ aux)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00294\ }
+\DoxyCodeLine{00296\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsValid()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ !!m\_keypair;\ \}}
+\DoxyCodeLine{00297\ }
+\DoxyCodeLine{00298\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00299\ \ \ \ \ KeyPair(\textcolor{keyword}{const}\ CKey\&\ key,\ \textcolor{keyword}{const}\ uint256*\ merkle\_root);}
+\DoxyCodeLine{00300\ }
+\DoxyCodeLine{00301\ \ \ \ \ \textcolor{keyword}{using\ }KeyType\ =\ std::array<unsigned\ char,\ 96>;}
+\DoxyCodeLine{00302\ \ \ \ \ secure\_unique\_ptr<KeyType>\ m\_keypair;}
+\DoxyCodeLine{00303\ }
+\DoxyCodeLine{00304\ \ \ \ \ \textcolor{keywordtype}{void}\ MakeKeyPairData()}
+\DoxyCodeLine{00305\ \ \ \ \ \{}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_keypair)\ m\_keypair\ =\ make\_secure\_unique<KeyType>();}
+\DoxyCodeLine{00307\ \ \ \ \ \}}
+\DoxyCodeLine{00308\ }
+\DoxyCodeLine{00309\ \ \ \ \ \textcolor{keywordtype}{void}\ ClearKeyPairData()}
+\DoxyCodeLine{00310\ \ \ \ \ \{}
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ m\_keypair.reset();}
+\DoxyCodeLine{00312\ \ \ \ \ \}}
+\DoxyCodeLine{00313\ \};}
+\DoxyCodeLine{00314\ }
+\DoxyCodeLine{00316\ \textcolor{keywordtype}{bool}\ ECC\_InitSanityCheck();}
+\DoxyCodeLine{00317\ }
+\DoxyCodeLine{00325\ \textcolor{keyword}{class\ }ECC\_Context}
+\DoxyCodeLine{00326\ \{}
+\DoxyCodeLine{00327\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00328\ \ \ \ \ ECC\_Context();}
+\DoxyCodeLine{00329\ \ \ \ \ \string~ECC\_Context();}
+\DoxyCodeLine{00330\ \};}
+\DoxyCodeLine{00331\ }
+\DoxyCodeLine{00332\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_KEY\_H}}
+
+\end{DoxyCode}

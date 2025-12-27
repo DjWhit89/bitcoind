@@ -1,0 +1,74 @@
+\doxysection{tests\+\_\+exhaustive\+\_\+impl.\+h}
+\label{extrakeys_2tests__exhaustive__impl_8h_source}\index{src/secp256k1/src/modules/extrakeys/tests\_exhaustive\_impl.h@{src/secp256k1/src/modules/extrakeys/tests\_exhaustive\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2020\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_MODULE\_EXTRAKEYS\_TESTS\_EXHAUSTIVE\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_MODULE\_EXTRAKEYS\_TESTS\_EXHAUSTIVE\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1\_extrakeys.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}main\_impl.h"{}}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_exhaustive\_extrakeys(\textcolor{keyword}{const}\ secp256k1\_context\ *ctx,\ \textcolor{keyword}{const}\ secp256k1\_ge*\ group)\ \{}
+\DoxyCodeLine{00014\ \ \ \ \ secp256k1\_keypair\ keypair[EXHAUSTIVE\_TEST\_ORDER\ -\/\ 1];}
+\DoxyCodeLine{00015\ \ \ \ \ secp256k1\_pubkey\ pubkey[EXHAUSTIVE\_TEST\_ORDER\ -\/\ 1];}
+\DoxyCodeLine{00016\ \ \ \ \ secp256k1\_xonly\_pubkey\ xonly\_pubkey[EXHAUSTIVE\_TEST\_ORDER\ -\/\ 1];}
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{keywordtype}{int}\ parities[EXHAUSTIVE\_TEST\_ORDER\ -\/\ 1];}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ xonly\_pubkey\_bytes[EXHAUSTIVE\_TEST\_ORDER\ -\/\ 1][32];}
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 1;\ i\ <\ EXHAUSTIVE\_TEST\_ORDER;\ i++)\ \{}
+\DoxyCodeLine{00022\ \ \ \ \ \ \ \ \ secp256k1\_fe\ fe;}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ secp256k1\_scalar\ scalar\_i;}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ buf[33];}
+\DoxyCodeLine{00025\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ parity;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_set\_int(\&scalar\_i,\ i);}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ secp256k1\_scalar\_get\_b32(buf,\ \&scalar\_i);}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Construct\ pubkey\ and\ keypair.\ */}}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_create(ctx,\ \&keypair[i\ -\/\ 1],\ buf));}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_create(ctx,\ \&pubkey[i\ -\/\ 1],\ buf));}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Construct\ serialized\ xonly\_pubkey\ from\ keypair.\ */}}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(ctx,\ \&xonly\_pubkey[i\ -\/\ 1],\ \&parities[i\ -\/\ 1],\ \&keypair[i\ -\/\ 1]));}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(ctx,\ xonly\_pubkey\_bytes[i\ -\/\ 1],\ \&xonly\_pubkey[i\ -\/\ 1]));}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Parse\ the\ xonly\_pubkey\ back\ and\ verify\ it\ matches\ the\ previously\ serialized\ value.\ */}}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(ctx,\ \&xonly\_pubkey[i\ -\/\ 1],\ xonly\_pubkey\_bytes[i\ -\/\ 1]));}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(ctx,\ buf,\ \&xonly\_pubkey[i\ -\/\ 1]));}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(xonly\_pubkey\_bytes[i\ -\/\ 1],\ buf,\ 32)\ ==\ 0);}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Construct\ the\ xonly\_pubkey\ from\ the\ pubkey,\ and\ verify\ it\ matches\ the\ same.\ */}}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(ctx,\ \&xonly\_pubkey[i\ -\/\ 1],\ \&parity,\ \&pubkey[i\ -\/\ 1]));}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ CHECK(parity\ ==\ parities[i\ -\/\ 1]);}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(ctx,\ buf,\ \&xonly\_pubkey[i\ -\/\ 1]));}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(xonly\_pubkey\_bytes[i\ -\/\ 1],\ buf,\ 32)\ ==\ 0);}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Compare\ the\ xonly\_pubkey\ bytes\ against\ the\ precomputed\ group.\ */}}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ secp256k1\_fe\_set\_b32\_mod(\&fe,\ xonly\_pubkey\_bytes[i\ -\/\ 1]);}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_fe\_equal(\&fe,\ \&group[i].x));}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ the\ parity\ against\ the\ precomputed\ group.\ */}}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ fe\ =\ group[i].y;}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ secp256k1\_fe\_normalize\_var(\&fe);}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_fe\_is\_odd(\&fe)\ ==\ parities[i\ -\/\ 1]);}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Verify\ that\ the\ higher\ half\ is\ identical\ to\ the\ lower\ half\ mirrored.\ */}}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ >\ EXHAUSTIVE\_TEST\_ORDER\ /\ 2)\ \{}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(xonly\_pubkey\_bytes[i\ -\/\ 1],\ xonly\_pubkey\_bytes[EXHAUSTIVE\_TEST\_ORDER\ -\/\ i\ -\/\ 1],\ 32)\ ==\ 0);}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(parities[i\ -\/\ 1]\ ==\ 1\ -\/\ parities[EXHAUSTIVE\_TEST\_ORDER\ -\/\ i\ -\/\ 1]);}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00063\ \ \ \ \ \}}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{comment}{/*\ TODO:\ keypair/xonly\_pubkey\ tweak\ tests\ */}}
+\DoxyCodeLine{00066\ \}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

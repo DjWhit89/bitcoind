@@ -1,0 +1,67 @@
+\doxysection{trace.\+h}
+\label{trace_8h_source}\index{src/util/trace.h@{src/util/trace.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2020-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_TRACE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_TRACE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <bitcoin-\/build-\/config.h>}\ \textcolor{comment}{//\ IWYU\ pragma:\ keep}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#ifdef\ ENABLE\_TRACING}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{comment}{//\ Workaround\ for\ https://gcc.gnu.org/bugzilla/show\_bug.cgi?id=103395}}
+\DoxyCodeLine{00013\ \textcolor{comment}{//\ systemtap\ 4.6\ on\ 32-\/bit\ ARM\ triggers\ internal\ compiler\ error}}
+\DoxyCodeLine{00014\ \textcolor{comment}{//\ (this\ workaround\ is\ included\ in\ systemtap\ 4.7+)}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#if\ defined(\_\_arm\_\_)}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#\ \ define\ STAP\_SDT\_ARG\_CONSTRAINT\ g}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{comment}{//\ Setting\ SDT\_USE\_VARIADIC\ lets\ systemtap\ (sys/sdt.h)\ know\ that\ we\ want\ to\ use}}
+\DoxyCodeLine{00020\ \textcolor{comment}{//\ the\ optional\ variadic\ macros\ to\ define\ tracepoints.}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#define\ SDT\_USE\_VARIADIC\ 1}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{comment}{//\ Setting\ \_SDT\_HAS\_SEMAPHORES\ let's\ systemtap\ (sys/sdt.h)\ know\ that\ we\ want\ to}}
+\DoxyCodeLine{00024\ \textcolor{comment}{//\ use\ the\ optional\ semaphore\ feature\ for\ our\ tracepoints.\ This\ feature\ allows}}
+\DoxyCodeLine{00025\ \textcolor{comment}{//\ us\ to\ check\ if\ something\ is\ attached\ to\ a\ tracepoint.\ We\ only\ want\ to\ prepare}}
+\DoxyCodeLine{00026\ \textcolor{comment}{//\ some\ potentially\ expensive\ tracepoint\ arguments,\ if\ the\ tracepoint\ is\ being}}
+\DoxyCodeLine{00027\ \textcolor{comment}{//\ used.\ Here,\ an\ expensive\ argument\ preparation\ could,\ for\ example,\ be}}
+\DoxyCodeLine{00028\ \textcolor{comment}{//\ calculating\ a\ hash\ or\ serialization\ of\ a\ data\ structure.}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#define\ \_SDT\_HAS\_SEMAPHORES\ 1}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \textcolor{comment}{//\ Used\ to\ define\ a\ counting\ semaphore\ for\ a\ tracepoint.\ This\ semaphore\ is}}
+\DoxyCodeLine{00032\ \textcolor{comment}{//\ automatically\ incremented\ by\ tracing\ frameworks\ (bpftrace,\ bcc,\ libbpf,\ ...)}}
+\DoxyCodeLine{00033\ \textcolor{comment}{//\ upon\ attaching\ to\ the\ tracepoint\ and\ decremented\ when\ detaching.\ This\ needs}}
+\DoxyCodeLine{00034\ \textcolor{comment}{//\ to\ be\ a\ global\ variable.\ It's\ placed\ in\ the\ '.probes'\ ELF\ section.}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#define\ TRACEPOINT\_SEMAPHORE(context,\ event)\ \(\backslash\)}}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\ \ \ \ unsigned\ short\ context\#\#\_\#\#event\#\#\_semaphore\ \_\_attribute\_\_((section("{}.probes"{})))}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{preprocessor}{\#include\ <sys/sdt.h>}}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \textcolor{comment}{//\ Returns\ true\ if\ something\ is\ attached\ to\ the\ tracepoint.}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#define\ TRACEPOINT\_ACTIVE(context,\ event)\ (context\#\#\_\#\#event\#\#\_semaphore\ >\ 0)}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \textcolor{comment}{//\ A\ USDT\ tracepoint\ with\ one\ to\ twelve\ arguments.\ It's\ checked\ that\ the}}
+\DoxyCodeLine{00044\ \textcolor{comment}{//\ tracepoint\ is\ active\ before\ preparing\ its\ arguments.}}
+\DoxyCodeLine{00045\ \textcolor{preprocessor}{\#define\ TRACEPOINT(context,\ event,\ ...)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\ \ \ \ do\ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ if\ (TRACEPOINT\_ACTIVE(context,\ event))\ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00048\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \ \ \ \ STAP\_PROBEV(context,\ event\ \_\_VA\_OPT\_\_(,\ )\ \_\_VA\_ARGS\_\_);\ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00049\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ \}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\ \ \ \ \}\ while(0)}}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \textcolor{preprocessor}{\#define\ TRACEPOINT\_SEMAPHORE(context,\ event)}}
+\DoxyCodeLine{00055\ \textcolor{preprocessor}{\#define\ TRACEPOINT\_ACTIVE(context,\ event)\ false}}
+\DoxyCodeLine{00056\ \textcolor{preprocessor}{\#define\ TRACEPOINT(context,\ ...)}}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ ENABLE\_TRACING}}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_TRACE\_H}}
+
+\end{DoxyCode}

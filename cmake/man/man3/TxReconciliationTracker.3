@@ -1,0 +1,86 @@
+.TH "TxReconciliationTracker" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+TxReconciliationTracker
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <txreconciliation\&.h>\fP
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBImpl\fP"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBTxReconciliationTracker\fP (uint32_t recon_version)"
+.br
+.ti -1c
+.RI "\fB~TxReconciliationTracker\fP ()"
+.br
+.ti -1c
+.RI "uint64_t \fBPreRegisterPeer\fP (\fBNodeId\fP peer_id)"
+.br
+.ti -1c
+.RI "\fBReconciliationRegisterResult\fP \fBRegisterPeer\fP (\fBNodeId\fP peer_id, bool is_peer_inbound, uint32_t peer_recon_version, uint64_t remote_salt)"
+.br
+.ti -1c
+.RI "void \fBForgetPeer\fP (\fBNodeId\fP peer_id)"
+.br
+.ti -1c
+.RI "bool \fBIsPeerRegistered\fP (\fBNodeId\fP peer_id) const"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Transaction reconciliation is a way for nodes to efficiently announce transactions\&. This object keeps track of all txreconciliation-related communications with the peers\&. The high-level protocol is:
+.IP "0." 4
+Txreconciliation protocol handshake\&.
+.IP "1." 4
+Once we receive a new transaction, add it to the set instead of announcing immediately\&.
+.IP "2." 4
+At regular intervals, a txreconciliation initiator requests a sketch from a peer, where a sketch is a compressed representation of short form IDs of the transactions in their set\&.
+.IP "3." 4
+Once the initiator received a sketch from the peer, the initiator computes a local sketch, and combines the two sketches to attempt finding the difference in \fIsets\fP\&. 4a\&. If the difference was not larger than estimated, see SUCCESS below\&. 4b\&. If the difference was larger than estimated, initial txreconciliation fails\&. The initiator requests a larger sketch via an extension round (allowed only once)\&.
+.IP "  \(bu" 4
+If extension succeeds (a larger sketch is sufficient), see SUCCESS below\&.
+.IP "  \(bu" 4
+If extension fails (a larger sketch is insufficient), see FAILURE below\&.
+.PP
+
+.PP
+
+.PP
+SUCCESS\&. The initiator knows full symmetrical difference and can request what the initiator is missing and announce to the peer what the peer is missing\&.
+
+.PP
+FAILURE\&. The initiator notifies the peer about the failure and announces all transactions from the corresponding set\&. Once the peer received the failure notification, the peer announces all transactions from their set\&.
+
+.PP
+This is a modification of the Erlay protocol (https://arxiv.org/abs/1905.10518) with two changes (sketch extensions instead of bisections, and an extra INV exchange round), both are motivated in BIP-330\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBTxReconciliationTracker\fP (uint32_t recon_version)\fR [explicit]\fP"
+
+.SS "~\fBTxReconciliationTracker\fP ()\fR [default]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "void ForgetPeer (\fBNodeId\fP peer_id)"
+Attempts to forget txreconciliation-related state of the peer (if we previously stored any)\&. After this, we won't be able to reconcile transactions with the peer\&. 
+.SS "bool IsPeerRegistered (\fBNodeId\fP peer_id) const"
+Check if a peer is registered to reconcile transactions with us\&. 
+.SS "uint64_t PreRegisterPeer (\fBNodeId\fP peer_id)"
+Step 0\&. Generates initial part of the state (salt) required to reconcile txs with the peer\&. The salt is used for short ID computation required for txreconciliation\&. The function returns the salt\&. A peer can't participate in future txreconciliations without this call\&. This function must be called only once per peer\&. 
+.SS "\fBReconciliationRegisterResult\fP RegisterPeer (\fBNodeId\fP peer_id, bool is_peer_inbound, uint32_t peer_recon_version, uint64_t remote_salt)"
+Step 0\&. Once the peer agreed to reconcile txs with us, generate the state required to track ongoing reconciliations\&. Must be called only after pre-registering the peer and only once\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

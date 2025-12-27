@@ -1,0 +1,176 @@
+\doxysection{src/wallet/wallet.cpp File Reference}
+\label{wallet_8cpp}\index{src/wallet/wallet.cpp@{src/wallet/wallet.cpp}}
+{\ttfamily \#include $<$wallet/wallet.\+h$>$}\newline
+{\ttfamily \#include $<$bitcoin-\/build-\/config.\+h$>$}\newline
+{\ttfamily \#include $<$addresstype.\+h$>$}\newline
+{\ttfamily \#include $<$blockfilter.\+h$>$}\newline
+{\ttfamily \#include $<$chain.\+h$>$}\newline
+{\ttfamily \#include $<$coins.\+h$>$}\newline
+{\ttfamily \#include $<$common/args.\+h$>$}\newline
+{\ttfamily \#include $<$common/messages.\+h$>$}\newline
+{\ttfamily \#include $<$common/settings.\+h$>$}\newline
+{\ttfamily \#include $<$common/signmessage.\+h$>$}\newline
+{\ttfamily \#include $<$common/system.\+h$>$}\newline
+{\ttfamily \#include $<$consensus/amount.\+h$>$}\newline
+{\ttfamily \#include $<$consensus/consensus.\+h$>$}\newline
+{\ttfamily \#include $<$consensus/validation.\+h$>$}\newline
+{\ttfamily \#include $<$external\+\_\+signer.\+h$>$}\newline
+{\ttfamily \#include $<$interfaces/chain.\+h$>$}\newline
+{\ttfamily \#include $<$interfaces/handler.\+h$>$}\newline
+{\ttfamily \#include $<$interfaces/wallet.\+h$>$}\newline
+{\ttfamily \#include $<$kernel/mempool\+\_\+removal\+\_\+reason.\+h$>$}\newline
+{\ttfamily \#include $<$kernel/types.\+h$>$}\newline
+{\ttfamily \#include $<$key.\+h$>$}\newline
+{\ttfamily \#include $<$key\+\_\+io.\+h$>$}\newline
+{\ttfamily \#include $<$logging.\+h$>$}\newline
+{\ttfamily \#include $<$node/types.\+h$>$}\newline
+{\ttfamily \#include $<$outputtype.\+h$>$}\newline
+{\ttfamily \#include $<$policy/feerate.\+h$>$}\newline
+{\ttfamily \#include $<$policy/truc\+\_\+policy.\+h$>$}\newline
+{\ttfamily \#include $<$primitives/block.\+h$>$}\newline
+{\ttfamily \#include $<$primitives/transaction.\+h$>$}\newline
+{\ttfamily \#include $<$psbt.\+h$>$}\newline
+{\ttfamily \#include $<$pubkey.\+h$>$}\newline
+{\ttfamily \#include $<$random.\+h$>$}\newline
+{\ttfamily \#include $<$script/descriptor.\+h$>$}\newline
+{\ttfamily \#include $<$script/interpreter.\+h$>$}\newline
+{\ttfamily \#include $<$script/script.\+h$>$}\newline
+{\ttfamily \#include $<$script/sign.\+h$>$}\newline
+{\ttfamily \#include $<$script/signingprovider.\+h$>$}\newline
+{\ttfamily \#include $<$script/solver.\+h$>$}\newline
+{\ttfamily \#include $<$serialize.\+h$>$}\newline
+{\ttfamily \#include $<$span.\+h$>$}\newline
+{\ttfamily \#include $<$streams.\+h$>$}\newline
+{\ttfamily \#include $<$support/allocators/secure.\+h$>$}\newline
+{\ttfamily \#include $<$support/allocators/zeroafterfree.\+h$>$}\newline
+{\ttfamily \#include $<$support/cleanse.\+h$>$}\newline
+{\ttfamily \#include $<$sync.\+h$>$}\newline
+{\ttfamily \#include $<$tinyformat.\+h$>$}\newline
+{\ttfamily \#include $<$uint256.\+h$>$}\newline
+{\ttfamily \#include $<$univalue.\+h$>$}\newline
+{\ttfamily \#include $<$util/check.\+h$>$}\newline
+{\ttfamily \#include $<$util/fs.\+h$>$}\newline
+{\ttfamily \#include $<$util/fs\+\_\+helpers.\+h$>$}\newline
+{\ttfamily \#include $<$util/moneystr.\+h$>$}\newline
+{\ttfamily \#include $<$util/result.\+h$>$}\newline
+{\ttfamily \#include $<$util/string.\+h$>$}\newline
+{\ttfamily \#include $<$util/time.\+h$>$}\newline
+{\ttfamily \#include $<$util/translation.\+h$>$}\newline
+{\ttfamily \#include $<$wallet/coincontrol.\+h$>$}\newline
+{\ttfamily \#include $<$wallet/context.\+h$>$}\newline
+{\ttfamily \#include $<$wallet/crypter.\+h$>$}\newline
+{\ttfamily \#include $<$wallet/db.\+h$>$}\newline
+{\ttfamily \#include $<$wallet/external\+\_\+signer\+\_\+scriptpubkeyman.\+h$>$}\newline
+{\ttfamily \#include $<$wallet/scriptpubkeyman.\+h$>$}\newline
+{\ttfamily \#include $<$wallet/transaction.\+h$>$}\newline
+{\ttfamily \#include $<$wallet/types.\+h$>$}\newline
+{\ttfamily \#include $<$wallet/walletdb.\+h$>$}\newline
+{\ttfamily \#include $<$wallet/walletutil.\+h$>$}\newline
+{\ttfamily \#include $<$algorithm$>$}\newline
+{\ttfamily \#include $<$cassert$>$}\newline
+{\ttfamily \#include $<$condition\+\_\+variable$>$}\newline
+{\ttfamily \#include $<$exception$>$}\newline
+{\ttfamily \#include $<$optional$>$}\newline
+{\ttfamily \#include $<$stdexcept$>$}\newline
+{\ttfamily \#include $<$thread$>$}\newline
+{\ttfamily \#include $<$tuple$>$}\newline
+{\ttfamily \#include $<$variant$>$}\newline
+\doxysubsubsection*{Namespaces}
+\begin{DoxyCompactItemize}
+\item 
+namespace \textbf{ wallet}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Enumerations}
+\begin{DoxyCompactItemize}
+\item 
+enum class \textbf{ PSBTError} 
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+bool \textbf{ Add\+Wallet\+Setting} (\textbf{ interfaces\+::\+Chain} \&chain, const std\+::string \&wallet\+\_\+name)
+\begin{DoxyCompactList}\small\item\em Add wallet name to persistent configuration so it will be loaded on startup. \end{DoxyCompactList}\item 
+bool \textbf{ Remove\+Wallet\+Setting} (\textbf{ interfaces\+::\+Chain} \&chain, const std\+::string \&wallet\+\_\+name)
+\begin{DoxyCompactList}\small\item\em Remove wallet name from persistent configuration so it will not be loaded on startup. \end{DoxyCompactList}\item 
+bool \textbf{ Add\+Wallet} (\textbf{ Wallet\+Context} \&context, const std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ \&\textbf{ wallet})
+\item 
+bool \textbf{ Remove\+Wallet} (\textbf{ Wallet\+Context} \&context, const std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ \&\textbf{ wallet}, std\+::optional$<$ bool $>$ load\+\_\+on\+\_\+start, std\+::vector$<$ \textbf{ bilingual\+\_\+str} $>$ \&warnings)
+\item 
+bool \textbf{ Remove\+Wallet} (\textbf{ Wallet\+Context} \&context, const std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ \&\textbf{ wallet}, std\+::optional$<$ bool $>$ load\+\_\+on\+\_\+start)
+\item 
+std\+::vector$<$ std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ $>$ \textbf{ Get\+Wallets} (\textbf{ Wallet\+Context} \&context)
+\item 
+std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ \textbf{ Get\+Default\+Wallet} (\textbf{ Wallet\+Context} \&context, size\+\_\+t \&count)
+\item 
+std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ \textbf{ Get\+Wallet} (\textbf{ Wallet\+Context} \&context, const std\+::string \&\textbf{ name})
+\item 
+std\+::unique\+\_\+ptr$<$ \textbf{ interfaces\+::\+Handler} $>$ \textbf{ Handle\+Load\+Wallet} (\textbf{ Wallet\+Context} \&context, \textbf{ Load\+Wallet\+Fn} load\+\_\+wallet)
+\item 
+void \textbf{ Notify\+Wallet\+Loaded} (\textbf{ Wallet\+Context} \&context, const std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ \&\textbf{ wallet})
+\item 
+void \textbf{ Wait\+For\+Delete\+Wallet} (std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ \&\&\textbf{ wallet})
+\item 
+std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ \textbf{ Load\+Wallet} (\textbf{ Wallet\+Context} \&context, const std\+::string \&\textbf{ name}, std\+::optional$<$ bool $>$ load\+\_\+on\+\_\+start, const \textbf{ Database\+Options} \&options, \textbf{ Database\+Status} \&status, \textbf{ bilingual\+\_\+str} \&error, std\+::vector$<$ \textbf{ bilingual\+\_\+str} $>$ \&warnings)
+\item 
+std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ \textbf{ Create\+Wallet} (\textbf{ Wallet\+Context} \&context, const std\+::string \&\textbf{ name}, std\+::optional$<$ bool $>$ load\+\_\+on\+\_\+start, \textbf{ Database\+Options} \&options, \textbf{ Database\+Status} \&status, \textbf{ bilingual\+\_\+str} \&error, std\+::vector$<$ \textbf{ bilingual\+\_\+str} $>$ \&warnings)
+\item 
+std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ \textbf{ Restore\+Wallet} (\textbf{ Wallet\+Context} \&context, const \textbf{ fs\+::path} \&backup\+\_\+file, const std\+::string \&wallet\+\_\+name, std\+::optional$<$ bool $>$ load\+\_\+on\+\_\+start, \textbf{ Database\+Status} \&status, \textbf{ bilingual\+\_\+str} \&error, std\+::vector$<$ \textbf{ bilingual\+\_\+str} $>$ \&warnings, bool load\+\_\+after\+\_\+restore)
+\item 
+void \textbf{ Maybe\+Resend\+Wallet\+Txs} (\textbf{ Wallet\+Context} \&context)
+\item 
+std\+::unique\+\_\+ptr$<$ \textbf{ Wallet\+Database} $>$ \textbf{ Make\+Wallet\+Database} (const std\+::string \&\textbf{ name}, const \textbf{ Database\+Options} \&options, \textbf{ Database\+Status} \&status, \textbf{ bilingual\+\_\+str} \&error\+\_\+string)
+\item 
+bool \textbf{ Do\+Migration} (\textbf{ CWallet} \&\textbf{ wallet}, \textbf{ Wallet\+Context} \&context, \textbf{ bilingual\+\_\+str} \&error, \textbf{ Migration\+Result} \&res) \textbf{ EXCLUSIVE\+\_\+\+LOCKS\+\_\+\+REQUIRED}(wallet.\+cs\+\_\+wallet)
+\item 
+\textbf{ util\+::\+Result}$<$ \textbf{ Migration\+Result} $>$ \textbf{ Migrate\+Legacy\+To\+Descriptor} (const std\+::string \&wallet\+\_\+name, const \textbf{ Secure\+String} \&passphrase, \textbf{ Wallet\+Context} \&context)
+\begin{DoxyCompactList}\small\item\em Do all steps to migrate a legacy wallet to a descriptor wallet. \end{DoxyCompactList}\item 
+\textbf{ util\+::\+Result}$<$ \textbf{ Migration\+Result} $>$ \textbf{ Migrate\+Legacy\+To\+Descriptor} (std\+::shared\+\_\+ptr$<$ \textbf{ CWallet} $>$ local\+\_\+wallet, const \textbf{ Secure\+String} \&passphrase, \textbf{ Wallet\+Context} \&context)
+\begin{DoxyCompactList}\small\item\em Requirement\+: The wallet provided to this function must be isolated, with no attachment to the node\textquotesingle{}s context. \end{DoxyCompactList}\item 
+\textbf{ bilingual\+\_\+str} \textbf{ Amount\+Err\+Msg} (const std\+::string \&optname, const std\+::string \&str\+Value)
+\item 
+\textbf{ bilingual\+\_\+str} \textbf{ Amount\+High\+Warn} (const std\+::string \&optname)
+\item 
+void \textbf{ Replace\+All} (std\+::string \&in\+\_\+out, const std\+::string \&search, const std\+::string \&substitute)
+\item 
+{\footnotesize template$<$typename \textbf{ T}$>$ }\\std\+::string \textbf{ To\+String} (const \textbf{ T} \&t)
+\end{DoxyCompactItemize}
+
+
+\label{doc-enum-members}
+\doxysubsection{Enumeration Type Documentation}
+\index{wallet.cpp@{wallet.cpp}!PSBTError@{PSBTError}}
+\index{PSBTError@{PSBTError}!wallet.cpp@{wallet.cpp}}
+\doxysubsubsection{PSBTError}
+{\footnotesize\ttfamily \label{wallet_8cpp_a463d00d67d3e9d48d7a3dc0c6ee84d06} 
+enum class \textbf{ PSBTError}\hspace{0.3cm}{\ttfamily [strong]}}
+
+
+
+\label{doc-func-members}
+\doxysubsection{Function Documentation}
+\index{wallet.cpp@{wallet.cpp}!AmountErrMsg@{AmountErrMsg}}
+\index{AmountErrMsg@{AmountErrMsg}!wallet.cpp@{wallet.cpp}}
+\doxysubsubsection{AmountErrMsg()}
+{\footnotesize\ttfamily \label{wallet_8cpp_a5bfdbde590f74817cddf14212b156d19} 
+\textbf{ bilingual\+\_\+str} Amount\+Err\+Msg (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{optname}{, }\item[{const std\+::string \&}]{str\+Value}{}\end{DoxyParamCaption})}
+
+\index{wallet.cpp@{wallet.cpp}!AmountHighWarn@{AmountHighWarn}}
+\index{AmountHighWarn@{AmountHighWarn}!wallet.cpp@{wallet.cpp}}
+\doxysubsubsection{AmountHighWarn()}
+{\footnotesize\ttfamily \label{wallet_8cpp_a50b54149f1d47d55dc2bf583af71b7c0} 
+\textbf{ bilingual\+\_\+str} Amount\+High\+Warn (\begin{DoxyParamCaption}\item[{const std\+::string \&}]{optname}{}\end{DoxyParamCaption})}
+
+\index{wallet.cpp@{wallet.cpp}!ReplaceAll@{ReplaceAll}}
+\index{ReplaceAll@{ReplaceAll}!wallet.cpp@{wallet.cpp}}
+\doxysubsubsection{ReplaceAll()}
+{\footnotesize\ttfamily \label{wallet_8cpp_ac3615d6e25683cb921a19c421c2f558b} 
+void Replace\+All (\begin{DoxyParamCaption}\item[{std\+::string \&}]{in\+\_\+out}{, }\item[{const std\+::string \&}]{search}{, }\item[{const std\+::string \&}]{substitute}{}\end{DoxyParamCaption})}
+
+\index{wallet.cpp@{wallet.cpp}!ToString@{ToString}}
+\index{ToString@{ToString}!wallet.cpp@{wallet.cpp}}
+\doxysubsubsection{ToString()}
+{\footnotesize\ttfamily \label{wallet_8cpp_aec2c30b1707eac00ff7e4fb5b3f7a92d} 
+template$<$typename \textbf{ T}$>$ \\
+std\+::string To\+String (\begin{DoxyParamCaption}\item[{const \textbf{ T} \&}]{t}{}\end{DoxyParamCaption})}
+
+Locale-\/independent version of std\+::to\+\_\+string 

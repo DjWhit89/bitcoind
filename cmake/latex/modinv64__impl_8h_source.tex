@@ -1,0 +1,786 @@
+\doxysection{modinv64\+\_\+impl.\+h}
+\label{modinv64__impl_8h_source}\index{src/secp256k1/src/modinv64\_impl.h@{src/secp256k1/src/modinv64\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2020\ Peter\ Dettman\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ **********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_MODINV64\_IMPL\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_MODINV64\_IMPL\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}int128.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}modinv64.h"{}}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{comment}{/*\ This\ file\ implements\ modular\ inversion\ based\ on\ the\ paper\ "{}Fast\ constant-\/time\ gcd\ computation\ and}}
+\DoxyCodeLine{00014\ \textcolor{comment}{\ *\ modular\ inversion"{}\ by\ Daniel\ J.\ Bernstein\ and\ Bo-\/Yin\ Yang.}}
+\DoxyCodeLine{00015\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00016\ \textcolor{comment}{\ *\ For\ an\ explanation\ of\ the\ algorithm,\ see\ doc/safegcd\_implementation.md.\ This\ file\ contains\ an}}
+\DoxyCodeLine{00017\ \textcolor{comment}{\ *\ implementation\ for\ N=62,\ using\ 62-\/bit\ signed\ limbs\ represented\ as\ int64\_t.}}
+\DoxyCodeLine{00018\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{comment}{/*\ Data\ type\ for\ transition\ matrices\ (see\ section\ 3\ of\ explanation).}}
+\DoxyCodeLine{00021\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00022\ \textcolor{comment}{\ *\ t\ =\ [\ u\ \ v\ ]}}
+\DoxyCodeLine{00023\ \textcolor{comment}{\ *\ \ \ \ \ [\ q\ \ r\ ]}}
+\DoxyCodeLine{00024\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00025\ \textcolor{keyword}{typedef}\ \textcolor{keyword}{struct\ }\{}
+\DoxyCodeLine{00026\ \ \ \ \ int64\_t\ u,\ v,\ q,\ r;}
+\DoxyCodeLine{00027\ \}\ secp256k1\_modinv64\_trans2x2;}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00030\ \textcolor{comment}{/*\ Helper\ function\ to\ compute\ the\ absolute\ value\ of\ an\ int64\_t.}}
+\DoxyCodeLine{00031\ \textcolor{comment}{\ *\ (we\ don't\ use\ abs/labs/llabs\ as\ it\ depends\ on\ the\ int\ sizes).\ */}}
+\DoxyCodeLine{00032\ \textcolor{keyword}{static}\ int64\_t\ secp256k1\_modinv64\_abs(int64\_t\ v)\ \{}
+\DoxyCodeLine{00033\ \ \ \ \ VERIFY\_CHECK(v\ >\ INT64\_MIN);}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keywordflow}{if}\ (v\ <\ 0)\ \textcolor{keywordflow}{return}\ -\/v;}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordflow}{return}\ v;}
+\DoxyCodeLine{00036\ \}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_signed62\ SECP256K1\_SIGNED62\_ONE\ =\ \{\{1\}\};}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \textcolor{comment}{/*\ Compute\ a*factor\ and\ put\ it\ in\ r.\ All\ but\ the\ top\ limb\ in\ r\ will\ be\ in\ range\ [0,2\string^62).\ */}}
+\DoxyCodeLine{00041\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_modinv64\_mul\_62(secp256k1\_modinv64\_signed62\ *r,\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_signed62\ *a,\ \textcolor{keywordtype}{int}\ alen,\ int64\_t\ factor)\ \{}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ M62\ =\ UINT64\_MAX\ >>\ 2;}
+\DoxyCodeLine{00043\ \ \ \ \ secp256k1\_int128\ c,\ d;}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00045\ \ \ \ \ secp256k1\_i128\_from\_i64(\&c,\ 0);}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 4;\ ++i)\ \{}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ <\ alen)\ secp256k1\_i128\_accum\_mul(\&c,\ a-\/>v[i],\ factor);}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ r-\/>v[i]\ =\ secp256k1\_i128\_to\_u64(\&c)\ \&\ M62;\ secp256k1\_i128\_rshift(\&c,\ 62);}
+\DoxyCodeLine{00049\ \ \ \ \ \}}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordflow}{if}\ (4\ <\ alen)\ secp256k1\_i128\_accum\_mul(\&c,\ a-\/>v[4],\ factor);}
+\DoxyCodeLine{00051\ \ \ \ \ secp256k1\_i128\_from\_i64(\&d,\ secp256k1\_i128\_to\_i64(\&c));}
+\DoxyCodeLine{00052\ \ \ \ \ VERIFY\_CHECK(secp256k1\_i128\_eq\_var(\&c,\ \&d));}
+\DoxyCodeLine{00053\ \ \ \ \ r-\/>v[4]\ =\ secp256k1\_i128\_to\_i64(\&c);}
+\DoxyCodeLine{00054\ \}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \textcolor{comment}{/*\ Return\ -\/1\ for\ a<b*factor,\ 0\ for\ a==b*factor,\ 1\ for\ a>b*factor.\ A\ has\ alen\ limbs;\ b\ has\ 5.\ */}}
+\DoxyCodeLine{00057\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_modinv64\_mul\_cmp\_62(\textcolor{keyword}{const}\ secp256k1\_modinv64\_signed62\ *a,\ \textcolor{keywordtype}{int}\ alen,\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_signed62\ *b,\ int64\_t\ factor)\ \{}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00059\ \ \ \ \ secp256k1\_modinv64\_signed62\ am,\ bm;}
+\DoxyCodeLine{00060\ \ \ \ \ secp256k1\_modinv64\_mul\_62(\&am,\ a,\ alen,\ 1);\ \textcolor{comment}{/*\ Normalize\ all\ but\ the\ top\ limb\ of\ a.\ */}}
+\DoxyCodeLine{00061\ \ \ \ \ secp256k1\_modinv64\_mul\_62(\&bm,\ b,\ 5,\ factor);}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 4;\ ++i)\ \{}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Verify\ that\ all\ but\ the\ top\ limb\ of\ a\ and\ b\ are\ normalized.\ */}}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(am.v[i]\ >>\ 62\ ==\ 0);}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(bm.v[i]\ >>\ 62\ ==\ 0);}
+\DoxyCodeLine{00066\ \ \ \ \ \}}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 4;\ i\ >=\ 0;\ -\/-\/i)\ \{}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (am.v[i]\ <\ bm.v[i])\ \textcolor{keywordflow}{return}\ -\/1;}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (am.v[i]\ >\ bm.v[i])\ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00070\ \ \ \ \ \}}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00072\ \}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \textcolor{comment}{/*\ Check\ if\ the\ determinant\ of\ t\ is\ equal\ to\ 1\ <<\ n.\ If\ abs,\ check\ if\ |det\ t|\ ==\ 1\ <<\ n.\ */}}
+\DoxyCodeLine{00075\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_modinv64\_det\_check\_pow2(\textcolor{keyword}{const}\ secp256k1\_modinv64\_trans2x2\ *t,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ n,\ \textcolor{keywordtype}{int}\ abs)\ \{}
+\DoxyCodeLine{00076\ \ \ \ \ secp256k1\_int128\ a;}
+\DoxyCodeLine{00077\ \ \ \ \ secp256k1\_i128\_det(\&a,\ t-\/>u,\ t-\/>v,\ t-\/>q,\ t-\/>r);}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_i128\_check\_pow2(\&a,\ n,\ 1))\ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keywordflow}{if}\ (abs\ \&\&\ secp256k1\_i128\_check\_pow2(\&a,\ n,\ -\/1))\ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00081\ \}}
+\DoxyCodeLine{00082\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \textcolor{comment}{/*\ Take\ as\ input\ a\ signed62\ number\ in\ range\ (-\/2*modulus,modulus),\ and\ add\ a\ multiple\ of\ the\ modulus}}
+\DoxyCodeLine{00085\ \textcolor{comment}{\ *\ to\ it\ to\ bring\ it\ to\ range\ [0,modulus).\ If\ sign\ <\ 0,\ the\ input\ will\ also\ be\ negated\ in\ the}}
+\DoxyCodeLine{00086\ \textcolor{comment}{\ *\ process.\ The\ input\ must\ have\ limbs\ in\ range\ (-\/2\string^62,2\string^62).\ The\ output\ will\ have\ limbs\ in\ range}}
+\DoxyCodeLine{00087\ \textcolor{comment}{\ *\ [0,2\string^62).\ */}}
+\DoxyCodeLine{00088\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_modinv64\_normalize\_62(secp256k1\_modinv64\_signed62\ *r,\ int64\_t\ sign,\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_modinfo\ *modinfo)\ \{}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keyword}{const}\ int64\_t\ M62\ =\ (int64\_t)(UINT64\_MAX\ >>\ 2);}
+\DoxyCodeLine{00090\ \ \ \ \ int64\_t\ r0\ =\ r-\/>v[0],\ r1\ =\ r-\/>v[1],\ r2\ =\ r-\/>v[2],\ r3\ =\ r-\/>v[3],\ r4\ =\ r-\/>v[4];}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{keyword}{volatile}\ int64\_t\ cond\_add,\ cond\_negate;}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{comment}{/*\ Verify\ that\ all\ limbs\ are\ in\ range\ (-\/2\string^62,2\string^62).\ */}}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 5;\ ++i)\ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(r-\/>v[i]\ >=\ -\/M62);}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(r-\/>v[i]\ <=\ M62);}
+\DoxyCodeLine{00099\ \ \ \ \ \}}
+\DoxyCodeLine{00100\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(r,\ 5,\ \&modinfo-\/>modulus,\ -\/2)\ >\ 0);\ \textcolor{comment}{/*\ r\ >\ -\/2*modulus\ */}}
+\DoxyCodeLine{00101\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(r,\ 5,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \textcolor{comment}{/*\ r\ <\ modulus\ */}}
+\DoxyCodeLine{00102\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{comment}{/*\ In\ a\ first\ step,\ add\ the\ modulus\ if\ the\ input\ is\ negative,\ and\ then\ negate\ if\ requested.}}
+\DoxyCodeLine{00105\ \textcolor{comment}{\ \ \ \ \ *\ This\ brings\ r\ from\ range\ (-\/2*modulus,modulus)\ to\ range\ (-\/modulus,modulus).\ As\ all\ input}}
+\DoxyCodeLine{00106\ \textcolor{comment}{\ \ \ \ \ *\ limbs\ are\ in\ range\ (-\/2\string^62,2\string^62),\ this\ cannot\ overflow\ an\ int64\_t.\ Note\ that\ the\ right}}
+\DoxyCodeLine{00107\ \textcolor{comment}{\ \ \ \ \ *\ shifts\ below\ are\ signed\ sign-\/extending\ shifts\ (see\ assumptions.h\ for\ tests\ that\ that\ is}}
+\DoxyCodeLine{00108\ \textcolor{comment}{\ \ \ \ \ *\ indeed\ the\ behavior\ of\ the\ right\ shift\ operator).\ */}}
+\DoxyCodeLine{00109\ \ \ \ \ cond\_add\ =\ r4\ >>\ 63;}
+\DoxyCodeLine{00110\ \ \ \ \ r0\ +=\ modinfo-\/>modulus.v[0]\ \&\ cond\_add;}
+\DoxyCodeLine{00111\ \ \ \ \ r1\ +=\ modinfo-\/>modulus.v[1]\ \&\ cond\_add;}
+\DoxyCodeLine{00112\ \ \ \ \ r2\ +=\ modinfo-\/>modulus.v[2]\ \&\ cond\_add;}
+\DoxyCodeLine{00113\ \ \ \ \ r3\ +=\ modinfo-\/>modulus.v[3]\ \&\ cond\_add;}
+\DoxyCodeLine{00114\ \ \ \ \ r4\ +=\ modinfo-\/>modulus.v[4]\ \&\ cond\_add;}
+\DoxyCodeLine{00115\ \ \ \ \ cond\_negate\ =\ sign\ >>\ 63;}
+\DoxyCodeLine{00116\ \ \ \ \ r0\ =\ (r0\ \string^\ cond\_negate)\ -\/\ cond\_negate;}
+\DoxyCodeLine{00117\ \ \ \ \ r1\ =\ (r1\ \string^\ cond\_negate)\ -\/\ cond\_negate;}
+\DoxyCodeLine{00118\ \ \ \ \ r2\ =\ (r2\ \string^\ cond\_negate)\ -\/\ cond\_negate;}
+\DoxyCodeLine{00119\ \ \ \ \ r3\ =\ (r3\ \string^\ cond\_negate)\ -\/\ cond\_negate;}
+\DoxyCodeLine{00120\ \ \ \ \ r4\ =\ (r4\ \string^\ cond\_negate)\ -\/\ cond\_negate;}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{comment}{/*\ Propagate\ the\ top\ bits,\ to\ bring\ limbs\ back\ to\ range\ (-\/2\string^62,2\string^62).\ */}}
+\DoxyCodeLine{00122\ \ \ \ \ r1\ +=\ r0\ >>\ 62;\ r0\ \&=\ M62;}
+\DoxyCodeLine{00123\ \ \ \ \ r2\ +=\ r1\ >>\ 62;\ r1\ \&=\ M62;}
+\DoxyCodeLine{00124\ \ \ \ \ r3\ +=\ r2\ >>\ 62;\ r2\ \&=\ M62;}
+\DoxyCodeLine{00125\ \ \ \ \ r4\ +=\ r3\ >>\ 62;\ r3\ \&=\ M62;}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{comment}{/*\ In\ a\ second\ step\ add\ the\ modulus\ again\ if\ the\ result\ is\ still\ negative,\ bringing}}
+\DoxyCodeLine{00128\ \textcolor{comment}{\ \ \ \ \ *\ r\ to\ range\ [0,modulus).\ */}}
+\DoxyCodeLine{00129\ \ \ \ \ cond\_add\ =\ r4\ >>\ 63;}
+\DoxyCodeLine{00130\ \ \ \ \ r0\ +=\ modinfo-\/>modulus.v[0]\ \&\ cond\_add;}
+\DoxyCodeLine{00131\ \ \ \ \ r1\ +=\ modinfo-\/>modulus.v[1]\ \&\ cond\_add;}
+\DoxyCodeLine{00132\ \ \ \ \ r2\ +=\ modinfo-\/>modulus.v[2]\ \&\ cond\_add;}
+\DoxyCodeLine{00133\ \ \ \ \ r3\ +=\ modinfo-\/>modulus.v[3]\ \&\ cond\_add;}
+\DoxyCodeLine{00134\ \ \ \ \ r4\ +=\ modinfo-\/>modulus.v[4]\ \&\ cond\_add;}
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{comment}{/*\ And\ propagate\ again.\ */}}
+\DoxyCodeLine{00136\ \ \ \ \ r1\ +=\ r0\ >>\ 62;\ r0\ \&=\ M62;}
+\DoxyCodeLine{00137\ \ \ \ \ r2\ +=\ r1\ >>\ 62;\ r1\ \&=\ M62;}
+\DoxyCodeLine{00138\ \ \ \ \ r3\ +=\ r2\ >>\ 62;\ r2\ \&=\ M62;}
+\DoxyCodeLine{00139\ \ \ \ \ r4\ +=\ r3\ >>\ 62;\ r3\ \&=\ M62;}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00141\ \ \ \ \ r-\/>v[0]\ =\ r0;}
+\DoxyCodeLine{00142\ \ \ \ \ r-\/>v[1]\ =\ r1;}
+\DoxyCodeLine{00143\ \ \ \ \ r-\/>v[2]\ =\ r2;}
+\DoxyCodeLine{00144\ \ \ \ \ r-\/>v[3]\ =\ r3;}
+\DoxyCodeLine{00145\ \ \ \ \ r-\/>v[4]\ =\ r4;}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00147\ \ \ \ \ VERIFY\_CHECK(r0\ >>\ 62\ ==\ 0);}
+\DoxyCodeLine{00148\ \ \ \ \ VERIFY\_CHECK(r1\ >>\ 62\ ==\ 0);}
+\DoxyCodeLine{00149\ \ \ \ \ VERIFY\_CHECK(r2\ >>\ 62\ ==\ 0);}
+\DoxyCodeLine{00150\ \ \ \ \ VERIFY\_CHECK(r3\ >>\ 62\ ==\ 0);}
+\DoxyCodeLine{00151\ \ \ \ \ VERIFY\_CHECK(r4\ >>\ 62\ ==\ 0);}
+\DoxyCodeLine{00152\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(r,\ 5,\ \&modinfo-\/>modulus,\ 0)\ >=\ 0);\ \textcolor{comment}{/*\ r\ >=\ 0\ */}}
+\DoxyCodeLine{00153\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(r,\ 5,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \textcolor{comment}{/*\ r\ <\ modulus\ */}}
+\DoxyCodeLine{00154\ \}}
+\DoxyCodeLine{00155\ }
+\DoxyCodeLine{00156\ \textcolor{comment}{/*\ Compute\ the\ transition\ matrix\ and\ eta\ for\ 59\ divsteps\ (where\ zeta=-\/(delta+1/2)).}}
+\DoxyCodeLine{00157\ \textcolor{comment}{\ *\ Note\ that\ the\ transformation\ matrix\ is\ scaled\ by\ 2\string^62\ and\ not\ 2\string^59.}}
+\DoxyCodeLine{00158\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00159\ \textcolor{comment}{\ *\ Input:\ \ zeta:\ initial\ zeta}}
+\DoxyCodeLine{00160\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ f0:\ \ \ bottom\ limb\ of\ initial\ f}}
+\DoxyCodeLine{00161\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ g0:\ \ \ bottom\ limb\ of\ initial\ g}}
+\DoxyCodeLine{00162\ \textcolor{comment}{\ *\ Output:\ t:\ transition\ matrix}}
+\DoxyCodeLine{00163\ \textcolor{comment}{\ *\ Return:\ final\ zeta}}
+\DoxyCodeLine{00164\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00165\ \textcolor{comment}{\ *\ Implements\ the\ divsteps\_n\_matrix\ function\ from\ the\ explanation.}}
+\DoxyCodeLine{00166\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00167\ \textcolor{keyword}{static}\ int64\_t\ secp256k1\_modinv64\_divsteps\_59(int64\_t\ zeta,\ uint64\_t\ f0,\ uint64\_t\ g0,\ secp256k1\_modinv64\_trans2x2\ *t)\ \{}
+\DoxyCodeLine{00168\ \ \ \ \ \textcolor{comment}{/*\ u,v,q,r\ are\ the\ elements\ of\ the\ transformation\ matrix\ being\ built\ up,}}
+\DoxyCodeLine{00169\ \textcolor{comment}{\ \ \ \ \ *\ starting\ with\ the\ identity\ matrix\ times\ 8\ (because\ the\ caller\ expects}}
+\DoxyCodeLine{00170\ \textcolor{comment}{\ \ \ \ \ *\ a\ result\ scaled\ by\ 2\string^62).\ Semantically\ they\ are\ signed\ integers}}
+\DoxyCodeLine{00171\ \textcolor{comment}{\ \ \ \ \ *\ in\ range\ [-\/2\string^62,2\string^62],\ but\ here\ represented\ as\ unsigned\ mod\ 2\string^64.\ This}}
+\DoxyCodeLine{00172\ \textcolor{comment}{\ \ \ \ \ *\ permits\ left\ shifting\ (which\ is\ UB\ for\ negative\ numbers).\ The\ range}}
+\DoxyCodeLine{00173\ \textcolor{comment}{\ \ \ \ \ *\ being\ inside\ [-\/2\string^63,2\string^63)\ means\ that\ casting\ to\ signed\ works\ correctly.}}
+\DoxyCodeLine{00174\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00175\ \ \ \ \ uint64\_t\ u\ =\ 8,\ v\ =\ 0,\ q\ =\ 0,\ r\ =\ 8;}
+\DoxyCodeLine{00176\ \ \ \ \ \textcolor{keyword}{volatile}\ uint64\_t\ c1,\ c2;}
+\DoxyCodeLine{00177\ \ \ \ \ uint64\_t\ mask1,\ mask2,\ f\ =\ f0,\ g\ =\ g0,\ x,\ y,\ z;}
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 3;\ i\ <\ 62;\ ++i)\ \{}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((f\ \&\ 1)\ ==\ 1);\ \textcolor{comment}{/*\ f\ must\ always\ be\ odd\ */}}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((u\ *\ f0\ +\ v\ *\ g0)\ ==\ f\ <<\ i);}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((q\ *\ f0\ +\ r\ *\ g0)\ ==\ g\ <<\ i);}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Compute\ conditional\ masks\ for\ (zeta\ <\ 0)\ and\ for\ (g\ \&\ 1).\ */}}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ c1\ =\ zeta\ >>\ 63;}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ mask1\ =\ c1;}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ c2\ =\ g\ \&\ 1;}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ mask2\ =\ -\/c2;}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Compute\ x,y,z,\ conditionally\ negated\ versions\ of\ f,u,v.\ */}}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ x\ =\ (f\ \string^\ mask1)\ -\/\ mask1;}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ y\ =\ (u\ \string^\ mask1)\ -\/\ mask1;}
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ z\ =\ (v\ \string^\ mask1)\ -\/\ mask1;}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Conditionally\ add\ x,y,z\ to\ g,q,r.\ */}}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ g\ +=\ x\ \&\ mask2;}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ q\ +=\ y\ \&\ mask2;}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ r\ +=\ z\ \&\ mask2;}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ In\ what\ follows,\ c1\ is\ a\ condition\ mask\ for\ (zeta\ <\ 0)\ and\ (g\ \&\ 1).\ */}}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ mask1\ \&=\ mask2;}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Conditionally\ change\ zeta\ into\ -\/zeta-\/2\ or\ zeta-\/1.\ */}}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ zeta\ =\ (zeta\ \string^\ mask1)\ -\/\ 1;}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Conditionally\ add\ g,q,r\ to\ f,u,v.\ */}}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ f\ +=\ g\ \&\ mask1;}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ u\ +=\ q\ \&\ mask1;}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ v\ +=\ r\ \&\ mask1;}
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Shifts\ */}}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ g\ >>=\ 1;}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ u\ <<=\ 1;}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ v\ <<=\ 1;}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Bounds\ on\ zeta\ that\ follow\ from\ the\ bounds\ on\ iteration\ count\ (max\ 10*59\ divsteps).\ */}}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(zeta\ >=\ -\/591\ \&\&\ zeta\ <=\ 591);}
+\DoxyCodeLine{00211\ \ \ \ \ \}}
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{comment}{/*\ Return\ data\ in\ t\ and\ return\ value.\ */}}
+\DoxyCodeLine{00213\ \ \ \ \ t-\/>u\ =\ (int64\_t)u;}
+\DoxyCodeLine{00214\ \ \ \ \ t-\/>v\ =\ (int64\_t)v;}
+\DoxyCodeLine{00215\ \ \ \ \ t-\/>q\ =\ (int64\_t)q;}
+\DoxyCodeLine{00216\ \ \ \ \ t-\/>r\ =\ (int64\_t)r;}
+\DoxyCodeLine{00217\ }
+\DoxyCodeLine{00218\ \ \ \ \ \textcolor{comment}{/*\ The\ determinant\ of\ t\ must\ be\ a\ power\ of\ two.\ This\ guarantees\ that\ multiplication\ with\ t}}
+\DoxyCodeLine{00219\ \textcolor{comment}{\ \ \ \ \ *\ does\ not\ change\ the\ gcd\ of\ f\ and\ g,\ apart\ from\ adding\ a\ power-\/of-\/2\ factor\ to\ it\ (which}}
+\DoxyCodeLine{00220\ \textcolor{comment}{\ \ \ \ \ *\ will\ be\ divided\ out\ again).\ As\ each\ divstep's\ individual\ matrix\ has\ determinant\ 2,\ the}}
+\DoxyCodeLine{00221\ \textcolor{comment}{\ \ \ \ \ *\ aggregate\ of\ 59\ of\ them\ will\ have\ determinant\ 2\string^59.\ Multiplying\ with\ the\ initial}}
+\DoxyCodeLine{00222\ \textcolor{comment}{\ \ \ \ \ *\ 8*identity\ (which\ has\ determinant\ 2\string^6)\ means\ the\ overall\ outputs\ has\ determinant}}
+\DoxyCodeLine{00223\ \textcolor{comment}{\ \ \ \ \ *\ 2\string^65.\ */}}
+\DoxyCodeLine{00224\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_det\_check\_pow2(t,\ 65,\ 0));}
+\DoxyCodeLine{00225\ }
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{keywordflow}{return}\ zeta;}
+\DoxyCodeLine{00227\ \}}
+\DoxyCodeLine{00228\ }
+\DoxyCodeLine{00229\ \textcolor{comment}{/*\ Compute\ the\ transition\ matrix\ and\ eta\ for\ 62\ divsteps\ (variable\ time,\ eta=-\/delta).}}
+\DoxyCodeLine{00230\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00231\ \textcolor{comment}{\ *\ Input:\ \ eta:\ initial\ eta}}
+\DoxyCodeLine{00232\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ f0:\ \ bottom\ limb\ of\ initial\ f}}
+\DoxyCodeLine{00233\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ g0:\ \ bottom\ limb\ of\ initial\ g}}
+\DoxyCodeLine{00234\ \textcolor{comment}{\ *\ Output:\ t:\ transition\ matrix}}
+\DoxyCodeLine{00235\ \textcolor{comment}{\ *\ Return:\ final\ eta}}
+\DoxyCodeLine{00236\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00237\ \textcolor{comment}{\ *\ Implements\ the\ divsteps\_n\_matrix\_var\ function\ from\ the\ explanation.}}
+\DoxyCodeLine{00238\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00239\ \textcolor{keyword}{static}\ int64\_t\ secp256k1\_modinv64\_divsteps\_62\_var(int64\_t\ eta,\ uint64\_t\ f0,\ uint64\_t\ g0,\ secp256k1\_modinv64\_trans2x2\ *t)\ \{}
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{comment}{/*\ Transformation\ matrix;\ see\ comments\ in\ secp256k1\_modinv64\_divsteps\_62.\ */}}
+\DoxyCodeLine{00241\ \ \ \ \ uint64\_t\ u\ =\ 1,\ v\ =\ 0,\ q\ =\ 0,\ r\ =\ 1;}
+\DoxyCodeLine{00242\ \ \ \ \ uint64\_t\ f\ =\ f0,\ g\ =\ g0,\ m;}
+\DoxyCodeLine{00243\ \ \ \ \ uint32\_t\ w;}
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keywordtype}{int}\ i\ =\ 62,\ limit,\ zeros;}
+\DoxyCodeLine{00245\ }
+\DoxyCodeLine{00246\ \ \ \ \ \textcolor{keywordflow}{for}\ (;;)\ \{}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Use\ a\ sentinel\ bit\ to\ count\ zeros\ only\ up\ to\ i.\ */}}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ zeros\ =\ secp256k1\_ctz64\_var(g\ |\ (UINT64\_MAX\ <<\ i));}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Perform\ zeros\ divsteps\ at\ once;\ they\ all\ just\ divide\ g\ by\ two.\ */}}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ g\ >>=\ zeros;}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ u\ <<=\ zeros;}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ v\ <<=\ zeros;}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ eta\ -\/=\ zeros;}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ i\ -\/=\ zeros;}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ We're\ done\ once\ we've\ done\ 62\ divsteps.\ */}}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ ==\ 0)\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((f\ \&\ 1)\ ==\ 1);}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((g\ \&\ 1)\ ==\ 1);}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((u\ *\ f0\ +\ v\ *\ g0)\ ==\ f\ <<\ (62\ -\/\ i));}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((q\ *\ f0\ +\ r\ *\ g0)\ ==\ g\ <<\ (62\ -\/\ i));}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Bounds\ on\ eta\ that\ follow\ from\ the\ bounds\ on\ iteration\ count\ (max\ 12*62\ divsteps).\ */}}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(eta\ >=\ -\/745\ \&\&\ eta\ <=\ 745);}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ eta\ is\ negative,\ negate\ it\ and\ replace\ f,g\ with\ g,-\/f.\ */}}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (eta\ <\ 0)\ \{}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ tmp;}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ \ \ \ \ eta\ =\ -\/eta;}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\ =\ f;\ f\ =\ g;\ g\ =\ -\/tmp;}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\ =\ u;\ u\ =\ q;\ q\ =\ -\/tmp;}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\ =\ v;\ v\ =\ r;\ r\ =\ -\/tmp;}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Use\ a\ formula\ to\ cancel\ out\ up\ to\ 6\ bits\ of\ g.\ Also,\ no\ more\ than\ i\ can\ be\ cancelled}}
+\DoxyCodeLine{00271\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ out\ (as\ we'd\ be\ done\ before\ that\ point),\ and\ no\ more\ than\ eta+1\ can\ be\ done\ as\ its}}
+\DoxyCodeLine{00272\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ sign\ will\ flip\ again\ once\ that\ happens.\ */}}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \ \ \ \ limit\ =\ ((int)eta\ +\ 1)\ >\ i\ ?\ i\ :\ ((int)eta\ +\ 1);}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \ \ \ \ VERIFY\_CHECK(limit\ >\ 0\ \&\&\ limit\ <=\ 62);}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ is\ a\ mask\ for\ the\ bottom\ min(limit,\ 6)\ bits.\ */}}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \ \ \ \ m\ =\ (UINT64\_MAX\ >>\ (64\ -\/\ limit))\ \&\ 63U;}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Find\ what\ multiple\ of\ f\ must\ be\ added\ to\ g\ to\ cancel\ its\ bottom\ min(limit,\ 6)}}
+\DoxyCodeLine{00278\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ bits.\ */}}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ \ \ \ \ w\ =\ (f\ *\ g\ *\ (f\ *\ f\ -\/\ 2))\ \&\ m;}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ In\ this\ branch,\ use\ a\ simpler\ formula\ that\ only\ lets\ us\ cancel\ up\ to\ 4\ bits\ of\ g,\ as}}
+\DoxyCodeLine{00282\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ eta\ tends\ to\ be\ smaller\ here.\ */}}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ \ \ \ \ limit\ =\ ((int)eta\ +\ 1)\ >\ i\ ?\ i\ :\ ((int)eta\ +\ 1);}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ \ \ \ \ VERIFY\_CHECK(limit\ >\ 0\ \&\&\ limit\ <=\ 62);}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ is\ a\ mask\ for\ the\ bottom\ min(limit,\ 4)\ bits.\ */}}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \ \ \ \ m\ =\ (UINT64\_MAX\ >>\ (64\ -\/\ limit))\ \&\ 15U;}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Find\ what\ multiple\ of\ f\ must\ be\ added\ to\ g\ to\ cancel\ its\ bottom\ min(limit,\ 4)}}
+\DoxyCodeLine{00288\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ bits.\ */}}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \ \ \ \ w\ =\ f\ +\ (((f\ +\ 1)\ \&\ 4)\ <<\ 1);}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \ \ \ \ w\ =\ (-\/w\ *\ g)\ \&\ m;}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ g\ +=\ f\ *\ w;}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ q\ +=\ u\ *\ w;}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ r\ +=\ v\ *\ w;}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((g\ \&\ m)\ ==\ 0);}
+\DoxyCodeLine{00296\ \ \ \ \ \}}
+\DoxyCodeLine{00297\ \ \ \ \ \textcolor{comment}{/*\ Return\ data\ in\ t\ and\ return\ value.\ */}}
+\DoxyCodeLine{00298\ \ \ \ \ t-\/>u\ =\ (int64\_t)u;}
+\DoxyCodeLine{00299\ \ \ \ \ t-\/>v\ =\ (int64\_t)v;}
+\DoxyCodeLine{00300\ \ \ \ \ t-\/>q\ =\ (int64\_t)q;}
+\DoxyCodeLine{00301\ \ \ \ \ t-\/>r\ =\ (int64\_t)r;}
+\DoxyCodeLine{00302\ }
+\DoxyCodeLine{00303\ \ \ \ \ \textcolor{comment}{/*\ The\ determinant\ of\ t\ must\ be\ a\ power\ of\ two.\ This\ guarantees\ that\ multiplication\ with\ t}}
+\DoxyCodeLine{00304\ \textcolor{comment}{\ \ \ \ \ *\ does\ not\ change\ the\ gcd\ of\ f\ and\ g,\ apart\ from\ adding\ a\ power-\/of-\/2\ factor\ to\ it\ (which}}
+\DoxyCodeLine{00305\ \textcolor{comment}{\ \ \ \ \ *\ will\ be\ divided\ out\ again).\ As\ each\ divstep's\ individual\ matrix\ has\ determinant\ 2,\ the}}
+\DoxyCodeLine{00306\ \textcolor{comment}{\ \ \ \ \ *\ aggregate\ of\ 62\ of\ them\ will\ have\ determinant\ 2\string^62.\ */}}
+\DoxyCodeLine{00307\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_det\_check\_pow2(t,\ 62,\ 0));}
+\DoxyCodeLine{00308\ }
+\DoxyCodeLine{00309\ \ \ \ \ \textcolor{keywordflow}{return}\ eta;}
+\DoxyCodeLine{00310\ \}}
+\DoxyCodeLine{00311\ }
+\DoxyCodeLine{00312\ \textcolor{comment}{/*\ Compute\ the\ transition\ matrix\ and\ eta\ for\ 62\ posdivsteps\ (variable\ time,\ eta=-\/delta),\ and\ keeps\ track}}
+\DoxyCodeLine{00313\ \textcolor{comment}{\ *\ of\ the\ Jacobi\ symbol\ along\ the\ way.\ f0\ and\ g0\ must\ be\ f\ and\ g\ mod\ 2\string^64\ rather\ than\ 2\string^62,\ because}}
+\DoxyCodeLine{00314\ \textcolor{comment}{\ *\ Jacobi\ tracking\ requires\ knowing\ (f\ mod\ 8)\ rather\ than\ just\ (f\ mod\ 2).}}
+\DoxyCodeLine{00315\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00316\ \textcolor{comment}{\ *\ Input:\ \ \ \ \ \ \ \ eta:\ initial\ eta}}
+\DoxyCodeLine{00317\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ f0:\ \ bottom\ limb\ of\ initial\ f}}
+\DoxyCodeLine{00318\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ g0:\ \ bottom\ limb\ of\ initial\ g}}
+\DoxyCodeLine{00319\ \textcolor{comment}{\ *\ Output:\ \ \ \ \ \ \ t:\ transition\ matrix}}
+\DoxyCodeLine{00320\ \textcolor{comment}{\ *\ Input/Output:\ (*jacp\ \&\ 1)\ is\ bitflipped\ if\ and\ only\ if\ the\ Jacobi\ symbol\ of\ (f\ |\ g)\ changes\ sign}}
+\DoxyCodeLine{00321\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ by\ applying\ the\ returned\ transformation\ matrix\ to\ it.\ The\ other\ bits\ of\ *jacp\ may}}
+\DoxyCodeLine{00322\ \textcolor{comment}{\ *\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ change,\ but\ are\ meaningless.}}
+\DoxyCodeLine{00323\ \textcolor{comment}{\ *\ Return:\ \ \ \ \ \ \ final\ eta}}
+\DoxyCodeLine{00324\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00325\ \textcolor{keyword}{static}\ int64\_t\ secp256k1\_modinv64\_posdivsteps\_62\_var(int64\_t\ eta,\ uint64\_t\ f0,\ uint64\_t\ g0,\ secp256k1\_modinv64\_trans2x2\ *t,\ \textcolor{keywordtype}{int}\ *jacp)\ \{}
+\DoxyCodeLine{00326\ \ \ \ \ \textcolor{comment}{/*\ Transformation\ matrix;\ see\ comments\ in\ secp256k1\_modinv64\_divsteps\_62.\ */}}
+\DoxyCodeLine{00327\ \ \ \ \ uint64\_t\ u\ =\ 1,\ v\ =\ 0,\ q\ =\ 0,\ r\ =\ 1;}
+\DoxyCodeLine{00328\ \ \ \ \ uint64\_t\ f\ =\ f0,\ g\ =\ g0,\ m;}
+\DoxyCodeLine{00329\ \ \ \ \ uint32\_t\ w;}
+\DoxyCodeLine{00330\ \ \ \ \ \textcolor{keywordtype}{int}\ i\ =\ 62,\ limit,\ zeros;}
+\DoxyCodeLine{00331\ \ \ \ \ \textcolor{keywordtype}{int}\ jac\ =\ *jacp;}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00333\ \ \ \ \ \textcolor{keywordflow}{for}\ (;;)\ \{}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Use\ a\ sentinel\ bit\ to\ count\ zeros\ only\ up\ to\ i.\ */}}
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ zeros\ =\ secp256k1\_ctz64\_var(g\ |\ (UINT64\_MAX\ <<\ i));}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Perform\ zeros\ divsteps\ at\ once;\ they\ all\ just\ divide\ g\ by\ two.\ */}}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ g\ >>=\ zeros;}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ u\ <<=\ zeros;}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ v\ <<=\ zeros;}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ eta\ -\/=\ zeros;}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ i\ -\/=\ zeros;}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Update\ the\ bottom\ bit\ of\ jac:\ when\ dividing\ g\ by\ an\ odd\ power\ of\ 2,}}
+\DoxyCodeLine{00343\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ if\ (f\ mod\ 8)\ is\ 3\ or\ 5,\ the\ Jacobi\ symbol\ changes\ sign.\ */}}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ jac\ \string^=\ (zeros\ \&\ ((f\ >>\ 1)\ \string^\ (f\ >>\ 2)));}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ We're\ done\ once\ we've\ done\ 62\ posdivsteps.\ */}}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ ==\ 0)\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((f\ \&\ 1)\ ==\ 1);}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((g\ \&\ 1)\ ==\ 1);}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((u\ *\ f0\ +\ v\ *\ g0)\ ==\ f\ <<\ (62\ -\/\ i));}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((q\ *\ f0\ +\ r\ *\ g0)\ ==\ g\ <<\ (62\ -\/\ i));}
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ eta\ is\ negative,\ negate\ it\ and\ replace\ f,g\ with\ g,f.\ */}}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (eta\ <\ 0)\ \{}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ tmp;}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \ \ \ \ eta\ =\ -\/eta;}
+\DoxyCodeLine{00355\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\ =\ f;\ f\ =\ g;\ g\ =\ tmp;}
+\DoxyCodeLine{00356\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\ =\ u;\ u\ =\ q;\ q\ =\ tmp;}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\ =\ v;\ v\ =\ r;\ r\ =\ tmp;}
+\DoxyCodeLine{00358\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Update\ bottom\ bit\ of\ jac:\ when\ swapping\ f\ and\ g,\ the\ Jacobi\ symbol\ changes\ sign}}
+\DoxyCodeLine{00359\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ if\ both\ f\ and\ g\ are\ 3\ mod\ 4.\ */}}
+\DoxyCodeLine{00360\ \ \ \ \ \ \ \ \ \ \ \ \ jac\ \string^=\ ((f\ \&\ g)\ >>\ 1);}
+\DoxyCodeLine{00361\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Use\ a\ formula\ to\ cancel\ out\ up\ to\ 6\ bits\ of\ g.\ Also,\ no\ more\ than\ i\ can\ be\ cancelled}}
+\DoxyCodeLine{00362\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ out\ (as\ we'd\ be\ done\ before\ that\ point),\ and\ no\ more\ than\ eta+1\ can\ be\ done\ as\ its}}
+\DoxyCodeLine{00363\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ sign\ will\ flip\ again\ once\ that\ happens.\ */}}
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ \ \ \ \ limit\ =\ ((int)eta\ +\ 1)\ >\ i\ ?\ i\ :\ ((int)eta\ +\ 1);}
+\DoxyCodeLine{00365\ \ \ \ \ \ \ \ \ \ \ \ \ VERIFY\_CHECK(limit\ >\ 0\ \&\&\ limit\ <=\ 62);}
+\DoxyCodeLine{00366\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ is\ a\ mask\ for\ the\ bottom\ min(limit,\ 6)\ bits.\ */}}
+\DoxyCodeLine{00367\ \ \ \ \ \ \ \ \ \ \ \ \ m\ =\ (UINT64\_MAX\ >>\ (64\ -\/\ limit))\ \&\ 63U;}
+\DoxyCodeLine{00368\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Find\ what\ multiple\ of\ f\ must\ be\ added\ to\ g\ to\ cancel\ its\ bottom\ min(limit,\ 6)}}
+\DoxyCodeLine{00369\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ bits.\ */}}
+\DoxyCodeLine{00370\ \ \ \ \ \ \ \ \ \ \ \ \ w\ =\ (f\ *\ g\ *\ (f\ *\ f\ -\/\ 2))\ \&\ m;}
+\DoxyCodeLine{00371\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00372\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ In\ this\ branch,\ use\ a\ simpler\ formula\ that\ only\ lets\ us\ cancel\ up\ to\ 4\ bits\ of\ g,\ as}}
+\DoxyCodeLine{00373\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ eta\ tends\ to\ be\ smaller\ here.\ */}}
+\DoxyCodeLine{00374\ \ \ \ \ \ \ \ \ \ \ \ \ limit\ =\ ((int)eta\ +\ 1)\ >\ i\ ?\ i\ :\ ((int)eta\ +\ 1);}
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \ \ \ \ \ \ VERIFY\_CHECK(limit\ >\ 0\ \&\&\ limit\ <=\ 62);}
+\DoxyCodeLine{00376\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ is\ a\ mask\ for\ the\ bottom\ min(limit,\ 4)\ bits.\ */}}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \ \ \ \ \ \ m\ =\ (UINT64\_MAX\ >>\ (64\ -\/\ limit))\ \&\ 15U;}
+\DoxyCodeLine{00378\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Find\ what\ multiple\ of\ f\ must\ be\ added\ to\ g\ to\ cancel\ its\ bottom\ min(limit,\ 4)}}
+\DoxyCodeLine{00379\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ bits.\ */}}
+\DoxyCodeLine{00380\ \ \ \ \ \ \ \ \ \ \ \ \ w\ =\ f\ +\ (((f\ +\ 1)\ \&\ 4)\ <<\ 1);}
+\DoxyCodeLine{00381\ \ \ \ \ \ \ \ \ \ \ \ \ w\ =\ (-\/w\ *\ g)\ \&\ m;}
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00383\ \ \ \ \ \ \ \ \ g\ +=\ f\ *\ w;}
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ q\ +=\ u\ *\ w;}
+\DoxyCodeLine{00385\ \ \ \ \ \ \ \ \ r\ +=\ v\ *\ w;}
+\DoxyCodeLine{00386\ \ \ \ \ \ \ \ \ VERIFY\_CHECK((g\ \&\ m)\ ==\ 0);}
+\DoxyCodeLine{00387\ \ \ \ \ \}}
+\DoxyCodeLine{00388\ \ \ \ \ \textcolor{comment}{/*\ Return\ data\ in\ t\ and\ return\ value.\ */}}
+\DoxyCodeLine{00389\ \ \ \ \ t-\/>u\ =\ (int64\_t)u;}
+\DoxyCodeLine{00390\ \ \ \ \ t-\/>v\ =\ (int64\_t)v;}
+\DoxyCodeLine{00391\ \ \ \ \ t-\/>q\ =\ (int64\_t)q;}
+\DoxyCodeLine{00392\ \ \ \ \ t-\/>r\ =\ (int64\_t)r;}
+\DoxyCodeLine{00393\ }
+\DoxyCodeLine{00394\ \ \ \ \ \textcolor{comment}{/*\ The\ determinant\ of\ t\ must\ be\ a\ power\ of\ two.\ This\ guarantees\ that\ multiplication\ with\ t}}
+\DoxyCodeLine{00395\ \textcolor{comment}{\ \ \ \ \ *\ does\ not\ change\ the\ gcd\ of\ f\ and\ g,\ apart\ from\ adding\ a\ power-\/of-\/2\ factor\ to\ it\ (which}}
+\DoxyCodeLine{00396\ \textcolor{comment}{\ \ \ \ \ *\ will\ be\ divided\ out\ again).\ As\ each\ divstep's\ individual\ matrix\ has\ determinant\ 2\ or\ -\/2,}}
+\DoxyCodeLine{00397\ \textcolor{comment}{\ \ \ \ \ *\ the\ aggregate\ of\ 62\ of\ them\ will\ have\ determinant\ 2\string^62\ or\ -\/2\string^62.\ */}}
+\DoxyCodeLine{00398\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_det\_check\_pow2(t,\ 62,\ 1));}
+\DoxyCodeLine{00399\ }
+\DoxyCodeLine{00400\ \ \ \ \ *jacp\ =\ jac;}
+\DoxyCodeLine{00401\ \ \ \ \ \textcolor{keywordflow}{return}\ eta;}
+\DoxyCodeLine{00402\ \}}
+\DoxyCodeLine{00403\ }
+\DoxyCodeLine{00404\ \textcolor{comment}{/*\ Compute\ (t/2\string^62)\ *\ [d,\ e]\ mod\ modulus,\ where\ t\ is\ a\ transition\ matrix\ scaled\ by\ 2\string^62.}}
+\DoxyCodeLine{00405\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00406\ \textcolor{comment}{\ *\ On\ input\ and\ output,\ d\ and\ e\ are\ in\ range\ (-\/2*modulus,modulus).\ All\ output\ limbs\ will\ be\ in\ range}}
+\DoxyCodeLine{00407\ \textcolor{comment}{\ *\ (-\/2\string^62,2\string^62).}}
+\DoxyCodeLine{00408\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00409\ \textcolor{comment}{\ *\ This\ implements\ the\ update\_de\ function\ from\ the\ explanation.}}
+\DoxyCodeLine{00410\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00411\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_modinv64\_update\_de\_62(secp256k1\_modinv64\_signed62\ *d,\ secp256k1\_modinv64\_signed62\ *e,\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_trans2x2\ *t,\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_modinfo*\ modinfo)\ \{}
+\DoxyCodeLine{00412\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ M62\ =\ UINT64\_MAX\ >>\ 2;}
+\DoxyCodeLine{00413\ \ \ \ \ \textcolor{keyword}{const}\ int64\_t\ d0\ =\ d-\/>v[0],\ d1\ =\ d-\/>v[1],\ d2\ =\ d-\/>v[2],\ d3\ =\ d-\/>v[3],\ d4\ =\ d-\/>v[4];}
+\DoxyCodeLine{00414\ \ \ \ \ \textcolor{keyword}{const}\ int64\_t\ e0\ =\ e-\/>v[0],\ e1\ =\ e-\/>v[1],\ e2\ =\ e-\/>v[2],\ e3\ =\ e-\/>v[3],\ e4\ =\ e-\/>v[4];}
+\DoxyCodeLine{00415\ \ \ \ \ \textcolor{keyword}{const}\ int64\_t\ u\ =\ t-\/>u,\ v\ =\ t-\/>v,\ q\ =\ t-\/>q,\ r\ =\ t-\/>r;}
+\DoxyCodeLine{00416\ \ \ \ \ int64\_t\ md,\ me,\ sd,\ se;}
+\DoxyCodeLine{00417\ \ \ \ \ secp256k1\_int128\ cd,\ ce;}
+\DoxyCodeLine{00418\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(d,\ 5,\ \&modinfo-\/>modulus,\ -\/2)\ >\ 0);\ \textcolor{comment}{/*\ d\ >\ -\/2*modulus\ */}}
+\DoxyCodeLine{00419\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(d,\ 5,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \ \textcolor{comment}{/*\ d\ <\ \ \ \ modulus\ */}}
+\DoxyCodeLine{00420\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(e,\ 5,\ \&modinfo-\/>modulus,\ -\/2)\ >\ 0);\ \textcolor{comment}{/*\ e\ >\ -\/2*modulus\ */}}
+\DoxyCodeLine{00421\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(e,\ 5,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \ \textcolor{comment}{/*\ e\ <\ \ \ \ modulus\ */}}
+\DoxyCodeLine{00422\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_abs(u)\ <=\ (((int64\_t)1\ <<\ 62)\ -\/\ secp256k1\_modinv64\_abs(v)));\ \textcolor{comment}{/*\ |u|+|v|\ <=\ 2\string^62\ */}}
+\DoxyCodeLine{00423\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_abs(q)\ <=\ (((int64\_t)1\ <<\ 62)\ -\/\ secp256k1\_modinv64\_abs(r)));\ \textcolor{comment}{/*\ |q|+|r|\ <=\ 2\string^62\ */}}
+\DoxyCodeLine{00424\ }
+\DoxyCodeLine{00425\ \ \ \ \ \textcolor{comment}{/*\ [md,me]\ start\ as\ zero;\ plus\ [u,q]\ if\ d\ is\ negative;\ plus\ [v,r]\ if\ e\ is\ negative.\ */}}
+\DoxyCodeLine{00426\ \ \ \ \ sd\ =\ d4\ >>\ 63;}
+\DoxyCodeLine{00427\ \ \ \ \ se\ =\ e4\ >>\ 63;}
+\DoxyCodeLine{00428\ \ \ \ \ md\ =\ (u\ \&\ sd)\ +\ (v\ \&\ se);}
+\DoxyCodeLine{00429\ \ \ \ \ me\ =\ (q\ \&\ sd)\ +\ (r\ \&\ se);}
+\DoxyCodeLine{00430\ \ \ \ \ \textcolor{comment}{/*\ Begin\ computing\ t*[d,e].\ */}}
+\DoxyCodeLine{00431\ \ \ \ \ secp256k1\_i128\_mul(\&cd,\ u,\ d0);}
+\DoxyCodeLine{00432\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ v,\ e0);}
+\DoxyCodeLine{00433\ \ \ \ \ secp256k1\_i128\_mul(\&ce,\ q,\ d0);}
+\DoxyCodeLine{00434\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ r,\ e0);}
+\DoxyCodeLine{00435\ \ \ \ \ \textcolor{comment}{/*\ Correct\ md,me\ so\ that\ t*[d,e]+modulus*[md,me]\ has\ 62\ zero\ bottom\ bits.\ */}}
+\DoxyCodeLine{00436\ \ \ \ \ md\ -\/=\ (modinfo-\/>modulus\_inv62\ *\ secp256k1\_i128\_to\_u64(\&cd)\ +\ md)\ \&\ M62;}
+\DoxyCodeLine{00437\ \ \ \ \ me\ -\/=\ (modinfo-\/>modulus\_inv62\ *\ secp256k1\_i128\_to\_u64(\&ce)\ +\ me)\ \&\ M62;}
+\DoxyCodeLine{00438\ \ \ \ \ \textcolor{comment}{/*\ Update\ the\ beginning\ of\ computation\ for\ t*[d,e]+modulus*[md,me]\ now\ md,me\ are\ known.\ */}}
+\DoxyCodeLine{00439\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ modinfo-\/>modulus.v[0],\ md);}
+\DoxyCodeLine{00440\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ modinfo-\/>modulus.v[0],\ me);}
+\DoxyCodeLine{00441\ \ \ \ \ \textcolor{comment}{/*\ Verify\ that\ the\ low\ 62\ bits\ of\ the\ computation\ are\ indeed\ zero,\ and\ then\ throw\ them\ away.\ */}}
+\DoxyCodeLine{00442\ \ \ \ \ VERIFY\_CHECK((secp256k1\_i128\_to\_u64(\&cd)\ \&\ M62)\ ==\ 0);\ secp256k1\_i128\_rshift(\&cd,\ 62);}
+\DoxyCodeLine{00443\ \ \ \ \ VERIFY\_CHECK((secp256k1\_i128\_to\_u64(\&ce)\ \&\ M62)\ ==\ 0);\ secp256k1\_i128\_rshift(\&ce,\ 62);}
+\DoxyCodeLine{00444\ \ \ \ \ \textcolor{comment}{/*\ Compute\ limb\ 1\ of\ t*[d,e]+modulus*[md,me],\ and\ store\ it\ as\ output\ limb\ 0\ (=\ down\ shift).\ */}}
+\DoxyCodeLine{00445\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ u,\ d1);}
+\DoxyCodeLine{00446\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ v,\ e1);}
+\DoxyCodeLine{00447\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ q,\ d1);}
+\DoxyCodeLine{00448\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ r,\ e1);}
+\DoxyCodeLine{00449\ \ \ \ \ \textcolor{keywordflow}{if}\ (modinfo-\/>modulus.v[1])\ \{\ \textcolor{comment}{/*\ Optimize\ for\ the\ case\ where\ limb\ of\ modulus\ is\ zero.\ */}}
+\DoxyCodeLine{00450\ \ \ \ \ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ modinfo-\/>modulus.v[1],\ md);}
+\DoxyCodeLine{00451\ \ \ \ \ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ modinfo-\/>modulus.v[1],\ me);}
+\DoxyCodeLine{00452\ \ \ \ \ \}}
+\DoxyCodeLine{00453\ \ \ \ \ d-\/>v[0]\ =\ secp256k1\_i128\_to\_u64(\&cd)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cd,\ 62);}
+\DoxyCodeLine{00454\ \ \ \ \ e-\/>v[0]\ =\ secp256k1\_i128\_to\_u64(\&ce)\ \&\ M62;\ secp256k1\_i128\_rshift(\&ce,\ 62);}
+\DoxyCodeLine{00455\ \ \ \ \ \textcolor{comment}{/*\ Compute\ limb\ 2\ of\ t*[d,e]+modulus*[md,me],\ and\ store\ it\ as\ output\ limb\ 1.\ */}}
+\DoxyCodeLine{00456\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ u,\ d2);}
+\DoxyCodeLine{00457\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ v,\ e2);}
+\DoxyCodeLine{00458\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ q,\ d2);}
+\DoxyCodeLine{00459\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ r,\ e2);}
+\DoxyCodeLine{00460\ \ \ \ \ \textcolor{keywordflow}{if}\ (modinfo-\/>modulus.v[2])\ \{\ \textcolor{comment}{/*\ Optimize\ for\ the\ case\ where\ limb\ of\ modulus\ is\ zero.\ */}}
+\DoxyCodeLine{00461\ \ \ \ \ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ modinfo-\/>modulus.v[2],\ md);}
+\DoxyCodeLine{00462\ \ \ \ \ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ modinfo-\/>modulus.v[2],\ me);}
+\DoxyCodeLine{00463\ \ \ \ \ \}}
+\DoxyCodeLine{00464\ \ \ \ \ d-\/>v[1]\ =\ secp256k1\_i128\_to\_u64(\&cd)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cd,\ 62);}
+\DoxyCodeLine{00465\ \ \ \ \ e-\/>v[1]\ =\ secp256k1\_i128\_to\_u64(\&ce)\ \&\ M62;\ secp256k1\_i128\_rshift(\&ce,\ 62);}
+\DoxyCodeLine{00466\ \ \ \ \ \textcolor{comment}{/*\ Compute\ limb\ 3\ of\ t*[d,e]+modulus*[md,me],\ and\ store\ it\ as\ output\ limb\ 2.\ */}}
+\DoxyCodeLine{00467\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ u,\ d3);}
+\DoxyCodeLine{00468\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ v,\ e3);}
+\DoxyCodeLine{00469\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ q,\ d3);}
+\DoxyCodeLine{00470\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ r,\ e3);}
+\DoxyCodeLine{00471\ \ \ \ \ \textcolor{keywordflow}{if}\ (modinfo-\/>modulus.v[3])\ \{\ \textcolor{comment}{/*\ Optimize\ for\ the\ case\ where\ limb\ of\ modulus\ is\ zero.\ */}}
+\DoxyCodeLine{00472\ \ \ \ \ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ modinfo-\/>modulus.v[3],\ md);}
+\DoxyCodeLine{00473\ \ \ \ \ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ modinfo-\/>modulus.v[3],\ me);}
+\DoxyCodeLine{00474\ \ \ \ \ \}}
+\DoxyCodeLine{00475\ \ \ \ \ d-\/>v[2]\ =\ secp256k1\_i128\_to\_u64(\&cd)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cd,\ 62);}
+\DoxyCodeLine{00476\ \ \ \ \ e-\/>v[2]\ =\ secp256k1\_i128\_to\_u64(\&ce)\ \&\ M62;\ secp256k1\_i128\_rshift(\&ce,\ 62);}
+\DoxyCodeLine{00477\ \ \ \ \ \textcolor{comment}{/*\ Compute\ limb\ 4\ of\ t*[d,e]+modulus*[md,me],\ and\ store\ it\ as\ output\ limb\ 3.\ */}}
+\DoxyCodeLine{00478\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ u,\ d4);}
+\DoxyCodeLine{00479\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ v,\ e4);}
+\DoxyCodeLine{00480\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ q,\ d4);}
+\DoxyCodeLine{00481\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ r,\ e4);}
+\DoxyCodeLine{00482\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cd,\ modinfo-\/>modulus.v[4],\ md);}
+\DoxyCodeLine{00483\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&ce,\ modinfo-\/>modulus.v[4],\ me);}
+\DoxyCodeLine{00484\ \ \ \ \ d-\/>v[3]\ =\ secp256k1\_i128\_to\_u64(\&cd)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cd,\ 62);}
+\DoxyCodeLine{00485\ \ \ \ \ e-\/>v[3]\ =\ secp256k1\_i128\_to\_u64(\&ce)\ \&\ M62;\ secp256k1\_i128\_rshift(\&ce,\ 62);}
+\DoxyCodeLine{00486\ \ \ \ \ \textcolor{comment}{/*\ What\ remains\ is\ limb\ 5\ of\ t*[d,e]+modulus*[md,me];\ store\ it\ as\ output\ limb\ 4.\ */}}
+\DoxyCodeLine{00487\ \ \ \ \ d-\/>v[4]\ =\ secp256k1\_i128\_to\_i64(\&cd);}
+\DoxyCodeLine{00488\ \ \ \ \ e-\/>v[4]\ =\ secp256k1\_i128\_to\_i64(\&ce);}
+\DoxyCodeLine{00489\ }
+\DoxyCodeLine{00490\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(d,\ 5,\ \&modinfo-\/>modulus,\ -\/2)\ >\ 0);\ \textcolor{comment}{/*\ d\ >\ -\/2*modulus\ */}}
+\DoxyCodeLine{00491\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(d,\ 5,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \ \textcolor{comment}{/*\ d\ <\ \ \ \ modulus\ */}}
+\DoxyCodeLine{00492\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(e,\ 5,\ \&modinfo-\/>modulus,\ -\/2)\ >\ 0);\ \textcolor{comment}{/*\ e\ >\ -\/2*modulus\ */}}
+\DoxyCodeLine{00493\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(e,\ 5,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \ \textcolor{comment}{/*\ e\ <\ \ \ \ modulus\ */}}
+\DoxyCodeLine{00494\ \}}
+\DoxyCodeLine{00495\ }
+\DoxyCodeLine{00496\ \textcolor{comment}{/*\ Compute\ (t/2\string^62)\ *\ [f,\ g],\ where\ t\ is\ a\ transition\ matrix\ scaled\ by\ 2\string^62.}}
+\DoxyCodeLine{00497\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00498\ \textcolor{comment}{\ *\ This\ implements\ the\ update\_fg\ function\ from\ the\ explanation.}}
+\DoxyCodeLine{00499\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00500\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_modinv64\_update\_fg\_62(secp256k1\_modinv64\_signed62\ *f,\ secp256k1\_modinv64\_signed62\ *g,\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_trans2x2\ *t)\ \{}
+\DoxyCodeLine{00501\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ M62\ =\ UINT64\_MAX\ >>\ 2;}
+\DoxyCodeLine{00502\ \ \ \ \ \textcolor{keyword}{const}\ int64\_t\ f0\ =\ f-\/>v[0],\ f1\ =\ f-\/>v[1],\ f2\ =\ f-\/>v[2],\ f3\ =\ f-\/>v[3],\ f4\ =\ f-\/>v[4];}
+\DoxyCodeLine{00503\ \ \ \ \ \textcolor{keyword}{const}\ int64\_t\ g0\ =\ g-\/>v[0],\ g1\ =\ g-\/>v[1],\ g2\ =\ g-\/>v[2],\ g3\ =\ g-\/>v[3],\ g4\ =\ g-\/>v[4];}
+\DoxyCodeLine{00504\ \ \ \ \ \textcolor{keyword}{const}\ int64\_t\ u\ =\ t-\/>u,\ v\ =\ t-\/>v,\ q\ =\ t-\/>q,\ r\ =\ t-\/>r;}
+\DoxyCodeLine{00505\ \ \ \ \ secp256k1\_int128\ cf,\ cg;}
+\DoxyCodeLine{00506\ \ \ \ \ \textcolor{comment}{/*\ Start\ computing\ t*[f,g].\ */}}
+\DoxyCodeLine{00507\ \ \ \ \ secp256k1\_i128\_mul(\&cf,\ u,\ f0);}
+\DoxyCodeLine{00508\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ v,\ g0);}
+\DoxyCodeLine{00509\ \ \ \ \ secp256k1\_i128\_mul(\&cg,\ q,\ f0);}
+\DoxyCodeLine{00510\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ r,\ g0);}
+\DoxyCodeLine{00511\ \ \ \ \ \textcolor{comment}{/*\ Verify\ that\ the\ bottom\ 62\ bits\ of\ the\ result\ are\ zero,\ and\ then\ throw\ them\ away.\ */}}
+\DoxyCodeLine{00512\ \ \ \ \ VERIFY\_CHECK((secp256k1\_i128\_to\_u64(\&cf)\ \&\ M62)\ ==\ 0);\ secp256k1\_i128\_rshift(\&cf,\ 62);}
+\DoxyCodeLine{00513\ \ \ \ \ VERIFY\_CHECK((secp256k1\_i128\_to\_u64(\&cg)\ \&\ M62)\ ==\ 0);\ secp256k1\_i128\_rshift(\&cg,\ 62);}
+\DoxyCodeLine{00514\ \ \ \ \ \textcolor{comment}{/*\ Compute\ limb\ 1\ of\ t*[f,g],\ and\ store\ it\ as\ output\ limb\ 0\ (=\ down\ shift).\ */}}
+\DoxyCodeLine{00515\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ u,\ f1);}
+\DoxyCodeLine{00516\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ v,\ g1);}
+\DoxyCodeLine{00517\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ q,\ f1);}
+\DoxyCodeLine{00518\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ r,\ g1);}
+\DoxyCodeLine{00519\ \ \ \ \ f-\/>v[0]\ =\ secp256k1\_i128\_to\_u64(\&cf)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cf,\ 62);}
+\DoxyCodeLine{00520\ \ \ \ \ g-\/>v[0]\ =\ secp256k1\_i128\_to\_u64(\&cg)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cg,\ 62);}
+\DoxyCodeLine{00521\ \ \ \ \ \textcolor{comment}{/*\ Compute\ limb\ 2\ of\ t*[f,g],\ and\ store\ it\ as\ output\ limb\ 1.\ */}}
+\DoxyCodeLine{00522\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ u,\ f2);}
+\DoxyCodeLine{00523\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ v,\ g2);}
+\DoxyCodeLine{00524\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ q,\ f2);}
+\DoxyCodeLine{00525\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ r,\ g2);}
+\DoxyCodeLine{00526\ \ \ \ \ f-\/>v[1]\ =\ secp256k1\_i128\_to\_u64(\&cf)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cf,\ 62);}
+\DoxyCodeLine{00527\ \ \ \ \ g-\/>v[1]\ =\ secp256k1\_i128\_to\_u64(\&cg)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cg,\ 62);}
+\DoxyCodeLine{00528\ \ \ \ \ \textcolor{comment}{/*\ Compute\ limb\ 3\ of\ t*[f,g],\ and\ store\ it\ as\ output\ limb\ 2.\ */}}
+\DoxyCodeLine{00529\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ u,\ f3);}
+\DoxyCodeLine{00530\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ v,\ g3);}
+\DoxyCodeLine{00531\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ q,\ f3);}
+\DoxyCodeLine{00532\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ r,\ g3);}
+\DoxyCodeLine{00533\ \ \ \ \ f-\/>v[2]\ =\ secp256k1\_i128\_to\_u64(\&cf)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cf,\ 62);}
+\DoxyCodeLine{00534\ \ \ \ \ g-\/>v[2]\ =\ secp256k1\_i128\_to\_u64(\&cg)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cg,\ 62);}
+\DoxyCodeLine{00535\ \ \ \ \ \textcolor{comment}{/*\ Compute\ limb\ 4\ of\ t*[f,g],\ and\ store\ it\ as\ output\ limb\ 3.\ */}}
+\DoxyCodeLine{00536\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ u,\ f4);}
+\DoxyCodeLine{00537\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ v,\ g4);}
+\DoxyCodeLine{00538\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ q,\ f4);}
+\DoxyCodeLine{00539\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ r,\ g4);}
+\DoxyCodeLine{00540\ \ \ \ \ f-\/>v[3]\ =\ secp256k1\_i128\_to\_u64(\&cf)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cf,\ 62);}
+\DoxyCodeLine{00541\ \ \ \ \ g-\/>v[3]\ =\ secp256k1\_i128\_to\_u64(\&cg)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cg,\ 62);}
+\DoxyCodeLine{00542\ \ \ \ \ \textcolor{comment}{/*\ What\ remains\ is\ limb\ 5\ of\ t*[f,g];\ store\ it\ as\ output\ limb\ 4.\ */}}
+\DoxyCodeLine{00543\ \ \ \ \ f-\/>v[4]\ =\ secp256k1\_i128\_to\_i64(\&cf);}
+\DoxyCodeLine{00544\ \ \ \ \ g-\/>v[4]\ =\ secp256k1\_i128\_to\_i64(\&cg);}
+\DoxyCodeLine{00545\ \}}
+\DoxyCodeLine{00546\ }
+\DoxyCodeLine{00547\ \textcolor{comment}{/*\ Compute\ (t/2\string^62)\ *\ [f,\ g],\ where\ t\ is\ a\ transition\ matrix\ for\ 62\ divsteps.}}
+\DoxyCodeLine{00548\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00549\ \textcolor{comment}{\ *\ Version\ that\ operates\ on\ a\ variable\ number\ of\ limbs\ in\ f\ and\ g.}}
+\DoxyCodeLine{00550\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00551\ \textcolor{comment}{\ *\ This\ implements\ the\ update\_fg\ function\ from\ the\ explanation.}}
+\DoxyCodeLine{00552\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00553\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_modinv64\_update\_fg\_62\_var(\textcolor{keywordtype}{int}\ len,\ secp256k1\_modinv64\_signed62\ *f,\ secp256k1\_modinv64\_signed62\ *g,\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_trans2x2\ *t)\ \{}
+\DoxyCodeLine{00554\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ M62\ =\ UINT64\_MAX\ >>\ 2;}
+\DoxyCodeLine{00555\ \ \ \ \ \textcolor{keyword}{const}\ int64\_t\ u\ =\ t-\/>u,\ v\ =\ t-\/>v,\ q\ =\ t-\/>q,\ r\ =\ t-\/>r;}
+\DoxyCodeLine{00556\ \ \ \ \ int64\_t\ fi,\ gi;}
+\DoxyCodeLine{00557\ \ \ \ \ secp256k1\_int128\ cf,\ cg;}
+\DoxyCodeLine{00558\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00559\ \ \ \ \ VERIFY\_CHECK(len\ >\ 0);}
+\DoxyCodeLine{00560\ \ \ \ \ \textcolor{comment}{/*\ Start\ computing\ t*[f,g].\ */}}
+\DoxyCodeLine{00561\ \ \ \ \ fi\ =\ f-\/>v[0];}
+\DoxyCodeLine{00562\ \ \ \ \ gi\ =\ g-\/>v[0];}
+\DoxyCodeLine{00563\ \ \ \ \ secp256k1\_i128\_mul(\&cf,\ u,\ fi);}
+\DoxyCodeLine{00564\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ v,\ gi);}
+\DoxyCodeLine{00565\ \ \ \ \ secp256k1\_i128\_mul(\&cg,\ q,\ fi);}
+\DoxyCodeLine{00566\ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ r,\ gi);}
+\DoxyCodeLine{00567\ \ \ \ \ \textcolor{comment}{/*\ Verify\ that\ the\ bottom\ 62\ bits\ of\ the\ result\ are\ zero,\ and\ then\ throw\ them\ away.\ */}}
+\DoxyCodeLine{00568\ \ \ \ \ VERIFY\_CHECK((secp256k1\_i128\_to\_u64(\&cf)\ \&\ M62)\ ==\ 0);\ secp256k1\_i128\_rshift(\&cf,\ 62);}
+\DoxyCodeLine{00569\ \ \ \ \ VERIFY\_CHECK((secp256k1\_i128\_to\_u64(\&cg)\ \&\ M62)\ ==\ 0);\ secp256k1\_i128\_rshift(\&cg,\ 62);}
+\DoxyCodeLine{00570\ \ \ \ \ \textcolor{comment}{/*\ Now\ iteratively\ compute\ limb\ i=1..len\ of\ t*[f,g],\ and\ store\ them\ in\ output\ limb\ i-\/1\ (shifting}}
+\DoxyCodeLine{00571\ \textcolor{comment}{\ \ \ \ \ *\ down\ by\ 62\ bits).\ */}}
+\DoxyCodeLine{00572\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 1;\ i\ <\ len;\ ++i)\ \{}
+\DoxyCodeLine{00573\ \ \ \ \ \ \ \ \ fi\ =\ f-\/>v[i];}
+\DoxyCodeLine{00574\ \ \ \ \ \ \ \ \ gi\ =\ g-\/>v[i];}
+\DoxyCodeLine{00575\ \ \ \ \ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ u,\ fi);}
+\DoxyCodeLine{00576\ \ \ \ \ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cf,\ v,\ gi);}
+\DoxyCodeLine{00577\ \ \ \ \ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ q,\ fi);}
+\DoxyCodeLine{00578\ \ \ \ \ \ \ \ \ secp256k1\_i128\_accum\_mul(\&cg,\ r,\ gi);}
+\DoxyCodeLine{00579\ \ \ \ \ \ \ \ \ f-\/>v[i\ -\/\ 1]\ =\ secp256k1\_i128\_to\_u64(\&cf)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cf,\ 62);}
+\DoxyCodeLine{00580\ \ \ \ \ \ \ \ \ g-\/>v[i\ -\/\ 1]\ =\ secp256k1\_i128\_to\_u64(\&cg)\ \&\ M62;\ secp256k1\_i128\_rshift(\&cg,\ 62);}
+\DoxyCodeLine{00581\ \ \ \ \ \}}
+\DoxyCodeLine{00582\ \ \ \ \ \textcolor{comment}{/*\ What\ remains\ is\ limb\ (len)\ of\ t*[f,g];\ store\ it\ as\ output\ limb\ (len-\/1).\ */}}
+\DoxyCodeLine{00583\ \ \ \ \ f-\/>v[len\ -\/\ 1]\ =\ secp256k1\_i128\_to\_i64(\&cf);}
+\DoxyCodeLine{00584\ \ \ \ \ g-\/>v[len\ -\/\ 1]\ =\ secp256k1\_i128\_to\_i64(\&cg);}
+\DoxyCodeLine{00585\ \}}
+\DoxyCodeLine{00586\ }
+\DoxyCodeLine{00587\ \textcolor{comment}{/*\ Compute\ the\ inverse\ of\ x\ modulo\ modinfo-\/>modulus,\ and\ replace\ x\ with\ it\ (constant\ time\ in\ x).\ */}}
+\DoxyCodeLine{00588\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_modinv64(secp256k1\_modinv64\_signed62\ *x,\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_modinfo\ *modinfo)\ \{}
+\DoxyCodeLine{00589\ \ \ \ \ \textcolor{comment}{/*\ Start\ with\ d=0,\ e=1,\ f=modulus,\ g=x,\ zeta=-\/1.\ */}}
+\DoxyCodeLine{00590\ \ \ \ \ secp256k1\_modinv64\_signed62\ d\ =\ \{\{0,\ 0,\ 0,\ 0,\ 0\}\};}
+\DoxyCodeLine{00591\ \ \ \ \ secp256k1\_modinv64\_signed62\ e\ =\ \{\{1,\ 0,\ 0,\ 0,\ 0\}\};}
+\DoxyCodeLine{00592\ \ \ \ \ secp256k1\_modinv64\_signed62\ f\ =\ modinfo-\/>modulus;}
+\DoxyCodeLine{00593\ \ \ \ \ secp256k1\_modinv64\_signed62\ g\ =\ *x;}
+\DoxyCodeLine{00594\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00595\ \ \ \ \ int64\_t\ zeta\ =\ -\/1;\ \textcolor{comment}{/*\ zeta\ =\ -\/(delta+1/2);\ delta\ starts\ at\ 1/2.\ */}}
+\DoxyCodeLine{00596\ }
+\DoxyCodeLine{00597\ \ \ \ \ \textcolor{comment}{/*\ Do\ 10\ iterations\ of\ 59\ divsteps\ each\ =\ 590\ divsteps.\ This\ suffices\ for\ 256-\/bit\ inputs.\ */}}
+\DoxyCodeLine{00598\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 10;\ ++i)\ \{}
+\DoxyCodeLine{00599\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Compute\ transition\ matrix\ and\ new\ zeta\ after\ 59\ divsteps.\ */}}
+\DoxyCodeLine{00600\ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_trans2x2\ t;}
+\DoxyCodeLine{00601\ \ \ \ \ \ \ \ \ zeta\ =\ secp256k1\_modinv64\_divsteps\_59(zeta,\ f.v[0],\ g.v[0],\ \&t);}
+\DoxyCodeLine{00602\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Update\ d,e\ using\ that\ transition\ matrix.\ */}}
+\DoxyCodeLine{00603\ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_update\_de\_62(\&d,\ \&e,\ \&t,\ modinfo);}
+\DoxyCodeLine{00604\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Update\ f,g\ using\ that\ transition\ matrix.\ */}}
+\DoxyCodeLine{00605\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ 5,\ \&modinfo-\/>modulus,\ -\/1)\ >\ 0);\ \textcolor{comment}{/*\ f\ >\ -\/modulus\ */}}
+\DoxyCodeLine{00606\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ 5,\ \&modinfo-\/>modulus,\ 1)\ <=\ 0);\ \textcolor{comment}{/*\ f\ <=\ modulus\ */}}
+\DoxyCodeLine{00607\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ 5,\ \&modinfo-\/>modulus,\ -\/1)\ >\ 0);\ \textcolor{comment}{/*\ g\ >\ -\/modulus\ */}}
+\DoxyCodeLine{00608\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ 5,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \ \textcolor{comment}{/*\ g\ <\ \ modulus\ */}}
+\DoxyCodeLine{00609\ }
+\DoxyCodeLine{00610\ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_update\_fg\_62(\&f,\ \&g,\ \&t);}
+\DoxyCodeLine{00611\ }
+\DoxyCodeLine{00612\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ 5,\ \&modinfo-\/>modulus,\ -\/1)\ >\ 0);\ \textcolor{comment}{/*\ f\ >\ -\/modulus\ */}}
+\DoxyCodeLine{00613\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ 5,\ \&modinfo-\/>modulus,\ 1)\ <=\ 0);\ \textcolor{comment}{/*\ f\ <=\ modulus\ */}}
+\DoxyCodeLine{00614\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ 5,\ \&modinfo-\/>modulus,\ -\/1)\ >\ 0);\ \textcolor{comment}{/*\ g\ >\ -\/modulus\ */}}
+\DoxyCodeLine{00615\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ 5,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \ \textcolor{comment}{/*\ g\ <\ \ modulus\ */}}
+\DoxyCodeLine{00616\ \ \ \ \ \}}
+\DoxyCodeLine{00617\ }
+\DoxyCodeLine{00618\ \ \ \ \ \textcolor{comment}{/*\ At\ this\ point\ sufficient\ iterations\ have\ been\ performed\ that\ g\ must\ have\ reached\ 0}}
+\DoxyCodeLine{00619\ \textcolor{comment}{\ \ \ \ \ *\ and\ (if\ g\ was\ not\ originally\ 0)\ f\ must\ now\ equal\ +/-\/\ GCD\ of\ the\ initial\ f,\ g}}
+\DoxyCodeLine{00620\ \textcolor{comment}{\ \ \ \ \ *\ values\ i.e.\ +/-\/\ 1,\ and\ d\ now\ contains\ +/-\/\ the\ modular\ inverse.\ */}}
+\DoxyCodeLine{00621\ }
+\DoxyCodeLine{00622\ \ \ \ \ \textcolor{comment}{/*\ g\ ==\ 0\ */}}
+\DoxyCodeLine{00623\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ 5,\ \&SECP256K1\_SIGNED62\_ONE,\ 0)\ ==\ 0);}
+\DoxyCodeLine{00624\ \ \ \ \ \textcolor{comment}{/*\ |f|\ ==\ 1,\ or\ (x\ ==\ 0\ and\ d\ ==\ 0\ and\ f\ ==\ modulus)\ */}}
+\DoxyCodeLine{00625\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ 5,\ \&SECP256K1\_SIGNED62\_ONE,\ -\/1)\ ==\ 0\ ||}
+\DoxyCodeLine{00626\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ 5,\ \&SECP256K1\_SIGNED62\_ONE,\ 1)\ ==\ 0\ ||}
+\DoxyCodeLine{00627\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (secp256k1\_modinv64\_mul\_cmp\_62(x,\ 5,\ \&SECP256K1\_SIGNED62\_ONE,\ 0)\ ==\ 0\ \&\&}
+\DoxyCodeLine{00628\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_mul\_cmp\_62(\&d,\ 5,\ \&SECP256K1\_SIGNED62\_ONE,\ 0)\ ==\ 0\ \&\&}
+\DoxyCodeLine{00629\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ 5,\ \&modinfo-\/>modulus,\ 1)\ ==\ 0));}
+\DoxyCodeLine{00630\ }
+\DoxyCodeLine{00631\ \ \ \ \ \textcolor{comment}{/*\ Optionally\ negate\ d,\ normalize\ to\ [0,modulus),\ and\ return\ it.\ */}}
+\DoxyCodeLine{00632\ \ \ \ \ secp256k1\_modinv64\_normalize\_62(\&d,\ f.v[4],\ modinfo);}
+\DoxyCodeLine{00633\ \ \ \ \ *x\ =\ d;}
+\DoxyCodeLine{00634\ \}}
+\DoxyCodeLine{00635\ }
+\DoxyCodeLine{00636\ \textcolor{comment}{/*\ Compute\ the\ inverse\ of\ x\ modulo\ modinfo-\/>modulus,\ and\ replace\ x\ with\ it\ (variable\ time).\ */}}
+\DoxyCodeLine{00637\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_modinv64\_var(secp256k1\_modinv64\_signed62\ *x,\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_modinfo\ *modinfo)\ \{}
+\DoxyCodeLine{00638\ \ \ \ \ \textcolor{comment}{/*\ Start\ with\ d=0,\ e=1,\ f=modulus,\ g=x,\ eta=-\/1.\ */}}
+\DoxyCodeLine{00639\ \ \ \ \ secp256k1\_modinv64\_signed62\ d\ =\ \{\{0,\ 0,\ 0,\ 0,\ 0\}\};}
+\DoxyCodeLine{00640\ \ \ \ \ secp256k1\_modinv64\_signed62\ e\ =\ \{\{1,\ 0,\ 0,\ 0,\ 0\}\};}
+\DoxyCodeLine{00641\ \ \ \ \ secp256k1\_modinv64\_signed62\ f\ =\ modinfo-\/>modulus;}
+\DoxyCodeLine{00642\ \ \ \ \ secp256k1\_modinv64\_signed62\ g\ =\ *x;}
+\DoxyCodeLine{00643\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00644\ \ \ \ \ \textcolor{keywordtype}{int}\ i\ =\ 0;}
+\DoxyCodeLine{00645\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00646\ \ \ \ \ \textcolor{keywordtype}{int}\ j,\ len\ =\ 5;}
+\DoxyCodeLine{00647\ \ \ \ \ int64\_t\ eta\ =\ -\/1;\ \textcolor{comment}{/*\ eta\ =\ -\/delta;\ delta\ is\ initially\ 1\ */}}
+\DoxyCodeLine{00648\ \ \ \ \ int64\_t\ cond,\ fn,\ gn;}
+\DoxyCodeLine{00649\ }
+\DoxyCodeLine{00650\ \ \ \ \ \textcolor{comment}{/*\ Do\ iterations\ of\ 62\ divsteps\ each\ until\ g=0.\ */}}
+\DoxyCodeLine{00651\ \ \ \ \ \textcolor{keywordflow}{while}\ (1)\ \{}
+\DoxyCodeLine{00652\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Compute\ transition\ matrix\ and\ new\ eta\ after\ 62\ divsteps.\ */}}
+\DoxyCodeLine{00653\ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_trans2x2\ t;}
+\DoxyCodeLine{00654\ \ \ \ \ \ \ \ \ eta\ =\ secp256k1\_modinv64\_divsteps\_62\_var(eta,\ f.v[0],\ g.v[0],\ \&t);}
+\DoxyCodeLine{00655\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Update\ d,e\ using\ that\ transition\ matrix.\ */}}
+\DoxyCodeLine{00656\ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_update\_de\_62(\&d,\ \&e,\ \&t,\ modinfo);}
+\DoxyCodeLine{00657\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Update\ f,g\ using\ that\ transition\ matrix.\ */}}
+\DoxyCodeLine{00658\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ len,\ \&modinfo-\/>modulus,\ -\/1)\ >\ 0);\ \textcolor{comment}{/*\ f\ >\ -\/modulus\ */}}
+\DoxyCodeLine{00659\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ len,\ \&modinfo-\/>modulus,\ 1)\ <=\ 0);\ \textcolor{comment}{/*\ f\ <=\ modulus\ */}}
+\DoxyCodeLine{00660\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ len,\ \&modinfo-\/>modulus,\ -\/1)\ >\ 0);\ \textcolor{comment}{/*\ g\ >\ -\/modulus\ */}}
+\DoxyCodeLine{00661\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ len,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \ \textcolor{comment}{/*\ g\ <\ \ modulus\ */}}
+\DoxyCodeLine{00662\ }
+\DoxyCodeLine{00663\ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_update\_fg\_62\_var(len,\ \&f,\ \&g,\ \&t);}
+\DoxyCodeLine{00664\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ the\ bottom\ limb\ of\ g\ is\ zero,\ there\ is\ a\ chance\ that\ g=0.\ */}}
+\DoxyCodeLine{00665\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (g.v[0]\ ==\ 0)\ \{}
+\DoxyCodeLine{00666\ \ \ \ \ \ \ \ \ \ \ \ \ cond\ =\ 0;}
+\DoxyCodeLine{00667\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ if\ the\ other\ limbs\ are\ also\ 0.\ */}}
+\DoxyCodeLine{00668\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (j\ =\ 1;\ j\ <\ len;\ ++j)\ \{}
+\DoxyCodeLine{00669\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cond\ |=\ g.v[j];}
+\DoxyCodeLine{00670\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00671\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ so,\ we're\ done.\ */}}
+\DoxyCodeLine{00672\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cond\ ==\ 0)\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00673\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00674\ }
+\DoxyCodeLine{00675\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Determine\ if\ len>1\ and\ limb\ (len-\/1)\ of\ both\ f\ and\ g\ is\ 0\ or\ -\/1.\ */}}
+\DoxyCodeLine{00676\ \ \ \ \ \ \ \ \ fn\ =\ f.v[len\ -\/\ 1];}
+\DoxyCodeLine{00677\ \ \ \ \ \ \ \ \ gn\ =\ g.v[len\ -\/\ 1];}
+\DoxyCodeLine{00678\ \ \ \ \ \ \ \ \ cond\ =\ ((int64\_t)len\ -\/\ 2)\ >>\ 63;}
+\DoxyCodeLine{00679\ \ \ \ \ \ \ \ \ cond\ |=\ fn\ \string^\ (fn\ >>\ 63);}
+\DoxyCodeLine{00680\ \ \ \ \ \ \ \ \ cond\ |=\ gn\ \string^\ (gn\ >>\ 63);}
+\DoxyCodeLine{00681\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ so,\ reduce\ length,\ propagating\ the\ sign\ of\ f\ and\ g's\ top\ limb\ into\ the\ one\ below.\ */}}
+\DoxyCodeLine{00682\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cond\ ==\ 0)\ \{}
+\DoxyCodeLine{00683\ \ \ \ \ \ \ \ \ \ \ \ \ f.v[len\ -\/\ 2]\ |=\ (uint64\_t)fn\ <<\ 62;}
+\DoxyCodeLine{00684\ \ \ \ \ \ \ \ \ \ \ \ \ g.v[len\ -\/\ 2]\ |=\ (uint64\_t)gn\ <<\ 62;}
+\DoxyCodeLine{00685\ \ \ \ \ \ \ \ \ \ \ \ \ -\/-\/len;}
+\DoxyCodeLine{00686\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00687\ }
+\DoxyCodeLine{00688\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(++i\ <\ 12);\ \textcolor{comment}{/*\ We\ should\ never\ need\ more\ than\ 12*62\ =\ 744\ divsteps\ */}}
+\DoxyCodeLine{00689\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ len,\ \&modinfo-\/>modulus,\ -\/1)\ >\ 0);\ \textcolor{comment}{/*\ f\ >\ -\/modulus\ */}}
+\DoxyCodeLine{00690\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ len,\ \&modinfo-\/>modulus,\ 1)\ <=\ 0);\ \textcolor{comment}{/*\ f\ <=\ modulus\ */}}
+\DoxyCodeLine{00691\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ len,\ \&modinfo-\/>modulus,\ -\/1)\ >\ 0);\ \textcolor{comment}{/*\ g\ >\ -\/modulus\ */}}
+\DoxyCodeLine{00692\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ len,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \ \textcolor{comment}{/*\ g\ <\ \ modulus\ */}}
+\DoxyCodeLine{00693\ \ \ \ \ \}}
+\DoxyCodeLine{00694\ }
+\DoxyCodeLine{00695\ \ \ \ \ \textcolor{comment}{/*\ At\ this\ point\ g\ is\ 0\ and\ (if\ g\ was\ not\ originally\ 0)\ f\ must\ now\ equal\ +/-\/\ GCD\ of}}
+\DoxyCodeLine{00696\ \textcolor{comment}{\ \ \ \ \ *\ the\ initial\ f,\ g\ values\ i.e.\ +/-\/\ 1,\ and\ d\ now\ contains\ +/-\/\ the\ modular\ inverse.\ */}}
+\DoxyCodeLine{00697\ }
+\DoxyCodeLine{00698\ \ \ \ \ \textcolor{comment}{/*\ g\ ==\ 0\ */}}
+\DoxyCodeLine{00699\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ len,\ \&SECP256K1\_SIGNED62\_ONE,\ 0)\ ==\ 0);}
+\DoxyCodeLine{00700\ \ \ \ \ \textcolor{comment}{/*\ |f|\ ==\ 1,\ or\ (x\ ==\ 0\ and\ d\ ==\ 0\ and\ f\ ==\ modulus)\ */}}
+\DoxyCodeLine{00701\ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ len,\ \&SECP256K1\_SIGNED62\_ONE,\ -\/1)\ ==\ 0\ ||}
+\DoxyCodeLine{00702\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ len,\ \&SECP256K1\_SIGNED62\_ONE,\ 1)\ ==\ 0\ ||}
+\DoxyCodeLine{00703\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (secp256k1\_modinv64\_mul\_cmp\_62(x,\ 5,\ \&SECP256K1\_SIGNED62\_ONE,\ 0)\ ==\ 0\ \&\&}
+\DoxyCodeLine{00704\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_mul\_cmp\_62(\&d,\ 5,\ \&SECP256K1\_SIGNED62\_ONE,\ 0)\ ==\ 0\ \&\&}
+\DoxyCodeLine{00705\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ len,\ \&modinfo-\/>modulus,\ 1)\ ==\ 0));}
+\DoxyCodeLine{00706\ }
+\DoxyCodeLine{00707\ \ \ \ \ \textcolor{comment}{/*\ Optionally\ negate\ d,\ normalize\ to\ [0,modulus),\ and\ return\ it.\ */}}
+\DoxyCodeLine{00708\ \ \ \ \ secp256k1\_modinv64\_normalize\_62(\&d,\ f.v[len\ -\/\ 1],\ modinfo);}
+\DoxyCodeLine{00709\ \ \ \ \ *x\ =\ d;}
+\DoxyCodeLine{00710\ \}}
+\DoxyCodeLine{00711\ }
+\DoxyCodeLine{00712\ \textcolor{comment}{/*\ Do\ up\ to\ 25\ iterations\ of\ 62\ posdivsteps\ (up\ to\ 1550\ steps;\ more\ is\ extremely\ rare)\ each\ until\ f=1.}}
+\DoxyCodeLine{00713\ \textcolor{comment}{\ *\ In\ VERIFY\ mode\ use\ a\ lower\ number\ of\ iterations\ (744,\ close\ to\ the\ median\ 756),\ so\ failure\ actually\ occurs.\ */}}
+\DoxyCodeLine{00714\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00715\ \textcolor{preprocessor}{\#define\ JACOBI64\_ITERATIONS\ 12}}
+\DoxyCodeLine{00716\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00717\ \textcolor{preprocessor}{\#define\ JACOBI64\_ITERATIONS\ 25}}
+\DoxyCodeLine{00718\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00719\ }
+\DoxyCodeLine{00720\ \textcolor{comment}{/*\ Compute\ the\ Jacobi\ symbol\ of\ x\ modulo\ modinfo-\/>modulus\ (variable\ time).\ gcd(x,modulus)\ must\ be\ 1.\ */}}
+\DoxyCodeLine{00721\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_jacobi64\_maybe\_var(\textcolor{keyword}{const}\ secp256k1\_modinv64\_signed62\ *x,\ \textcolor{keyword}{const}\ secp256k1\_modinv64\_modinfo\ *modinfo)\ \{}
+\DoxyCodeLine{00722\ \ \ \ \ \textcolor{comment}{/*\ Start\ with\ f=modulus,\ g=x,\ eta=-\/1.\ */}}
+\DoxyCodeLine{00723\ \ \ \ \ secp256k1\_modinv64\_signed62\ f\ =\ modinfo-\/>modulus;}
+\DoxyCodeLine{00724\ \ \ \ \ secp256k1\_modinv64\_signed62\ g\ =\ *x;}
+\DoxyCodeLine{00725\ \ \ \ \ \textcolor{keywordtype}{int}\ j,\ len\ =\ 5;}
+\DoxyCodeLine{00726\ \ \ \ \ int64\_t\ eta\ =\ -\/1;\ \textcolor{comment}{/*\ eta\ =\ -\/delta;\ delta\ is\ initially\ 1\ */}}
+\DoxyCodeLine{00727\ \ \ \ \ int64\_t\ cond,\ fn,\ gn;}
+\DoxyCodeLine{00728\ \ \ \ \ \textcolor{keywordtype}{int}\ jac\ =\ 0;}
+\DoxyCodeLine{00729\ \ \ \ \ \textcolor{keywordtype}{int}\ count;}
+\DoxyCodeLine{00730\ }
+\DoxyCodeLine{00731\ \ \ \ \ \textcolor{comment}{/*\ The\ input\ limbs\ must\ all\ be\ non-\/negative.\ */}}
+\DoxyCodeLine{00732\ \ \ \ \ VERIFY\_CHECK(g.v[0]\ >=\ 0\ \&\&\ g.v[1]\ >=\ 0\ \&\&\ g.v[2]\ >=\ 0\ \&\&\ g.v[3]\ >=\ 0\ \&\&\ g.v[4]\ >=\ 0);}
+\DoxyCodeLine{00733\ }
+\DoxyCodeLine{00734\ \ \ \ \ \textcolor{comment}{/*\ If\ x\ >\ 0,\ then\ if\ the\ loop\ below\ converges,\ it\ converges\ to\ f=g=gcd(x,modulus).\ Since\ we}}
+\DoxyCodeLine{00735\ \textcolor{comment}{\ \ \ \ \ *\ require\ that\ gcd(x,modulus)=1\ and\ modulus>=3,\ x\ cannot\ be\ 0.\ Thus,\ we\ must\ reach\ f=1\ (or}}
+\DoxyCodeLine{00736\ \textcolor{comment}{\ \ \ \ \ *\ time\ out).\ */}}
+\DoxyCodeLine{00737\ \ \ \ \ VERIFY\_CHECK((g.v[0]\ |\ g.v[1]\ |\ g.v[2]\ |\ g.v[3]\ |\ g.v[4])\ !=\ 0);}
+\DoxyCodeLine{00738\ }
+\DoxyCodeLine{00739\ \ \ \ \ \textcolor{keywordflow}{for}\ (count\ =\ 0;\ count\ <\ JACOBI64\_ITERATIONS;\ ++count)\ \{}
+\DoxyCodeLine{00740\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Compute\ transition\ matrix\ and\ new\ eta\ after\ 62\ posdivsteps.\ */}}
+\DoxyCodeLine{00741\ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_trans2x2\ t;}
+\DoxyCodeLine{00742\ \ \ \ \ \ \ \ \ eta\ =\ secp256k1\_modinv64\_posdivsteps\_62\_var(eta,\ f.v[0]\ |\ ((uint64\_t)f.v[1]\ <<\ 62),\ g.v[0]\ |\ ((uint64\_t)g.v[1]\ <<\ 62),\ \&t,\ \&jac);}
+\DoxyCodeLine{00743\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Update\ f,g\ using\ that\ transition\ matrix.\ */}}
+\DoxyCodeLine{00744\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ len,\ \&modinfo-\/>modulus,\ 0)\ >\ 0);\ \textcolor{comment}{/*\ f\ >\ 0\ */}}
+\DoxyCodeLine{00745\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ len,\ \&modinfo-\/>modulus,\ 1)\ <=\ 0);\ \textcolor{comment}{/*\ f\ <=\ modulus\ */}}
+\DoxyCodeLine{00746\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ len,\ \&modinfo-\/>modulus,\ 0)\ >\ 0);\ \textcolor{comment}{/*\ g\ >\ 0\ */}}
+\DoxyCodeLine{00747\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ len,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \ \textcolor{comment}{/*\ g\ <\ modulus\ */}}
+\DoxyCodeLine{00748\ }
+\DoxyCodeLine{00749\ \ \ \ \ \ \ \ \ secp256k1\_modinv64\_update\_fg\_62\_var(len,\ \&f,\ \&g,\ \&t);}
+\DoxyCodeLine{00750\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ the\ bottom\ limb\ of\ f\ is\ 1,\ there\ is\ a\ chance\ that\ f=1.\ */}}
+\DoxyCodeLine{00751\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (f.v[0]\ ==\ 1)\ \{}
+\DoxyCodeLine{00752\ \ \ \ \ \ \ \ \ \ \ \ \ cond\ =\ 0;}
+\DoxyCodeLine{00753\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ if\ the\ other\ limbs\ are\ also\ 0.\ */}}
+\DoxyCodeLine{00754\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (j\ =\ 1;\ j\ <\ len;\ ++j)\ \{}
+\DoxyCodeLine{00755\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cond\ |=\ f.v[j];}
+\DoxyCodeLine{00756\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00757\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ so,\ we're\ done.\ When\ f=1,\ the\ Jacobi\ symbol\ (g\ |\ f)=1.\ */}}
+\DoxyCodeLine{00758\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cond\ ==\ 0)\ \textcolor{keywordflow}{return}\ 1\ -\/\ 2*(jac\ \&\ 1);}
+\DoxyCodeLine{00759\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00760\ }
+\DoxyCodeLine{00761\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Determine\ if\ len>1\ and\ limb\ (len-\/1)\ of\ both\ f\ and\ g\ is\ 0.\ */}}
+\DoxyCodeLine{00762\ \ \ \ \ \ \ \ \ fn\ =\ f.v[len\ -\/\ 1];}
+\DoxyCodeLine{00763\ \ \ \ \ \ \ \ \ gn\ =\ g.v[len\ -\/\ 1];}
+\DoxyCodeLine{00764\ \ \ \ \ \ \ \ \ cond\ =\ ((int64\_t)len\ -\/\ 2)\ >>\ 63;}
+\DoxyCodeLine{00765\ \ \ \ \ \ \ \ \ cond\ |=\ fn;}
+\DoxyCodeLine{00766\ \ \ \ \ \ \ \ \ cond\ |=\ gn;}
+\DoxyCodeLine{00767\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ so,\ reduce\ length.\ */}}
+\DoxyCodeLine{00768\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cond\ ==\ 0)\ -\/-\/len;}
+\DoxyCodeLine{00769\ }
+\DoxyCodeLine{00770\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ len,\ \&modinfo-\/>modulus,\ 0)\ >\ 0);\ \textcolor{comment}{/*\ f\ >\ 0\ */}}
+\DoxyCodeLine{00771\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&f,\ len,\ \&modinfo-\/>modulus,\ 1)\ <=\ 0);\ \textcolor{comment}{/*\ f\ <=\ modulus\ */}}
+\DoxyCodeLine{00772\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ len,\ \&modinfo-\/>modulus,\ 0)\ >\ 0);\ \textcolor{comment}{/*\ g\ >\ 0\ */}}
+\DoxyCodeLine{00773\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(secp256k1\_modinv64\_mul\_cmp\_62(\&g,\ len,\ \&modinfo-\/>modulus,\ 1)\ <\ 0);\ \ \textcolor{comment}{/*\ g\ <\ modulus\ */}}
+\DoxyCodeLine{00774\ \ \ \ \ \}}
+\DoxyCodeLine{00775\ }
+\DoxyCodeLine{00776\ \ \ \ \ \textcolor{comment}{/*\ The\ loop\ failed\ to\ converge\ to\ f=g\ after\ 1550\ iterations.\ Return\ 0,\ indicating\ unknown\ result.\ */}}
+\DoxyCodeLine{00777\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00778\ \}}
+\DoxyCodeLine{00779\ }
+\DoxyCodeLine{00780\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_MODINV64\_IMPL\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

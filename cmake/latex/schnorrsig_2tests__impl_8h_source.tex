@@ -1,0 +1,988 @@
+\doxysection{tests\+\_\+impl.\+h}
+\label{schnorrsig_2tests__impl_8h_source}\index{src/secp256k1/src/modules/schnorrsig/tests\_impl.h@{src/secp256k1/src/modules/schnorrsig/tests\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2018-\/2020\ Andrew\ Poelstra,\ Jonas\ Nick\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_MODULE\_SCHNORRSIG\_TESTS\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_MODULE\_SCHNORRSIG\_TESTS\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1\_schnorrsig.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}../../unit\_test.h"{}}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{comment}{/*\ Checks\ that\ a\ bit\ flip\ in\ the\ n\_flip-\/th\ argument\ (that\ has\ n\_bytes\ many}}
+\DoxyCodeLine{00014\ \textcolor{comment}{\ *\ bytes)\ changes\ the\ hash\ function}}
+\DoxyCodeLine{00015\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00016\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ nonce\_function\_bip340\_bitflip(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ **args,\ \textcolor{keywordtype}{size\_t}\ n\_flip,\ \textcolor{keywordtype}{size\_t}\ n\_bytes,\ \textcolor{keywordtype}{size\_t}\ msglen,\ \textcolor{keywordtype}{size\_t}\ algolen)\ \{}
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ nonces[2][32];}
+\DoxyCodeLine{00018\ \ \ \ \ CHECK(nonce\_function\_bip340(nonces[0],\ args[0],\ msglen,\ args[1],\ args[2],\ args[3],\ algolen,\ args[4])\ ==\ 1);}
+\DoxyCodeLine{00019\ \ \ \ \ testrand\_flip(args[n\_flip],\ n\_bytes);}
+\DoxyCodeLine{00020\ \ \ \ \ CHECK(nonce\_function\_bip340(nonces[1],\ args[0],\ msglen,\ args[1],\ args[2],\ args[3],\ algolen,\ args[4])\ ==\ 1);}
+\DoxyCodeLine{00021\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(nonces[0],\ nonces[1],\ 32)\ !=\ 0);}
+\DoxyCodeLine{00022\ \}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ run\_nonce\_function\_bip340\_tests(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{comment}{/*\ "{}BIP0340/nonce"{}\ */}}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tag[]\ =\ \{\textcolor{charliteral}{'B'},\ \textcolor{charliteral}{'I'},\ \textcolor{charliteral}{'P'},\ \textcolor{charliteral}{'0'},\ \textcolor{charliteral}{'3'},\ \textcolor{charliteral}{'4'},\ \textcolor{charliteral}{'0'},\ \textcolor{charliteral}{'/'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'o'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'c'},\ \textcolor{charliteral}{'e'}\};}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{comment}{/*\ "{}BIP0340/aux"{}\ */}}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aux\_tag[]\ =\ \{\textcolor{charliteral}{'B'},\ \textcolor{charliteral}{'I'},\ \textcolor{charliteral}{'P'},\ \textcolor{charliteral}{'0'},\ \textcolor{charliteral}{'3'},\ \textcolor{charliteral}{'4'},\ \textcolor{charliteral}{'0'},\ \textcolor{charliteral}{'/'},\ \textcolor{charliteral}{'a'},\ \textcolor{charliteral}{'u'},\ \textcolor{charliteral}{'x'}\};}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ algo[]\ =\ \{\textcolor{charliteral}{'B'},\ \textcolor{charliteral}{'I'},\ \textcolor{charliteral}{'P'},\ \textcolor{charliteral}{'0'},\ \textcolor{charliteral}{'3'},\ \textcolor{charliteral}{'4'},\ \textcolor{charliteral}{'0'},\ \textcolor{charliteral}{'/'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'o'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'c'},\ \textcolor{charliteral}{'e'}\};}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ algolen\ =\ \textcolor{keyword}{sizeof}(algo);}
+\DoxyCodeLine{00031\ \ \ \ \ secp256k1\_sha256\ sha\_optimized;}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ nonce[32],\ nonce\_z[32];}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32];}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ msglen\ =\ \textcolor{keyword}{sizeof}(msg);}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ key[32];}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32];}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aux\_rand[32];}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *args[5];}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ hash\ initialized\ by}}
+\DoxyCodeLine{00042\ \textcolor{comment}{\ \ \ \ \ *\ secp256k1\_nonce\_function\_bip340\_sha256\_tagged\ has\ the\ expected}}
+\DoxyCodeLine{00043\ \textcolor{comment}{\ \ \ \ \ *\ state.\ */}}
+\DoxyCodeLine{00044\ \ \ \ \ secp256k1\_nonce\_function\_bip340\_sha256\_tagged(\&sha\_optimized);}
+\DoxyCodeLine{00045\ \ \ \ \ test\_sha256\_tag\_midstate(\&sha\_optimized,\ tag,\ \textcolor{keyword}{sizeof}(tag));}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \ \textcolor{comment}{/*\ Check\ that\ hash\ initialized\ by}}
+\DoxyCodeLine{00049\ \textcolor{comment}{\ \ \ \ *\ secp256k1\_nonce\_function\_bip340\_sha256\_tagged\_aux\ has\ the\ expected}}
+\DoxyCodeLine{00050\ \textcolor{comment}{\ \ \ \ *\ state.\ */}}
+\DoxyCodeLine{00051\ \ \ \ \ secp256k1\_nonce\_function\_bip340\_sha256\_tagged\_aux(\&sha\_optimized);}
+\DoxyCodeLine{00052\ \ \ \ \ test\_sha256\_tag\_midstate(\&sha\_optimized,\ aux\_tag,\ \textcolor{keyword}{sizeof}(aux\_tag));}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \ \ testrand256(msg);}
+\DoxyCodeLine{00055\ \ \ \ \ testrand256(key);}
+\DoxyCodeLine{00056\ \ \ \ \ testrand256(pk);}
+\DoxyCodeLine{00057\ \ \ \ \ testrand256(aux\_rand);}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ a\ bitflip\ in\ an\ argument\ results\ in\ different\ nonces.\ */}}
+\DoxyCodeLine{00060\ \ \ \ \ args[0]\ =\ msg;}
+\DoxyCodeLine{00061\ \ \ \ \ args[1]\ =\ key;}
+\DoxyCodeLine{00062\ \ \ \ \ args[2]\ =\ pk;}
+\DoxyCodeLine{00063\ \ \ \ \ args[3]\ =\ algo;}
+\DoxyCodeLine{00064\ \ \ \ \ args[4]\ =\ aux\_rand;}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ COUNT;\ i++)\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ nonce\_function\_bip340\_bitflip(args,\ 0,\ 32,\ msglen,\ algolen);}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ nonce\_function\_bip340\_bitflip(args,\ 1,\ 32,\ msglen,\ algolen);}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ nonce\_function\_bip340\_bitflip(args,\ 2,\ 32,\ msglen,\ algolen);}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Flip\ algo\ special\ case\ "{}BIP0340/nonce"{}\ */}}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ nonce\_function\_bip340\_bitflip(args,\ 3,\ algolen,\ msglen,\ algolen);}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Flip\ algo\ again\ */}}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ nonce\_function\_bip340\_bitflip(args,\ 3,\ algolen,\ msglen,\ algolen);}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ nonce\_function\_bip340\_bitflip(args,\ 4,\ 32,\ msglen,\ algolen);}
+\DoxyCodeLine{00074\ \ \ \ \ \}}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{comment}{/*\ NULL\ algo\ is\ disallowed\ */}}
+\DoxyCodeLine{00077\ \ \ \ \ CHECK(nonce\_function\_bip340(nonce,\ msg,\ msglen,\ key,\ pk,\ NULL,\ 0,\ NULL)\ ==\ 0);}
+\DoxyCodeLine{00078\ \ \ \ \ CHECK(nonce\_function\_bip340(nonce,\ msg,\ msglen,\ key,\ pk,\ algo,\ algolen,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{comment}{/*\ Other\ algo\ is\ fine\ */}}
+\DoxyCodeLine{00080\ \ \ \ \ testrand\_bytes\_test(algo,\ algolen);}
+\DoxyCodeLine{00081\ \ \ \ \ CHECK(nonce\_function\_bip340(nonce,\ msg,\ msglen,\ key,\ pk,\ algo,\ algolen,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ COUNT;\ i++)\ \{}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ nonce2[32];}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ uint32\_t\ offset\ =\ testrand\_int(msglen\ -\/\ 1);}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ msglen\_tmp\ =\ (msglen\ +\ offset)\ \%\ msglen;}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ algolen\_tmp;}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Different\ msglen\ gives\ different\ nonce\ */}}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ CHECK(nonce\_function\_bip340(nonce2,\ msg,\ msglen\_tmp,\ key,\ pk,\ algo,\ algolen,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(nonce,\ nonce2,\ 32)\ !=\ 0);}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Different\ algolen\ gives\ different\ nonce\ */}}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ offset\ =\ testrand\_int(algolen\ -\/\ 1);}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ algolen\_tmp\ =\ (algolen\ +\ offset)\ \%\ algolen;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ CHECK(nonce\_function\_bip340(nonce2,\ msg,\ msglen,\ key,\ pk,\ algo,\ algolen\_tmp,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(nonce,\ nonce2,\ 32)\ !=\ 0);}
+\DoxyCodeLine{00098\ \ \ \ \ \}}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{comment}{/*\ NULL\ aux\_rand\ argument\ is\ allowed,\ and\ identical\ to\ passing\ all\ zero\ aux\_rand.\ */}}
+\DoxyCodeLine{00101\ \ \ \ \ memset(aux\_rand,\ 0,\ 32);}
+\DoxyCodeLine{00102\ \ \ \ \ CHECK(nonce\_function\_bip340(nonce\_z,\ msg,\ msglen,\ key,\ pk,\ algo,\ algolen,\ \&aux\_rand)\ ==\ 1);}
+\DoxyCodeLine{00103\ \ \ \ \ CHECK(nonce\_function\_bip340(nonce,\ msg,\ msglen,\ key,\ pk,\ algo,\ algolen,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00104\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(nonce\_z,\ nonce,\ 32)\ ==\ 0);}
+\DoxyCodeLine{00105\ \}}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_schnorrsig\_api(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk1[32];}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk2[32];}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk3[32];}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32];}
+\DoxyCodeLine{00112\ \ \ \ \ secp256k1\_keypair\ keypairs[3];}
+\DoxyCodeLine{00113\ \ \ \ \ secp256k1\_keypair\ invalid\_keypair\ =\ \{\{\ 0\ \}\};}
+\DoxyCodeLine{00114\ \ \ \ \ secp256k1\_xonly\_pubkey\ pk[3];}
+\DoxyCodeLine{00115\ \ \ \ \ secp256k1\_xonly\_pubkey\ zero\_pk;}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64];}
+\DoxyCodeLine{00117\ \ \ \ \ secp256k1\_schnorrsig\_extraparams\ extraparams\ =\ SECP256K1\_SCHNORRSIG\_EXTRAPARAMS\_INIT;}
+\DoxyCodeLine{00118\ \ \ \ \ secp256k1\_schnorrsig\_extraparams\ invalid\_extraparams\ =\ \{\{\ 0\ \},\ NULL,\ NULL\};}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00120\ \ \ \ \ testrand256(sk1);}
+\DoxyCodeLine{00121\ \ \ \ \ testrand256(sk2);}
+\DoxyCodeLine{00122\ \ \ \ \ testrand256(sk3);}
+\DoxyCodeLine{00123\ \ \ \ \ testrand256(msg);}
+\DoxyCodeLine{00124\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypairs[0],\ sk1)\ ==\ 1);}
+\DoxyCodeLine{00125\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypairs[1],\ sk2)\ ==\ 1);}
+\DoxyCodeLine{00126\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypairs[2],\ sk3)\ ==\ 1);}
+\DoxyCodeLine{00127\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&pk[0],\ NULL,\ \&keypairs[0])\ ==\ 1);}
+\DoxyCodeLine{00128\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&pk[1],\ NULL,\ \&keypairs[1])\ ==\ 1);}
+\DoxyCodeLine{00129\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&pk[2],\ NULL,\ \&keypairs[2])\ ==\ 1);}
+\DoxyCodeLine{00130\ \ \ \ \ memset(\&zero\_pk,\ 0,\ \textcolor{keyword}{sizeof}(zero\_pk));}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00133\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign32(CTX,\ sig,\ msg,\ \&keypairs[0],\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00134\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_sign32(CTX,\ NULL,\ msg,\ \&keypairs[0],\ NULL));}
+\DoxyCodeLine{00135\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_sign32(CTX,\ sig,\ NULL,\ \&keypairs[0],\ NULL));}
+\DoxyCodeLine{00136\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_sign32(CTX,\ sig,\ msg,\ NULL,\ NULL));}
+\DoxyCodeLine{00137\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_sign32(CTX,\ sig,\ msg,\ \&invalid\_keypair,\ NULL));}
+\DoxyCodeLine{00138\ \ \ \ \ CHECK\_ILLEGAL(STATIC\_CTX,\ secp256k1\_schnorrsig\_sign32(STATIC\_CTX,\ sig,\ msg,\ \&keypairs[0],\ NULL));}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00140\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&keypairs[0],\ \&extraparams)\ ==\ 1);}
+\DoxyCodeLine{00141\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_sign\_custom(CTX,\ NULL,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&keypairs[0],\ \&extraparams));}
+\DoxyCodeLine{00142\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ NULL,\ \textcolor{keyword}{sizeof}(msg),\ \&keypairs[0],\ \&extraparams));}
+\DoxyCodeLine{00143\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ NULL,\ 0,\ \&keypairs[0],\ \&extraparams)\ ==\ 1);}
+\DoxyCodeLine{00144\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ NULL,\ \&extraparams));}
+\DoxyCodeLine{00145\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&invalid\_keypair,\ \&extraparams));}
+\DoxyCodeLine{00146\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&keypairs[0],\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00147\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&keypairs[0],\ \&invalid\_extraparams));}
+\DoxyCodeLine{00148\ \ \ \ \ CHECK\_ILLEGAL(STATIC\_CTX,\ secp256k1\_schnorrsig\_sign\_custom(STATIC\_CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&keypairs[0],\ \&extraparams));}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00150\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign32(CTX,\ sig,\ msg,\ \&keypairs[0],\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00151\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&pk[0])\ ==\ 1);}
+\DoxyCodeLine{00152\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_verify(CTX,\ NULL,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&pk[0]));}
+\DoxyCodeLine{00153\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_verify(CTX,\ sig,\ NULL,\ \textcolor{keyword}{sizeof}(msg),\ \&pk[0]));}
+\DoxyCodeLine{00154\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig,\ NULL,\ 0,\ \&pk[0])\ ==\ 0);}
+\DoxyCodeLine{00155\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_verify(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ NULL));}
+\DoxyCodeLine{00156\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_schnorrsig\_verify(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&zero\_pk));}
+\DoxyCodeLine{00157\ \}}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00159\ \textcolor{comment}{/*\ Checks\ that\ hash\ initialized\ by\ secp256k1\_schnorrsig\_sha256\_tagged\ has\ the}}
+\DoxyCodeLine{00160\ \textcolor{comment}{\ *\ expected\ state.\ */}}
+\DoxyCodeLine{00161\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_schnorrsig\_sha256\_tagged(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tag[]\ =\ \{\textcolor{charliteral}{'B'},\ \textcolor{charliteral}{'I'},\ \textcolor{charliteral}{'P'},\ \textcolor{charliteral}{'0'},\ \textcolor{charliteral}{'3'},\ \textcolor{charliteral}{'4'},\ \textcolor{charliteral}{'0'},\ \textcolor{charliteral}{'/'},\ \textcolor{charliteral}{'c'},\ \textcolor{charliteral}{'h'},\ \textcolor{charliteral}{'a'},\ \textcolor{charliteral}{'l'},\ \textcolor{charliteral}{'l'},\ \textcolor{charliteral}{'e'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'g'},\ \textcolor{charliteral}{'e'}\};}
+\DoxyCodeLine{00163\ \ \ \ \ secp256k1\_sha256\ sha;}
+\DoxyCodeLine{00164\ \ \ \ \ secp256k1\_sha256\ sha\_optimized;}
+\DoxyCodeLine{00165\ }
+\DoxyCodeLine{00166\ \ \ \ \ secp256k1\_sha256\_initialize\_tagged(\&sha,\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *)\ tag,\ \textcolor{keyword}{sizeof}(tag));}
+\DoxyCodeLine{00167\ \ \ \ \ secp256k1\_schnorrsig\_sha256\_tagged(\&sha\_optimized);}
+\DoxyCodeLine{00168\ \ \ \ \ test\_sha256\_eq(\&sha,\ \&sha\_optimized);}
+\DoxyCodeLine{00169\ \}}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00171\ \textcolor{comment}{/*\ Helper\ function\ for\ schnorrsig\_bip\_vectors}}
+\DoxyCodeLine{00172\ \textcolor{comment}{\ *\ Signs\ the\ message\ and\ checks\ that\ it's\ the\ same\ as\ expected\_sig.\ */}}
+\DoxyCodeLine{00173\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_schnorrsig\_bip\_vectors\_check\_signing(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sk,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *pk\_serialized,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *aux\_rand,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg,\ \textcolor{keywordtype}{size\_t}\ msglen,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *expected\_sig)\ \{}
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64];}
+\DoxyCodeLine{00175\ \ \ \ \ secp256k1\_keypair\ keypair;}
+\DoxyCodeLine{00176\ \ \ \ \ secp256k1\_xonly\_pubkey\ pk,\ pk\_expected;}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00178\ \ \ \ \ secp256k1\_schnorrsig\_extraparams\ extraparams\ =\ SECP256K1\_SCHNORRSIG\_EXTRAPARAMS\_INIT;}
+\DoxyCodeLine{00179\ \ \ \ \ extraparams.ndata\ =\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*)aux\_rand;}
+\DoxyCodeLine{00180\ }
+\DoxyCodeLine{00181\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk));}
+\DoxyCodeLine{00182\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ msg,\ msglen,\ \&keypair,\ \&extraparams));}
+\DoxyCodeLine{00183\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(sig,\ expected\_sig,\ 64)\ ==\ 0);}
+\DoxyCodeLine{00184\ \ \ \ \ \textcolor{keywordflow}{if}\ (msglen\ ==\ 32)\ \{}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ memset(sig,\ 0,\ 64);}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign32(CTX,\ sig,\ msg,\ \&keypair,\ aux\_rand));}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(sig,\ expected\_sig,\ 64)\ ==\ 0);}
+\DoxyCodeLine{00188\ \ \ \ \ \}}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00190\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&pk\_expected,\ pk\_serialized));}
+\DoxyCodeLine{00191\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&pk,\ NULL,\ \&keypair));}
+\DoxyCodeLine{00192\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&pk,\ \&pk\_expected,\ \textcolor{keyword}{sizeof}(pk))\ ==\ 0);}
+\DoxyCodeLine{00193\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig,\ msg,\ msglen,\ \&pk));}
+\DoxyCodeLine{00194\ \}}
+\DoxyCodeLine{00195\ }
+\DoxyCodeLine{00196\ \textcolor{comment}{/*\ Helper\ function\ for\ schnorrsig\_bip\_vectors}}
+\DoxyCodeLine{00197\ \textcolor{comment}{\ *\ Checks\ that\ both\ verify\ and\ verify\_batch\ (TODO)\ return\ the\ same\ value\ as\ expected.\ */}}
+\DoxyCodeLine{00198\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_schnorrsig\_bip\_vectors\_check\_verify(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *pk\_serialized,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg,\ \textcolor{keywordtype}{size\_t}\ msglen,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sig,\ \textcolor{keywordtype}{int}\ expected)\ \{}
+\DoxyCodeLine{00199\ \ \ \ \ secp256k1\_xonly\_pubkey\ pk;}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00201\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&pk,\ pk\_serialized));}
+\DoxyCodeLine{00202\ \ \ \ \ CHECK(expected\ ==\ secp256k1\_schnorrsig\_verify(CTX,\ sig,\ msg,\ msglen,\ \&pk));}
+\DoxyCodeLine{00203\ \}}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \textcolor{comment}{/*\ Test\ vectors\ according\ to\ BIP-\/340\ ("{}Schnorr\ Signatures\ for\ secp256k1"{}).\ See}}
+\DoxyCodeLine{00206\ \textcolor{comment}{\ *\ https://github.com/bitcoin/bips/blob/master/bip-\/0340/test-\/vectors.csv.\ */}}
+\DoxyCodeLine{00207\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_schnorrsig\_bip\_vectors(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00208\ \ \ \ \ \{}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 0\ */}}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32]\ =\ \{}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x03}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \ \ \ \ 0xF9,\ 0x30,\ 0x8A,\ 0x01,\ 0x92,\ 0x58,\ 0xC3,\ 0x10,}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \ \ \ \ 0x49,\ 0x34,\ 0x4F,\ 0x85,\ 0xF8,\ 0x9D,\ 0x52,\ 0x29,}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \ \ \ \ 0xB5,\ 0x31,\ 0xC8,\ 0x45,\ 0x83,\ 0x6F,\ 0x99,\ 0xB0,}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \ \ \ \ 0x86,\ 0x01,\ 0xF1,\ 0x13,\ 0xBC,\ 0xE0,\ 0x36,\ 0xF9}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aux\_rand[32]\ =\ \{}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \ \ \ \ 0xE9,\ 0x07,\ 0x83,\ 0x1F,\ 0x80,\ 0x84,\ 0x8D,\ 0x10,}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \ \ \ \ 0x69,\ 0xA5,\ 0x37,\ 0x1B,\ 0x40,\ 0x24,\ 0x10,\ 0x36,}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4B,\ 0xDF,\ 0x1C,\ 0x5F,\ 0x83,\ 0x07,\ 0xB0,\ 0x08,}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4C,\ 0x55,\ 0xF1,\ 0xCE,\ 0x2D,\ 0xCA,\ 0x82,\ 0x15,}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ \ \ \ \ 0x25,\ 0xF6,\ 0x6A,\ 0x4A,\ 0x85,\ 0xEA,\ 0x8B,\ 0x71,}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \ \ \ \ 0xE4,\ 0x82,\ 0xA7,\ 0x4F,\ 0x38,\ 0x2D,\ 0x2C,\ 0xE5,}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \ \ \ \ 0xEB,\ 0xEE,\ 0xE8,\ 0xFD,\ 0xB2,\ 0x17,\ 0x2F,\ 0x47,}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \ \ \ \ 0x7D,\ 0xF4,\ 0x90,\ 0x0D,\ 0x31,\ 0x05,\ 0x36,\ 0xC0}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_signing(sk,\ pk,\ aux\_rand,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig);}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 1);}
+\DoxyCodeLine{00246\ \ \ \ \ \}}
+\DoxyCodeLine{00247\ \ \ \ \ \{}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 1\ */}}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32]\ =\ \{}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ \ \ \ \ 0xB7,\ 0xE1,\ 0x51,\ 0x62,\ 0x8A,\ 0xED,\ 0x2A,\ 0x6A,}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \ \ \ \ 0xBF,\ 0x71,\ 0x58,\ 0x80,\ 0x9C,\ 0xF4,\ 0xF3,\ 0xC7,}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ \ \ \ \ 0x62,\ 0xE7,\ 0x16,\ 0x0F,\ 0x38,\ 0xB4,\ 0xDA,\ 0x56,}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA7,\ 0x84,\ 0xD9,\ 0x04,\ 0x51,\ 0x90,\ 0xCF,\ 0xEF}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDF,\ 0xF1,\ 0xD7,\ 0x7F,\ 0x2A,\ 0x67,\ 0x1C,\ 0x5F,}
+\DoxyCodeLine{00257\ \ \ \ \ \ \ \ \ \ \ \ \ 0x36,\ 0x18,\ 0x37,\ 0x26,\ 0xDB,\ 0x23,\ 0x41,\ 0xBE,}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \ \ \ \ 0x58,\ 0xFE,\ 0xAE,\ 0x1D,\ 0xA2,\ 0xDE,\ 0xCE,\ 0xD8,}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ \ \ \ \ 0x43,\ 0x24,\ 0x0F,\ 0x7B,\ 0x50,\ 0x2B,\ 0xA6,\ 0x59}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aux\_rand[32]\ =\ \{}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x01}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \ \ \ \ 0x24,\ 0x3F,\ 0x6A,\ 0x88,\ 0x85,\ 0xA3,\ 0x08,\ 0xD3,}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \ \ \ \ 0x13,\ 0x19,\ 0x8A,\ 0x2E,\ 0x03,\ 0x70,\ 0x73,\ 0x44,}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA4,\ 0x09,\ 0x38,\ 0x22,\ 0x29,\ 0x9F,\ 0x31,\ 0xD0,}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x2E,\ 0xFA,\ 0x98,\ 0xEC,\ 0x4E,\ 0x6C,\ 0x89}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \ \ \ \ 0x68,\ 0x96,\ 0xBD,\ 0x60,\ 0xEE,\ 0xAE,\ 0x29,\ 0x6D,}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \ \ \ \ 0xB4,\ 0x8A,\ 0x22,\ 0x9F,\ 0xF7,\ 0x1D,\ 0xFE,\ 0x07,}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \ \ \ \ 0x1B,\ 0xDE,\ 0x41,\ 0x3E,\ 0x6D,\ 0x43,\ 0xF9,\ 0x17,}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDC,\ 0x8D,\ 0xCF,\ 0x8C,\ 0x78,\ 0xDE,\ 0x33,\ 0x41,}
+\DoxyCodeLine{00278\ \ \ \ \ \ \ \ \ \ \ \ \ 0x89,\ 0x06,\ 0xD1,\ 0x1A,\ 0xC9,\ 0x76,\ 0xAB,\ 0xCC,}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ \ \ \ \ 0xB2,\ 0x0B,\ 0x09,\ 0x12,\ 0x92,\ 0xBF,\ 0xF4,\ 0xEA,}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \ \ \ \ 0x89,\ 0x7E,\ 0xFC,\ 0xB6,\ 0x39,\ 0xEA,\ 0x87,\ 0x1C,}
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFA,\ 0x95,\ 0xF6,\ 0xDE,\ 0x33,\ 0x9E,\ 0x4B,\ 0x0A}
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_signing(sk,\ pk,\ aux\_rand,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig);}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 1);}
+\DoxyCodeLine{00285\ \ \ \ \ \}}
+\DoxyCodeLine{00286\ \ \ \ \ \{}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 2\ */}}
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32]\ =\ \{}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \ \ \ \ 0xC9,\ 0x0F,\ 0xDA,\ 0xA2,\ 0x21,\ 0x68,\ 0xC2,\ 0x34,}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \ \ \ \ 0xC4,\ 0xC6,\ 0x62,\ 0x8B,\ 0x80,\ 0xDC,\ 0x1C,\ 0xD1,}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \ \ \ \ 0x29,\ 0x02,\ 0x4E,\ 0x08,\ 0x8A,\ 0x67,\ 0xCC,\ 0x74,}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \ \ \ \ 0x02,\ 0x0B,\ 0xBE,\ 0xA6,\ 0x3B,\ 0x14,\ 0xE5,\ 0xC9}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDD,\ 0x30,\ 0x8A,\ 0xFE,\ 0xC5,\ 0x77,\ 0x7E,\ 0x13,}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ \ \ \ \ 0x12,\ 0x1F,\ 0xA7,\ 0x2B,\ 0x9C,\ 0xC1,\ 0xB7,\ 0xCC,}
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \ \ \ \ \ \ 0x01,\ 0x39,\ 0x71,\ 0x53,\ 0x09,\ 0xB0,\ 0x86,\ 0xC9,}
+\DoxyCodeLine{00298\ \ \ \ \ \ \ \ \ \ \ \ \ 0x60,\ 0xE1,\ 0x8F,\ 0xD9,\ 0x69,\ 0x77,\ 0x4E,\ 0xB8}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00300\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aux\_rand[32]\ =\ \{}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \ \ \ \ 0xC8,\ 0x7A,\ 0xA5,\ 0x38,\ 0x24,\ 0xB4,\ 0xD7,\ 0xAE,}
+\DoxyCodeLine{00302\ \ \ \ \ \ \ \ \ \ \ \ \ 0x2E,\ 0xB0,\ 0x35,\ 0xA2,\ 0xB5,\ 0xBB,\ 0xBC,\ 0xCC,}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x0E,\ 0x76,\ 0xCD,\ 0xC6,\ 0xD1,\ 0x69,\ 0x2C,}
+\DoxyCodeLine{00304\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4B,\ 0x0B,\ 0x62,\ 0xD7,\ 0x98,\ 0xE6,\ 0xD9,\ 0x06}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00307\ \ \ \ \ \ \ \ \ \ \ \ \ 0x7E,\ 0x2D,\ 0x58,\ 0xD8,\ 0xB3,\ 0xBC,\ 0xDF,\ 0x1A,}
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ \ \ \ \ 0xBA,\ 0xDE,\ 0xC7,\ 0x82,\ 0x90,\ 0x54,\ 0xF9,\ 0x0D,}
+\DoxyCodeLine{00309\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDA,\ 0x98,\ 0x05,\ 0xAA,\ 0xB5,\ 0x6C,\ 0x77,\ 0x33,}
+\DoxyCodeLine{00310\ \ \ \ \ \ \ \ \ \ \ \ \ 0x30,\ 0x24,\ 0xB9,\ 0xD0,\ 0xA5,\ 0x08,\ 0xB7,\ 0x5C}
+\DoxyCodeLine{00311\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \ \ \ \ 0x58,\ 0x31,\ 0xAA,\ 0xEE,\ 0xD7,\ 0xB4,\ 0x4B,\ 0xB7,}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4E,\ 0x5E,\ 0xAB,\ 0x94,\ 0xBA,\ 0x9D,\ 0x42,\ 0x94,}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ \ \ \ \ 0xC4,\ 0x9B,\ 0xCF,\ 0x2A,\ 0x60,\ 0x72,\ 0x8D,\ 0x8B,}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4C,\ 0x20,\ 0x0F,\ 0x50,\ 0xDD,\ 0x31,\ 0x3C,\ 0x1B,}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ \ \ \ \ 0xAB,\ 0x74,\ 0x58,\ 0x79,\ 0xA5,\ 0xAD,\ 0x95,\ 0x4A,}
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ \ \ \ \ 0x72,\ 0xC4,\ 0x5A,\ 0x91,\ 0xC3,\ 0xA5,\ 0x1D,\ 0x3C,}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ \ \ \ \ 0x7A,\ 0xDE,\ 0xA9,\ 0x8D,\ 0x82,\ 0xF8,\ 0x48,\ 0x1E,}
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ \ \ \ \ 0x0E,\ 0x1E,\ 0x03,\ 0x67,\ 0x4A,\ 0x6F,\ 0x3F,\ 0xB7}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_signing(sk,\ pk,\ aux\_rand,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig);}
+\DoxyCodeLine{00323\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 1);}
+\DoxyCodeLine{00324\ \ \ \ \ \}}
+\DoxyCodeLine{00325\ \ \ \ \ \{}
+\DoxyCodeLine{00326\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 3\ */}}
+\DoxyCodeLine{00327\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32]\ =\ \{}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ \ \ \ \ \ \ 0x0B,\ 0x43,\ 0x2B,\ 0x26,\ 0x77,\ 0x93,\ 0x73,\ 0x81,}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \ \ \ \ 0xAE,\ 0xF0,\ 0x5B,\ 0xB0,\ 0x2A,\ 0x66,\ 0xEC,\ 0xD0,}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \ \ \ \ 0x12,\ 0x77,\ 0x30,\ 0x62,\ 0xCF,\ 0x3F,\ 0xA2,\ 0x54,}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ 0x9E,\ 0x44,\ 0xF5,\ 0x8E,\ 0xD2,\ 0x40,\ 0x17,\ 0x10}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ \ \ \ \ 0x25,\ 0xD1,\ 0xDF,\ 0xF9,\ 0x51,\ 0x05,\ 0xF5,\ 0x25,}
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ \ \ \ \ 0x3C,\ 0x40,\ 0x22,\ 0xF6,\ 0x28,\ 0xA9,\ 0x96,\ 0xAD,}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ \ \ \ \ 0x3A,\ 0x0D,\ 0x95,\ 0xFB,\ 0xF2,\ 0x1D,\ 0x46,\ 0x8A,}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ \ \ \ \ 0x1B,\ 0x33,\ 0xF8,\ 0xC1,\ 0x60,\ 0xD8,\ 0xF5,\ 0x17}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aux\_rand[32]\ =\ \{}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ \ \ \ \ 0x7E,\ 0xB0,\ 0x50,\ 0x97,\ 0x57,\ 0xE2,\ 0x46,\ 0xF1,}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ \ \ \ \ 0x94,\ 0x49,\ 0x88,\ 0x56,\ 0x51,\ 0x61,\ 0x1C,\ 0xB9,}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \ \ \ \ 0x65,\ 0xEC,\ 0xC1,\ 0xA1,\ 0x87,\ 0xDD,\ 0x51,\ 0xB6,}
+\DoxyCodeLine{00355\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4F,\ 0xDA,\ 0x1E,\ 0xDC,\ 0x96,\ 0x37,\ 0xD5,\ 0xEC,}
+\DoxyCodeLine{00356\ \ \ \ \ \ \ \ \ \ \ \ \ 0x97,\ 0x58,\ 0x2B,\ 0x9C,\ 0xB1,\ 0x3D,\ 0xB3,\ 0x93,}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ \ \ \ \ 0x37,\ 0x05,\ 0xB3,\ 0x2B,\ 0xA9,\ 0x82,\ 0xAF,\ 0x5A,}
+\DoxyCodeLine{00358\ \ \ \ \ \ \ \ \ \ \ \ \ 0xF2,\ 0x5F,\ 0xD7,\ 0x88,\ 0x81,\ 0xEB,\ 0xB3,\ 0x27,}
+\DoxyCodeLine{00359\ \ \ \ \ \ \ \ \ \ \ \ \ 0x71,\ 0xFC,\ 0x59,\ 0x22,\ 0xEF,\ 0xC6,\ 0x6E,\ 0xA3}
+\DoxyCodeLine{00360\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00361\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_signing(sk,\ pk,\ aux\_rand,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig);}
+\DoxyCodeLine{00362\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 1);}
+\DoxyCodeLine{00363\ \ \ \ \ \}}
+\DoxyCodeLine{00364\ \ \ \ \ \{}
+\DoxyCodeLine{00365\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 4\ */}}
+\DoxyCodeLine{00366\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00367\ \ \ \ \ \ \ \ \ \ \ \ \ 0xD6,\ 0x9C,\ 0x35,\ 0x09,\ 0xBB,\ 0x99,\ 0xE4,\ 0x12,}
+\DoxyCodeLine{00368\ \ \ \ \ \ \ \ \ \ \ \ \ 0xE6,\ 0x8B,\ 0x0F,\ 0xE8,\ 0x54,\ 0x4E,\ 0x72,\ 0x83,}
+\DoxyCodeLine{00369\ \ \ \ \ \ \ \ \ \ \ \ \ 0x7D,\ 0xFA,\ 0x30,\ 0x74,\ 0x6D,\ 0x8B,\ 0xE2,\ 0xAA,}
+\DoxyCodeLine{00370\ \ \ \ \ \ \ \ \ \ \ \ \ 0x65,\ 0x97,\ 0x5F,\ 0x29,\ 0xD2,\ 0x2D,\ 0xC7,\ 0xB9}
+\DoxyCodeLine{00371\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00372\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00373\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4D,\ 0xF3,\ 0xC3,\ 0xF6,\ 0x8F,\ 0xCC,\ 0x83,\ 0xB2,}
+\DoxyCodeLine{00374\ \ \ \ \ \ \ \ \ \ \ \ \ 0x7E,\ 0x9D,\ 0x42,\ 0xC9,\ 0x04,\ 0x31,\ 0xA7,\ 0x24,}
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \ \ \ \ \ \ 0x99,\ 0xF1,\ 0x78,\ 0x75,\ 0xC8,\ 0x1A,\ 0x59,\ 0x9B,}
+\DoxyCodeLine{00376\ \ \ \ \ \ \ \ \ \ \ \ \ 0x56,\ 0x6C,\ 0x98,\ 0x89,\ 0xB9,\ 0x69,\ 0x67,\ 0x03}
+\DoxyCodeLine{00377\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00378\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00379\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00380\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x3B,\ 0x78,\ 0xCE,\ 0x56,\ 0x3F,}
+\DoxyCodeLine{00381\ \ \ \ \ \ \ \ \ \ \ \ \ 0x89,\ 0xA0,\ 0xED,\ 0x94,\ 0x14,\ 0xF5,\ 0xAA,\ 0x28,}
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ \ \ \ \ 0xAD,\ 0x0D,\ 0x96,\ 0xD6,\ 0x79,\ 0x5F,\ 0x9C,\ 0x63,}
+\DoxyCodeLine{00383\ \ \ \ \ \ \ \ \ \ \ \ \ 0x76,\ 0xAF,\ 0xB1,\ 0x54,\ 0x8A,\ 0xF6,\ 0x03,\ 0xB3,}
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ \ \ \ \ 0xEB,\ 0x45,\ 0xC9,\ 0xF8,\ 0x20,\ 0x7D,\ 0xEE,\ 0x10,}
+\DoxyCodeLine{00385\ \ \ \ \ \ \ \ \ \ \ \ \ 0x60,\ 0xCB,\ 0x71,\ 0xC0,\ 0x4E,\ 0x80,\ 0xF5,\ 0x93,}
+\DoxyCodeLine{00386\ \ \ \ \ \ \ \ \ \ \ \ \ 0x06,\ 0x0B,\ 0x07,\ 0xD2,\ 0x83,\ 0x08,\ 0xD7,\ 0xF4}
+\DoxyCodeLine{00387\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00388\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 1);}
+\DoxyCodeLine{00389\ \ \ \ \ \}}
+\DoxyCodeLine{00390\ \ \ \ \ \{}
+\DoxyCodeLine{00391\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 5\ */}}
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00393\ \ \ \ \ \ \ \ \ \ \ \ \ 0xEE,\ 0xFD,\ 0xEA,\ 0x4C,\ 0xDB,\ 0x67,\ 0x77,\ 0x50,}
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA4,\ 0x20,\ 0xFE,\ 0xE8,\ 0x07,\ 0xEA,\ 0xCF,\ 0x21,}
+\DoxyCodeLine{00395\ \ \ \ \ \ \ \ \ \ \ \ \ 0xEB,\ 0x98,\ 0x98,\ 0xAE,\ 0x79,\ 0xB9,\ 0x76,\ 0x87,}
+\DoxyCodeLine{00396\ \ \ \ \ \ \ \ \ \ \ \ \ 0x66,\ 0xE4,\ 0xFA,\ 0xA0,\ 0x4A,\ 0x2D,\ 0x4A,\ 0x34}
+\DoxyCodeLine{00397\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00398\ \ \ \ \ \ \ \ \ secp256k1\_xonly\_pubkey\ pk\_parsed;}
+\DoxyCodeLine{00399\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ No\ need\ to\ check\ the\ signature\ of\ the\ test\ vector\ as\ parsing\ the\ pubkey\ already\ fails\ */}}
+\DoxyCodeLine{00400\ \ \ \ \ \ \ \ \ CHECK(!secp256k1\_xonly\_pubkey\_parse(CTX,\ \&pk\_parsed,\ pk));}
+\DoxyCodeLine{00401\ \ \ \ \ \}}
+\DoxyCodeLine{00402\ \ \ \ \ \{}
+\DoxyCodeLine{00403\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 6\ */}}
+\DoxyCodeLine{00404\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00405\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDF,\ 0xF1,\ 0xD7,\ 0x7F,\ 0x2A,\ 0x67,\ 0x1C,\ 0x5F,}
+\DoxyCodeLine{00406\ \ \ \ \ \ \ \ \ \ \ \ \ 0x36,\ 0x18,\ 0x37,\ 0x26,\ 0xDB,\ 0x23,\ 0x41,\ 0xBE,}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ \ \ \ \ 0x58,\ 0xFE,\ 0xAE,\ 0x1D,\ 0xA2,\ 0xDE,\ 0xCE,\ 0xD8,}
+\DoxyCodeLine{00408\ \ \ \ \ \ \ \ \ \ \ \ \ 0x43,\ 0x24,\ 0x0F,\ 0x7B,\ 0x50,\ 0x2B,\ 0xA6,\ 0x59}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ \ \ \ \ 0x24,\ 0x3F,\ 0x6A,\ 0x88,\ 0x85,\ 0xA3,\ 0x08,\ 0xD3,}
+\DoxyCodeLine{00412\ \ \ \ \ \ \ \ \ \ \ \ \ 0x13,\ 0x19,\ 0x8A,\ 0x2E,\ 0x03,\ 0x70,\ 0x73,\ 0x44,}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA4,\ 0x09,\ 0x38,\ 0x22,\ 0x29,\ 0x9F,\ 0x31,\ 0xD0,}
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x2E,\ 0xFA,\ 0x98,\ 0xEC,\ 0x4E,\ 0x6C,\ 0x89}
+\DoxyCodeLine{00415\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00416\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xF9,\ 0x7B,\ 0xD5,\ 0x75,\ 0x5E,\ 0xEE,\ 0xA4,}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ \ \ \ \ 0x20,\ 0x45,\ 0x3A,\ 0x14,\ 0x35,\ 0x52,\ 0x35,\ 0xD3,}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ \ \ \ \ 0x82,\ 0xF6,\ 0x47,\ 0x2F,\ 0x85,\ 0x68,\ 0xA1,\ 0x8B,}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ \ \ \ \ 0x2F,\ 0x05,\ 0x7A,\ 0x14,\ 0x60,\ 0x29,\ 0x75,\ 0x56,}
+\DoxyCodeLine{00421\ \ \ \ \ \ \ \ \ \ \ \ \ 0x3C,\ 0xC2,\ 0x79,\ 0x44,\ 0x64,\ 0x0A,\ 0xC6,\ 0x07,}
+\DoxyCodeLine{00422\ \ \ \ \ \ \ \ \ \ \ \ \ 0xCD,\ 0x10,\ 0x7A,\ 0xE1,\ 0x09,\ 0x23,\ 0xD9,\ 0xEF,}
+\DoxyCodeLine{00423\ \ \ \ \ \ \ \ \ \ \ \ \ 0x7A,\ 0x73,\ 0xC6,\ 0x43,\ 0xE1,\ 0x66,\ 0xBE,\ 0x5E,}
+\DoxyCodeLine{00424\ \ \ \ \ \ \ \ \ \ \ \ \ 0xBE,\ 0xAF,\ 0xA3,\ 0x4B,\ 0x1A,\ 0xC5,\ 0x53,\ 0xE2}
+\DoxyCodeLine{00425\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00426\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 0);}
+\DoxyCodeLine{00427\ \ \ \ \ \}}
+\DoxyCodeLine{00428\ \ \ \ \ \{}
+\DoxyCodeLine{00429\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 7\ */}}
+\DoxyCodeLine{00430\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00431\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDF,\ 0xF1,\ 0xD7,\ 0x7F,\ 0x2A,\ 0x67,\ 0x1C,\ 0x5F,}
+\DoxyCodeLine{00432\ \ \ \ \ \ \ \ \ \ \ \ \ 0x36,\ 0x18,\ 0x37,\ 0x26,\ 0xDB,\ 0x23,\ 0x41,\ 0xBE,}
+\DoxyCodeLine{00433\ \ \ \ \ \ \ \ \ \ \ \ \ 0x58,\ 0xFE,\ 0xAE,\ 0x1D,\ 0xA2,\ 0xDE,\ 0xCE,\ 0xD8,}
+\DoxyCodeLine{00434\ \ \ \ \ \ \ \ \ \ \ \ \ 0x43,\ 0x24,\ 0x0F,\ 0x7B,\ 0x50,\ 0x2B,\ 0xA6,\ 0x59}
+\DoxyCodeLine{00435\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00436\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00437\ \ \ \ \ \ \ \ \ \ \ \ \ 0x24,\ 0x3F,\ 0x6A,\ 0x88,\ 0x85,\ 0xA3,\ 0x08,\ 0xD3,}
+\DoxyCodeLine{00438\ \ \ \ \ \ \ \ \ \ \ \ \ 0x13,\ 0x19,\ 0x8A,\ 0x2E,\ 0x03,\ 0x70,\ 0x73,\ 0x44,}
+\DoxyCodeLine{00439\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA4,\ 0x09,\ 0x38,\ 0x22,\ 0x29,\ 0x9F,\ 0x31,\ 0xD0,}
+\DoxyCodeLine{00440\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x2E,\ 0xFA,\ 0x98,\ 0xEC,\ 0x4E,\ 0x6C,\ 0x89}
+\DoxyCodeLine{00441\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ \ \ \ \ 0x1F,\ 0xA6,\ 0x2E,\ 0x33,\ 0x1E,\ 0xDB,\ 0xC2,\ 0x1C,}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ \ \ \ \ 0x39,\ 0x47,\ 0x92,\ 0xD2,\ 0xAB,\ 0x11,\ 0x00,\ 0xA7,}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ \ \ \ \ 0xB4,\ 0x32,\ 0xB0,\ 0x13,\ 0xDF,\ 0x3F,\ 0x6F,\ 0xF4,}
+\DoxyCodeLine{00446\ \ \ \ \ \ \ \ \ \ \ \ \ 0xF9,\ 0x9F,\ 0xCB,\ 0x33,\ 0xE0,\ 0xE1,\ 0x51,\ 0x5F,}
+\DoxyCodeLine{00447\ \ \ \ \ \ \ \ \ \ \ \ \ 0x28,\ 0x89,\ 0x0B,\ 0x3E,\ 0xDB,\ 0x6E,\ 0x71,\ 0x89,}
+\DoxyCodeLine{00448\ \ \ \ \ \ \ \ \ \ \ \ \ 0xB6,\ 0x30,\ 0x44,\ 0x8B,\ 0x51,\ 0x5C,\ 0xE4,\ 0xF8,}
+\DoxyCodeLine{00449\ \ \ \ \ \ \ \ \ \ \ \ \ 0x62,\ 0x2A,\ 0x95,\ 0x4C,\ 0xFE,\ 0x54,\ 0x57,\ 0x35,}
+\DoxyCodeLine{00450\ \ \ \ \ \ \ \ \ \ \ \ \ 0xAA,\ 0xEA,\ 0x51,\ 0x34,\ 0xFC,\ 0xCD,\ 0xB2,\ 0xBD}
+\DoxyCodeLine{00451\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00452\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 0);}
+\DoxyCodeLine{00453\ \ \ \ \ \}}
+\DoxyCodeLine{00454\ \ \ \ \ \{}
+\DoxyCodeLine{00455\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 8\ */}}
+\DoxyCodeLine{00456\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00457\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDF,\ 0xF1,\ 0xD7,\ 0x7F,\ 0x2A,\ 0x67,\ 0x1C,\ 0x5F,}
+\DoxyCodeLine{00458\ \ \ \ \ \ \ \ \ \ \ \ \ 0x36,\ 0x18,\ 0x37,\ 0x26,\ 0xDB,\ 0x23,\ 0x41,\ 0xBE,}
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ \ \ \ \ 0x58,\ 0xFE,\ 0xAE,\ 0x1D,\ 0xA2,\ 0xDE,\ 0xCE,\ 0xD8,}
+\DoxyCodeLine{00460\ \ \ \ \ \ \ \ \ \ \ \ \ 0x43,\ 0x24,\ 0x0F,\ 0x7B,\ 0x50,\ 0x2B,\ 0xA6,\ 0x59}
+\DoxyCodeLine{00461\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00462\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00463\ \ \ \ \ \ \ \ \ \ \ \ \ 0x24,\ 0x3F,\ 0x6A,\ 0x88,\ 0x85,\ 0xA3,\ 0x08,\ 0xD3,}
+\DoxyCodeLine{00464\ \ \ \ \ \ \ \ \ \ \ \ \ 0x13,\ 0x19,\ 0x8A,\ 0x2E,\ 0x03,\ 0x70,\ 0x73,\ 0x44,}
+\DoxyCodeLine{00465\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA4,\ 0x09,\ 0x38,\ 0x22,\ 0x29,\ 0x9F,\ 0x31,\ 0xD0,}
+\DoxyCodeLine{00466\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x2E,\ 0xFA,\ 0x98,\ 0xEC,\ 0x4E,\ 0x6C,\ 0x89}
+\DoxyCodeLine{00467\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00468\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00469\ \ \ \ \ \ \ \ \ \ \ \ \ 0x6C,\ 0xFF,\ 0x5C,\ 0x3B,\ 0xA8,\ 0x6C,\ 0x69,\ 0xEA,}
+\DoxyCodeLine{00470\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4B,\ 0x73,\ 0x76,\ 0xF3,\ 0x1A,\ 0x9B,\ 0xCB,\ 0x4F,}
+\DoxyCodeLine{00471\ \ \ \ \ \ \ \ \ \ \ \ \ 0x74,\ 0xC1,\ 0x97,\ 0x60,\ 0x89,\ 0xB2,\ 0xD9,\ 0x96,}
+\DoxyCodeLine{00472\ \ \ \ \ \ \ \ \ \ \ \ \ 0x3D,\ 0xA2,\ 0xE5,\ 0x54,\ 0x3E,\ 0x17,\ 0x77,\ 0x69,}
+\DoxyCodeLine{00473\ \ \ \ \ \ \ \ \ \ \ \ \ 0x96,\ 0x17,\ 0x64,\ 0xB3,\ 0xAA,\ 0x9B,\ 0x2F,\ 0xFC,}
+\DoxyCodeLine{00474\ \ \ \ \ \ \ \ \ \ \ \ \ 0xB6,\ 0xEF,\ 0x94,\ 0x7B,\ 0x68,\ 0x87,\ 0xA2,\ 0x26,}
+\DoxyCodeLine{00475\ \ \ \ \ \ \ \ \ \ \ \ \ 0xE8,\ 0xD7,\ 0xC9,\ 0x3E,\ 0x00,\ 0xC5,\ 0xED,\ 0x0C,}
+\DoxyCodeLine{00476\ \ \ \ \ \ \ \ \ \ \ \ \ 0x18,\ 0x34,\ 0xFF,\ 0x0D,\ 0x0C,\ 0x2E,\ 0x6D,\ 0xA6}
+\DoxyCodeLine{00477\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00478\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 0);}
+\DoxyCodeLine{00479\ \ \ \ \ \}}
+\DoxyCodeLine{00480\ \ \ \ \ \{}
+\DoxyCodeLine{00481\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 9\ */}}
+\DoxyCodeLine{00482\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00483\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDF,\ 0xF1,\ 0xD7,\ 0x7F,\ 0x2A,\ 0x67,\ 0x1C,\ 0x5F,}
+\DoxyCodeLine{00484\ \ \ \ \ \ \ \ \ \ \ \ \ 0x36,\ 0x18,\ 0x37,\ 0x26,\ 0xDB,\ 0x23,\ 0x41,\ 0xBE,}
+\DoxyCodeLine{00485\ \ \ \ \ \ \ \ \ \ \ \ \ 0x58,\ 0xFE,\ 0xAE,\ 0x1D,\ 0xA2,\ 0xDE,\ 0xCE,\ 0xD8,}
+\DoxyCodeLine{00486\ \ \ \ \ \ \ \ \ \ \ \ \ 0x43,\ 0x24,\ 0x0F,\ 0x7B,\ 0x50,\ 0x2B,\ 0xA6,\ 0x59}
+\DoxyCodeLine{00487\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00488\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00489\ \ \ \ \ \ \ \ \ \ \ \ \ 0x24,\ 0x3F,\ 0x6A,\ 0x88,\ 0x85,\ 0xA3,\ 0x08,\ 0xD3,}
+\DoxyCodeLine{00490\ \ \ \ \ \ \ \ \ \ \ \ \ 0x13,\ 0x19,\ 0x8A,\ 0x2E,\ 0x03,\ 0x70,\ 0x73,\ 0x44,}
+\DoxyCodeLine{00491\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA4,\ 0x09,\ 0x38,\ 0x22,\ 0x29,\ 0x9F,\ 0x31,\ 0xD0,}
+\DoxyCodeLine{00492\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x2E,\ 0xFA,\ 0x98,\ 0xEC,\ 0x4E,\ 0x6C,\ 0x89}
+\DoxyCodeLine{00493\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00494\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00495\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00496\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00497\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00498\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00499\ \ \ \ \ \ \ \ \ \ \ \ \ 0x12,\ 0x3D,\ 0xDA,\ 0x83,\ 0x28,\ 0xAF,\ 0x9C,\ 0x23,}
+\DoxyCodeLine{00500\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA9,\ 0x4C,\ 0x1F,\ 0xEE,\ 0xCF,\ 0xD1,\ 0x23,\ 0xBA,}
+\DoxyCodeLine{00501\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4F,\ 0xB7,\ 0x34,\ 0x76,\ 0xF0,\ 0xD5,\ 0x94,\ 0xDC,}
+\DoxyCodeLine{00502\ \ \ \ \ \ \ \ \ \ \ \ \ 0xB6,\ 0x5C,\ 0x64,\ 0x25,\ 0xBD,\ 0x18,\ 0x60,\ 0x51}
+\DoxyCodeLine{00503\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00504\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 0);}
+\DoxyCodeLine{00505\ \ \ \ \ \}}
+\DoxyCodeLine{00506\ \ \ \ \ \{}
+\DoxyCodeLine{00507\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 10\ */}}
+\DoxyCodeLine{00508\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00509\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDF,\ 0xF1,\ 0xD7,\ 0x7F,\ 0x2A,\ 0x67,\ 0x1C,\ 0x5F,}
+\DoxyCodeLine{00510\ \ \ \ \ \ \ \ \ \ \ \ \ 0x36,\ 0x18,\ 0x37,\ 0x26,\ 0xDB,\ 0x23,\ 0x41,\ 0xBE,}
+\DoxyCodeLine{00511\ \ \ \ \ \ \ \ \ \ \ \ \ 0x58,\ 0xFE,\ 0xAE,\ 0x1D,\ 0xA2,\ 0xDE,\ 0xCE,\ 0xD8,}
+\DoxyCodeLine{00512\ \ \ \ \ \ \ \ \ \ \ \ \ 0x43,\ 0x24,\ 0x0F,\ 0x7B,\ 0x50,\ 0x2B,\ 0xA6,\ 0x59}
+\DoxyCodeLine{00513\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00514\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00515\ \ \ \ \ \ \ \ \ \ \ \ \ 0x24,\ 0x3F,\ 0x6A,\ 0x88,\ 0x85,\ 0xA3,\ 0x08,\ 0xD3,}
+\DoxyCodeLine{00516\ \ \ \ \ \ \ \ \ \ \ \ \ 0x13,\ 0x19,\ 0x8A,\ 0x2E,\ 0x03,\ 0x70,\ 0x73,\ 0x44,}
+\DoxyCodeLine{00517\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA4,\ 0x09,\ 0x38,\ 0x22,\ 0x29,\ 0x9F,\ 0x31,\ 0xD0,}
+\DoxyCodeLine{00518\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x2E,\ 0xFA,\ 0x98,\ 0xEC,\ 0x4E,\ 0x6C,\ 0x89}
+\DoxyCodeLine{00519\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00520\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00521\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00522\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00523\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00524\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x01,}
+\DoxyCodeLine{00525\ \ \ \ \ \ \ \ \ \ \ \ \ 0x76,\ 0x15,\ 0xFB,\ 0xAF,\ 0x5A,\ 0xE2,\ 0x88,\ 0x64,}
+\DoxyCodeLine{00526\ \ \ \ \ \ \ \ \ \ \ \ \ 0x01,\ 0x3C,\ 0x09,\ 0x97,\ 0x42,\ 0xDE,\ 0xAD,\ 0xB4,}
+\DoxyCodeLine{00527\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDB,\ 0xA8,\ 0x7F,\ 0x11,\ 0xAC,\ 0x67,\ 0x54,\ 0xF9,}
+\DoxyCodeLine{00528\ \ \ \ \ \ \ \ \ \ \ \ \ 0x37,\ 0x80,\ 0xD5,\ 0xA1,\ 0x83,\ 0x7C,\ 0xF1,\ 0x97}
+\DoxyCodeLine{00529\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00530\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 0);}
+\DoxyCodeLine{00531\ \ \ \ \ \}}
+\DoxyCodeLine{00532\ \ \ \ \ \{}
+\DoxyCodeLine{00533\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 11\ */}}
+\DoxyCodeLine{00534\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00535\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDF,\ 0xF1,\ 0xD7,\ 0x7F,\ 0x2A,\ 0x67,\ 0x1C,\ 0x5F,}
+\DoxyCodeLine{00536\ \ \ \ \ \ \ \ \ \ \ \ \ 0x36,\ 0x18,\ 0x37,\ 0x26,\ 0xDB,\ 0x23,\ 0x41,\ 0xBE,}
+\DoxyCodeLine{00537\ \ \ \ \ \ \ \ \ \ \ \ \ 0x58,\ 0xFE,\ 0xAE,\ 0x1D,\ 0xA2,\ 0xDE,\ 0xCE,\ 0xD8,}
+\DoxyCodeLine{00538\ \ \ \ \ \ \ \ \ \ \ \ \ 0x43,\ 0x24,\ 0x0F,\ 0x7B,\ 0x50,\ 0x2B,\ 0xA6,\ 0x59}
+\DoxyCodeLine{00539\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00540\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00541\ \ \ \ \ \ \ \ \ \ \ \ \ 0x24,\ 0x3F,\ 0x6A,\ 0x88,\ 0x85,\ 0xA3,\ 0x08,\ 0xD3,}
+\DoxyCodeLine{00542\ \ \ \ \ \ \ \ \ \ \ \ \ 0x13,\ 0x19,\ 0x8A,\ 0x2E,\ 0x03,\ 0x70,\ 0x73,\ 0x44,}
+\DoxyCodeLine{00543\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA4,\ 0x09,\ 0x38,\ 0x22,\ 0x29,\ 0x9F,\ 0x31,\ 0xD0,}
+\DoxyCodeLine{00544\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x2E,\ 0xFA,\ 0x98,\ 0xEC,\ 0x4E,\ 0x6C,\ 0x89}
+\DoxyCodeLine{00545\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00546\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00547\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4A,\ 0x29,\ 0x8D,\ 0xAC,\ 0xAE,\ 0x57,\ 0x39,\ 0x5A,}
+\DoxyCodeLine{00548\ \ \ \ \ \ \ \ \ \ \ \ \ 0x15,\ 0xD0,\ 0x79,\ 0x5D,\ 0xDB,\ 0xFD,\ 0x1D,\ 0xCB,}
+\DoxyCodeLine{00549\ \ \ \ \ \ \ \ \ \ \ \ \ 0x56,\ 0x4D,\ 0xA8,\ 0x2B,\ 0x0F,\ 0x26,\ 0x9B,\ 0xC7,}
+\DoxyCodeLine{00550\ \ \ \ \ \ \ \ \ \ \ \ \ 0x0A,\ 0x74,\ 0xF8,\ 0x22,\ 0x04,\ 0x29,\ 0xBA,\ 0x1D,}
+\DoxyCodeLine{00551\ \ \ \ \ \ \ \ \ \ \ \ \ 0x69,\ 0xE8,\ 0x9B,\ 0x4C,\ 0x55,\ 0x64,\ 0xD0,\ 0x03,}
+\DoxyCodeLine{00552\ \ \ \ \ \ \ \ \ \ \ \ \ 0x49,\ 0x10,\ 0x6B,\ 0x84,\ 0x97,\ 0x78,\ 0x5D,\ 0xD7,}
+\DoxyCodeLine{00553\ \ \ \ \ \ \ \ \ \ \ \ \ 0xD1,\ 0xD7,\ 0x13,\ 0xA8,\ 0xAE,\ 0x82,\ 0xB3,\ 0x2F,}
+\DoxyCodeLine{00554\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA7,\ 0x9D,\ 0x5F,\ 0x7F,\ 0xC4,\ 0x07,\ 0xD3,\ 0x9B}
+\DoxyCodeLine{00555\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00556\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 0);}
+\DoxyCodeLine{00557\ \ \ \ \ \}}
+\DoxyCodeLine{00558\ \ \ \ \ \{}
+\DoxyCodeLine{00559\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 12\ */}}
+\DoxyCodeLine{00560\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00561\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDF,\ 0xF1,\ 0xD7,\ 0x7F,\ 0x2A,\ 0x67,\ 0x1C,\ 0x5F,}
+\DoxyCodeLine{00562\ \ \ \ \ \ \ \ \ \ \ \ \ 0x36,\ 0x18,\ 0x37,\ 0x26,\ 0xDB,\ 0x23,\ 0x41,\ 0xBE,}
+\DoxyCodeLine{00563\ \ \ \ \ \ \ \ \ \ \ \ \ 0x58,\ 0xFE,\ 0xAE,\ 0x1D,\ 0xA2,\ 0xDE,\ 0xCE,\ 0xD8,}
+\DoxyCodeLine{00564\ \ \ \ \ \ \ \ \ \ \ \ \ 0x43,\ 0x24,\ 0x0F,\ 0x7B,\ 0x50,\ 0x2B,\ 0xA6,\ 0x59}
+\DoxyCodeLine{00565\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00566\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00567\ \ \ \ \ \ \ \ \ \ \ \ \ 0x24,\ 0x3F,\ 0x6A,\ 0x88,\ 0x85,\ 0xA3,\ 0x08,\ 0xD3,}
+\DoxyCodeLine{00568\ \ \ \ \ \ \ \ \ \ \ \ \ 0x13,\ 0x19,\ 0x8A,\ 0x2E,\ 0x03,\ 0x70,\ 0x73,\ 0x44,}
+\DoxyCodeLine{00569\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA4,\ 0x09,\ 0x38,\ 0x22,\ 0x29,\ 0x9F,\ 0x31,\ 0xD0,}
+\DoxyCodeLine{00570\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x2E,\ 0xFA,\ 0x98,\ 0xEC,\ 0x4E,\ 0x6C,\ 0x89}
+\DoxyCodeLine{00571\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00572\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00573\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00574\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00575\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00576\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFE,\ 0xFF,\ 0xFF,\ 0xFC,\ 0x2F,}
+\DoxyCodeLine{00577\ \ \ \ \ \ \ \ \ \ \ \ \ 0x69,\ 0xE8,\ 0x9B,\ 0x4C,\ 0x55,\ 0x64,\ 0xD0,\ 0x03,}
+\DoxyCodeLine{00578\ \ \ \ \ \ \ \ \ \ \ \ \ 0x49,\ 0x10,\ 0x6B,\ 0x84,\ 0x97,\ 0x78,\ 0x5D,\ 0xD7,}
+\DoxyCodeLine{00579\ \ \ \ \ \ \ \ \ \ \ \ \ 0xD1,\ 0xD7,\ 0x13,\ 0xA8,\ 0xAE,\ 0x82,\ 0xB3,\ 0x2F,}
+\DoxyCodeLine{00580\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA7,\ 0x9D,\ 0x5F,\ 0x7F,\ 0xC4,\ 0x07,\ 0xD3,\ 0x9B}
+\DoxyCodeLine{00581\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00582\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 0);}
+\DoxyCodeLine{00583\ \ \ \ \ \}}
+\DoxyCodeLine{00584\ \ \ \ \ \{}
+\DoxyCodeLine{00585\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 13\ */}}
+\DoxyCodeLine{00586\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00587\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDF,\ 0xF1,\ 0xD7,\ 0x7F,\ 0x2A,\ 0x67,\ 0x1C,\ 0x5F,}
+\DoxyCodeLine{00588\ \ \ \ \ \ \ \ \ \ \ \ \ 0x36,\ 0x18,\ 0x37,\ 0x26,\ 0xDB,\ 0x23,\ 0x41,\ 0xBE,}
+\DoxyCodeLine{00589\ \ \ \ \ \ \ \ \ \ \ \ \ 0x58,\ 0xFE,\ 0xAE,\ 0x1D,\ 0xA2,\ 0xDE,\ 0xCE,\ 0xD8,}
+\DoxyCodeLine{00590\ \ \ \ \ \ \ \ \ \ \ \ \ 0x43,\ 0x24,\ 0x0F,\ 0x7B,\ 0x50,\ 0x2B,\ 0xA6,\ 0x59}
+\DoxyCodeLine{00591\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00592\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32]\ =\ \{}
+\DoxyCodeLine{00593\ \ \ \ \ \ \ \ \ \ \ \ \ 0x24,\ 0x3F,\ 0x6A,\ 0x88,\ 0x85,\ 0xA3,\ 0x08,\ 0xD3,}
+\DoxyCodeLine{00594\ \ \ \ \ \ \ \ \ \ \ \ \ 0x13,\ 0x19,\ 0x8A,\ 0x2E,\ 0x03,\ 0x70,\ 0x73,\ 0x44,}
+\DoxyCodeLine{00595\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA4,\ 0x09,\ 0x38,\ 0x22,\ 0x29,\ 0x9F,\ 0x31,\ 0xD0,}
+\DoxyCodeLine{00596\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x2E,\ 0xFA,\ 0x98,\ 0xEC,\ 0x4E,\ 0x6C,\ 0x89}
+\DoxyCodeLine{00597\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00598\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00599\ \ \ \ \ \ \ \ \ \ \ \ \ 0x6C,\ 0xFF,\ 0x5C,\ 0x3B,\ 0xA8,\ 0x6C,\ 0x69,\ 0xEA,}
+\DoxyCodeLine{00600\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4B,\ 0x73,\ 0x76,\ 0xF3,\ 0x1A,\ 0x9B,\ 0xCB,\ 0x4F,}
+\DoxyCodeLine{00601\ \ \ \ \ \ \ \ \ \ \ \ \ 0x74,\ 0xC1,\ 0x97,\ 0x60,\ 0x89,\ 0xB2,\ 0xD9,\ 0x96,}
+\DoxyCodeLine{00602\ \ \ \ \ \ \ \ \ \ \ \ \ 0x3D,\ 0xA2,\ 0xE5,\ 0x54,\ 0x3E,\ 0x17,\ 0x77,\ 0x69,}
+\DoxyCodeLine{00603\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00604\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFE,}
+\DoxyCodeLine{00605\ \ \ \ \ \ \ \ \ \ \ \ \ 0xBA,\ 0xAE,\ 0xDC,\ 0xE6,\ 0xAF,\ 0x48,\ 0xA0,\ 0x3B,}
+\DoxyCodeLine{00606\ \ \ \ \ \ \ \ \ \ \ \ \ 0xBF,\ 0xD2,\ 0x5E,\ 0x8C,\ 0xD0,\ 0x36,\ 0x41,\ 0x41}
+\DoxyCodeLine{00607\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00608\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 0);}
+\DoxyCodeLine{00609\ \ \ \ \ \}}
+\DoxyCodeLine{00610\ \ \ \ \ \{}
+\DoxyCodeLine{00611\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 14\ */}}
+\DoxyCodeLine{00612\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00613\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00614\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00615\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,\ 0xFF,}
+\DoxyCodeLine{00616\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,\ 0xFF,\ 0xFF,\ 0xFE,\ 0xFF,\ 0xFF,\ 0xFC,\ 0x30}
+\DoxyCodeLine{00617\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00618\ \ \ \ \ \ \ \ \ secp256k1\_xonly\_pubkey\ pk\_parsed;}
+\DoxyCodeLine{00619\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ No\ need\ to\ check\ the\ signature\ of\ the\ test\ vector\ as\ parsing\ the\ pubkey\ already\ fails\ */}}
+\DoxyCodeLine{00620\ \ \ \ \ \ \ \ \ CHECK(!secp256k1\_xonly\_pubkey\_parse(CTX,\ \&pk\_parsed,\ pk));}
+\DoxyCodeLine{00621\ \ \ \ \ \}}
+\DoxyCodeLine{00622\ \ \ \ \ \{}
+\DoxyCodeLine{00623\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 15\ */}}
+\DoxyCodeLine{00624\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32]\ =\ \{}
+\DoxyCodeLine{00625\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00626\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00627\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00628\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00629\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00630\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00631\ \ \ \ \ \ \ \ \ \ \ \ \ 0x77,\ 0x8C,\ 0xAA,\ 0x53,\ 0xB4,\ 0x39,\ 0x3A,\ 0xC4,}
+\DoxyCodeLine{00632\ \ \ \ \ \ \ \ \ \ \ \ \ 0x67,\ 0x77,\ 0x4D,\ 0x09,\ 0x49,\ 0x7A,\ 0x87,\ 0x22,}
+\DoxyCodeLine{00633\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4B,\ 0xF9,\ 0xFA,\ 0xB6,\ 0xF6,\ 0xE6,\ 0x8B,\ 0x23,}
+\DoxyCodeLine{00634\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x64,\ 0x97,\ 0x32,\ 0x4D,\ 0x6F,\ 0xD1,\ 0x17,}
+\DoxyCodeLine{00635\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00636\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aux\_rand[32]\ =\ \{}
+\DoxyCodeLine{00637\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00638\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00639\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00640\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00641\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00642\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ const\ unsigned\ char\ msg[0]\ =\ \{\};\ */}}
+\DoxyCodeLine{00643\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00644\ \ \ \ \ \ \ \ \ \ \ \ \ 0x71,\ 0x53,\ 0x5D,\ 0xB1,\ 0x65,\ 0xEC,\ 0xD9,\ 0xFB,}
+\DoxyCodeLine{00645\ \ \ \ \ \ \ \ \ \ \ \ \ 0xBC,\ 0x04,\ 0x6E,\ 0x5F,\ 0xFA,\ 0xEA,\ 0x61,\ 0x18,}
+\DoxyCodeLine{00646\ \ \ \ \ \ \ \ \ \ \ \ \ 0x6B,\ 0xB6,\ 0xAD,\ 0x43,\ 0x67,\ 0x32,\ 0xFC,\ 0xCC,}
+\DoxyCodeLine{00647\ \ \ \ \ \ \ \ \ \ \ \ \ 0x25,\ 0x29,\ 0x1A,\ 0x55,\ 0x89,\ 0x54,\ 0x64,\ 0xCF,}
+\DoxyCodeLine{00648\ \ \ \ \ \ \ \ \ \ \ \ \ 0x60,\ 0x69,\ 0xCE,\ 0x26,\ 0xBF,\ 0x03,\ 0x46,\ 0x62,}
+\DoxyCodeLine{00649\ \ \ \ \ \ \ \ \ \ \ \ \ 0x28,\ 0xF1,\ 0x9A,\ 0x3A,\ 0x62,\ 0xDB,\ 0x8A,\ 0x64,}
+\DoxyCodeLine{00650\ \ \ \ \ \ \ \ \ \ \ \ \ 0x9F,\ 0x2D,\ 0x56,\ 0x0F,\ 0xAC,\ 0x65,\ 0x28,\ 0x27,}
+\DoxyCodeLine{00651\ \ \ \ \ \ \ \ \ \ \ \ \ 0xD1,\ 0xAF,\ 0x05,\ 0x74,\ 0xE4,\ 0x27,\ 0xAB,\ 0x63,}
+\DoxyCodeLine{00652\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00653\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_signing(sk,\ pk,\ aux\_rand,\ NULL,\ 0,\ sig);}
+\DoxyCodeLine{00654\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ NULL,\ 0,\ sig,\ 1);}
+\DoxyCodeLine{00655\ \ \ \ \ \}}
+\DoxyCodeLine{00656\ \ \ \ \ \{}
+\DoxyCodeLine{00657\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 16\ */}}
+\DoxyCodeLine{00658\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32]\ =\ \{}
+\DoxyCodeLine{00659\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00660\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00661\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00662\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00663\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00664\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00665\ \ \ \ \ \ \ \ \ \ \ \ \ 0x77,\ 0x8C,\ 0xAA,\ 0x53,\ 0xB4,\ 0x39,\ 0x3A,\ 0xC4,}
+\DoxyCodeLine{00666\ \ \ \ \ \ \ \ \ \ \ \ \ 0x67,\ 0x77,\ 0x4D,\ 0x09,\ 0x49,\ 0x7A,\ 0x87,\ 0x22,}
+\DoxyCodeLine{00667\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4B,\ 0xF9,\ 0xFA,\ 0xB6,\ 0xF6,\ 0xE6,\ 0x8B,\ 0x23,}
+\DoxyCodeLine{00668\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x64,\ 0x97,\ 0x32,\ 0x4D,\ 0x6F,\ 0xD1,\ 0x17,}
+\DoxyCodeLine{00669\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00670\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aux\_rand[32]\ =\ \{}
+\DoxyCodeLine{00671\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00672\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00673\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00674\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00675\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00676\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[]\ =\ \{\ 0x11\ \};}
+\DoxyCodeLine{00677\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00678\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0xA2,\ 0x0A,\ 0x0A,\ 0xFE,\ 0xF6,\ 0x41,\ 0x24,}
+\DoxyCodeLine{00679\ \ \ \ \ \ \ \ \ \ \ \ \ 0x64,\ 0x92,\ 0x32,\ 0xE0,\ 0x69,\ 0x3C,\ 0x58,\ 0x3A,}
+\DoxyCodeLine{00680\ \ \ \ \ \ \ \ \ \ \ \ \ 0xB1,\ 0xB9,\ 0x93,\ 0x4A,\ 0xE6,\ 0x3B,\ 0x4C,\ 0x35,}
+\DoxyCodeLine{00681\ \ \ \ \ \ \ \ \ \ \ \ \ 0x11,\ 0xF3,\ 0xAE,\ 0x11,\ 0x34,\ 0xC6,\ 0xA3,\ 0x03,}
+\DoxyCodeLine{00682\ \ \ \ \ \ \ \ \ \ \ \ \ 0xEA,\ 0x31,\ 0x73,\ 0xBF,\ 0xEA,\ 0x66,\ 0x83,\ 0xBD,}
+\DoxyCodeLine{00683\ \ \ \ \ \ \ \ \ \ \ \ \ 0x10,\ 0x1F,\ 0xA5,\ 0xAA,\ 0x5D,\ 0xBC,\ 0x19,\ 0x96,}
+\DoxyCodeLine{00684\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFE,\ 0x7C,\ 0xAC,\ 0xFC,\ 0x5A,\ 0x57,\ 0x7D,\ 0x33,}
+\DoxyCodeLine{00685\ \ \ \ \ \ \ \ \ \ \ \ \ 0xEC,\ 0x14,\ 0x56,\ 0x4C,\ 0xEC,\ 0x2B,\ 0xAC,\ 0xBF,}
+\DoxyCodeLine{00686\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00687\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_signing(sk,\ pk,\ aux\_rand,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig);}
+\DoxyCodeLine{00688\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 1);}
+\DoxyCodeLine{00689\ \ \ \ \ \}}
+\DoxyCodeLine{00690\ \ \ \ \ \{}
+\DoxyCodeLine{00691\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 17\ */}}
+\DoxyCodeLine{00692\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32]\ =\ \{}
+\DoxyCodeLine{00693\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00694\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00695\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00696\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00697\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00698\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00699\ \ \ \ \ \ \ \ \ \ \ \ \ 0x77,\ 0x8C,\ 0xAA,\ 0x53,\ 0xB4,\ 0x39,\ 0x3A,\ 0xC4,}
+\DoxyCodeLine{00700\ \ \ \ \ \ \ \ \ \ \ \ \ 0x67,\ 0x77,\ 0x4D,\ 0x09,\ 0x49,\ 0x7A,\ 0x87,\ 0x22,}
+\DoxyCodeLine{00701\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4B,\ 0xF9,\ 0xFA,\ 0xB6,\ 0xF6,\ 0xE6,\ 0x8B,\ 0x23,}
+\DoxyCodeLine{00702\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x64,\ 0x97,\ 0x32,\ 0x4D,\ 0x6F,\ 0xD1,\ 0x17,}
+\DoxyCodeLine{00703\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00704\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aux\_rand[32]\ =\ \{}
+\DoxyCodeLine{00705\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00706\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00707\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00708\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00709\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00710\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[]\ =\ \{}
+\DoxyCodeLine{00711\ \ \ \ \ \ \ \ \ \ \ \ \ 0x01,\ 0x02,\ 0x03,\ 0x04,\ 0x05,\ 0x06,\ 0x07,\ 0x08,}
+\DoxyCodeLine{00712\ \ \ \ \ \ \ \ \ \ \ \ \ 0x09,\ 0x0A,\ 0x0B,\ 0x0C,\ 0x0D,\ 0x0E,\ 0x0F,\ 0x10,}
+\DoxyCodeLine{00713\ \ \ \ \ \ \ \ \ \ \ \ \ 0x11,}
+\DoxyCodeLine{00714\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00715\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00716\ \ \ \ \ \ \ \ \ \ \ \ \ 0x51,\ 0x30,\ 0xF3,\ 0x9A,\ 0x40,\ 0x59,\ 0xB4,\ 0x3B,}
+\DoxyCodeLine{00717\ \ \ \ \ \ \ \ \ \ \ \ \ 0xC7,\ 0xCA,\ 0xC0,\ 0x9A,\ 0x19,\ 0xEC,\ 0xE5,\ 0x2B,}
+\DoxyCodeLine{00718\ \ \ \ \ \ \ \ \ \ \ \ \ 0x5D,\ 0x86,\ 0x99,\ 0xD1,\ 0xA7,\ 0x1E,\ 0x3C,\ 0x52,}
+\DoxyCodeLine{00719\ \ \ \ \ \ \ \ \ \ \ \ \ 0xDA,\ 0x9A,\ 0xFD,\ 0xB6,\ 0xB5,\ 0x0A,\ 0xC3,\ 0x70,}
+\DoxyCodeLine{00720\ \ \ \ \ \ \ \ \ \ \ \ \ 0xC4,\ 0xA4,\ 0x82,\ 0xB7,\ 0x7B,\ 0xF9,\ 0x60,\ 0xF8,}
+\DoxyCodeLine{00721\ \ \ \ \ \ \ \ \ \ \ \ \ 0x68,\ 0x15,\ 0x40,\ 0xE2,\ 0x5B,\ 0x67,\ 0x71,\ 0xEC,}
+\DoxyCodeLine{00722\ \ \ \ \ \ \ \ \ \ \ \ \ 0xE1,\ 0xE5,\ 0xA3,\ 0x7F,\ 0xD8,\ 0x0E,\ 0x5A,\ 0x51,}
+\DoxyCodeLine{00723\ \ \ \ \ \ \ \ \ \ \ \ \ 0x89,\ 0x7C,\ 0x55,\ 0x66,\ 0xA9,\ 0x7E,\ 0xA5,\ 0xA5,}
+\DoxyCodeLine{00724\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00725\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_signing(sk,\ pk,\ aux\_rand,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig);}
+\DoxyCodeLine{00726\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 1);}
+\DoxyCodeLine{00727\ \ \ \ \ \}}
+\DoxyCodeLine{00728\ \ \ \ \ \{}
+\DoxyCodeLine{00729\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ vector\ 18\ */}}
+\DoxyCodeLine{00730\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32]\ =\ \{}
+\DoxyCodeLine{00731\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00732\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00733\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00734\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,\ 0x03,\ 0x40,}
+\DoxyCodeLine{00735\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00736\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[32]\ =\ \{}
+\DoxyCodeLine{00737\ \ \ \ \ \ \ \ \ \ \ \ \ 0x77,\ 0x8C,\ 0xAA,\ 0x53,\ 0xB4,\ 0x39,\ 0x3A,\ 0xC4,}
+\DoxyCodeLine{00738\ \ \ \ \ \ \ \ \ \ \ \ \ 0x67,\ 0x77,\ 0x4D,\ 0x09,\ 0x49,\ 0x7A,\ 0x87,\ 0x22,}
+\DoxyCodeLine{00739\ \ \ \ \ \ \ \ \ \ \ \ \ 0x4B,\ 0xF9,\ 0xFA,\ 0xB6,\ 0xF6,\ 0xE6,\ 0x8B,\ 0x23,}
+\DoxyCodeLine{00740\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,\ 0x64,\ 0x97,\ 0x32,\ 0x4D,\ 0x6F,\ 0xD1,\ 0x17,}
+\DoxyCodeLine{00741\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00742\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aux\_rand[32]\ =\ \{}
+\DoxyCodeLine{00743\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00744\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00745\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00746\ \ \ \ \ \ \ \ \ \ \ \ \ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,\ 0x00,}
+\DoxyCodeLine{00747\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00748\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64]\ =\ \{}
+\DoxyCodeLine{00749\ \ \ \ \ \ \ \ \ \ \ \ \ 0x40,\ 0x3B,\ 0x12,\ 0xB0,\ 0xD8,\ 0x55,\ 0x5A,\ 0x34,}
+\DoxyCodeLine{00750\ \ \ \ \ \ \ \ \ \ \ \ \ 0x41,\ 0x75,\ 0xEA,\ 0x7E,\ 0xC7,\ 0x46,\ 0x56,\ 0x63,}
+\DoxyCodeLine{00751\ \ \ \ \ \ \ \ \ \ \ \ \ 0x03,\ 0x32,\ 0x1E,\ 0x5D,\ 0xBF,\ 0xA8,\ 0xBE,\ 0x6F,}
+\DoxyCodeLine{00752\ \ \ \ \ \ \ \ \ \ \ \ \ 0x09,\ 0x16,\ 0x35,\ 0x16,\ 0x3E,\ 0xCA,\ 0x79,\ 0xA8,}
+\DoxyCodeLine{00753\ \ \ \ \ \ \ \ \ \ \ \ \ 0x58,\ 0x5E,\ 0xD3,\ 0xE3,\ 0x17,\ 0x08,\ 0x07,\ 0xE7,}
+\DoxyCodeLine{00754\ \ \ \ \ \ \ \ \ \ \ \ \ 0xC0,\ 0x3B,\ 0x72,\ 0x0F,\ 0xC5,\ 0x4C,\ 0x7B,\ 0x23,}
+\DoxyCodeLine{00755\ \ \ \ \ \ \ \ \ \ \ \ \ 0x89,\ 0x7F,\ 0xCB,\ 0xA0,\ 0xE9,\ 0xD0,\ 0xB4,\ 0xA0,}
+\DoxyCodeLine{00756\ \ \ \ \ \ \ \ \ \ \ \ \ 0x68,\ 0x94,\ 0xCF,\ 0xD2,\ 0x49,\ 0xF2,\ 0x23,\ 0x67,}
+\DoxyCodeLine{00757\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00758\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[100];}
+\DoxyCodeLine{00759\ \ \ \ \ \ \ \ \ memset(msg,\ 0x99,\ \textcolor{keyword}{sizeof}(msg));}
+\DoxyCodeLine{00760\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_signing(sk,\ pk,\ aux\_rand,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig);}
+\DoxyCodeLine{00761\ \ \ \ \ \ \ \ \ test\_schnorrsig\_bip\_vectors\_check\_verify(pk,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ sig,\ 1);}
+\DoxyCodeLine{00762\ \ \ \ \ \}}
+\DoxyCodeLine{00763\ \}}
+\DoxyCodeLine{00764\ }
+\DoxyCodeLine{00765\ \textcolor{comment}{/*\ Nonce\ function\ that\ returns\ constant\ 0\ */}}
+\DoxyCodeLine{00766\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ nonce\_function\_failing(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *nonce32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg,\ \textcolor{keywordtype}{size\_t}\ msglen,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *key32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *xonly\_pk32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *algo,\ \textcolor{keywordtype}{size\_t}\ algolen,\ \textcolor{keywordtype}{void}\ *data)\ \{}
+\DoxyCodeLine{00767\ \ \ \ \ (void)\ msg;}
+\DoxyCodeLine{00768\ \ \ \ \ (void)\ msglen;}
+\DoxyCodeLine{00769\ \ \ \ \ (void)\ key32;}
+\DoxyCodeLine{00770\ \ \ \ \ (void)\ xonly\_pk32;}
+\DoxyCodeLine{00771\ \ \ \ \ (void)\ algo;}
+\DoxyCodeLine{00772\ \ \ \ \ (void)\ algolen;}
+\DoxyCodeLine{00773\ \ \ \ \ (void)\ data;}
+\DoxyCodeLine{00774\ \ \ \ \ (void)\ nonce32;}
+\DoxyCodeLine{00775\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00776\ \}}
+\DoxyCodeLine{00777\ }
+\DoxyCodeLine{00778\ \textcolor{comment}{/*\ Nonce\ function\ that\ sets\ nonce\ to\ 0\ */}}
+\DoxyCodeLine{00779\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ nonce\_function\_0(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *nonce32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg,\ \textcolor{keywordtype}{size\_t}\ msglen,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *key32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *xonly\_pk32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *algo,\ \textcolor{keywordtype}{size\_t}\ algolen,\ \textcolor{keywordtype}{void}\ *data)\ \{}
+\DoxyCodeLine{00780\ \ \ \ \ (void)\ msg;}
+\DoxyCodeLine{00781\ \ \ \ \ (void)\ msglen;}
+\DoxyCodeLine{00782\ \ \ \ \ (void)\ key32;}
+\DoxyCodeLine{00783\ \ \ \ \ (void)\ xonly\_pk32;}
+\DoxyCodeLine{00784\ \ \ \ \ (void)\ algo;}
+\DoxyCodeLine{00785\ \ \ \ \ (void)\ algolen;}
+\DoxyCodeLine{00786\ \ \ \ \ (void)\ data;}
+\DoxyCodeLine{00787\ }
+\DoxyCodeLine{00788\ \ \ \ \ memset(nonce32,\ 0,\ 32);}
+\DoxyCodeLine{00789\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00790\ \}}
+\DoxyCodeLine{00791\ }
+\DoxyCodeLine{00792\ \textcolor{comment}{/*\ Nonce\ function\ that\ sets\ nonce\ to\ 0xFF...0xFF\ */}}
+\DoxyCodeLine{00793\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ nonce\_function\_overflowing(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *nonce32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg,\ \textcolor{keywordtype}{size\_t}\ msglen,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *key32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *xonly\_pk32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *algo,\ \textcolor{keywordtype}{size\_t}\ algolen,\ \textcolor{keywordtype}{void}\ *data)\ \{}
+\DoxyCodeLine{00794\ \ \ \ \ (void)\ msg;}
+\DoxyCodeLine{00795\ \ \ \ \ (void)\ msglen;}
+\DoxyCodeLine{00796\ \ \ \ \ (void)\ key32;}
+\DoxyCodeLine{00797\ \ \ \ \ (void)\ xonly\_pk32;}
+\DoxyCodeLine{00798\ \ \ \ \ (void)\ algo;}
+\DoxyCodeLine{00799\ \ \ \ \ (void)\ algolen;}
+\DoxyCodeLine{00800\ \ \ \ \ (void)\ data;}
+\DoxyCodeLine{00801\ }
+\DoxyCodeLine{00802\ \ \ \ \ memset(nonce32,\ 0xFF,\ 32);}
+\DoxyCodeLine{00803\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00804\ \}}
+\DoxyCodeLine{00805\ }
+\DoxyCodeLine{00806\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_schnorrsig\_sign\_internal(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00807\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32];}
+\DoxyCodeLine{00808\ \ \ \ \ secp256k1\_xonly\_pubkey\ pk;}
+\DoxyCodeLine{00809\ \ \ \ \ secp256k1\_keypair\ keypair;}
+\DoxyCodeLine{00810\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[]\ =\ \{\textcolor{charliteral}{'t'},\ \textcolor{charliteral}{'h'},\ \textcolor{charliteral}{'i'},\ \textcolor{charliteral}{'s'},\ \textcolor{charliteral}{'\ '},\ \textcolor{charliteral}{'i'},\ \textcolor{charliteral}{'s'},\ \textcolor{charliteral}{'\ '},\ \textcolor{charliteral}{'a'},\ \textcolor{charliteral}{'\ '},\ \textcolor{charliteral}{'m'},\ \textcolor{charliteral}{'s'},\ \textcolor{charliteral}{'g'},\ \textcolor{charliteral}{'\ '},\ \textcolor{charliteral}{'f'},\ \textcolor{charliteral}{'o'},\ \textcolor{charliteral}{'r'},\ \textcolor{charliteral}{'\ '},\ \textcolor{charliteral}{'a'},\ \textcolor{charliteral}{'\ '},\ \textcolor{charliteral}{'s'},\ \textcolor{charliteral}{'c'},\ \textcolor{charliteral}{'h'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'o'},\ \textcolor{charliteral}{'r'},\ \textcolor{charliteral}{'r'},\ \textcolor{charliteral}{'s'},\ \textcolor{charliteral}{'i'},\ \textcolor{charliteral}{'g'},\ \textcolor{charliteral}{'.'},\ \textcolor{charliteral}{'.'}\};}
+\DoxyCodeLine{00811\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64];}
+\DoxyCodeLine{00812\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig2[64];}
+\DoxyCodeLine{00813\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ zeros64[64]\ =\ \{\ 0\ \};}
+\DoxyCodeLine{00814\ \ \ \ \ secp256k1\_schnorrsig\_extraparams\ extraparams\ =\ SECP256K1\_SCHNORRSIG\_EXTRAPARAMS\_INIT;}
+\DoxyCodeLine{00815\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aux\_rand[32];}
+\DoxyCodeLine{00816\ }
+\DoxyCodeLine{00817\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00818\ \ \ \ \ testrand256(aux\_rand);}
+\DoxyCodeLine{00819\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk));}
+\DoxyCodeLine{00820\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&pk,\ NULL,\ \&keypair));}
+\DoxyCodeLine{00821\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign32(CTX,\ sig,\ msg,\ \&keypair,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00822\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&pk));}
+\DoxyCodeLine{00823\ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ deprecated\ alias\ gives\ the\ same\ result\ */}}
+\DoxyCodeLine{00824\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign(CTX,\ sig2,\ msg,\ \&keypair,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00825\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(sig,\ sig2,\ \textcolor{keyword}{sizeof}(sig))\ ==\ 0);}
+\DoxyCodeLine{00826\ }
+\DoxyCodeLine{00827\ \ \ \ \ \textcolor{comment}{/*\ Test\ different\ nonce\ functions\ */}}
+\DoxyCodeLine{00828\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&keypair,\ \&extraparams)\ ==\ 1);}
+\DoxyCodeLine{00829\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&pk));}
+\DoxyCodeLine{00830\ \ \ \ \ memset(sig,\ 1,\ \textcolor{keyword}{sizeof}(sig));}
+\DoxyCodeLine{00831\ \ \ \ \ extraparams.noncefp\ =\ nonce\_function\_failing;}
+\DoxyCodeLine{00832\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&keypair,\ \&extraparams)\ ==\ 0);}
+\DoxyCodeLine{00833\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(sig,\ zeros64,\ \textcolor{keyword}{sizeof}(sig))\ ==\ 0);}
+\DoxyCodeLine{00834\ \ \ \ \ memset(\&sig,\ 1,\ \textcolor{keyword}{sizeof}(sig));}
+\DoxyCodeLine{00835\ \ \ \ \ extraparams.noncefp\ =\ nonce\_function\_0;}
+\DoxyCodeLine{00836\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&keypair,\ \&extraparams)\ ==\ 0);}
+\DoxyCodeLine{00837\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(sig,\ zeros64,\ \textcolor{keyword}{sizeof}(sig))\ ==\ 0);}
+\DoxyCodeLine{00838\ \ \ \ \ memset(\&sig,\ 1,\ \textcolor{keyword}{sizeof}(sig));}
+\DoxyCodeLine{00839\ \ \ \ \ extraparams.noncefp\ =\ nonce\_function\_overflowing;}
+\DoxyCodeLine{00840\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&keypair,\ \&extraparams)\ ==\ 1);}
+\DoxyCodeLine{00841\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&pk));}
+\DoxyCodeLine{00842\ }
+\DoxyCodeLine{00843\ \ \ \ \ \textcolor{comment}{/*\ When\ using\ the\ default\ nonce\ function,\ schnorrsig\_sign\_custom\ produces}}
+\DoxyCodeLine{00844\ \textcolor{comment}{\ \ \ \ \ *\ the\ same\ result\ as\ schnorrsig\_sign\ with\ aux\_rand\ =\ extraparams.ndata\ */}}
+\DoxyCodeLine{00845\ \ \ \ \ extraparams.noncefp\ =\ NULL;}
+\DoxyCodeLine{00846\ \ \ \ \ extraparams.ndata\ =\ aux\_rand;}
+\DoxyCodeLine{00847\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&keypair,\ \&extraparams)\ ==\ 1);}
+\DoxyCodeLine{00848\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign32(CTX,\ sig2,\ msg,\ \&keypair,\ extraparams.ndata)\ ==\ 1);}
+\DoxyCodeLine{00849\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(sig,\ sig2,\ \textcolor{keyword}{sizeof}(sig))\ ==\ 0);}
+\DoxyCodeLine{00850\ \}}
+\DoxyCodeLine{00851\ }
+\DoxyCodeLine{00852\ \textcolor{preprocessor}{\#define\ N\_SIGS\ 3}}
+\DoxyCodeLine{00853\ \textcolor{comment}{/*\ Creates\ N\_SIGS\ valid\ signatures\ and\ verifies\ them\ with\ verify\ and}}
+\DoxyCodeLine{00854\ \textcolor{comment}{\ *\ verify\_batch\ (TODO).\ Then\ flips\ some\ bits\ and\ checks\ that\ verification\ now}}
+\DoxyCodeLine{00855\ \textcolor{comment}{\ *\ fails.\ */}}
+\DoxyCodeLine{00856\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_schnorrsig\_sign\_verify\_internal(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00857\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32];}
+\DoxyCodeLine{00858\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[N\_SIGS][32];}
+\DoxyCodeLine{00859\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[N\_SIGS][64];}
+\DoxyCodeLine{00860\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i;}
+\DoxyCodeLine{00861\ \ \ \ \ secp256k1\_keypair\ keypair;}
+\DoxyCodeLine{00862\ \ \ \ \ secp256k1\_xonly\_pubkey\ pk;}
+\DoxyCodeLine{00863\ \ \ \ \ secp256k1\_scalar\ s;}
+\DoxyCodeLine{00864\ }
+\DoxyCodeLine{00865\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00866\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk));}
+\DoxyCodeLine{00867\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&pk,\ NULL,\ \&keypair));}
+\DoxyCodeLine{00868\ }
+\DoxyCodeLine{00869\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ N\_SIGS;\ i++)\ \{}
+\DoxyCodeLine{00870\ \ \ \ \ \ \ \ \ testrand256(msg[i]);}
+\DoxyCodeLine{00871\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign32(CTX,\ sig[i],\ msg[i],\ \&keypair,\ NULL));}
+\DoxyCodeLine{00872\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig[i],\ msg[i],\ \textcolor{keyword}{sizeof}(msg[i]),\ \&pk));}
+\DoxyCodeLine{00873\ \ \ \ \ \}}
+\DoxyCodeLine{00874\ }
+\DoxyCodeLine{00875\ \ \ \ \ \{}
+\DoxyCodeLine{00876\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Flip\ a\ few\ bits\ in\ the\ signature\ and\ in\ the\ message\ and\ check\ that}}
+\DoxyCodeLine{00877\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ verify\ and\ verify\_batch\ (TODO)\ fail\ */}}
+\DoxyCodeLine{00878\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ sig\_idx\ =\ testrand\_int(N\_SIGS);}
+\DoxyCodeLine{00879\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ byte\_idx\ =\ testrand\_bits(5);}
+\DoxyCodeLine{00880\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ xorbyte\ =\ testrand\_int(254)+1;}
+\DoxyCodeLine{00881\ \ \ \ \ \ \ \ \ sig[sig\_idx][byte\_idx]\ \string^=\ xorbyte;}
+\DoxyCodeLine{00882\ \ \ \ \ \ \ \ \ CHECK(!secp256k1\_schnorrsig\_verify(CTX,\ sig[sig\_idx],\ msg[sig\_idx],\ \textcolor{keyword}{sizeof}(msg[sig\_idx]),\ \&pk));}
+\DoxyCodeLine{00883\ \ \ \ \ \ \ \ \ sig[sig\_idx][byte\_idx]\ \string^=\ xorbyte;}
+\DoxyCodeLine{00884\ }
+\DoxyCodeLine{00885\ \ \ \ \ \ \ \ \ byte\_idx\ =\ testrand\_bits(5);}
+\DoxyCodeLine{00886\ \ \ \ \ \ \ \ \ sig[sig\_idx][32+byte\_idx]\ \string^=\ xorbyte;}
+\DoxyCodeLine{00887\ \ \ \ \ \ \ \ \ CHECK(!secp256k1\_schnorrsig\_verify(CTX,\ sig[sig\_idx],\ msg[sig\_idx],\ \textcolor{keyword}{sizeof}(msg[sig\_idx]),\ \&pk));}
+\DoxyCodeLine{00888\ \ \ \ \ \ \ \ \ sig[sig\_idx][32+byte\_idx]\ \string^=\ xorbyte;}
+\DoxyCodeLine{00889\ }
+\DoxyCodeLine{00890\ \ \ \ \ \ \ \ \ byte\_idx\ =\ testrand\_bits(5);}
+\DoxyCodeLine{00891\ \ \ \ \ \ \ \ \ msg[sig\_idx][byte\_idx]\ \string^=\ xorbyte;}
+\DoxyCodeLine{00892\ \ \ \ \ \ \ \ \ CHECK(!secp256k1\_schnorrsig\_verify(CTX,\ sig[sig\_idx],\ msg[sig\_idx],\ \textcolor{keyword}{sizeof}(msg[sig\_idx]),\ \&pk));}
+\DoxyCodeLine{00893\ \ \ \ \ \ \ \ \ msg[sig\_idx][byte\_idx]\ \string^=\ xorbyte;}
+\DoxyCodeLine{00894\ }
+\DoxyCodeLine{00895\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ above\ bitflips\ have\ been\ reversed\ correctly\ */}}
+\DoxyCodeLine{00896\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig[sig\_idx],\ msg[sig\_idx],\ \textcolor{keyword}{sizeof}(msg[sig\_idx]),\ \&pk));}
+\DoxyCodeLine{00897\ \ \ \ \ \}}
+\DoxyCodeLine{00898\ }
+\DoxyCodeLine{00899\ \ \ \ \ \textcolor{comment}{/*\ Test\ overflowing\ s\ */}}
+\DoxyCodeLine{00900\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign32(CTX,\ sig[0],\ msg[0],\ \&keypair,\ NULL));}
+\DoxyCodeLine{00901\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig[0],\ msg[0],\ \textcolor{keyword}{sizeof}(msg[0]),\ \&pk));}
+\DoxyCodeLine{00902\ \ \ \ \ memset(\&sig[0][32],\ 0xFF,\ 32);}
+\DoxyCodeLine{00903\ \ \ \ \ CHECK(!secp256k1\_schnorrsig\_verify(CTX,\ sig[0],\ msg[0],\ \textcolor{keyword}{sizeof}(msg[0]),\ \&pk));}
+\DoxyCodeLine{00904\ }
+\DoxyCodeLine{00905\ \ \ \ \ \textcolor{comment}{/*\ Test\ negative\ s\ */}}
+\DoxyCodeLine{00906\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign32(CTX,\ sig[0],\ msg[0],\ \&keypair,\ NULL));}
+\DoxyCodeLine{00907\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig[0],\ msg[0],\ \textcolor{keyword}{sizeof}(msg[0]),\ \&pk));}
+\DoxyCodeLine{00908\ \ \ \ \ secp256k1\_scalar\_set\_b32(\&s,\ \&sig[0][32],\ NULL);}
+\DoxyCodeLine{00909\ \ \ \ \ secp256k1\_scalar\_negate(\&s,\ \&s);}
+\DoxyCodeLine{00910\ \ \ \ \ secp256k1\_scalar\_get\_b32(\&sig[0][32],\ \&s);}
+\DoxyCodeLine{00911\ \ \ \ \ CHECK(!secp256k1\_schnorrsig\_verify(CTX,\ sig[0],\ msg[0],\ \textcolor{keyword}{sizeof}(msg[0]),\ \&pk));}
+\DoxyCodeLine{00912\ }
+\DoxyCodeLine{00913\ \ \ \ \ \textcolor{comment}{/*\ The\ empty\ message\ can\ be\ signed\ \&\ verified\ */}}
+\DoxyCodeLine{00914\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig[0],\ NULL,\ 0,\ \&keypair,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00915\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig[0],\ NULL,\ 0,\ \&pk)\ ==\ 1);}
+\DoxyCodeLine{00916\ }
+\DoxyCodeLine{00917\ \ \ \ \ \{}
+\DoxyCodeLine{00918\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ varying\ message\ lengths\ */}}
+\DoxyCodeLine{00919\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg\_large[32\ *\ 8];}
+\DoxyCodeLine{00920\ \ \ \ \ \ \ \ \ uint32\_t\ msglen\ \ =\ testrand\_int(\textcolor{keyword}{sizeof}(msg\_large));}
+\DoxyCodeLine{00921\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(msg\_large);\ i\ +=\ 32)\ \{}
+\DoxyCodeLine{00922\ \ \ \ \ \ \ \ \ \ \ \ \ testrand256(\&msg\_large[i]);}
+\DoxyCodeLine{00923\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00924\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign\_custom(CTX,\ sig[0],\ msg\_large,\ msglen,\ \&keypair,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00925\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig[0],\ msg\_large,\ msglen,\ \&pk)\ ==\ 1);}
+\DoxyCodeLine{00926\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Verification\ for\ a\ random\ wrong\ message\ length\ fails\ */}}
+\DoxyCodeLine{00927\ \ \ \ \ \ \ \ \ msglen\ =\ (msglen\ +\ (\textcolor{keyword}{sizeof}(msg\_large)\ -\/\ 1))\ \%\ \textcolor{keyword}{sizeof}(msg\_large);}
+\DoxyCodeLine{00928\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig[0],\ msg\_large,\ msglen,\ \&pk)\ ==\ 0);}
+\DoxyCodeLine{00929\ \ \ \ \ \}}
+\DoxyCodeLine{00930\ \}}
+\DoxyCodeLine{00931\ \textcolor{preprocessor}{\#undef\ N\_SIGS}}
+\DoxyCodeLine{00932\ }
+\DoxyCodeLine{00933\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ test\_schnorrsig\_taproot(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00934\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32];}
+\DoxyCodeLine{00935\ \ \ \ \ secp256k1\_keypair\ keypair;}
+\DoxyCodeLine{00936\ \ \ \ \ secp256k1\_xonly\_pubkey\ internal\_pk;}
+\DoxyCodeLine{00937\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ internal\_pk\_bytes[32];}
+\DoxyCodeLine{00938\ \ \ \ \ secp256k1\_xonly\_pubkey\ output\_pk;}
+\DoxyCodeLine{00939\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ output\_pk\_bytes[32];}
+\DoxyCodeLine{00940\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tweak[32];}
+\DoxyCodeLine{00941\ \ \ \ \ \textcolor{keywordtype}{int}\ pk\_parity;}
+\DoxyCodeLine{00942\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32];}
+\DoxyCodeLine{00943\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sig[64];}
+\DoxyCodeLine{00944\ }
+\DoxyCodeLine{00945\ \ \ \ \ \textcolor{comment}{/*\ Create\ output\ key\ */}}
+\DoxyCodeLine{00946\ \ \ \ \ testrand256(sk);}
+\DoxyCodeLine{00947\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk)\ ==\ 1);}
+\DoxyCodeLine{00948\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&internal\_pk,\ NULL,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00949\ \ \ \ \ \textcolor{comment}{/*\ In\ actual\ taproot\ the\ tweak\ would\ be\ hash\ of\ internal\_pk\ */}}
+\DoxyCodeLine{00950\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(CTX,\ tweak,\ \&internal\_pk)\ ==\ 1);}
+\DoxyCodeLine{00951\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_tweak\_add(CTX,\ \&keypair,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00952\ \ \ \ \ CHECK(secp256k1\_keypair\_xonly\_pub(CTX,\ \&output\_pk,\ \&pk\_parity,\ \&keypair)\ ==\ 1);}
+\DoxyCodeLine{00953\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(CTX,\ output\_pk\_bytes,\ \&output\_pk)\ ==\ 1);}
+\DoxyCodeLine{00954\ }
+\DoxyCodeLine{00955\ \ \ \ \ \textcolor{comment}{/*\ Key\ spend\ */}}
+\DoxyCodeLine{00956\ \ \ \ \ testrand256(msg);}
+\DoxyCodeLine{00957\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_sign32(CTX,\ sig,\ msg,\ \&keypair,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00958\ \ \ \ \ \textcolor{comment}{/*\ Verify\ key\ spend\ */}}
+\DoxyCodeLine{00959\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&output\_pk,\ output\_pk\_bytes)\ ==\ 1);}
+\DoxyCodeLine{00960\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&output\_pk)\ ==\ 1);}
+\DoxyCodeLine{00961\ }
+\DoxyCodeLine{00962\ \ \ \ \ \textcolor{comment}{/*\ Script\ spend\ */}}
+\DoxyCodeLine{00963\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(CTX,\ internal\_pk\_bytes,\ \&internal\_pk)\ ==\ 1);}
+\DoxyCodeLine{00964\ \ \ \ \ \textcolor{comment}{/*\ Verify\ script\ spend\ */}}
+\DoxyCodeLine{00965\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&internal\_pk,\ internal\_pk\_bytes)\ ==\ 1);}
+\DoxyCodeLine{00966\ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ output\_pk\_bytes,\ pk\_parity,\ \&internal\_pk,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00967\ \}}
+\DoxyCodeLine{00968\ }
+\DoxyCodeLine{00969\ \textcolor{comment}{/*\ -\/-\/-\/\ Test\ registry\ -\/-\/-\/\ */}}
+\DoxyCodeLine{00970\ REPEAT\_TEST(test\_schnorrsig\_sign)}
+\DoxyCodeLine{00971\ REPEAT\_TEST(test\_schnorrsig\_sign\_verify)}
+\DoxyCodeLine{00972\ }
+\DoxyCodeLine{00973\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }tf\_test\_entry\ tests\_schnorrsig[]\ =\ \{}
+\DoxyCodeLine{00974\ \ \ \ \ CASE(nonce\_function\_bip340\_tests),}
+\DoxyCodeLine{00975\ \ \ \ \ CASE1(test\_schnorrsig\_api),}
+\DoxyCodeLine{00976\ \ \ \ \ CASE1(test\_schnorrsig\_sha256\_tagged),}
+\DoxyCodeLine{00977\ \ \ \ \ CASE1(test\_schnorrsig\_bip\_vectors),}
+\DoxyCodeLine{00978\ \ \ \ \ CASE1(test\_schnorrsig\_sign),}
+\DoxyCodeLine{00979\ \ \ \ \ CASE1(test\_schnorrsig\_sign\_verify),}
+\DoxyCodeLine{00980\ \ \ \ \ CASE1(test\_schnorrsig\_taproot),}
+\DoxyCodeLine{00981\ \};}
+\DoxyCodeLine{00982\ }
+\DoxyCodeLine{00983\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

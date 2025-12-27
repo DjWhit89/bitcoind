@@ -1,0 +1,221 @@
+\doxysection{string.\+h}
+\label{string_8h_source}\index{src/util/string.h@{src/util/string.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2019-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_STRING\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_STRING\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <locale>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <sstream>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <string>}\ \ \ \ \ \ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <string\_view>}\ \textcolor{comment}{//\ IWYU\ pragma:\ export}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{namespace\ }util\ \{}
+\DoxyCodeLine{00020\ \textcolor{keyword}{namespace\ }detail\ \{}
+\DoxyCodeLine{00021\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{unsigned}\ num\_params>}
+\DoxyCodeLine{00022\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ CheckNumFormatSpecifiers(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ str)}
+\DoxyCodeLine{00023\ \{}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ count\_normal\{0\};\ \textcolor{comment}{//\ Number\ of\ "{}normal"{}\ specifiers,\ like\ \%s}}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ count\_pos\{0\};\ \ \ \ \textcolor{comment}{//\ Max\ number\ in\ positional\ specifier,\ like\ \%8\$s}}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ it\{str\};\ *it\ !=\ \textcolor{charliteral}{'\(\backslash\)0'};\ ++it)\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (*it\ !=\ \textcolor{charliteral}{'\%'}\ ||\ *++it\ ==\ \textcolor{charliteral}{'\%'})\ \textcolor{keywordflow}{continue};\ \textcolor{comment}{//\ Skip\ escaped\ \%\%}}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ add\_arg\ =\ [\&]\ \{}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ maybe\_num\{0\};}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{charliteral}{'0'}\ <=\ *it\ \&\&\ *it\ <=\ \textcolor{charliteral}{'9'})\ \{}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ maybe\_num\ *=\ 10;}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ maybe\_num\ +=\ *it\ -\/\ \textcolor{charliteral}{'0'};}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++it;}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (*it\ ==\ \textcolor{charliteral}{'\$'})\ \{}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++it;}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Positional\ specifier,\ like\ \%8\$s}}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (maybe\_num\ ==\ 0)\ \textcolor{keywordflow}{throw}\ \textcolor{stringliteral}{"{}Positional\ format\ specifier\ must\ have\ position\ of\ at\ least\ 1"{}};}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ count\_pos\ =\ std::max(count\_pos,\ maybe\_num);}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Non-\/positional\ specifier,\ like\ \%s}}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++count\_normal;}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Increase\ argument\ count\ and\ consume\ positional\ specifier,\ if\ present.}}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ add\_arg();}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Consume\ flags.}}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (*it\ ==\ \textcolor{charliteral}{'\#'}\ ||\ *it\ ==\ \textcolor{charliteral}{'0'}\ ||\ *it\ ==\ \textcolor{charliteral}{'-\/'}\ ||\ *it\ ==\ \textcolor{charliteral}{'\ '}\ ||\ *it\ ==\ \textcolor{charliteral}{'+'})\ ++it;}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ parse\_size\ =\ [\&]\ \{}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (*it\ ==\ \textcolor{charliteral}{'*'})\ \{}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++it;}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ add\_arg();}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{charliteral}{'0'}\ <=\ *it\ \&\&\ *it\ <=\ \textcolor{charliteral}{'9'})\ ++it;}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Consume\ dynamic\ or\ static\ width\ value.}}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ parse\_size();}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Consume\ dynamic\ or\ static\ precision\ value.}}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (*it\ ==\ \textcolor{charliteral}{'.'})\ \{}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ ++it;}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ parse\_size();}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (*it\ ==\ \textcolor{charliteral}{'\(\backslash\)0'})\ \textcolor{keywordflow}{throw}\ \textcolor{stringliteral}{"{}Format\ specifier\ incorrectly\ terminated\ by\ end\ of\ string"{}};}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Length\ and\ type\ in\ "{}[flags][width][.precision][length]type"{}}}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ is\ not\ checked.\ Parsing\ continues\ with\ the\ next\ '\%'.}}
+\DoxyCodeLine{00076\ \ \ \ \ \}}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keywordflow}{if}\ (count\_normal\ \&\&\ count\_pos)\ \textcolor{keywordflow}{throw}\ \textcolor{stringliteral}{"{}Format\ specifiers\ must\ be\ all\ positional\ or\ all\ non-\/positional!"{}};}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ count\{count\_normal\ |\ count\_pos\};}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keywordflow}{if}\ (num\_params\ !=\ count)\ \textcolor{keywordflow}{throw}\ \textcolor{stringliteral}{"{}Format\ specifier\ count\ must\ match\ the\ argument\ count!"{}};}
+\DoxyCodeLine{00080\ \}}
+\DoxyCodeLine{00081\ \}\ \textcolor{comment}{//\ namespace\ detail}}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00091\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{unsigned}\ num\_params>}
+\DoxyCodeLine{00092\ \textcolor{keyword}{struct\ }ConstevalFormatString\ \{}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ \textcolor{keyword}{const}\ fmt;}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keyword}{consteval}\ ConstevalFormatString(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ str)\ :\ fmt\{str\}\ \{\ detail::CheckNumFormatSpecifiers<num\_params>(fmt);\ \}}
+\DoxyCodeLine{00095\ \};}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00097\ \textcolor{keywordtype}{void}\ ReplaceAll(std::string\&\ in\_out,\ \textcolor{keyword}{const}\ std::string\&\ search,\ \textcolor{keyword}{const}\ std::string\&\ substitute);}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00114\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T\ =\ std::span<const\ \textcolor{keywordtype}{char}>>}
+\DoxyCodeLine{00115\ std::vector<T>\ Split(\textcolor{keyword}{const}\ std::span<const\ char>\&\ sp,\ std::string\_view\ separators,\ \textcolor{keywordtype}{bool}\ include\_sep\ =\ \textcolor{keyword}{false})}
+\DoxyCodeLine{00116\ \{}
+\DoxyCodeLine{00117\ \ \ \ \ std::vector<T>\ ret;}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keyword}{auto}\ it\ =\ sp.begin();}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keyword}{auto}\ start\ =\ it;}
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{keywordflow}{while}\ (it\ !=\ sp.end())\ \{}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (separators.find(*it)\ !=\ std::string::npos)\ \{}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (include\_sep)\ \{}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ret.emplace\_back(start,\ it\ +\ 1);}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ret.emplace\_back(start,\ it);}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \ \ \ \ start\ =\ it\ +\ 1;}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ ++it;}
+\DoxyCodeLine{00130\ \ \ \ \ \}}
+\DoxyCodeLine{00131\ \ \ \ \ ret.emplace\_back(start,\ it);}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00133\ \}}
+\DoxyCodeLine{00134\ }
+\DoxyCodeLine{00142\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T\ =\ std::span<const\ \textcolor{keywordtype}{char}>>}
+\DoxyCodeLine{00143\ std::vector<T>\ Split(\textcolor{keyword}{const}\ std::span<const\ char>\&\ sp,\ \textcolor{keywordtype}{char}\ sep,\ \textcolor{keywordtype}{bool}\ include\_sep\ =\ \textcolor{keyword}{false})}
+\DoxyCodeLine{00144\ \{}
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keywordflow}{return}\ Split<T>(sp,\ std::string\_view\{\&sep,\ 1\},\ include\_sep);}
+\DoxyCodeLine{00146\ \}}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00148\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::vector<std::string>\ SplitString(std::string\_view\ str,\ \textcolor{keywordtype}{char}\ sep)}
+\DoxyCodeLine{00149\ \{}
+\DoxyCodeLine{00150\ \ \ \ \ \textcolor{keywordflow}{return}\ Split<std::string>(str,\ sep);}
+\DoxyCodeLine{00151\ \}}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00153\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::vector<std::string>\ SplitString(std::string\_view\ str,\ std::string\_view\ separators)}
+\DoxyCodeLine{00154\ \{}
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{keywordflow}{return}\ Split<std::string>(str,\ separators);}
+\DoxyCodeLine{00156\ \}}
+\DoxyCodeLine{00157\ }
+\DoxyCodeLine{00158\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::string\_view\ TrimStringView(std::string\_view\ str,\ std::string\_view\ pattern\ =\ \textcolor{stringliteral}{"{}\ \(\backslash\)f\(\backslash\)n\(\backslash\)r\(\backslash\)t\(\backslash\)v"{}})}
+\DoxyCodeLine{00159\ \{}
+\DoxyCodeLine{00160\ \ \ \ \ std::string::size\_type\ front\ =\ str.find\_first\_not\_of(pattern);}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordflow}{if}\ (front\ ==\ std::string::npos)\ \{}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{\};}
+\DoxyCodeLine{00163\ \ \ \ \ \}}
+\DoxyCodeLine{00164\ \ \ \ \ std::string::size\_type\ end\ =\ str.find\_last\_not\_of(pattern);}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keywordflow}{return}\ str.substr(front,\ end\ -\/\ front\ +\ 1);}
+\DoxyCodeLine{00166\ \}}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::string\ TrimString(std::string\_view\ str,\ std::string\_view\ pattern\ =\ \textcolor{stringliteral}{"{}\ \(\backslash\)f\(\backslash\)n\(\backslash\)r\(\backslash\)t\(\backslash\)v"{}})}
+\DoxyCodeLine{00169\ \{}
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{keywordflow}{return}\ std::string(TrimStringView(str,\ pattern));}
+\DoxyCodeLine{00171\ \}}
+\DoxyCodeLine{00172\ }
+\DoxyCodeLine{00173\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::string\_view\ RemoveSuffixView(std::string\_view\ str,\ std::string\_view\ suffix)}
+\DoxyCodeLine{00174\ \{}
+\DoxyCodeLine{00175\ \ \ \ \ \textcolor{keywordflow}{if}\ (str.ends\_with(suffix))\ \{}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ str.substr(0,\ str.size()\ -\/\ suffix.size());}
+\DoxyCodeLine{00177\ \ \ \ \ \}}
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keywordflow}{return}\ str;}
+\DoxyCodeLine{00179\ \}}
+\DoxyCodeLine{00180\ }
+\DoxyCodeLine{00181\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::string\_view\ RemovePrefixView(std::string\_view\ str,\ std::string\_view\ prefix)}
+\DoxyCodeLine{00182\ \{}
+\DoxyCodeLine{00183\ \ \ \ \ \textcolor{keywordflow}{if}\ (str.starts\_with(prefix))\ \{}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ str.substr(prefix.size());}
+\DoxyCodeLine{00185\ \ \ \ \ \}}
+\DoxyCodeLine{00186\ \ \ \ \ \textcolor{keywordflow}{return}\ str;}
+\DoxyCodeLine{00187\ \}}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00189\ [[nodiscard]]\ \textcolor{keyword}{inline}\ std::string\ RemovePrefix(std::string\_view\ str,\ std::string\_view\ prefix)}
+\DoxyCodeLine{00190\ \{}
+\DoxyCodeLine{00191\ \ \ \ \ \textcolor{keywordflow}{return}\ std::string(RemovePrefixView(str,\ prefix));}
+\DoxyCodeLine{00192\ \}}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00202\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ C,\ \textcolor{keyword}{typename}\ S,\ \textcolor{keyword}{typename}\ UnaryOp>}
+\DoxyCodeLine{00203\ \textcolor{comment}{//\ NOLINTNEXTLINE(misc-\/no-\/recursion)}}
+\DoxyCodeLine{00204\ \textcolor{keyword}{auto}\ Join(\textcolor{keyword}{const}\ C\&\ container,\ \textcolor{keyword}{const}\ S\&\ separator,\ UnaryOp\ unary\_op)}
+\DoxyCodeLine{00205\ \{}
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keyword}{decltype}(unary\_op(*container.begin()))\ ret;}
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{keywordtype}{bool}\ first\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00208\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ item\ :\ container)\ \{}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!first)\ ret\ +=\ separator;}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ ret\ +=\ unary\_op(item);}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ first\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00212\ \ \ \ \ \}}
+\DoxyCodeLine{00213\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00214\ \}}
+\DoxyCodeLine{00215\ }
+\DoxyCodeLine{00216\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ C,\ \textcolor{keyword}{typename}\ S>}
+\DoxyCodeLine{00217\ \textcolor{keyword}{auto}\ Join(\textcolor{keyword}{const}\ C\&\ container,\ \textcolor{keyword}{const}\ S\&\ separator)}
+\DoxyCodeLine{00218\ \{}
+\DoxyCodeLine{00219\ \ \ \ \ \textcolor{keywordflow}{return}\ Join(container,\ separator,\ [](\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ i)\ \{\ \textcolor{keywordflow}{return}\ i;\ \});}
+\DoxyCodeLine{00220\ \}}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00225\ \textcolor{keyword}{inline}\ std::string\ MakeUnorderedList(\textcolor{keyword}{const}\ std::vector<std::string>\&\ items)}
+\DoxyCodeLine{00226\ \{}
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{keywordflow}{return}\ Join(items,\ \textcolor{stringliteral}{"{}\(\backslash\)n"{}},\ [](\textcolor{keyword}{const}\ std::string\&\ item)\ \{\ \textcolor{keywordflow}{return}\ \textcolor{stringliteral}{"{}-\/\ "{}}\ +\ item;\ \});}
+\DoxyCodeLine{00228\ \}}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00233\ [[nodiscard]]\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ ContainsNoNUL(std::string\_view\ str)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00234\ \{}
+\DoxyCodeLine{00235\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ c\ :\ str)\ \{}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (c\ ==\ 0)\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00237\ \ \ \ \ \}}
+\DoxyCodeLine{00238\ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00239\ \}}
+\DoxyCodeLine{00240\ }
+\DoxyCodeLine{00244\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00245\ std::string\ ToString(\textcolor{keyword}{const}\ T\&\ t)}
+\DoxyCodeLine{00246\ \{}
+\DoxyCodeLine{00247\ \ \ \ \ std::ostringstream\ oss;}
+\DoxyCodeLine{00248\ \ \ \ \ oss.imbue(std::locale::classic());}
+\DoxyCodeLine{00249\ \ \ \ \ oss\ <<\ t;}
+\DoxyCodeLine{00250\ \ \ \ \ \textcolor{keywordflow}{return}\ oss.str();}
+\DoxyCodeLine{00251\ \}}
+\DoxyCodeLine{00252\ }
+\DoxyCodeLine{00256\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T1,\ \textcolor{keywordtype}{size\_t}\ PREFIX\_LEN>}
+\DoxyCodeLine{00257\ [[nodiscard]]\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ HasPrefix(\textcolor{keyword}{const}\ T1\&\ obj,}
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::array<uint8\_t,\ PREFIX\_LEN>\&\ prefix)}
+\DoxyCodeLine{00259\ \{}
+\DoxyCodeLine{00260\ \ \ \ \ \textcolor{keywordflow}{return}\ obj.size()\ >=\ PREFIX\_LEN\ \&\&}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ \ \ \ std::equal(std::begin(prefix),\ std::end(prefix),\ std::begin(obj));}
+\DoxyCodeLine{00262\ \}}
+\DoxyCodeLine{00263\ \}\ \textcolor{comment}{//\ namespace\ util}}
+\DoxyCodeLine{00264\ }
+\DoxyCodeLine{00265\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_STRING\_H}}
+
+\end{DoxyCode}

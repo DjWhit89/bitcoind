@@ -1,0 +1,198 @@
+.TH "SatInfo" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+SatInfo
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <miniscript\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "constexpr \fBSatInfo\fP () noexcept"
+.br
+.ti -1c
+.RI "constexpr \fBSatInfo\fP (int32_t in_netdiff, int32_t in_exec) noexcept"
+.br
+.in -1c
+.SS "Static Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBEmpty\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBPush\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBHash\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBNop\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBIf\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBBinaryOp\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBOP_DUP\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBOP_IFDUP\fP (bool nonzero) noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBOP_EQUALVERIFY\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBOP_EQUAL\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBOP_SIZE\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBOP_CHECKSIG\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBOP_0NOTEQUAL\fP () noexcept"
+.br
+.ti -1c
+.RI "static constexpr \fBSatInfo\fP \fBOP_VERIFY\fP () noexcept"
+.br
+.in -1c
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "const bool \fBvalid\fP"
+.br
+.RI "Whether a canonical satisfaction/dissatisfaction is possible at all\&. "
+.ti -1c
+.RI "const int32_t \fBnetdiff\fP"
+.br
+.RI "How much higher the stack size at start of execution can be compared to at the end\&. "
+.ti -1c
+.RI "const int32_t \fBexec\fP"
+.br
+.RI "Mow much higher the stack size can be during execution compared to at the end\&. "
+.in -1c
+.SS "Friends"
+
+.in +1c
+.ti -1c
+.RI "constexpr friend \fBSatInfo\fP \fBoperator|\fP (const \fBSatInfo\fP &a, const \fBSatInfo\fP &b) noexcept"
+.br
+.ti -1c
+.RI "constexpr friend \fBSatInfo\fP \fBoperator+\fP (const \fBSatInfo\fP &a, const \fBSatInfo\fP &b) noexcept"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+A data structure to help the calculation of stack size limits\&.
+
+.PP
+Conceptually, every \fBSatInfo\fP object corresponds to a (possibly empty) set of script execution traces (sequences of opcodes)\&.
+.IP "\(bu" 2
+\fBSatInfo\fP{} corresponds to the empty set\&.
+.IP "\(bu" 2
+\fBSatInfo\fP{n, e} corresponds to a single trace whose net effect is removing n elements from the stack (may be negative for a net increase), and reaches a maximum of e stack elements more than it ends with\&.
+.IP "\(bu" 2
+operator| is the union operation: (a | b) corresponds to the union of the traces in a and the traces in b\&.
+.IP "\(bu" 2
+operator+ is the concatenation operator: (a + b) corresponds to the set of traces formed by concatenating any trace in a with any trace in b\&.
+.PP
+
+.PP
+Its fields are:
+.IP "\(bu" 2
+valid is true if the set is non-empty\&.
+.IP "\(bu" 2
+netdiff (if valid) is the largest difference between stack size at the beginning and at the end of the script across all traces in the set\&.
+.IP "\(bu" 2
+exec (if valid) is the largest difference between stack size anywhere during execution and at the end of the script, across all traces in the set (note that this is not necessarily due to the same trace as the one that resulted in the value for netdiff)\&.
+.PP
+
+.PP
+This allows us to build up stack size limits for any script efficiently, by starting from the individual opcodes miniscripts correspond to, using concatenation to construct scripts, and using the union operation to choose between execution branches\&. Since any top-level script satisfaction ends with a single stack element, we know that for a full script:
+.IP "\(bu" 2
+netdiff+1 is the maximal initial stack size (relevant for P2WSH stack limits)\&.
+.IP "\(bu" 2
+exec+1 is the maximal stack size reached during execution (relevant for P2TR stack limits)\&.
+.PP
+
+.PP
+Mathematically, \fBSatInfo\fP forms a semiring:
+.IP "\(bu" 2
+operator| is the semiring addition operator, with identity \fBSatInfo\fP{}, and which is commutative and associative\&.
+.IP "\(bu" 2
+operator+ is the semiring multiplication operator, with identity \fBSatInfo\fP{0}, and which is associative\&.
+.IP "\(bu" 2
+operator+ is distributive over operator|, so (a + (b | c)) = (a+b | a+c)\&. This means we do not need to actually materialize all possible full execution traces over the whole script (which may be exponential in the length of the script); instead we can use the union operation at the individual subexpression level, and concatenate the result with subexpressions before and after it\&.
+.IP "\(bu" 2
+It is not a commutative semiring, because a+b can differ from b+a\&. For example, "OP_1 OP_DROP" has exec=1, while "OP_DROP OP_1" has exec=0\&. 
+.PP
+
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "SatInfo ()\fR [inline]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+Empty script set\&. 
+.SS "SatInfo (int32_t in_netdiff, int32_t in_exec)\fR [inline]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+Script set with a single script in it, with specified netdiff and exec\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "constexpr \fBSatInfo\fP BinaryOp ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+A script consisting of just a binary operator (OP_BOOLAND, OP_BOOLOR, OP_ADD)\&. 
+.SS "constexpr \fBSatInfo\fP Empty ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+The empty script\&. 
+.SS "constexpr \fBSatInfo\fP Hash ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+A script consisting of a single hash opcode\&. 
+.SS "constexpr \fBSatInfo\fP If ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+A script consisting of just OP_IF or OP_NOTIF\&. Note that OP_ELSE and OP_ENDIF have no stack effect\&. 
+.SS "constexpr \fBSatInfo\fP Nop ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+A script consisting of just a repurposed nop (OP_CHECKLOCKTIMEVERIFY, OP_CHECKSEQUENCEVERIFY)\&. 
+.SS "constexpr \fBSatInfo\fP OP_0NOTEQUAL ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+
+.SS "constexpr \fBSatInfo\fP OP_CHECKSIG ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+
+.SS "constexpr \fBSatInfo\fP OP_DUP ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+
+.SS "constexpr \fBSatInfo\fP OP_EQUAL ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+
+.SS "constexpr \fBSatInfo\fP OP_EQUALVERIFY ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+
+.SS "constexpr \fBSatInfo\fP OP_IFDUP (bool nonzero)\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+
+.SS "constexpr \fBSatInfo\fP OP_SIZE ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+
+.SS "constexpr \fBSatInfo\fP OP_VERIFY ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+
+.SS "constexpr \fBSatInfo\fP Push ()\fR [inline]\fP, \fR [static]\fP, \fR [constexpr]\fP, \fR [noexcept]\fP"
+A script consisting of a single push opcode\&. 
+.SH "Friends And Related Symbol Documentation"
+.PP 
+.SS "friend \fBSatInfo\fP operator+ (const \fBSatInfo\fP & a, const \fBSatInfo\fP & b)\fR [friend]\fP"
+Script set concatenation\&. 
+.SS "friend \fBSatInfo\fP operator| (const \fBSatInfo\fP & a, const \fBSatInfo\fP & b)\fR [friend]\fP"
+Script set union\&. 
+.SH "Field Documentation"
+.PP 
+.SS "const int32_t exec"
+
+.PP
+Mow much higher the stack size can be during execution compared to at the end\&. 
+.SS "const int32_t netdiff"
+
+.PP
+How much higher the stack size at start of execution can be compared to at the end\&. 
+.SS "const bool valid"
+
+.PP
+Whether a canonical satisfaction/dissatisfaction is possible at all\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

@@ -1,0 +1,108 @@
+\doxysection{translation.\+h}
+\label{translation_8h_source}\index{src/util/translation.h@{src/util/translation.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2019-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_TRANSLATION\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_TRANSLATION\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <tinyformat.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <util/string.h>}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00016\ \textcolor{keyword}{using\ }TranslateFn\ =\ std::function<std::string(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*)>;}
+\DoxyCodeLine{00017\ \textcolor{keyword}{const}\ \textcolor{keyword}{extern}\ TranslateFn\ G\_TRANSLATION\_FUN;}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{struct\ }bilingual\_str\ \{}
+\DoxyCodeLine{00025\ \ \ \ \ std::string\ original;}
+\DoxyCodeLine{00026\ \ \ \ \ std::string\ translated;}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \ \ \ \ bilingual\_str\&\ operator+=(\textcolor{keyword}{const}\ bilingual\_str\&\ rhs)}
+\DoxyCodeLine{00029\ \ \ \ \ \{}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ original\ +=\ rhs.original;}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ translated\ +=\ rhs.translated;}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00033\ \ \ \ \ \}}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordtype}{bool}\ empty()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00036\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ original.empty();}
+\DoxyCodeLine{00038\ \ \ \ \ \}}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordtype}{void}\ clear()}
+\DoxyCodeLine{00041\ \ \ \ \ \{}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ original.clear();}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ translated.clear();}
+\DoxyCodeLine{00044\ \ \ \ \ \}}
+\DoxyCodeLine{00045\ \};}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ \textcolor{keyword}{inline}\ bilingual\_str\ operator+(bilingual\_str\ lhs,\ \textcolor{keyword}{const}\ bilingual\_str\&\ rhs)}
+\DoxyCodeLine{00048\ \{}
+\DoxyCodeLine{00049\ \ \ \ \ lhs\ +=\ rhs;}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordflow}{return}\ lhs;}
+\DoxyCodeLine{00051\ \}}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \textcolor{keyword}{namespace\ }util\ \{}
+\DoxyCodeLine{00055\ \textcolor{keyword}{struct\ }TranslatedLiteral\ \{}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ \textcolor{keyword}{const}\ original;}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keyword}{const}\ TranslateFn*\ translate\_fn;}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keyword}{consteval}\ TranslatedLiteral(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ str,\ \textcolor{keyword}{const}\ TranslateFn*\ fn\ =\ \&G\_TRANSLATION\_FUN)\ :\ original\{str\},\ translate\_fn\{fn\}\ \{\ assert(original);\ \}}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keyword}{operator}\ std::string()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ translate\_fn\ \&\&\ *translate\_fn\ ?\ (*translate\_fn)(original)\ :\ original;\ \}}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keyword}{operator}\ bilingual\_str()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \{original,\ std::string\{*\textcolor{keyword}{this}\}\};\ \}}
+\DoxyCodeLine{00062\ \};}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \textcolor{comment}{//\ TranslatedLiteral\ operators\ for\ formatting\ and\ adding\ to\ strings.}}
+\DoxyCodeLine{00065\ \textcolor{keyword}{inline}\ std::ostream\&\ operator<<(std::ostream\&\ os,\ \textcolor{keyword}{const}\ TranslatedLiteral\&\ lit)\ \{\ \textcolor{keywordflow}{return}\ os\ <<\ std::string\{lit\};\ \}}
+\DoxyCodeLine{00066\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00067\ T\ operator+(\textcolor{keyword}{const}\ T\&\ lhs,\ \textcolor{keyword}{const}\ TranslatedLiteral\&\ rhs)\ \{\ \textcolor{keywordflow}{return}\ lhs\ +\ \textcolor{keyword}{static\_cast<}T\textcolor{keyword}{>}(rhs);\ \}}
+\DoxyCodeLine{00068\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00069\ T\ operator+(\textcolor{keyword}{const}\ TranslatedLiteral\&\ lhs,\ \textcolor{keyword}{const}\ T\&\ rhs)\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}T\textcolor{keyword}{>}(lhs)\ +\ rhs;\ \}}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00071\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{unsigned}\ num\_params>}
+\DoxyCodeLine{00072\ \textcolor{keyword}{struct\ }BilingualFmt\ \{}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keyword}{const}\ ConstevalFormatString<num\_params>\ original;}
+\DoxyCodeLine{00074\ \ \ \ \ TranslatedLiteral\ lit;}
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keyword}{consteval}\ BilingualFmt(TranslatedLiteral\ l)\ :\ original\{l.original\},\ lit\{l\}\ \{\}}
+\DoxyCodeLine{00076\ \};}
+\DoxyCodeLine{00077\ \}\ \textcolor{comment}{//\ namespace\ util}}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \textcolor{keyword}{consteval}\ \textcolor{keyword}{auto}\ \_(util::TranslatedLiteral\ str)\ \{\ \textcolor{keywordflow}{return}\ str;\ \}}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00082\ \textcolor{keyword}{inline}\ bilingual\_str\ Untranslated(std::string\ original)\ \{\ \textcolor{keywordflow}{return}\ \{original,\ original\};\ \}}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \textcolor{comment}{//\ Provide\ an\ overload\ of\ tinyformat::format\ for\ BilingualFmt\ format\ strings\ and\ bilingual\_str\ or\ TranslatedLiteral\ args.}}
+\DoxyCodeLine{00085\ \textcolor{keyword}{namespace\ }tinyformat\ \{}
+\DoxyCodeLine{00086\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00087\ bilingual\_str\ format(util::BilingualFmt<\textcolor{keyword}{sizeof}...(Args)>\ fmt,\ \textcolor{keyword}{const}\ Args\&...\ args)}
+\DoxyCodeLine{00088\ \{}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ original\_arg\{[](\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ arg)\ -\/>\ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ \{}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_same\_v<\textcolor{keyword}{decltype}(arg),\ \textcolor{keyword}{const}\ bilingual\_str\&>)\ \{}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ arg.original;}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_same\_v<\textcolor{keyword}{decltype}(arg),\ \textcolor{keyword}{const}\ util::TranslatedLiteral\&>)\ \{}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ arg.original;}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ arg;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00097\ \ \ \ \ \}\};}
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ translated\_arg\{[](\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ arg)\ -\/>\ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ \{}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_same\_v<\textcolor{keyword}{decltype}(arg),\ \textcolor{keyword}{const}\ bilingual\_str\&>)\ \{}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ arg.translated;}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ arg;}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00104\ \ \ \ \ \}\};}
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{keywordflow}{return}\ bilingual\_str\{tfm::format(fmt.original,\ original\_arg(args)...),}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tfm::format(RuntimeFormat\{std::string\{fmt.lit\}\},\ translated\_arg(args)...)\};}
+\DoxyCodeLine{00107\ \}}
+\DoxyCodeLine{00108\ \}\ \textcolor{comment}{//\ namespace\ tinyformat}}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_TRANSLATION\_H}}
+
+\end{DoxyCode}

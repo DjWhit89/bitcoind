@@ -1,0 +1,773 @@
+\doxysection{wallet.\+h}
+\label{wallet_2wallet_8h_source}\index{src/wallet/wallet.h@{src/wallet/wallet.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_WALLET\_WALLET\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_WALLET\_WALLET\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <addresstype.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <interfaces/chain.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <interfaces/handler.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <kernel/cs\_main.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <logging.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <node/types.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <outputtype.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <policy/feerate.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <primitives/transaction\_identifier.h>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <script/interpreter.h>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <script/script.h>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <support/allocators/secure.h>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <tinyformat.h>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <util/fs.h>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <util/hasher.h>}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <util/result.h>}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ <util/string.h>}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ <util/time.h>}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <util/ui\_change\_type.h>}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#include\ <wallet/crypter.h>}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#include\ <wallet/db.h>}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#include\ <wallet/scriptpubkeyman.h>}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#include\ <wallet/transaction.h>}}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#include\ <wallet/types.h>}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#include\ <wallet/walletutil.h>}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00043\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00044\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00045\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00047\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00048\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00049\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00051\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00052\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \textcolor{preprocessor}{\#include\ <boost/signals2/signal.hpp>}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \textcolor{keyword}{class\ }CKey;}
+\DoxyCodeLine{00057\ \textcolor{keyword}{class\ }CKeyID;}
+\DoxyCodeLine{00058\ \textcolor{keyword}{class\ }CPubKey;}
+\DoxyCodeLine{00059\ \textcolor{keyword}{class\ }Coin;}
+\DoxyCodeLine{00060\ \textcolor{keyword}{class\ }SigningProvider;}
+\DoxyCodeLine{00061\ \textcolor{keyword}{enum\ class}\ MemPoolRemovalReason;}
+\DoxyCodeLine{00062\ \textcolor{keyword}{enum\ class}\ SigningResult;}
+\DoxyCodeLine{00063\ \textcolor{keyword}{namespace\ }common\ \{}
+\DoxyCodeLine{00064\ \textcolor{keyword}{enum\ class}\ PSBTError;}
+\DoxyCodeLine{00065\ \}\ \textcolor{comment}{//\ namespace\ common}}
+\DoxyCodeLine{00066\ \textcolor{keyword}{namespace\ }interfaces\ \{}
+\DoxyCodeLine{00067\ \textcolor{keyword}{class\ }Wallet;}
+\DoxyCodeLine{00068\ \}}
+\DoxyCodeLine{00069\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00070\ \textcolor{keyword}{class\ }CWallet;}
+\DoxyCodeLine{00071\ \textcolor{keyword}{class\ }WalletBatch;}
+\DoxyCodeLine{00072\ \textcolor{keyword}{enum\ class}\ DBErrors\ :\ int;}
+\DoxyCodeLine{00073\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{00074\ \textcolor{keyword}{struct\ }CBlockLocator;}
+\DoxyCodeLine{00075\ \textcolor{keyword}{struct\ }CExtKey;}
+\DoxyCodeLine{00076\ \textcolor{keyword}{struct\ }FlatSigningProvider;}
+\DoxyCodeLine{00077\ \textcolor{keyword}{struct\ }KeyOriginInfo;}
+\DoxyCodeLine{00078\ \textcolor{keyword}{struct\ }PartiallySignedTransaction;}
+\DoxyCodeLine{00079\ \textcolor{keyword}{struct\ }SignatureData;}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \textcolor{keyword}{using\ }LoadWalletFn\ =\ std::function<void(std::unique\_ptr<interfaces::Wallet>\ wallet)>;}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \textcolor{keyword}{struct\ }bilingual\_str;}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00086\ \textcolor{keyword}{struct\ }WalletContext;}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00090\ \textcolor{keywordtype}{void}\ WaitForDeleteWallet(std::shared\_ptr<CWallet>\&\&\ wallet);}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \textcolor{keywordtype}{bool}\ AddWallet(WalletContext\&\ context,\ \textcolor{keyword}{const}\ std::shared\_ptr<CWallet>\&\ wallet);}
+\DoxyCodeLine{00093\ \textcolor{keywordtype}{bool}\ RemoveWallet(WalletContext\&\ context,\ \textcolor{keyword}{const}\ std::shared\_ptr<CWallet>\&\ wallet,\ std::optional<bool>\ load\_on\_start,\ std::vector<bilingual\_str>\&\ warnings);}
+\DoxyCodeLine{00094\ \textcolor{keywordtype}{bool}\ RemoveWallet(WalletContext\&\ context,\ \textcolor{keyword}{const}\ std::shared\_ptr<CWallet>\&\ wallet,\ std::optional<bool>\ load\_on\_start);}
+\DoxyCodeLine{00095\ std::vector<std::shared\_ptr<CWallet>>\ GetWallets(WalletContext\&\ context);}
+\DoxyCodeLine{00096\ std::shared\_ptr<CWallet>\ GetDefaultWallet(WalletContext\&\ context,\ \textcolor{keywordtype}{size\_t}\&\ count);}
+\DoxyCodeLine{00097\ std::shared\_ptr<CWallet>\ GetWallet(WalletContext\&\ context,\ \textcolor{keyword}{const}\ std::string\&\ name);}
+\DoxyCodeLine{00098\ std::shared\_ptr<CWallet>\ LoadWallet(WalletContext\&\ context,\ \textcolor{keyword}{const}\ std::string\&\ name,\ std::optional<bool>\ load\_on\_start,\ \textcolor{keyword}{const}\ DatabaseOptions\&\ options,\ DatabaseStatus\&\ status,\ bilingual\_str\&\ error,\ std::vector<bilingual\_str>\&\ warnings);}
+\DoxyCodeLine{00099\ std::shared\_ptr<CWallet>\ CreateWallet(WalletContext\&\ context,\ \textcolor{keyword}{const}\ std::string\&\ name,\ std::optional<bool>\ load\_on\_start,\ DatabaseOptions\&\ options,\ DatabaseStatus\&\ status,\ bilingual\_str\&\ error,\ std::vector<bilingual\_str>\&\ warnings);}
+\DoxyCodeLine{00100\ std::shared\_ptr<CWallet>\ RestoreWallet(WalletContext\&\ context,\ \textcolor{keyword}{const}\ fs::path\&\ backup\_file,\ \textcolor{keyword}{const}\ std::string\&\ wallet\_name,\ std::optional<bool>\ load\_on\_start,\ DatabaseStatus\&\ status,\ bilingual\_str\&\ error,\ std::vector<bilingual\_str>\&\ warnings,\ \textcolor{keywordtype}{bool}\ load\_after\_restore\ =\ \textcolor{keyword}{true});}
+\DoxyCodeLine{00101\ std::unique\_ptr<interfaces::Handler>\ HandleLoadWallet(WalletContext\&\ context,\ LoadWalletFn\ load\_wallet);}
+\DoxyCodeLine{00102\ \textcolor{keywordtype}{void}\ NotifyWalletLoaded(WalletContext\&\ context,\ \textcolor{keyword}{const}\ std::shared\_ptr<CWallet>\&\ wallet);}
+\DoxyCodeLine{00103\ std::unique\_ptr<WalletDatabase>\ MakeWalletDatabase(\textcolor{keyword}{const}\ std::string\&\ name,\ \textcolor{keyword}{const}\ DatabaseOptions\&\ options,\ DatabaseStatus\&\ status,\ bilingual\_str\&\ error);}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00106\ \textcolor{keyword}{constexpr}\ CAmount\ DEFAULT\_PAY\_TX\_FEE\ =\ 0;}
+\DoxyCodeLine{00108\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ CAmount\ DEFAULT\_FALLBACK\_FEE\ =\ 0;}
+\DoxyCodeLine{00110\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ CAmount\ DEFAULT\_DISCARD\_FEE\ =\ 10000;}
+\DoxyCodeLine{00112\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ CAmount\ DEFAULT\_TRANSACTION\_MINFEE\ =\ 1000;}
+\DoxyCodeLine{00114\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ CAmount\ DEFAULT\_CONSOLIDATE\_FEERATE\{10000\};\ \textcolor{comment}{//\ 10\ sat/vbyte}}
+\DoxyCodeLine{00122\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ CAmount\ DEFAULT\_MAX\_AVOIDPARTIALSPEND\_FEE\ =\ 0;}
+\DoxyCodeLine{00124\ \textcolor{keyword}{constexpr}\ CAmount\ HIGH\_APS\_FEE\{COIN\ /\ 10000\};}
+\DoxyCodeLine{00126\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ CAmount\ WALLET\_INCREMENTAL\_RELAY\_FEE\ =\ 5000;}
+\DoxyCodeLine{00128\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_SPEND\_ZEROCONF\_CHANGE\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00130\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_WALLET\_REJECT\_LONG\_CHAINS\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00132\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ DEFAULT\_TX\_CONFIRM\_TARGET\ =\ 6;}
+\DoxyCodeLine{00134\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_WALLET\_RBF\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00135\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_WALLETBROADCAST\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00136\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_DISABLE\_WALLET\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00137\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_WALLETCROSSCHAIN\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00139\ \textcolor{keyword}{constexpr}\ CAmount\ DEFAULT\_TRANSACTION\_MAXFEE\{COIN\ /\ 10\};}
+\DoxyCodeLine{00141\ \textcolor{keyword}{constexpr}\ CAmount\ HIGH\_TX\_FEE\_PER\_KB\{COIN\ /\ 100\};}
+\DoxyCodeLine{00143\ \textcolor{keyword}{constexpr}\ CAmount\ HIGH\_MAX\_TX\_FEE\{100\ *\ HIGH\_TX\_FEE\_PER\_KB\};}
+\DoxyCodeLine{00145\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ DUMMY\_NESTED\_P2WPKH\_INPUT\_SIZE\ =\ 91;}
+\DoxyCodeLine{00146\ }
+\DoxyCodeLine{00147\ \textcolor{keyword}{class\ }CCoinControl;}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00150\ \textcolor{keyword}{constexpr}\ OutputType\ DEFAULT\_ADDRESS\_TYPE\{OutputType::BECH32\};}
+\DoxyCodeLine{00151\ }
+\DoxyCodeLine{00152\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint64\_t\ KNOWN\_WALLET\_FLAGS\ =}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ WALLET\_FLAG\_AVOID\_REUSE}
+\DoxyCodeLine{00154\ \ \ \ \ |\ \ \ WALLET\_FLAG\_BLANK\_WALLET}
+\DoxyCodeLine{00155\ \ \ \ \ |\ \ \ WALLET\_FLAG\_KEY\_ORIGIN\_METADATA}
+\DoxyCodeLine{00156\ \ \ \ \ |\ \ \ WALLET\_FLAG\_LAST\_HARDENED\_XPUB\_CACHED}
+\DoxyCodeLine{00157\ \ \ \ \ |\ \ \ WALLET\_FLAG\_DISABLE\_PRIVATE\_KEYS}
+\DoxyCodeLine{00158\ \ \ \ \ |\ \ \ WALLET\_FLAG\_DESCRIPTORS}
+\DoxyCodeLine{00159\ \ \ \ \ |\ \ \ WALLET\_FLAG\_EXTERNAL\_SIGNER;}
+\DoxyCodeLine{00160\ }
+\DoxyCodeLine{00161\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint64\_t\ MUTABLE\_WALLET\_FLAGS\ =}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ WALLET\_FLAG\_AVOID\_REUSE;}
+\DoxyCodeLine{00163\ }
+\DoxyCodeLine{00164\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ std::map<WalletFlags,\ std::string>\ WALLET\_FLAG\_TO\_STRING\{}
+\DoxyCodeLine{00165\ \ \ \ \ \{WALLET\_FLAG\_AVOID\_REUSE,\ \textcolor{stringliteral}{"{}avoid\_reuse"{}}\},}
+\DoxyCodeLine{00166\ \ \ \ \ \{WALLET\_FLAG\_BLANK\_WALLET,\ \textcolor{stringliteral}{"{}blank"{}}\},}
+\DoxyCodeLine{00167\ \ \ \ \ \{WALLET\_FLAG\_KEY\_ORIGIN\_METADATA,\ \textcolor{stringliteral}{"{}key\_origin\_metadata"{}}\},}
+\DoxyCodeLine{00168\ \ \ \ \ \{WALLET\_FLAG\_LAST\_HARDENED\_XPUB\_CACHED,\ \textcolor{stringliteral}{"{}last\_hardened\_xpub\_cached"{}}\},}
+\DoxyCodeLine{00169\ \ \ \ \ \{WALLET\_FLAG\_DISABLE\_PRIVATE\_KEYS,\ \textcolor{stringliteral}{"{}disable\_private\_keys"{}}\},}
+\DoxyCodeLine{00170\ \ \ \ \ \{WALLET\_FLAG\_DESCRIPTORS,\ \textcolor{stringliteral}{"{}descriptor\_wallet"{}}\},}
+\DoxyCodeLine{00171\ \ \ \ \ \{WALLET\_FLAG\_EXTERNAL\_SIGNER,\ \textcolor{stringliteral}{"{}external\_signer"{}}\}}
+\DoxyCodeLine{00172\ \};}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00174\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ std::map<std::string,\ WalletFlags>\ STRING\_TO\_WALLET\_FLAG\{}
+\DoxyCodeLine{00175\ \ \ \ \ \{WALLET\_FLAG\_TO\_STRING.at(WALLET\_FLAG\_AVOID\_REUSE),\ WALLET\_FLAG\_AVOID\_REUSE\},}
+\DoxyCodeLine{00176\ \ \ \ \ \{WALLET\_FLAG\_TO\_STRING.at(WALLET\_FLAG\_BLANK\_WALLET),\ WALLET\_FLAG\_BLANK\_WALLET\},}
+\DoxyCodeLine{00177\ \ \ \ \ \{WALLET\_FLAG\_TO\_STRING.at(WALLET\_FLAG\_KEY\_ORIGIN\_METADATA),\ WALLET\_FLAG\_KEY\_ORIGIN\_METADATA\},}
+\DoxyCodeLine{00178\ \ \ \ \ \{WALLET\_FLAG\_TO\_STRING.at(WALLET\_FLAG\_LAST\_HARDENED\_XPUB\_CACHED),\ WALLET\_FLAG\_LAST\_HARDENED\_XPUB\_CACHED\},}
+\DoxyCodeLine{00179\ \ \ \ \ \{WALLET\_FLAG\_TO\_STRING.at(WALLET\_FLAG\_DISABLE\_PRIVATE\_KEYS),\ WALLET\_FLAG\_DISABLE\_PRIVATE\_KEYS\},}
+\DoxyCodeLine{00180\ \ \ \ \ \{WALLET\_FLAG\_TO\_STRING.at(WALLET\_FLAG\_DESCRIPTORS),\ WALLET\_FLAG\_DESCRIPTORS\},}
+\DoxyCodeLine{00181\ \ \ \ \ \{WALLET\_FLAG\_TO\_STRING.at(WALLET\_FLAG\_EXTERNAL\_SIGNER),\ WALLET\_FLAG\_EXTERNAL\_SIGNER\}}
+\DoxyCodeLine{00182\ \};}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00199\ \textcolor{keyword}{class\ }ReserveDestination}
+\DoxyCodeLine{00200\ \{}
+\DoxyCodeLine{00201\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00203\ \ \ \ \ \textcolor{keyword}{const}\ CWallet*\ \textcolor{keyword}{const}\ pwallet;}
+\DoxyCodeLine{00205\ \ \ \ \ ScriptPubKeyMan*\ m\_spk\_man\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00206\ \ \ \ \ OutputType\ \textcolor{keyword}{const}\ type;}
+\DoxyCodeLine{00208\ \ \ \ \ int64\_t\ nIndex\{-\/1\};}
+\DoxyCodeLine{00210\ \ \ \ \ CTxDestination\ address;}
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{keywordtype}{bool}\ fInternal\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00213\ }
+\DoxyCodeLine{00214\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00216\ \ \ \ \ \textcolor{keyword}{explicit}\ ReserveDestination(CWallet*\ pwallet,\ OutputType\ type)}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ :\ pwallet(pwallet)}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ ,\ type(type)\ \{\ \}}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00220\ \ \ \ \ ReserveDestination(\textcolor{keyword}{const}\ ReserveDestination\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00221\ \ \ \ \ ReserveDestination\&\ operator=(\textcolor{keyword}{const}\ ReserveDestination\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00222\ }
+\DoxyCodeLine{00224\ \ \ \ \ \string~ReserveDestination()}
+\DoxyCodeLine{00225\ \ \ \ \ \{}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ ReturnDestination();}
+\DoxyCodeLine{00227\ \ \ \ \ \}}
+\DoxyCodeLine{00228\ }
+\DoxyCodeLine{00230\ \ \ \ \ util::Result<CTxDestination>\ GetReservedDestination(\textcolor{keywordtype}{bool}\ internal);}
+\DoxyCodeLine{00232\ \ \ \ \ \textcolor{keywordtype}{void}\ ReturnDestination();}
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{keywordtype}{void}\ KeepDestination();}
+\DoxyCodeLine{00235\ \};}
+\DoxyCodeLine{00236\ }
+\DoxyCodeLine{00240\ \textcolor{keyword}{struct\ }CAddressBookData}
+\DoxyCodeLine{00241\ \{}
+\DoxyCodeLine{00249\ \ \ \ \ std::optional<std::string>\ label;}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00256\ \ \ \ \ std::optional<AddressPurpose>\ purpose;}
+\DoxyCodeLine{00257\ }
+\DoxyCodeLine{00265\ \ \ \ \ \textcolor{keywordtype}{bool}\ previously\_spent\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00266\ }
+\DoxyCodeLine{00274\ \ \ \ \ std::map<std::string,\ std::string>\ receive\_requests\{\};}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsChange()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ !label.has\_value();\ \}}
+\DoxyCodeLine{00278\ \ \ \ \ std::string\ GetLabel()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ label\ ?\ *label\ :\ std::string\{\};\ \}}
+\DoxyCodeLine{00279\ \ \ \ \ \textcolor{keywordtype}{void}\ SetLabel(std::string\ name)\ \{\ label\ =\ std::move(name);\ \}}
+\DoxyCodeLine{00280\ \};}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00282\ \textcolor{keyword}{inline}\ std::string\ PurposeToString(AddressPurpose\ p)}
+\DoxyCodeLine{00283\ \{}
+\DoxyCodeLine{00284\ \ \ \ \ \textcolor{keywordflow}{switch}(p)\ \{}
+\DoxyCodeLine{00285\ \ \ \ \ \textcolor{keywordflow}{case}\ AddressPurpose::RECEIVE:\ \textcolor{keywordflow}{return}\ \textcolor{stringliteral}{"{}receive"{}};}
+\DoxyCodeLine{00286\ \ \ \ \ \textcolor{keywordflow}{case}\ AddressPurpose::SEND:\ \textcolor{keywordflow}{return}\ \textcolor{stringliteral}{"{}send"{}};}
+\DoxyCodeLine{00287\ \ \ \ \ \textcolor{keywordflow}{case}\ AddressPurpose::REFUND:\ \textcolor{keywordflow}{return}\ \textcolor{stringliteral}{"{}refund"{}};}
+\DoxyCodeLine{00288\ \ \ \ \ \}\ \textcolor{comment}{//\ no\ default\ case\ so\ the\ compiler\ will\ warn\ when\ a\ new\ enum\ as\ added}}
+\DoxyCodeLine{00289\ \ \ \ \ assert(\textcolor{keyword}{false});}
+\DoxyCodeLine{00290\ \}}
+\DoxyCodeLine{00291\ }
+\DoxyCodeLine{00292\ \textcolor{keyword}{inline}\ std::optional<AddressPurpose>\ PurposeFromString(std::string\_view\ s)}
+\DoxyCodeLine{00293\ \{}
+\DoxyCodeLine{00294\ \ \ \ \ \textcolor{keywordflow}{if}\ (s\ ==\ \textcolor{stringliteral}{"{}receive"{}})\ \textcolor{keywordflow}{return}\ AddressPurpose::RECEIVE;}
+\DoxyCodeLine{00295\ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (s\ ==\ \textcolor{stringliteral}{"{}send"{}})\ \textcolor{keywordflow}{return}\ AddressPurpose::SEND;}
+\DoxyCodeLine{00296\ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (s\ ==\ \textcolor{stringliteral}{"{}refund"{}})\ \textcolor{keywordflow}{return}\ AddressPurpose::REFUND;}
+\DoxyCodeLine{00297\ \ \ \ \ \textcolor{keywordflow}{return}\ \{\};}
+\DoxyCodeLine{00298\ \}}
+\DoxyCodeLine{00299\ }
+\DoxyCodeLine{00300\ \textcolor{keyword}{struct\ }CRecipient}
+\DoxyCodeLine{00301\ \{}
+\DoxyCodeLine{00302\ \ \ \ \ CTxDestination\ dest;}
+\DoxyCodeLine{00303\ \ \ \ \ CAmount\ nAmount;}
+\DoxyCodeLine{00304\ \ \ \ \ \textcolor{keywordtype}{bool}\ fSubtractFeeFromAmount;}
+\DoxyCodeLine{00305\ \};}
+\DoxyCodeLine{00306\ }
+\DoxyCodeLine{00307\ \textcolor{keyword}{class\ }WalletRescanReserver;\ \textcolor{comment}{//forward\ declarations\ for\ ScanForWalletTransactions/RescanFromTime}}
+\DoxyCodeLine{00311\ \textcolor{keyword}{class\ }CWallet\ final\ :\ \textcolor{keyword}{public}\ WalletStorage,\ \textcolor{keyword}{public}\ interfaces::Chain::Notifications}
+\DoxyCodeLine{00312\ \{}
+\DoxyCodeLine{00313\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00314\ \ \ \ \ CKeyingMaterial\ vMasterKey\ GUARDED\_BY(cs\_wallet);}
+\DoxyCodeLine{00315\ }
+\DoxyCodeLine{00316\ \ \ \ \ \textcolor{keywordtype}{bool}\ Unlock(\textcolor{keyword}{const}\ CKeyingMaterial\&\ vMasterKeyIn);}
+\DoxyCodeLine{00317\ }
+\DoxyCodeLine{00318\ \ \ \ \ std::atomic<bool>\ fAbortRescan\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00319\ \ \ \ \ std::atomic<bool>\ fScanningWallet\{\textcolor{keyword}{false}\};\ \textcolor{comment}{//\ controlled\ by\ WalletRescanReserver}}
+\DoxyCodeLine{00320\ \ \ \ \ std::atomic<bool>\ m\_scanning\_with\_passphrase\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00321\ \ \ \ \ std::atomic<SteadyClock::time\_point>\ m\_scanning\_start\{SteadyClock::time\_point\{\}\};}
+\DoxyCodeLine{00322\ \ \ \ \ std::atomic<double>\ m\_scanning\_progress\{0\};}
+\DoxyCodeLine{00323\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }WalletRescanReserver;}
+\DoxyCodeLine{00324\ }
+\DoxyCodeLine{00326\ \ \ \ \ NodeClock::time\_point\ m\_next\_resend\{GetDefaultNextResend()\};}
+\DoxyCodeLine{00329\ \ \ \ \ \textcolor{keywordtype}{bool}\ fBroadcastTransactions\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00330\ \ \ \ \ \textcolor{comment}{//\ Local\ time\ that\ the\ tip\ block\ was\ received.\ Used\ to\ schedule\ wallet\ rebroadcasts.}}
+\DoxyCodeLine{00331\ \ \ \ \ std::atomic<int64\_t>\ m\_best\_block\_time\ \{0\};}
+\DoxyCodeLine{00332\ }
+\DoxyCodeLine{00333\ \ \ \ \ \textcolor{comment}{//\ First\ created\ key\ time.\ Used\ to\ skip\ blocks\ prior\ to\ this\ time.}}
+\DoxyCodeLine{00334\ \ \ \ \ \textcolor{comment}{//\ 'std::numeric\_limits<int64\_t>::max()'\ if\ wallet\ is\ blank.}}
+\DoxyCodeLine{00335\ \ \ \ \ std::atomic<int64\_t>\ m\_birth\_time\{std::numeric\_limits<int64\_t>::max()\};}
+\DoxyCodeLine{00336\ }
+\DoxyCodeLine{00342\ \ \ \ \ \textcolor{keyword}{typedef}\ std::unordered\_multimap<COutPoint,\ Txid,\ SaltedOutpointHasher>\ TxSpends;}
+\DoxyCodeLine{00343\ \ \ \ \ TxSpends\ mapTxSpends\ GUARDED\_BY(cs\_wallet);}
+\DoxyCodeLine{00344\ \ \ \ \ \textcolor{keywordtype}{void}\ AddToSpends(\textcolor{keyword}{const}\ COutPoint\&\ outpoint,\ \textcolor{keyword}{const}\ Txid\&\ txid)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00345\ \ \ \ \ \textcolor{keywordtype}{void}\ AddToSpends(\textcolor{keyword}{const}\ CWalletTx\&\ wtx)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00346\ }
+\DoxyCodeLine{00363\ \ \ \ \ \textcolor{keywordtype}{bool}\ AddToWalletIfInvolvingMe(\textcolor{keyword}{const}\ CTransactionRef\&\ tx,\ \textcolor{keyword}{const}\ SyncTxState\&\ state,\ \textcolor{keywordtype}{bool}\ fUpdate,\ \textcolor{keywordtype}{bool}\ rescanning\_old\_block)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00364\ }
+\DoxyCodeLine{00366\ \ \ \ \ \textcolor{keywordtype}{void}\ MarkConflicted(\textcolor{keyword}{const}\ uint256\&\ hashBlock,\ \textcolor{keywordtype}{int}\ conflicting\_height,\ \textcolor{keyword}{const}\ Txid\&\ hashTx);}
+\DoxyCodeLine{00367\ }
+\DoxyCodeLine{00368\ \ \ \ \ \textcolor{keyword}{enum\ class}\ TxUpdate\ \{\ UNCHANGED,\ CHANGED,\ NOTIFY\_CHANGED\ \};}
+\DoxyCodeLine{00369\ }
+\DoxyCodeLine{00370\ \ \ \ \ \textcolor{keyword}{using\ }TryUpdatingStateFn\ =\ std::function<TxUpdate(CWalletTx\&\ wtx)>;}
+\DoxyCodeLine{00371\ }
+\DoxyCodeLine{00373\ \ \ \ \ \textcolor{keywordtype}{void}\ RecursiveUpdateTxState(\textcolor{keyword}{const}\ Txid\&\ tx\_hash,\ \textcolor{keyword}{const}\ TryUpdatingStateFn\&\ try\_updating\_state)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keywordtype}{void}\ RecursiveUpdateTxState(WalletBatch*\ batch,\ \textcolor{keyword}{const}\ Txid\&\ tx\_hash,\ \textcolor{keyword}{const}\ TryUpdatingStateFn\&\ try\_updating\_state)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00375\ }
+\DoxyCodeLine{00377\ \ \ \ \ \textcolor{keywordtype}{void}\ MarkInputsDirty(\textcolor{keyword}{const}\ CTransactionRef\&\ tx)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00378\ }
+\DoxyCodeLine{00379\ \ \ \ \ \textcolor{keywordtype}{void}\ SyncMetaData(std::pair<TxSpends::iterator,\ TxSpends::iterator>)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00380\ }
+\DoxyCodeLine{00381\ \ \ \ \ \textcolor{keywordtype}{bool}\ SyncTransaction(\textcolor{keyword}{const}\ CTransactionRef\&\ tx,\ \textcolor{keyword}{const}\ SyncTxState\&\ state,\ \textcolor{keywordtype}{bool}\ update\_tx\ =\ \textcolor{keyword}{true},\ \textcolor{keywordtype}{bool}\ rescanning\_old\_block\ =\ \textcolor{keyword}{false})\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00382\ }
+\DoxyCodeLine{00384\ \ \ \ \ std::atomic<uint64\_t>\ m\_wallet\_flags\{0\};}
+\DoxyCodeLine{00385\ }
+\DoxyCodeLine{00386\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetAddressBookWithDB(WalletBatch\&\ batch,\ \textcolor{keyword}{const}\ CTxDestination\&\ address,\ \textcolor{keyword}{const}\ std::string\&\ strName,\ \textcolor{keyword}{const}\ std::optional<AddressPurpose>\&\ strPurpose);}
+\DoxyCodeLine{00387\ }
+\DoxyCodeLine{00389\ \ \ \ \ \textcolor{keywordtype}{void}\ UnsetWalletFlagWithDB(WalletBatch\&\ batch,\ uint64\_t\ flag);}
+\DoxyCodeLine{00390\ }
+\DoxyCodeLine{00392\ \ \ \ \ \textcolor{keywordtype}{void}\ UnsetBlankWalletFlag(WalletBatch\&\ batch)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00393\ }
+\DoxyCodeLine{00395\ \ \ \ \ interfaces::Chain*\ m\_chain;}
+\DoxyCodeLine{00396\ }
+\DoxyCodeLine{00398\ \ \ \ \ std::string\ m\_name;}
+\DoxyCodeLine{00399\ }
+\DoxyCodeLine{00401\ \ \ \ \ std::unique\_ptr<WalletDatabase>\ m\_database;}
+\DoxyCodeLine{00402\ }
+\DoxyCodeLine{00410\ \ \ \ \ uint256\ m\_last\_block\_processed\ GUARDED\_BY(cs\_wallet);}
+\DoxyCodeLine{00411\ }
+\DoxyCodeLine{00417\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_last\_block\_processed\_height\ GUARDED\_BY(cs\_wallet)\ =\ -\/1;}
+\DoxyCodeLine{00418\ }
+\DoxyCodeLine{00419\ \ \ \ \ std::map<OutputType,\ ScriptPubKeyMan*>\ m\_external\_spk\_managers;}
+\DoxyCodeLine{00420\ \ \ \ \ std::map<OutputType,\ ScriptPubKeyMan*>\ m\_internal\_spk\_managers;}
+\DoxyCodeLine{00421\ }
+\DoxyCodeLine{00422\ \ \ \ \ \textcolor{comment}{//\ Indexed\ by\ a\ unique\ identifier\ produced\ by\ each\ ScriptPubKeyMan\ using}}
+\DoxyCodeLine{00423\ \ \ \ \ \textcolor{comment}{//\ ScriptPubKeyMan::GetID.\ In\ many\ cases\ it\ will\ be\ the\ hash\ of\ an\ internal\ structure}}
+\DoxyCodeLine{00424\ \ \ \ \ std::map<uint256,\ std::unique\_ptr<ScriptPubKeyMan>>\ m\_spk\_managers;}
+\DoxyCodeLine{00425\ }
+\DoxyCodeLine{00426\ \ \ \ \ \textcolor{comment}{//\ Appends\ spk\ managers\ into\ the\ main\ 'm\_spk\_managers'.}}
+\DoxyCodeLine{00427\ \ \ \ \ \textcolor{comment}{//\ Must\ be\ the\ only\ method\ adding\ data\ to\ it.}}
+\DoxyCodeLine{00428\ \ \ \ \ \textcolor{keywordtype}{void}\ AddScriptPubKeyMan(\textcolor{keyword}{const}\ uint256\&\ \textcolor{keywordtype}{id},\ std::unique\_ptr<ScriptPubKeyMan>\ spkm\_man);}
+\DoxyCodeLine{00429\ }
+\DoxyCodeLine{00430\ \ \ \ \ \textcolor{comment}{//\ Same\ as\ 'AddActiveScriptPubKeyMan'\ but\ designed\ for\ use\ within\ a\ batch\ transaction\ context}}
+\DoxyCodeLine{00431\ \ \ \ \ \textcolor{keywordtype}{void}\ AddActiveScriptPubKeyManWithDb(WalletBatch\&\ batch,\ uint256\ \textcolor{keywordtype}{id},\ OutputType\ type,\ \textcolor{keywordtype}{bool}\ internal);}
+\DoxyCodeLine{00432\ }
+\DoxyCodeLine{00434\ \ \ \ \ \textcolor{keywordtype}{void}\ SetWalletFlagWithDB(WalletBatch\&\ batch,\ uint64\_t\ flags);}
+\DoxyCodeLine{00435\ }
+\DoxyCodeLine{00437\ \ \ \ \ std::unordered\_map<CScript,\ std::vector<ScriptPubKeyMan*>,\ SaltedSipHasher>\ m\_cached\_spks;}
+\DoxyCodeLine{00438\ }
+\DoxyCodeLine{00440\ \ \ \ \ std::unordered\_map<COutPoint,\ WalletTXO,\ SaltedOutpointHasher>\ m\_txos\ GUARDED\_BY(cs\_wallet);}
+\DoxyCodeLine{00441\ }
+\DoxyCodeLine{00447\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ AttachChain(\textcolor{keyword}{const}\ std::shared\_ptr<CWallet>\&\ wallet,\ interfaces::Chain\&\ chain,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ rescan\_required,\ bilingual\_str\&\ error,\ std::vector<bilingual\_str>\&\ warnings);}
+\DoxyCodeLine{00448\ }
+\DoxyCodeLine{00449\ \ \ \ \ \textcolor{keyword}{static}\ NodeClock::time\_point\ GetDefaultNextResend();}
+\DoxyCodeLine{00450\ }
+\DoxyCodeLine{00451\ \ \ \ \ \textcolor{comment}{//\ Update\ last\ block\ processed\ in\ memory\ only}}
+\DoxyCodeLine{00452\ \ \ \ \ \textcolor{keywordtype}{void}\ SetLastBlockProcessedInMem(\textcolor{keywordtype}{int}\ block\_height,\ uint256\ block\_hash)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00453\ }
+\DoxyCodeLine{00455\ \ \ \ \ \textcolor{keywordtype}{void}\ UpdateTrucSiblingConflicts(\textcolor{keyword}{const}\ CWalletTx\&\ parent\_wtx,\ \textcolor{keyword}{const}\ Txid\&\ child\_txid,\ \textcolor{keywordtype}{bool}\ add\_conflict)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00456\ }
+\DoxyCodeLine{00457\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00462\ \ \ \ \ \textcolor{keyword}{mutable}\ RecursiveMutex\ cs\_wallet;}
+\DoxyCodeLine{00463\ }
+\DoxyCodeLine{00464\ \ \ \ \ WalletDatabase\&\ GetDatabase()\textcolor{keyword}{\ const\ override}}
+\DoxyCodeLine{00465\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00466\ \ \ \ \ \ \ \ \ assert(\textcolor{keyword}{static\_cast<}\textcolor{keywordtype}{bool}\textcolor{keyword}{>}(m\_database));}
+\DoxyCodeLine{00467\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *m\_database;}
+\DoxyCodeLine{00468\ \ \ \ \ \}}
+\DoxyCodeLine{00469\ }
+\DoxyCodeLine{00472\ \ \ \ \ \textcolor{keyword}{const}\ std::string\&\ GetName()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_name;\ \}}
+\DoxyCodeLine{00473\ }
+\DoxyCodeLine{00474\ \ \ \ \ \textcolor{keyword}{typedef}\ std::map<unsigned\ int,\ CMasterKey>\ MasterKeyMap;}
+\DoxyCodeLine{00475\ \ \ \ \ MasterKeyMap\ mapMasterKeys;}
+\DoxyCodeLine{00476\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nMasterKeyMaxID\ =\ 0;}
+\DoxyCodeLine{00477\ }
+\DoxyCodeLine{00479\ \ \ \ \ CWallet(interfaces::Chain*\ chain,\ \textcolor{keyword}{const}\ std::string\&\ name,\ std::unique\_ptr<WalletDatabase>\ database)}
+\DoxyCodeLine{00480\ \ \ \ \ \ \ \ \ :\ m\_chain(chain),}
+\DoxyCodeLine{00481\ \ \ \ \ \ \ \ \ \ \ m\_name(name),}
+\DoxyCodeLine{00482\ \ \ \ \ \ \ \ \ \ \ m\_database(std::move(database))}
+\DoxyCodeLine{00483\ \ \ \ \ \{}
+\DoxyCodeLine{00484\ \ \ \ \ \}}
+\DoxyCodeLine{00485\ }
+\DoxyCodeLine{00486\ \ \ \ \ \string~CWallet()}
+\DoxyCodeLine{00487\ \ \ \ \ \{}
+\DoxyCodeLine{00488\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Should\ not\ have\ slots\ connected\ at\ this\ point.}}
+\DoxyCodeLine{00489\ \ \ \ \ \ \ \ \ assert(NotifyUnload.empty());}
+\DoxyCodeLine{00490\ \ \ \ \ \}}
+\DoxyCodeLine{00491\ }
+\DoxyCodeLine{00492\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsCrypted()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00493\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsLocked()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00494\ \ \ \ \ \textcolor{keywordtype}{bool}\ Lock();}
+\DoxyCodeLine{00495\ }
+\DoxyCodeLine{00497\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveChain()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_chain\ ?\ true\ :\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00498\ }
+\DoxyCodeLine{00501\ \ \ \ \ std::unordered\_map<Txid,\ CWalletTx,\ SaltedTxidHasher>\ mapWallet\ GUARDED\_BY(cs\_wallet);}
+\DoxyCodeLine{00502\ }
+\DoxyCodeLine{00503\ \ \ \ \ \textcolor{keyword}{typedef}\ std::multimap<int64\_t,\ CWalletTx*>\ TxItems;}
+\DoxyCodeLine{00504\ \ \ \ \ TxItems\ wtxOrdered;}
+\DoxyCodeLine{00505\ }
+\DoxyCodeLine{00506\ \ \ \ \ int64\_t\ nOrderPosNext\ GUARDED\_BY(cs\_wallet)\ =\ 0;}
+\DoxyCodeLine{00507\ }
+\DoxyCodeLine{00508\ \ \ \ \ std::map<CTxDestination,\ CAddressBookData>\ m\_address\_book\ GUARDED\_BY(cs\_wallet);}
+\DoxyCodeLine{00509\ \ \ \ \ \textcolor{keyword}{const}\ CAddressBookData*\ FindAddressBookEntry(\textcolor{keyword}{const}\ CTxDestination\&,\ \textcolor{keywordtype}{bool}\ allow\_change\ =\ \textcolor{keyword}{false})\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00510\ }
+\DoxyCodeLine{00517\ \ \ \ \ std::map<COutPoint,\ \textcolor{keywordtype}{bool}>\ m\_locked\_coins\ GUARDED\_BY(cs\_wallet);}
+\DoxyCodeLine{00518\ }
+\DoxyCodeLine{00520\ \ \ \ \ std::unique\_ptr<interfaces::Handler>\ m\_chain\_notifications\_handler;}
+\DoxyCodeLine{00521\ }
+\DoxyCodeLine{00523\ \ \ \ \ interfaces::Chain\&\ chain()\textcolor{keyword}{\ const\ }\{\ assert(m\_chain);\ \textcolor{keywordflow}{return}\ *m\_chain;\ \}}
+\DoxyCodeLine{00524\ }
+\DoxyCodeLine{00525\ \ \ \ \ \textcolor{keyword}{const}\ CWalletTx*\ GetWalletTx(\textcolor{keyword}{const}\ Txid\&\ hash)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00526\ }
+\DoxyCodeLine{00527\ \ \ \ \ std::set<Txid>\ GetTxConflicts(\textcolor{keyword}{const}\ CWalletTx\&\ wtx)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00528\ }
+\DoxyCodeLine{00529\ \ \ \ \ \textcolor{keyword}{const}\ std::unordered\_map<COutPoint,\ WalletTXO,\ SaltedOutpointHasher>\&\ GetTXOs()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet)\ \{\ AssertLockHeld(cs\_wallet);\ \textcolor{keywordflow}{return}\ m\_txos;\ \};}
+\DoxyCodeLine{00530\ \ \ \ \ std::optional<WalletTXO>\ GetTXO(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00531\ }
+\DoxyCodeLine{00533\ \ \ \ \ \textcolor{keywordtype}{void}\ RefreshTXOsFromTx(\textcolor{keyword}{const}\ CWalletTx\&\ wtx)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00535\ \ \ \ \ \textcolor{keywordtype}{void}\ RefreshAllTXOs()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00536\ }
+\DoxyCodeLine{00550\ \ \ \ \ \textcolor{keywordtype}{int}\ GetTxDepthInMainChain(const\ CWalletTx\&\ wtx)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00551\ }
+\DoxyCodeLine{00557\ \ \ \ \ \textcolor{keywordtype}{int}\ GetTxBlocksToMaturity(const\ CWalletTx\&\ wtx)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00558\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsTxImmatureCoinBase(const\ CWalletTx\&\ wtx)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00559\ }
+\DoxyCodeLine{00560\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsSpent(const\ COutPoint\&\ outpoint)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00561\ }
+\DoxyCodeLine{00562\ \ \ \ \ \textcolor{comment}{//\ Whether\ this\ or\ any\ known\ scriptPubKey\ with\ the\ same\ single\ key\ has\ been\ spent.}}
+\DoxyCodeLine{00563\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsSpentKey(const\ CScript\&\ scriptPubKey)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00564\ \ \ \ \ \textcolor{keywordtype}{void}\ SetSpentKeyState(WalletBatch\&\ batch,\ const\ Txid\&\ hash,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ n,\ \textcolor{keywordtype}{bool}\ used,\ std::set<CTxDestination>\&\ tx\_destinations)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00565\ }
+\DoxyCodeLine{00567\ \ \ \ \ util::Result<\textcolor{keywordtype}{void}>\ DisplayAddress(const\ CTxDestination\&\ dest)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00568\ }
+\DoxyCodeLine{00569\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsLockedCoin(const\ COutPoint\&\ output)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00570\ \ \ \ \ \textcolor{keywordtype}{void}\ LoadLockedCoin(const\ COutPoint\&\ coin,\ \textcolor{keywordtype}{bool}\ persistent)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00571\ \ \ \ \ \textcolor{keywordtype}{bool}\ LockCoin(const\ COutPoint\&\ output,\ \textcolor{keywordtype}{bool}\ persist)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00572\ \ \ \ \ \textcolor{keywordtype}{bool}\ UnlockCoin(const\ COutPoint\&\ output)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00573\ \ \ \ \ \textcolor{keywordtype}{bool}\ UnlockAllCoins()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00574\ \ \ \ \ \textcolor{keywordtype}{void}\ ListLockedCoins(std::vector<COutPoint>\&\ vOutpts)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00575\ }
+\DoxyCodeLine{00576\ \ \ \ \ \textcolor{comment}{/*}}
+\DoxyCodeLine{00577\ \textcolor{comment}{\ \ \ \ \ *\ Rescan\ abort\ properties}}
+\DoxyCodeLine{00578\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00579\ \ \ \ \ \textcolor{keywordtype}{void}\ AbortRescan()\ \{\ fAbortRescan\ =\ \textcolor{keyword}{true};\ \}}
+\DoxyCodeLine{00580\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsAbortingRescan()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ fAbortRescan;\ \}}
+\DoxyCodeLine{00581\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsScanning()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ fScanningWallet;\ \}}
+\DoxyCodeLine{00582\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsScanningWithPassphrase()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_scanning\_with\_passphrase;\ \}}
+\DoxyCodeLine{00583\ \ \ \ \ SteadyClock::duration\ ScanningDuration()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ fScanningWallet\ ?\ SteadyClock::now()\ -\/\ m\_scanning\_start.load()\ :\ SteadyClock::duration\{\};\ \}}
+\DoxyCodeLine{00584\ \ \ \ \ \textcolor{keywordtype}{double}\ ScanningProgress()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ fScanningWallet\ ?\ (double)\ m\_scanning\_progress\ :\ 0;\ \}}
+\DoxyCodeLine{00585\ }
+\DoxyCodeLine{00587\ \ \ \ \ \textcolor{keywordtype}{void}\ UpgradeDescriptorCache()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00588\ }
+\DoxyCodeLine{00590\ \ \ \ \ \textcolor{keywordtype}{void}\ LoadAddressPreviouslySpent(const\ CTxDestination\&\ dest)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00592\ \ \ \ \ \textcolor{keywordtype}{void}\ LoadAddressReceiveRequest(const\ CTxDestination\&\ dest,\ const\ std::\textcolor{keywordtype}{string}\&\ \textcolor{keywordtype}{id},\ const\ std::\textcolor{keywordtype}{string}\&\ request)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00593\ }
+\DoxyCodeLine{00595\ \ \ \ \ int64\_t\ nRelockTime\ GUARDED\_BY(cs\_wallet)\{0\};}
+\DoxyCodeLine{00596\ }
+\DoxyCodeLine{00597\ \ \ \ \ \textcolor{comment}{//\ Used\ to\ prevent\ concurrent\ calls\ to\ walletpassphrase\ RPC.}}
+\DoxyCodeLine{00598\ \ \ \ \ Mutex\ m\_unlock\_mutex;}
+\DoxyCodeLine{00599\ \ \ \ \ \textcolor{comment}{//\ Used\ to\ prevent\ deleting\ the\ passphrase\ from\ memory\ when\ it\ is\ still\ in\ use.}}
+\DoxyCodeLine{00600\ \ \ \ \ RecursiveMutex\ m\_relock\_mutex;}
+\DoxyCodeLine{00601\ }
+\DoxyCodeLine{00602\ \ \ \ \ \textcolor{keywordtype}{bool}\ Unlock(\textcolor{keyword}{const}\ SecureString\&\ strWalletPassphrase);}
+\DoxyCodeLine{00603\ \ \ \ \ \textcolor{keywordtype}{bool}\ ChangeWalletPassphrase(\textcolor{keyword}{const}\ SecureString\&\ strOldWalletPassphrase,\ \textcolor{keyword}{const}\ SecureString\&\ strNewWalletPassphrase);}
+\DoxyCodeLine{00604\ \ \ \ \ \textcolor{keywordtype}{bool}\ EncryptWallet(\textcolor{keyword}{const}\ SecureString\&\ strWalletPassphrase);}
+\DoxyCodeLine{00605\ }
+\DoxyCodeLine{00606\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ ComputeTimeSmart(\textcolor{keyword}{const}\ CWalletTx\&\ wtx,\ \textcolor{keywordtype}{bool}\ rescanning\_old\_block)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00607\ }
+\DoxyCodeLine{00612\ \ \ \ \ int64\_t\ IncOrderPosNext(WalletBatch\ *batch\ =\ \textcolor{keyword}{nullptr})\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00613\ \ \ \ \ DBErrors\ ReorderTransactions();}
+\DoxyCodeLine{00614\ }
+\DoxyCodeLine{00615\ \ \ \ \ \textcolor{keywordtype}{void}\ MarkDirty();}
+\DoxyCodeLine{00616\ }
+\DoxyCodeLine{00623\ \ \ \ \ using\ UpdateWalletTxFn\ =\ std::function<\textcolor{keywordtype}{bool}(CWalletTx\&\ wtx,\ \textcolor{keywordtype}{bool}\ new\_tx)>;}
+\DoxyCodeLine{00624\ }
+\DoxyCodeLine{00629\ \ \ \ \ CWalletTx*\ AddToWallet(CTransactionRef\ tx,\ const\ TxState\&\ state,\ const\ UpdateWalletTxFn\&\ update\_wtx=\textcolor{keywordtype}{nullptr},\ \textcolor{keywordtype}{bool}\ rescanning\_old\_block\ =\ false);}
+\DoxyCodeLine{00630\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadToWallet(const\ Txid\&\ hash,\ const\ UpdateWalletTxFn\&\ fill\_wtx)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00631\ \ \ \ \ \textcolor{keywordtype}{void}\ transactionAddedToMempool(const\ CTransactionRef\&\ tx)\ override;}
+\DoxyCodeLine{00632\ \ \ \ \ \textcolor{keywordtype}{void}\ blockConnected(const\ kernel::ChainstateRole\&\ role,\ const\ interfaces::BlockInfo\&\ block)\ override;}
+\DoxyCodeLine{00633\ \ \ \ \ \textcolor{keywordtype}{void}\ blockDisconnected(const\ interfaces::BlockInfo\&\ block)\ override;}
+\DoxyCodeLine{00634\ \ \ \ \ \textcolor{keywordtype}{void}\ updatedBlockTip()\ override;}
+\DoxyCodeLine{00635\ \ \ \ \ int64\_t\ RescanFromTime(int64\_t\ startTime,\ const\ WalletRescanReserver\&\ reserver,\ \textcolor{keywordtype}{bool}\ update);}
+\DoxyCodeLine{00636\ }
+\DoxyCodeLine{00637\ \ \ \ \ struct\ ScanResult\ \{}
+\DoxyCodeLine{00638\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum}\ \{\ SUCCESS,\ FAILURE,\ USER\_ABORT\ \}\ status\ =\ SUCCESS;}
+\DoxyCodeLine{00639\ }
+\DoxyCodeLine{00643\ \ \ \ \ \ \ \ \ uint256\ last\_scanned\_block;}
+\DoxyCodeLine{00644\ \ \ \ \ \ \ \ \ std::optional<int>\ last\_scanned\_height;}
+\DoxyCodeLine{00645\ }
+\DoxyCodeLine{00650\ \ \ \ \ \ \ \ \ uint256\ last\_failed\_block;}
+\DoxyCodeLine{00651\ \ \ \ \ \};}
+\DoxyCodeLine{00652\ \ \ \ \ ScanResult\ ScanForWalletTransactions(\textcolor{keyword}{const}\ uint256\&\ start\_block,\ \textcolor{keywordtype}{int}\ start\_height,\ std::optional<int>\ max\_height,\ \textcolor{keyword}{const}\ WalletRescanReserver\&\ reserver,\ \textcolor{keywordtype}{bool}\ fUpdate,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ save\_progress);}
+\DoxyCodeLine{00653\ \ \ \ \ \textcolor{keywordtype}{void}\ transactionRemovedFromMempool(\textcolor{keyword}{const}\ CTransactionRef\&\ tx,\ MemPoolRemovalReason\ reason)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00655\ \ \ \ \ \textcolor{keywordtype}{void}\ SetNextResend()\ \{\ m\_next\_resend\ =\ GetDefaultNextResend();\ \}}
+\DoxyCodeLine{00657\ \ \ \ \ \textcolor{keywordtype}{bool}\ ShouldResend()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00658\ \ \ \ \ \textcolor{keywordtype}{void}\ ResubmitWalletTransactions(node::TxBroadcast\ broadcast\_method,\ \textcolor{keywordtype}{bool}\ force);}
+\DoxyCodeLine{00659\ }
+\DoxyCodeLine{00660\ \ \ \ \ OutputType\ TransactionChangeType(\textcolor{keyword}{const}\ std::optional<OutputType>\&\ change\_type,\ \textcolor{keyword}{const}\ std::vector<CRecipient>\&\ vecSend)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00661\ }
+\DoxyCodeLine{00663\ \ \ \ \ \textcolor{keywordtype}{bool}\ SignTransaction(CMutableTransaction\&\ tx)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00665\ \ \ \ \ \textcolor{keywordtype}{bool}\ SignTransaction(CMutableTransaction\&\ tx,\ \textcolor{keyword}{const}\ std::map<COutPoint,\ Coin>\&\ coins,\ \textcolor{keywordtype}{int}\ sighash,\ std::map<int,\ bilingual\_str>\&\ input\_errors)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00666\ \ \ \ \ SigningResult\ SignMessage(\textcolor{keyword}{const}\ std::string\&\ message,\ \textcolor{keyword}{const}\ PKHash\&\ pkhash,\ std::string\&\ str\_sig)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00667\ }
+\DoxyCodeLine{00683\ \ \ \ \ std::optional<common::PSBTError>\ FillPSBT(PartiallySignedTransaction\&\ psbtx,}
+\DoxyCodeLine{00684\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\&\ complete,}
+\DoxyCodeLine{00685\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::optional<int>\ sighash\_type\ =\ std::nullopt,}
+\DoxyCodeLine{00686\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ sign\ =\ \textcolor{keyword}{true},}
+\DoxyCodeLine{00687\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ bip32derivs\ =\ \textcolor{keyword}{true},}
+\DoxyCodeLine{00688\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}*\ n\_signed\ =\ \textcolor{keyword}{nullptr},}
+\DoxyCodeLine{00689\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ finalize\ =\ \textcolor{keyword}{true})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00690\ }
+\DoxyCodeLine{00700\ \ \ \ \ \textcolor{keywordtype}{void}\ CommitTransaction(CTransactionRef\ tx,\ mapValue\_t\ mapValue,\ std::vector<std::pair<std::string,\ std::string>>\ orderForm);}
+\DoxyCodeLine{00701\ }
+\DoxyCodeLine{00703\ \ \ \ \ \textcolor{keywordtype}{bool}\ SubmitTxMemoryPoolAndRelay(CWalletTx\&\ wtx,\ std::string\&\ err\_string,\ node::TxBroadcast\ broadcast\_method)\ \textcolor{keyword}{const}}
+\DoxyCodeLine{00704\ \ \ \ \ \ \ \ \ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00705\ }
+\DoxyCodeLine{00707\ \ \ \ \ \textcolor{keywordtype}{void}\ MaybeUpdateBirthTime(int64\_t\ time);}
+\DoxyCodeLine{00708\ }
+\DoxyCodeLine{00709\ \ \ \ \ CFeeRate\ m\_pay\_tx\_fee\{DEFAULT\_PAY\_TX\_FEE\};}
+\DoxyCodeLine{00710\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ m\_confirm\_target\{DEFAULT\_TX\_CONFIRM\_TARGET\};}
+\DoxyCodeLine{00713\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_spend\_zero\_conf\_change\{DEFAULT\_SPEND\_ZEROCONF\_CHANGE\};}
+\DoxyCodeLine{00714\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_signal\_rbf\{DEFAULT\_WALLET\_RBF\};}
+\DoxyCodeLine{00715\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_allow\_fallback\_fee\{\textcolor{keyword}{true}\};\ }
+\DoxyCodeLine{00716\ \ \ \ \ CFeeRate\ m\_min\_fee\{DEFAULT\_TRANSACTION\_MINFEE\};\ }
+\DoxyCodeLine{00722\ \ \ \ \ CFeeRate\ m\_fallback\_fee\{DEFAULT\_FALLBACK\_FEE\};}
+\DoxyCodeLine{00723\ }
+\DoxyCodeLine{00726\ \ \ \ \ CFeeRate\ m\_discard\_rate\{DEFAULT\_DISCARD\_FEE\};}
+\DoxyCodeLine{00727\ }
+\DoxyCodeLine{00732\ \ \ \ \ CFeeRate\ m\_consolidate\_feerate\{DEFAULT\_CONSOLIDATE\_FEERATE\};}
+\DoxyCodeLine{00733\ }
+\DoxyCodeLine{00735\ \ \ \ \ CAmount\ m\_max\_aps\_fee\{DEFAULT\_MAX\_AVOIDPARTIALSPEND\_FEE\};\ }
+\DoxyCodeLine{00736\ \ \ \ \ OutputType\ m\_default\_address\_type\{DEFAULT\_ADDRESS\_TYPE\};}
+\DoxyCodeLine{00743\ \ \ \ \ std::optional<OutputType>\ m\_default\_change\_type\{\};}
+\DoxyCodeLine{00745\ \ \ \ \ CAmount\ m\_default\_max\_tx\_fee\{DEFAULT\_TRANSACTION\_MAXFEE\};}
+\DoxyCodeLine{00746\ }
+\DoxyCodeLine{00748\ \ \ \ \ int64\_t\ m\_keypool\_size\{DEFAULT\_KEYPOOL\_SIZE\};}
+\DoxyCodeLine{00749\ }
+\DoxyCodeLine{00751\ \ \ \ \ std::string\ m\_notify\_tx\_changed\_script;}
+\DoxyCodeLine{00752\ }
+\DoxyCodeLine{00753\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ KeypoolCountExternalKeys()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00754\ \ \ \ \ \textcolor{keywordtype}{bool}\ TopUpKeyPool(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ kpSize\ =\ 0);}
+\DoxyCodeLine{00755\ }
+\DoxyCodeLine{00756\ \ \ \ \ \textcolor{comment}{//\ Filter\ struct\ for\ 'ListAddrBookAddresses'}}
+\DoxyCodeLine{00757\ \ \ \ \ struct\ AddrBookFilter\ \{}
+\DoxyCodeLine{00758\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Fetch\ addresses\ with\ the\ provided\ label}}
+\DoxyCodeLine{00759\ \ \ \ \ \ \ \ \ std::optional<std::string>\ m\_op\_label\{std::nullopt\};}
+\DoxyCodeLine{00760\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Don't\ include\ change\ addresses\ by\ default}}
+\DoxyCodeLine{00761\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ ignore\_change\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00762\ \ \ \ \ \};}
+\DoxyCodeLine{00763\ }
+\DoxyCodeLine{00767\ \ \ \ \ std::vector<CTxDestination>\ ListAddrBookAddresses(\textcolor{keyword}{const}\ std::optional<AddrBookFilter>\&\ filter)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00768\ }
+\DoxyCodeLine{00772\ \ \ \ \ std::set<std::string>\ ListAddrBookLabels(\textcolor{keyword}{const}\ std::optional<AddressPurpose>\ purpose)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00773\ }
+\DoxyCodeLine{00778\ \ \ \ \ \textcolor{keyword}{using\ }ListAddrBookFunc\ =\ std::function<void(\textcolor{keyword}{const}\ CTxDestination\&\ dest,\ \textcolor{keyword}{const}\ std::string\&\ label,\ \textcolor{keywordtype}{bool}\ is\_change,\ \textcolor{keyword}{const}\ std::optional<AddressPurpose>\ purpose)>;}
+\DoxyCodeLine{00779\ \ \ \ \ \textcolor{keywordtype}{void}\ ForEachAddrBookEntry(\textcolor{keyword}{const}\ ListAddrBookFunc\&\ func)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00780\ }
+\DoxyCodeLine{00785\ \ \ \ \ \textcolor{keywordtype}{void}\ MarkDestinationsDirty(\textcolor{keyword}{const}\ std::set<CTxDestination>\&\ destinations)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00786\ }
+\DoxyCodeLine{00787\ \ \ \ \ util::Result<CTxDestination>\ GetNewDestination(\textcolor{keyword}{const}\ OutputType\ type,\ \textcolor{keyword}{const}\ std::string\ label);}
+\DoxyCodeLine{00788\ \ \ \ \ util::Result<CTxDestination>\ GetNewChangeDestination(\textcolor{keyword}{const}\ OutputType\ type);}
+\DoxyCodeLine{00789\ }
+\DoxyCodeLine{00790\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsMine(\textcolor{keyword}{const}\ CTxDestination\&\ dest)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00791\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsMine(\textcolor{keyword}{const}\ CScript\&\ script)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00793\ \ \ \ \ CAmount\ GetDebit(\textcolor{keyword}{const}\ CTxIn\&\ txin)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00794\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsMine(\textcolor{keyword}{const}\ CTxOut\&\ txout)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00795\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsMine(\textcolor{keyword}{const}\ CTransaction\&\ tx)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00796\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsMine(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00798\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsFromMe(\textcolor{keyword}{const}\ CTransaction\&\ tx)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00799\ \ \ \ \ CAmount\ GetDebit(\textcolor{keyword}{const}\ CTransaction\&\ tx)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00800\ }
+\DoxyCodeLine{00801\ \ \ \ \ DBErrors\ LoadWallet();}
+\DoxyCodeLine{00802\ }
+\DoxyCodeLine{00804\ \ \ \ \ util::Result<void>\ RemoveTxs(std::vector<Txid>\&\ txs\_to\_remove)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00805\ \ \ \ \ util::Result<void>\ RemoveTxs(WalletBatch\&\ batch,\ std::vector<Txid>\&\ txs\_to\_remove)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00806\ }
+\DoxyCodeLine{00807\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetAddressBook(\textcolor{keyword}{const}\ CTxDestination\&\ address,\ \textcolor{keyword}{const}\ std::string\&\ strName,\ \textcolor{keyword}{const}\ std::optional<AddressPurpose>\&\ purpose);}
+\DoxyCodeLine{00808\ }
+\DoxyCodeLine{00809\ \ \ \ \ \textcolor{keywordtype}{bool}\ DelAddressBook(\textcolor{keyword}{const}\ CTxDestination\&\ address);}
+\DoxyCodeLine{00810\ \ \ \ \ \textcolor{keywordtype}{bool}\ DelAddressBookWithDB(WalletBatch\&\ batch,\ \textcolor{keyword}{const}\ CTxDestination\&\ address);}
+\DoxyCodeLine{00811\ }
+\DoxyCodeLine{00812\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsAddressPreviouslySpent(\textcolor{keyword}{const}\ CTxDestination\&\ dest)\ \textcolor{keyword}{const}\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00813\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetAddressPreviouslySpent(WalletBatch\&\ batch,\ \textcolor{keyword}{const}\ CTxDestination\&\ dest,\ \textcolor{keywordtype}{bool}\ used)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00814\ }
+\DoxyCodeLine{00815\ \ \ \ \ std::vector<std::string>\ GetAddressReceiveRequests()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00816\ \ \ \ \ \textcolor{keywordtype}{bool}\ SetAddressReceiveRequest(WalletBatch\&\ batch,\ const\ CTxDestination\&\ dest,\ const\ std::\textcolor{keywordtype}{string}\&\ \textcolor{keywordtype}{id},\ const\ std::\textcolor{keywordtype}{string}\&\ value)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00817\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseAddressReceiveRequest(WalletBatch\&\ batch,\ const\ CTxDestination\&\ dest,\ const\ std::\textcolor{keywordtype}{string}\&\ \textcolor{keywordtype}{id})\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00818\ }
+\DoxyCodeLine{00819\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ GetKeyPoolSize()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00820\ }
+\DoxyCodeLine{00822\ \ \ \ \ std::set<Txid>\ GetConflicts(const\ Txid\&\ txid)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00823\ }
+\DoxyCodeLine{00825\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasWalletSpend(const\ CTransactionRef\&\ tx)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00826\ }
+\DoxyCodeLine{00828\ \ \ \ \ \textcolor{keywordtype}{void}\ Close();}
+\DoxyCodeLine{00829\ }
+\DoxyCodeLine{00831\ \ \ \ \ boost::signals2::signal<\textcolor{keywordtype}{void}\ ()>\ NotifyUnload;}
+\DoxyCodeLine{00832\ }
+\DoxyCodeLine{00837\ \ \ \ \ boost::signals2::signal<\textcolor{keywordtype}{void}(const\ CTxDestination\&\ address,}
+\DoxyCodeLine{00838\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ std::\textcolor{keywordtype}{string}\&\ label,\ \textcolor{keywordtype}{bool}\ isMine,}
+\DoxyCodeLine{00839\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ AddressPurpose\ purpose,\ ChangeType\ status)>}
+\DoxyCodeLine{00840\ \ \ \ \ \ \ \ \ NotifyAddressBookChanged;}
+\DoxyCodeLine{00841\ }
+\DoxyCodeLine{00846\ \ \ \ \ boost::signals2::signal<\textcolor{keywordtype}{void}(const\ Txid\&\ hashTx,\ ChangeType\ status)>\ NotifyTransactionChanged;}
+\DoxyCodeLine{00847\ }
+\DoxyCodeLine{00849\ \ \ \ \ boost::signals2::signal<\textcolor{keywordtype}{void}\ (const\ std::\textcolor{keywordtype}{string}\ \&title,\ \textcolor{keywordtype}{int}\ nProgress)>\ ShowProgress;}
+\DoxyCodeLine{00850\ }
+\DoxyCodeLine{00852\ \ \ \ \ boost::signals2::signal<\textcolor{keywordtype}{void}\ ()>\ NotifyCanGetAddressesChanged;}
+\DoxyCodeLine{00853\ }
+\DoxyCodeLine{00858\ \ \ \ \ boost::signals2::signal<\textcolor{keywordtype}{void}\ (CWallet*\ wallet)>\ NotifyStatusChanged;}
+\DoxyCodeLine{00859\ }
+\DoxyCodeLine{00861\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetBroadcastTransactions()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ fBroadcastTransactions;\ \}}
+\DoxyCodeLine{00863\ \ \ \ \ \textcolor{keywordtype}{void}\ SetBroadcastTransactions(\textcolor{keywordtype}{bool}\ broadcast)\ \{\ fBroadcastTransactions\ =\ broadcast;\ \}}
+\DoxyCodeLine{00864\ }
+\DoxyCodeLine{00866\ \ \ \ \ \textcolor{keywordtype}{bool}\ TransactionCanBeAbandoned(\textcolor{keyword}{const}\ Txid\&\ hashTx)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00867\ }
+\DoxyCodeLine{00868\ \ \ \ \ \textcolor{comment}{/*\ Mark\ a\ transaction\ (and\ it\ in-\/wallet\ descendants)\ as\ abandoned\ so\ its\ inputs\ may\ be\ respent.\ */}}
+\DoxyCodeLine{00869\ \ \ \ \ \textcolor{keywordtype}{bool}\ AbandonTransaction(\textcolor{keyword}{const}\ Txid\&\ hashTx);}
+\DoxyCodeLine{00870\ \ \ \ \ \textcolor{keywordtype}{bool}\ AbandonTransaction(CWalletTx\&\ tx)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00871\ }
+\DoxyCodeLine{00873\ \ \ \ \ \textcolor{keywordtype}{bool}\ MarkReplaced(\textcolor{keyword}{const}\ Txid\&\ originalHash,\ \textcolor{keyword}{const}\ Txid\&\ newHash);}
+\DoxyCodeLine{00874\ }
+\DoxyCodeLine{00875\ \ \ \ \ \textcolor{comment}{/*\ Initializes\ the\ wallet,\ returns\ a\ new\ CWallet\ instance\ or\ a\ null\ pointer\ in\ case\ of\ an\ error\ */}}
+\DoxyCodeLine{00876\ \ \ \ \ \textcolor{keyword}{static}\ std::shared\_ptr<CWallet>\ Create(WalletContext\&\ context,\ \textcolor{keyword}{const}\ std::string\&\ name,\ std::unique\_ptr<WalletDatabase>\ database,\ uint64\_t\ wallet\_creation\_flags,\ bilingual\_str\&\ error,\ std::vector<bilingual\_str>\&\ warnings);}
+\DoxyCodeLine{00877\ }
+\DoxyCodeLine{00882\ \ \ \ \ \textcolor{keywordtype}{void}\ postInitProcess();}
+\DoxyCodeLine{00883\ }
+\DoxyCodeLine{00884\ \ \ \ \ \textcolor{keywordtype}{bool}\ BackupWallet(\textcolor{keyword}{const}\ std::string\&\ strDest)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00885\ }
+\DoxyCodeLine{00886\ \ \ \ \ \textcolor{comment}{/*\ Returns\ true\ if\ HD\ is\ enabled\ */}}
+\DoxyCodeLine{00887\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsHDEnabled()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00888\ }
+\DoxyCodeLine{00889\ \ \ \ \ \textcolor{comment}{/*\ Returns\ true\ if\ the\ wallet\ can\ give\ out\ new\ addresses.\ This\ means\ it\ has\ keys\ in\ the\ keypool\ or\ can\ generate\ new\ keys\ */}}
+\DoxyCodeLine{00890\ \ \ \ \ \textcolor{keywordtype}{bool}\ CanGetAddresses(\textcolor{keywordtype}{bool}\ internal\ =\ \textcolor{keyword}{false})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00891\ }
+\DoxyCodeLine{00892\ \ \ \ \ \textcolor{comment}{/*\ Returns\ the\ time\ of\ the\ first\ created\ key\ or,\ in\ case\ of\ an\ import,\ it\ could\ be\ the\ time\ of\ the\ first\ received\ transaction\ */}}
+\DoxyCodeLine{00893\ \ \ \ \ int64\_t\ GetBirthTime()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_birth\_time;\ \}}
+\DoxyCodeLine{00894\ }
+\DoxyCodeLine{00901\ \ \ \ \ \textcolor{keywordtype}{void}\ BlockUntilSyncedToCurrentChain()\ const\ LOCKS\_EXCLUDED(::cs\_main)\ EXCLUSIVE\_LOCKS\_REQUIRED(!cs\_wallet);}
+\DoxyCodeLine{00902\ }
+\DoxyCodeLine{00904\ \ \ \ \ \textcolor{keywordtype}{void}\ SetWalletFlag(uint64\_t\ flags);}
+\DoxyCodeLine{00905\ }
+\DoxyCodeLine{00907\ \ \ \ \ \textcolor{keywordtype}{void}\ UnsetWalletFlag(uint64\_t\ flag);}
+\DoxyCodeLine{00908\ }
+\DoxyCodeLine{00910\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsWalletFlagSet(uint64\_t\ flag)\ const\ override;}
+\DoxyCodeLine{00911\ }
+\DoxyCodeLine{00915\ \ \ \ \ \textcolor{keywordtype}{void}\ InitWalletFlags(uint64\_t\ flags);}
+\DoxyCodeLine{00917\ \ \ \ \ \textcolor{keywordtype}{bool}\ LoadWalletFlags(uint64\_t\ flags);}
+\DoxyCodeLine{00919\ \ \ \ \ uint64\_t\ GetWalletFlags()\ const;}
+\DoxyCodeLine{00920\ }
+\DoxyCodeLine{00922\ \ \ \ \ std::\textcolor{keywordtype}{string}\ LogName()\textcolor{keyword}{\ const\ override}}
+\DoxyCodeLine{00923\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00924\ \ \ \ \ \ \ \ \ std::string\ name\{GetName()\};}
+\DoxyCodeLine{00925\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ name.empty()\ ?\ \textcolor{stringliteral}{"{}default\ wallet"{}}\ :\ name;}
+\DoxyCodeLine{00926\ \ \ \ \ \};}
+\DoxyCodeLine{00927\ }
+\DoxyCodeLine{00929\ \ \ \ \ std::string\ DisplayName()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00930\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00931\ \ \ \ \ \ \ \ \ std::string\ name\{GetName()\};}
+\DoxyCodeLine{00932\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ name.empty()\ ?\ \_(\textcolor{stringliteral}{"{}default\ wallet"{}})\ :\ name;}
+\DoxyCodeLine{00933\ \ \ \ \ \};}
+\DoxyCodeLine{00934\ }
+\DoxyCodeLine{00936\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Params>}
+\DoxyCodeLine{00937\ \ \ \ \ \textcolor{keywordtype}{void}\ WalletLogPrintf(util::ConstevalFormatString<\textcolor{keyword}{sizeof}...(Params)>\ wallet\_fmt,\ \textcolor{keyword}{const}\ Params\&...\ params)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00938\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00939\ \ \ \ \ \ \ \ \ LogInfo(\textcolor{stringliteral}{"{}[\%s]\ \%s"{}},\ LogName(),\ tfm::format(wallet\_fmt,\ params...));}
+\DoxyCodeLine{00940\ \ \ \ \ \};}
+\DoxyCodeLine{00941\ }
+\DoxyCodeLine{00943\ \ \ \ \ std::set<ScriptPubKeyMan*>\ GetActiveScriptPubKeyMans()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00944\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsActiveScriptPubKeyMan(\textcolor{keyword}{const}\ ScriptPubKeyMan\&\ spkm)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00945\ }
+\DoxyCodeLine{00947\ \ \ \ \ std::set<ScriptPubKeyMan*>\ GetAllScriptPubKeyMans()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00948\ }
+\DoxyCodeLine{00950\ \ \ \ \ ScriptPubKeyMan*\ GetScriptPubKeyMan(\textcolor{keyword}{const}\ OutputType\&\ type,\ \textcolor{keywordtype}{bool}\ internal)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00951\ }
+\DoxyCodeLine{00953\ \ \ \ \ std::set<ScriptPubKeyMan*>\ GetScriptPubKeyMans(\textcolor{keyword}{const}\ CScript\&\ script)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00955\ \ \ \ \ ScriptPubKeyMan*\ GetScriptPubKeyMan(\textcolor{keyword}{const}\ uint256\&\ \textcolor{keywordtype}{id})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00956\ }
+\DoxyCodeLine{00958\ \ \ \ \ std::unique\_ptr<SigningProvider>\ GetSolvingProvider(\textcolor{keyword}{const}\ CScript\&\ script)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00959\ \ \ \ \ std::unique\_ptr<SigningProvider>\ GetSolvingProvider(\textcolor{keyword}{const}\ CScript\&\ script,\ SignatureData\&\ sigdata)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00960\ }
+\DoxyCodeLine{00962\ \ \ \ \ std::vector<WalletDescriptor>\ GetWalletDescriptors(\textcolor{keyword}{const}\ CScript\&\ script)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00963\ }
+\DoxyCodeLine{00965\ \ \ \ \ LegacyDataSPKM*\ GetLegacyDataSPKM()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00966\ \ \ \ \ LegacyDataSPKM*\ GetOrCreateLegacyDataSPKM();}
+\DoxyCodeLine{00967\ }
+\DoxyCodeLine{00969\ \ \ \ \ \textcolor{keywordtype}{void}\ SetupLegacyScriptPubKeyMan();}
+\DoxyCodeLine{00970\ }
+\DoxyCodeLine{00971\ \ \ \ \ \textcolor{keywordtype}{bool}\ WithEncryptionKey(std::function<\textcolor{keywordtype}{bool}\ (\textcolor{keyword}{const}\ CKeyingMaterial\&)>\ cb)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00972\ }
+\DoxyCodeLine{00973\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasEncryptionKeys()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00974\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveCryptedKeys()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00975\ }
+\DoxyCodeLine{00977\ \ \ \ \ \textcolor{keywordtype}{int}\ GetLastBlockHeight()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet)}
+\DoxyCodeLine{00978\ \ \ \ \ \{}
+\DoxyCodeLine{00979\ \ \ \ \ \ \ \ \ AssertLockHeld(cs\_wallet);}
+\DoxyCodeLine{00980\ \ \ \ \ \ \ \ \ assert(m\_last\_block\_processed\_height\ >=\ 0);}
+\DoxyCodeLine{00981\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_last\_block\_processed\_height;}
+\DoxyCodeLine{00982\ \ \ \ \ \};}
+\DoxyCodeLine{00983\ \ \ \ \ uint256\ GetLastBlockHash()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet)}
+\DoxyCodeLine{00984\ \ \ \ \ \{}
+\DoxyCodeLine{00985\ \ \ \ \ \ \ \ \ AssertLockHeld(cs\_wallet);}
+\DoxyCodeLine{00986\ \ \ \ \ \ \ \ \ assert(m\_last\_block\_processed\_height\ >=\ 0);}
+\DoxyCodeLine{00987\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_last\_block\_processed;}
+\DoxyCodeLine{00988\ \ \ \ \ \}}
+\DoxyCodeLine{00990\ \ \ \ \ \textcolor{keywordtype}{void}\ SetLastBlockProcessed(\textcolor{keywordtype}{int}\ block\_height,\ uint256\ block\_hash)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00992\ \ \ \ \ \textcolor{keywordtype}{void}\ WriteBestBlock()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{00993\ }
+\DoxyCodeLine{00995\ \ \ \ \ \textcolor{keywordtype}{void}\ ConnectScriptPubKeyManNotifiers();}
+\DoxyCodeLine{00996\ }
+\DoxyCodeLine{00998\ \ \ \ \ DescriptorScriptPubKeyMan\&\ LoadDescriptorScriptPubKeyMan(uint256\ \textcolor{keywordtype}{id},\ WalletDescriptor\&\ desc);}
+\DoxyCodeLine{00999\ }
+\DoxyCodeLine{01004\ \ \ \ \ \textcolor{keywordtype}{void}\ AddActiveScriptPubKeyMan(uint256\ \textcolor{keywordtype}{id},\ OutputType\ type,\ \textcolor{keywordtype}{bool}\ internal);}
+\DoxyCodeLine{01005\ }
+\DoxyCodeLine{01010\ \ \ \ \ \textcolor{keywordtype}{void}\ LoadActiveScriptPubKeyMan(uint256\ \textcolor{keywordtype}{id},\ OutputType\ type,\ \textcolor{keywordtype}{bool}\ internal);}
+\DoxyCodeLine{01011\ }
+\DoxyCodeLine{01016\ \ \ \ \ \textcolor{keywordtype}{void}\ DeactivateScriptPubKeyMan(uint256\ \textcolor{keywordtype}{id},\ OutputType\ type,\ \textcolor{keywordtype}{bool}\ internal);}
+\DoxyCodeLine{01017\ }
+\DoxyCodeLine{01019\ \ \ \ \ DescriptorScriptPubKeyMan\&\ SetupDescriptorScriptPubKeyMan(WalletBatch\&\ batch,\ const\ CExtKey\&\ master\_key,\ const\ OutputType\&\ output\_type,\ \textcolor{keywordtype}{bool}\ internal)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{01021\ \ \ \ \ \textcolor{keywordtype}{void}\ SetupDescriptorScriptPubKeyMans(WalletBatch\&\ batch,\ const\ CExtKey\&\ master\_key)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{01022\ \ \ \ \ \textcolor{keywordtype}{void}\ SetupDescriptorScriptPubKeyMans()\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{01023\ }
+\DoxyCodeLine{01025\ \ \ \ \ \textcolor{keywordtype}{void}\ SetupOwnDescriptorScriptPubKeyMans(WalletBatch\&\ batch)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{01026\ }
+\DoxyCodeLine{01028\ \ \ \ \ DescriptorScriptPubKeyMan*\ GetDescriptorScriptPubKeyMan(const\ WalletDescriptor\&\ desc)\ const;}
+\DoxyCodeLine{01029\ }
+\DoxyCodeLine{01033\ \ \ \ \ std::optional<\textcolor{keywordtype}{bool}>\ IsInternalScriptPubKeyMan(ScriptPubKeyMan*\ spk\_man)\ const;}
+\DoxyCodeLine{01034\ }
+\DoxyCodeLine{01036\ \ \ \ \ util::Result<std::reference\_wrapper<DescriptorScriptPubKeyMan>>\ AddWalletDescriptor(WalletDescriptor\&\ desc,\ const\ FlatSigningProvider\&\ signing\_provider,\ const\ std::\textcolor{keywordtype}{string}\&\ label,\ \textcolor{keywordtype}{bool}\ internal)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{01037\ }
+\DoxyCodeLine{01043\ \ \ \ \ \textcolor{keywordtype}{bool}\ MigrateToSQLite(bilingual\_str\&\ error)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{01044\ }
+\DoxyCodeLine{01046\ \ \ \ \ std::optional<MigrationData>\ GetDescriptorsForLegacy(bilingual\_str\&\ error)\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{01047\ }
+\DoxyCodeLine{01050\ \ \ \ \ util::Result<\textcolor{keywordtype}{void}>\ ApplyMigrationData(WalletBatch\&\ local\_wallet\_batch,\ MigrationData\&\ data)\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{01051\ }
+\DoxyCodeLine{01053\ \ \ \ \ \textcolor{keywordtype}{bool}\ CanGrindR()\ const;}
+\DoxyCodeLine{01054\ }
+\DoxyCodeLine{01056\ \ \ \ \ \textcolor{keywordtype}{void}\ CacheNewScriptPubKeys(const\ std::set<CScript>\&\ spks,\ ScriptPubKeyMan*\ spkm);}
+\DoxyCodeLine{01057\ }
+\DoxyCodeLine{01058\ \ \ \ \ \textcolor{keywordtype}{void}\ TopUpCallback(const\ std::set<CScript>\&\ spks,\ ScriptPubKeyMan*\ spkm)\ override;}
+\DoxyCodeLine{01059\ }
+\DoxyCodeLine{01061\ \ \ \ \ std::set<CExtPubKey>\ GetActiveHDPubKeys()\ const\ EXCLUSIVE\_LOCKS\_REQUIRED(cs\_wallet);}
+\DoxyCodeLine{01062\ }
+\DoxyCodeLine{01065\ \ \ \ \ std::optional<CKey>\ GetKey(const\ CKeyID\&\ keyid)\ const;}
+\DoxyCodeLine{01066\ \};}
+\DoxyCodeLine{01067\ }
+\DoxyCodeLine{01072\ \textcolor{keywordtype}{void}\ MaybeResendWalletTxs(WalletContext\&\ context);}
+\DoxyCodeLine{01073\ }
+\DoxyCodeLine{01075\ class\ WalletRescanReserver}
+\DoxyCodeLine{01076\ \{}
+\DoxyCodeLine{01077\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{01078\ \ \ \ \ \textcolor{keyword}{using\ }Clock\ =\ std::chrono::steady\_clock;}
+\DoxyCodeLine{01079\ \ \ \ \ \textcolor{keyword}{using\ }NowFn\ =\ std::function<Clock::time\_point()>;}
+\DoxyCodeLine{01080\ \ \ \ \ CWallet\&\ m\_wallet;}
+\DoxyCodeLine{01081\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_could\_reserve\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{01082\ \ \ \ \ NowFn\ m\_now;}
+\DoxyCodeLine{01083\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{01084\ \ \ \ \ \textcolor{keyword}{explicit}\ WalletRescanReserver(CWallet\&\ w)\ :\ m\_wallet(w)\ \{\}}
+\DoxyCodeLine{01085\ }
+\DoxyCodeLine{01086\ \ \ \ \ \textcolor{keywordtype}{bool}\ reserve(\textcolor{keywordtype}{bool}\ with\_passphrase\ =\ \textcolor{keyword}{false})}
+\DoxyCodeLine{01087\ \ \ \ \ \{}
+\DoxyCodeLine{01088\ \ \ \ \ \ \ \ \ assert(!m\_could\_reserve);}
+\DoxyCodeLine{01089\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_wallet.fScanningWallet.exchange(\textcolor{keyword}{true}))\ \{}
+\DoxyCodeLine{01090\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{01091\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01092\ \ \ \ \ \ \ \ \ m\_wallet.m\_scanning\_with\_passphrase.exchange(with\_passphrase);}
+\DoxyCodeLine{01093\ \ \ \ \ \ \ \ \ m\_wallet.m\_scanning\_start\ =\ SteadyClock::now();}
+\DoxyCodeLine{01094\ \ \ \ \ \ \ \ \ m\_wallet.m\_scanning\_progress\ =\ 0;}
+\DoxyCodeLine{01095\ \ \ \ \ \ \ \ \ m\_could\_reserve\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{01096\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{01097\ \ \ \ \ \}}
+\DoxyCodeLine{01098\ }
+\DoxyCodeLine{01099\ \ \ \ \ \textcolor{keywordtype}{bool}\ isReserved()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{01100\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{01101\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (m\_could\_reserve\ \&\&\ m\_wallet.fScanningWallet);}
+\DoxyCodeLine{01102\ \ \ \ \ \}}
+\DoxyCodeLine{01103\ }
+\DoxyCodeLine{01104\ \ \ \ \ Clock::time\_point\ now()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_now\ ?\ m\_now()\ :\ Clock::now();\ \};}
+\DoxyCodeLine{01105\ }
+\DoxyCodeLine{01106\ \ \ \ \ \textcolor{keywordtype}{void}\ setNow(NowFn\ now)\ \{\ m\_now\ =\ std::move(now);\ \}}
+\DoxyCodeLine{01107\ }
+\DoxyCodeLine{01108\ \ \ \ \ \string~WalletRescanReserver()}
+\DoxyCodeLine{01109\ \ \ \ \ \{}
+\DoxyCodeLine{01110\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_could\_reserve)\ \{}
+\DoxyCodeLine{01111\ \ \ \ \ \ \ \ \ \ \ \ \ m\_wallet.fScanningWallet\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{01112\ \ \ \ \ \ \ \ \ \ \ \ \ m\_wallet.m\_scanning\_with\_passphrase\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{01113\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01114\ \ \ \ \ \}}
+\DoxyCodeLine{01115\ \};}
+\DoxyCodeLine{01116\ }
+\DoxyCodeLine{01118\ \textcolor{keywordtype}{bool}\ AddWalletSetting(interfaces::Chain\&\ chain,\ \textcolor{keyword}{const}\ std::string\&\ wallet\_name);}
+\DoxyCodeLine{01119\ }
+\DoxyCodeLine{01121\ \textcolor{keywordtype}{bool}\ RemoveWalletSetting(interfaces::Chain\&\ chain,\ \textcolor{keyword}{const}\ std::string\&\ wallet\_name);}
+\DoxyCodeLine{01122\ }
+\DoxyCodeLine{01123\ \textcolor{keyword}{struct\ }MigrationResult\ \{}
+\DoxyCodeLine{01124\ \ \ \ \ std::string\ wallet\_name;}
+\DoxyCodeLine{01125\ \ \ \ \ std::shared\_ptr<CWallet>\ wallet;}
+\DoxyCodeLine{01126\ \ \ \ \ std::shared\_ptr<CWallet>\ watchonly\_wallet;}
+\DoxyCodeLine{01127\ \ \ \ \ std::shared\_ptr<CWallet>\ solvables\_wallet;}
+\DoxyCodeLine{01128\ \ \ \ \ fs::path\ backup\_path;}
+\DoxyCodeLine{01129\ \};}
+\DoxyCodeLine{01130\ }
+\DoxyCodeLine{01132\ [[nodiscard]]\ util::Result<MigrationResult>\ MigrateLegacyToDescriptor(\textcolor{keyword}{const}\ std::string\&\ wallet\_name,\ \textcolor{keyword}{const}\ SecureString\&\ passphrase,\ WalletContext\&\ context);}
+\DoxyCodeLine{01134\ [[nodiscard]]\ util::Result<MigrationResult>\ MigrateLegacyToDescriptor(std::shared\_ptr<CWallet>\ local\_wallet,\ \textcolor{keyword}{const}\ SecureString\&\ passphrase,\ WalletContext\&\ context);}
+\DoxyCodeLine{01135\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{01136\ }
+\DoxyCodeLine{01137\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_WALLET\_WALLET\_H}}
+
+\end{DoxyCode}

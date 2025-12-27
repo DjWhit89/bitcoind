@@ -1,0 +1,143 @@
+\doxysection{miner.\+h}
+\label{miner_8h_source}\index{src/node/miner.h@{src/node/miner.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_NODE\_MINER\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_NODE\_MINER\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <interfaces/types.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <node/types.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <policy/policy.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <primitives/block.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <txmempool.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/feefrac.h>}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <boost/multi\_index/identity.hpp>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <boost/multi\_index/indexed\_by.hpp>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <boost/multi\_index/ordered\_index.hpp>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <boost/multi\_index/tag.hpp>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <boost/multi\_index\_container.hpp>}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{keyword}{class\ }ArgsManager;}
+\DoxyCodeLine{00027\ \textcolor{keyword}{class\ }CBlockIndex;}
+\DoxyCodeLine{00028\ \textcolor{keyword}{class\ }CChainParams;}
+\DoxyCodeLine{00029\ \textcolor{keyword}{class\ }CScript;}
+\DoxyCodeLine{00030\ \textcolor{keyword}{class\ }Chainstate;}
+\DoxyCodeLine{00031\ \textcolor{keyword}{class\ }ChainstateManager;}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{namespace\ }Consensus\ \{\ \textcolor{keyword}{struct\ }Params;\ \};}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00035\ \textcolor{keyword}{using\ }interfaces::BlockRef;}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \textcolor{keyword}{namespace\ }node\ \{}
+\DoxyCodeLine{00038\ \textcolor{keyword}{class\ }KernelNotifications;}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ DEFAULT\_PRINT\_MODIFIED\_FEE\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00042\ \textcolor{keyword}{struct\ }CBlockTemplate}
+\DoxyCodeLine{00043\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ CBlock\ block;}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{comment}{//\ Fees\ per\ transaction,\ not\ including\ coinbase\ transaction\ (unlike\ CBlock::vtx).}}
+\DoxyCodeLine{00046\ \ \ \ \ std::vector<CAmount>\ vTxFees;}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{comment}{//\ Sigops\ per\ transaction,\ not\ including\ coinbase\ transaction\ (unlike\ CBlock::vtx).}}
+\DoxyCodeLine{00048\ \ \ \ \ std::vector<int64\_t>\ vTxSigOpsCost;}
+\DoxyCodeLine{00049\ \ \ \ \ std::vector<unsigned\ char>\ vchCoinbaseCommitment;}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{comment}{/*\ A\ vector\ of\ package\ fee\ rates,\ ordered\ by\ the\ sequence\ in\ which}}
+\DoxyCodeLine{00051\ \textcolor{comment}{\ \ \ \ \ *\ packages\ are\ selected\ for\ inclusion\ in\ the\ block\ template.*/}}
+\DoxyCodeLine{00052\ \ \ \ \ std::vector<FeePerVSize>\ m\_package\_feerates;}
+\DoxyCodeLine{00053\ \};}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00056\ \textcolor{keyword}{class\ }BlockAssembler}
+\DoxyCodeLine{00057\ \{}
+\DoxyCodeLine{00058\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{comment}{//\ The\ constructed\ block\ template}}
+\DoxyCodeLine{00060\ \ \ \ \ std::unique\_ptr<CBlockTemplate>\ pblocktemplate;}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{comment}{//\ Information\ on\ the\ current\ status\ of\ the\ block}}
+\DoxyCodeLine{00063\ \ \ \ \ uint64\_t\ nBlockWeight;}
+\DoxyCodeLine{00064\ \ \ \ \ uint64\_t\ nBlockTx;}
+\DoxyCodeLine{00065\ \ \ \ \ uint64\_t\ nBlockSigOpsCost;}
+\DoxyCodeLine{00066\ \ \ \ \ CAmount\ nFees;}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{comment}{//\ Chain\ context\ for\ the\ block}}
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordtype}{int}\ nHeight;}
+\DoxyCodeLine{00070\ \ \ \ \ int64\_t\ m\_lock\_time\_cutoff;}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keyword}{const}\ CChainParams\&\ chainparams;}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keyword}{const}\ CTxMemPool*\ \textcolor{keyword}{const}\ m\_mempool;}
+\DoxyCodeLine{00074\ \ \ \ \ Chainstate\&\ m\_chainstate;}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{keyword}{struct\ }Options\ :\ BlockCreateOptions\ \{}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Configuration\ parameters\ for\ the\ block\ size}}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ nBlockMaxWeight\{DEFAULT\_BLOCK\_MAX\_WEIGHT\};}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ CFeeRate\ blockMinFeeRate\{DEFAULT\_BLOCK\_MIN\_TX\_FEE\};}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Whether\ to\ call\ TestBlockValidity()\ at\ the\ end\ of\ CreateNewBlock().}}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ test\_block\_validity\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ print\_modified\_fee\{DEFAULT\_PRINT\_MODIFIED\_FEE\};}
+\DoxyCodeLine{00084\ \ \ \ \ \};}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keyword}{explicit}\ BlockAssembler(Chainstate\&\ chainstate,\ \textcolor{keyword}{const}\ CTxMemPool*\ mempool,\ \textcolor{keyword}{const}\ Options\&\ options);}
+\DoxyCodeLine{00087\ }
+\DoxyCodeLine{00089\ \ \ \ \ std::unique\_ptr<CBlockTemplate>\ CreateNewBlock();}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{static}\ std::optional<int64\_t>\ m\_last\_block\_num\_txs\{\};}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{static}\ std::optional<int64\_t>\ m\_last\_block\_weight\{\};}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{keyword}{const}\ Options\ m\_options;}
+\DoxyCodeLine{00098\ }
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{comment}{//\ utility\ functions}}
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{keywordtype}{void}\ resetBlock();}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keywordtype}{void}\ AddToBlock(\textcolor{keyword}{const}\ CTxMemPoolEntry\&\ entry);}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{comment}{//\ Methods\ for\ how\ to\ add\ transactions\ to\ a\ block.}}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordtype}{void}\ addChunks()\ EXCLUSIVE\_LOCKS\_REQUIRED(m\_mempool-\/>cs);}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{comment}{//\ helper\ functions\ for\ addChunks()}}
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keywordtype}{bool}\ TestChunkBlockLimits(FeePerWeight\ chunk\_feerate,\ int64\_t\ chunk\_sigops\_cost)\ const;}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{keywordtype}{bool}\ TestChunkTransactions(const\ std::vector<CTxMemPoolEntryRef>\&\ txs)\ const;}
+\DoxyCodeLine{00119\ \};}
+\DoxyCodeLine{00120\ }
+\DoxyCodeLine{00126\ int64\_t\ GetMinimumTime(const\ CBlockIndex*\ pindexPrev,\ const\ int64\_t\ difficulty\_adjustment\_interval);}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00128\ int64\_t\ UpdateTime(CBlockHeader*\ pblock,\ const\ Consensus::Params\&\ consensusParams,\ const\ CBlockIndex*\ pindexPrev);}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00131\ \textcolor{keywordtype}{void}\ RegenerateCommitments(CBlock\&\ block,\ ChainstateManager\&\ chainman);}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00134\ \textcolor{keywordtype}{void}\ ApplyArgsManOptions(const\ ArgsManager\&\ gArgs,\ BlockAssembler::Options\&\ options);}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00136\ \textcolor{comment}{/*\ Compute\ the\ block's\ merkle\ root,\ insert\ or\ replace\ the\ coinbase\ transaction\ and\ the\ merkle\ root\ into\ the\ block\ */}}
+\DoxyCodeLine{00137\ \textcolor{keywordtype}{void}\ AddMerkleRootAndCoinbase(CBlock\&\ block,\ CTransactionRef\ coinbase,\ uint32\_t\ version,\ uint32\_t\ timestamp,\ uint32\_t\ nonce);}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00140\ \textcolor{comment}{/*\ Interrupt\ the\ current\ wait\ for\ the\ next\ block\ template.\ */}}
+\DoxyCodeLine{00141\ \textcolor{keywordtype}{void}\ InterruptWait(KernelNotifications\&\ kernel\_notifications,\ \textcolor{keywordtype}{bool}\&\ interrupt\_wait);}
+\DoxyCodeLine{00146\ std::unique\_ptr<CBlockTemplate>\ WaitAndCreateNewBlock(ChainstateManager\&\ chainman,}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ KernelNotifications\&\ kernel\_notifications,}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CTxMemPool*\ mempool,}
+\DoxyCodeLine{00149\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ std::unique\_ptr<CBlockTemplate>\&\ block\_template,}
+\DoxyCodeLine{00150\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ BlockWaitOptions\&\ options,}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ const\ BlockAssembler::Options\&\ assemble\_options,}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\&\ interrupt\_wait);}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \textcolor{comment}{/*\ Locks\ cs\_main\ and\ returns\ the\ block\ hash\ and\ block\ height\ of\ the\ active\ chain\ if\ it\ exists;\ otherwise,\ returns\ nullopt.*/}}
+\DoxyCodeLine{00155\ std::optional<BlockRef>\ GetTip(ChainstateManager\&\ chainman);}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ \textcolor{comment}{/*\ Waits\ for\ the\ connected\ tip\ to\ change\ until\ timeout\ has\ elapsed.\ During\ node\ initialization,\ this\ will\ wait\ until\ the\ tip\ is\ connected\ (regardless\ of\ \`{}timeout`).}}
+\DoxyCodeLine{00158\ \textcolor{comment}{\ *\ Returns\ the\ current\ tip,\ or\ nullopt\ if\ the\ node\ is\ shutting\ down.\ */}}
+\DoxyCodeLine{00159\ std::optional<BlockRef>\ WaitTipChanged(ChainstateManager\&\ chainman,\ KernelNotifications\&\ kernel\_notifications,\ const\ uint256\&\ current\_tip,\ MillisecondsDouble\&\ timeout);}
+\DoxyCodeLine{00160\ \}\ \textcolor{comment}{//\ namespace\ node}}
+\DoxyCodeLine{00161\ }
+\DoxyCodeLine{00162\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_NODE\_MINER\_H}}
+
+\end{DoxyCode}

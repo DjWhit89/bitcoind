@@ -1,0 +1,104 @@
+.TH "src/crc32c/src/crc32c_portable.cc" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/crc32c/src/crc32c_portable.cc
+.SH SYNOPSIS
+.br
+.PP
+\fR#include '\&./crc32c_internal\&.h'\fP
+.br
+\fR#include <cstddef>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include '\&./crc32c_prefetch\&.h'\fP
+.br
+\fR#include '\&./crc32c_read_le\&.h'\fP
+.br
+\fR#include '\&./crc32c_round_up\&.h'\fP
+.br
+
+.SS "Namespaces"
+
+.in +1c
+.ti -1c
+.RI "namespace \fBcrc32c\fP"
+.br
+.in -1c
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBSTEP1\fP"
+.br
+.ti -1c
+.RI "#define \fBSTEP4\fP(s)"
+.br
+.ti -1c
+.RI "#define \fBSTEP16\fP"
+.br
+.ti -1c
+.RI "#define \fBSTEP4W\fP(w)"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "uint32_t \fBExtendPortable\fP (uint32_t crc, const uint8_t *data, size_t count)"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define STEP1"
+\fBValue:\fP
+.nf
+  do {                                     \\
+    int c = (l & 0xff) ^ *p++;             \\
+    l = kByteExtensionTable[c] ^ (l >> 8); \\
+  } while (0)
+.PP
+.fi
+
+.SS "#define STEP16"
+\fBValue:\fP
+.nf
+  do {         \\
+    STEP4(0);  \\
+    STEP4(1);  \\
+    STEP4(2);  \\
+    STEP4(3);  \\
+    p += 16;   \\
+  } while (0)
+.PP
+.fi
+
+.SS "#define STEP4( s)"
+\fBValue:\fP
+.nf
+  do {                                                                         \\
+    crc##s = ReadUint32LE(p + s * 4) ^ kStrideExtensionTable3[crc##s & 0xff] ^ \\
+             kStrideExtensionTable2[(crc##s >> 8) & 0xff] ^                    \\
+             kStrideExtensionTable1[(crc##s >> 16) & 0xff] ^                   \\
+             kStrideExtensionTable0[crc##s >> 24];                             \\
+  } while (0)
+.PP
+.fi
+
+.SS "#define STEP4W( w)"
+\fBValue:\fP
+.nf
+  do {                                              \\
+    w ^= l;                                         \\
+    for (size_t i = 0; i < 4; ++i) {                \\
+      w = (w >> 8) ^ kByteExtensionTable[w & 0xff]; \\
+    }                                               \\
+    l = w;                                          \\
+  } while (0)
+.PP
+.fi
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

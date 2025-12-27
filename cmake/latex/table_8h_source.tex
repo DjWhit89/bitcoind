@@ -1,0 +1,90 @@
+\doxysection{table.\+h}
+\label{table_8h_source}\index{src/leveldb/include/leveldb/table.h@{src/leveldb/include/leveldb/table.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_TABLE\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_TABLE\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}leveldb/iterator.h"{}}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{keyword}{class\ }Block;}
+\DoxyCodeLine{00016\ \textcolor{keyword}{class\ }BlockHandle;}
+\DoxyCodeLine{00017\ \textcolor{keyword}{class\ }Footer;}
+\DoxyCodeLine{00018\ \textcolor{keyword}{struct\ }Options;}
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }RandomAccessFile;}
+\DoxyCodeLine{00020\ \textcolor{keyword}{struct\ }ReadOptions;}
+\DoxyCodeLine{00021\ \textcolor{keyword}{class\ }TableCache;}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{comment}{//\ A\ Table\ is\ a\ sorted\ map\ from\ strings\ to\ strings.\ \ Tables\ are}}
+\DoxyCodeLine{00024\ \textcolor{comment}{//\ immutable\ and\ persistent.\ \ A\ Table\ may\ be\ safely\ accessed\ from}}
+\DoxyCodeLine{00025\ \textcolor{comment}{//\ multiple\ threads\ without\ external\ synchronization.}}
+\DoxyCodeLine{00026\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ Table\ \{}
+\DoxyCodeLine{00027\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00028\ \ \ \textcolor{comment}{//\ Attempt\ to\ open\ the\ table\ that\ is\ stored\ in\ bytes\ [0..file\_size)}}
+\DoxyCodeLine{00029\ \ \ \textcolor{comment}{//\ of\ "{}file"{},\ and\ read\ the\ metadata\ entries\ necessary\ to\ allow}}
+\DoxyCodeLine{00030\ \ \ \textcolor{comment}{//\ retrieving\ data\ from\ the\ table.}}
+\DoxyCodeLine{00031\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00032\ \ \ \textcolor{comment}{//\ If\ successful,\ returns\ ok\ and\ sets\ "{}*table"{}\ to\ the\ newly\ opened}}
+\DoxyCodeLine{00033\ \ \ \textcolor{comment}{//\ table.\ \ The\ client\ should\ delete\ "{}*table"{}\ when\ no\ longer\ needed.}}
+\DoxyCodeLine{00034\ \ \ \textcolor{comment}{//\ If\ there\ was\ an\ error\ while\ initializing\ the\ table,\ sets\ "{}*table"{}}}
+\DoxyCodeLine{00035\ \ \ \textcolor{comment}{//\ to\ nullptr\ and\ returns\ a\ non-\/ok\ status.\ \ Does\ not\ take\ ownership\ of}}
+\DoxyCodeLine{00036\ \ \ \textcolor{comment}{//\ "{}*source"{},\ but\ the\ client\ must\ ensure\ that\ "{}source"{}\ remains\ live}}
+\DoxyCodeLine{00037\ \ \ \textcolor{comment}{//\ for\ the\ duration\ of\ the\ returned\ table's\ lifetime.}}
+\DoxyCodeLine{00038\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00039\ \ \ \textcolor{comment}{//\ *file\ must\ remain\ live\ while\ this\ Table\ is\ in\ use.}}
+\DoxyCodeLine{00040\ \ \ \textcolor{keyword}{static}\ Status\ Open(\textcolor{keyword}{const}\ Options\&\ options,\ RandomAccessFile*\ file,}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ file\_size,\ Table**\ table);}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ Table(\textcolor{keyword}{const}\ Table\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00044\ \ \ Table\&\ operator=(\textcolor{keyword}{const}\ Table\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \string~Table();}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \textcolor{comment}{//\ Returns\ a\ new\ iterator\ over\ the\ table\ contents.}}
+\DoxyCodeLine{00049\ \ \ \textcolor{comment}{//\ The\ result\ of\ NewIterator()\ is\ initially\ invalid\ (caller\ must}}
+\DoxyCodeLine{00050\ \ \ \textcolor{comment}{//\ call\ one\ of\ the\ Seek\ methods\ on\ the\ iterator\ before\ using\ it).}}
+\DoxyCodeLine{00051\ \ \ Iterator*\ NewIterator(\textcolor{keyword}{const}\ ReadOptions\&)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00053\ \ \ \textcolor{comment}{//\ Given\ a\ key,\ return\ an\ approximate\ byte\ offset\ in\ the\ file\ where}}
+\DoxyCodeLine{00054\ \ \ \textcolor{comment}{//\ the\ data\ for\ that\ key\ begins\ (or\ would\ begin\ if\ the\ key\ were}}
+\DoxyCodeLine{00055\ \ \ \textcolor{comment}{//\ present\ in\ the\ file).\ \ The\ returned\ value\ is\ in\ terms\ of\ file}}
+\DoxyCodeLine{00056\ \ \ \textcolor{comment}{//\ bytes,\ and\ so\ includes\ effects\ like\ compression\ of\ the\ underlying\ data.}}
+\DoxyCodeLine{00057\ \ \ \textcolor{comment}{//\ E.g.,\ the\ approximate\ offset\ of\ the\ last\ key\ in\ the\ table\ will}}
+\DoxyCodeLine{00058\ \ \ \textcolor{comment}{//\ be\ close\ to\ the\ file\ length.}}
+\DoxyCodeLine{00059\ \ \ uint64\_t\ ApproximateOffsetOf(\textcolor{keyword}{const}\ Slice\&\ key)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00062\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }TableCache;}
+\DoxyCodeLine{00063\ \ \ \textcolor{keyword}{struct\ }Rep;}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00065\ \ \ \textcolor{keyword}{static}\ Iterator*\ BlockReader(\textcolor{keywordtype}{void}*,\ \textcolor{keyword}{const}\ ReadOptions\&,\ \textcolor{keyword}{const}\ Slice\&);}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \textcolor{keyword}{explicit}\ Table(Rep*\ rep)\ :\ rep\_(rep)\ \{\}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \textcolor{comment}{//\ Calls\ (*handle\_result)(arg,\ ...)\ with\ the\ entry\ found\ after\ a\ call}}
+\DoxyCodeLine{00070\ \ \ \textcolor{comment}{//\ to\ Seek(key).\ \ May\ not\ make\ such\ a\ call\ if\ filter\ policy\ says}}
+\DoxyCodeLine{00071\ \ \ \textcolor{comment}{//\ that\ key\ is\ not\ present.}}
+\DoxyCodeLine{00072\ \ \ Status\ InternalGet(\textcolor{keyword}{const}\ ReadOptions\&,\ \textcolor{keyword}{const}\ Slice\&\ key,\ \textcolor{keywordtype}{void}*\ arg,}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ (*handle\_result)(\textcolor{keywordtype}{void}*\ arg,\ \textcolor{keyword}{const}\ Slice\&\ k,}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ Slice\&\ v));}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \ \ \textcolor{keywordtype}{void}\ ReadMeta(\textcolor{keyword}{const}\ Footer\&\ footer);}
+\DoxyCodeLine{00077\ \ \ \textcolor{keywordtype}{void}\ ReadFilter(\textcolor{keyword}{const}\ Slice\&\ filter\_handle\_value);}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \ \ Rep*\ \textcolor{keyword}{const}\ rep\_;}
+\DoxyCodeLine{00080\ \};}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_INCLUDE\_TABLE\_H\_}}
+
+\end{DoxyCode}

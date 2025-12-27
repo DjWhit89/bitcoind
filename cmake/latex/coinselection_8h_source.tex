@@ -1,0 +1,318 @@
+\doxysection{coinselection.\+h}
+\label{coinselection_8h_source}\index{src/wallet/coinselection.h@{src/wallet/coinselection.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2017-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_WALLET\_COINSELECTION\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_WALLET\_COINSELECTION\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <consensus/amount.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <consensus/consensus.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <outputtype.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <policy/feerate.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <random.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <util/insert.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <util/result.h>}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00023\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ CAmount\ CHANGE\_LOWER\{50000\};}
+\DoxyCodeLine{00025\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ CAmount\ CHANGE\_UPPER\{1000000\};}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{struct\ }COutput\ \{}
+\DoxyCodeLine{00029\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00031\ \ \ \ \ std::optional<CAmount>\ effective\_value;}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00034\ \ \ \ \ std::optional<CAmount>\ fee;}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00038\ \ \ \ \ COutPoint\ outpoint;}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00041\ \ \ \ \ CTxOut\ txout;}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keywordtype}{int}\ depth;}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keywordtype}{int}\ input\_bytes;}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keywordtype}{bool}\ solvable;}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keywordtype}{bool}\ safe;}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00064\ \ \ \ \ int64\_t\ time;}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keywordtype}{bool}\ from\_me;}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00070\ \ \ \ \ CAmount\ long\_term\_fee\{0\};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00073\ \ \ \ \ CAmount\ ancestor\_bump\_fees\{0\};}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ \ \ COutput(\textcolor{keyword}{const}\ COutPoint\&\ outpoint,\ \textcolor{keyword}{const}\ CTxOut\&\ txout,\ \textcolor{keywordtype}{int}\ depth,\ \textcolor{keywordtype}{int}\ input\_bytes,\ \textcolor{keywordtype}{bool}\ solvable,\ \textcolor{keywordtype}{bool}\ safe,\ int64\_t\ time,\ \textcolor{keywordtype}{bool}\ from\_me,\ \textcolor{keyword}{const}\ std::optional<CFeeRate>\ feerate\ =\ std::nullopt)}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ :\ outpoint\{outpoint\},}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ txout\{txout\},}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \ \ depth\{depth\},}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \ \ input\_bytes\{input\_bytes\},}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \ \ solvable\{solvable\},}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ safe\{safe\},}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ time\{time\},}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ from\_me\{from\_me\}}
+\DoxyCodeLine{00084\ \ \ \ \ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (feerate)\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ base\ fee\ without\ considering\ potential\ unconfirmed\ ancestors}}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ fee\ =\ input\_bytes\ <\ 0\ ?\ 0\ :\ feerate.value().GetFee(input\_bytes);}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ effective\_value\ =\ txout.nValue\ -\/\ fee.value();}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00090\ \ \ \ \ \}}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ \ \ \ \ COutput(\textcolor{keyword}{const}\ COutPoint\&\ outpoint,\ \textcolor{keyword}{const}\ CTxOut\&\ txout,\ \textcolor{keywordtype}{int}\ depth,\ \textcolor{keywordtype}{int}\ input\_bytes,\ \textcolor{keywordtype}{bool}\ solvable,\ \textcolor{keywordtype}{bool}\ safe,\ int64\_t\ time,\ \textcolor{keywordtype}{bool}\ from\_me,\ \textcolor{keyword}{const}\ CAmount\ fees)}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ :\ COutput(outpoint,\ txout,\ depth,\ input\_bytes,\ solvable,\ safe,\ time,\ from\_me)}
+\DoxyCodeLine{00094\ \ \ \ \ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ if\ input\_bytes\ is\ unknown,\ then\ fees\ should\ be\ 0,\ if\ input\_bytes\ is\ known,\ then\ the\ fees\ should\ be\ a\ positive\ integer\ or\ 0\ (input\_bytes\ known\ and\ fees\ =\ 0\ only\ happens\ in\ the\ tests)}}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ assert((input\_bytes\ <\ 0\ \&\&\ fees\ ==\ 0)\ ||\ (input\_bytes\ >\ 0\ \&\&\ fees\ >=\ 0));}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ fee\ =\ fees;}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ effective\_value\ =\ txout.nValue\ -\/\ fee.value();}
+\DoxyCodeLine{00099\ \ \ \ \ \}}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \ \ \ \ std::string\ ToString()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00102\ }
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator<(\textcolor{keyword}{const}\ COutput\&\ rhs)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00104\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ outpoint\ <\ rhs.outpoint;}
+\DoxyCodeLine{00106\ \ \ \ \ \}}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keywordtype}{void}\ ApplyBumpFee(CAmount\ bump\_fee)}
+\DoxyCodeLine{00109\ \ \ \ \ \{}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ assert(bump\_fee\ >=\ 0);}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ ancestor\_bump\_fees\ =\ bump\_fee;}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ assert(fee);}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ *fee\ +=\ bump\_fee;}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Note:\ assert(effective\_value\ -\/\ bump\_fee\ ==\ nValue\ -\/\ fee.value());}}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ effective\_value\ =\ txout.nValue\ -\/\ fee.value();}
+\DoxyCodeLine{00116\ \ \ \ \ \}}
+\DoxyCodeLine{00117\ }
+\DoxyCodeLine{00118\ \ \ \ \ CAmount\ GetFee()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00119\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ assert(fee.has\_value());}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ fee.value();}
+\DoxyCodeLine{00122\ \ \ \ \ \}}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \ \ \ \ CAmount\ GetEffectiveValue()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00125\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ assert(effective\_value.has\_value());}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ effective\_value.value();}
+\DoxyCodeLine{00128\ \ \ \ \ \}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasEffectiveValue()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ effective\_value.has\_value();\ \}}
+\DoxyCodeLine{00131\ \};}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00134\ \textcolor{keyword}{struct\ }CoinSelectionParams\ \{}
+\DoxyCodeLine{00136\ \ \ \ \ FastRandomContext\&\ rng\_fast;}
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{keywordtype}{int}\ change\_output\_size\ =\ 0;}
+\DoxyCodeLine{00140\ \ \ \ \ \textcolor{keywordtype}{int}\ change\_spend\_size\ =\ 0;}
+\DoxyCodeLine{00143\ \ \ \ \ CAmount\ m\_min\_change\_target\{0\};}
+\DoxyCodeLine{00147\ \ \ \ \ CAmount\ min\_viable\_change\{0\};}
+\DoxyCodeLine{00149\ \ \ \ \ CAmount\ m\_change\_fee\{0\};}
+\DoxyCodeLine{00151\ \ \ \ \ CAmount\ m\_cost\_of\_change\{0\};}
+\DoxyCodeLine{00153\ \ \ \ \ CFeeRate\ m\_effective\_feerate;}
+\DoxyCodeLine{00156\ \ \ \ \ CFeeRate\ m\_long\_term\_feerate;}
+\DoxyCodeLine{00158\ \ \ \ \ CFeeRate\ m\_discard\_feerate;}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordtype}{int}\ tx\_noinputs\_size\ =\ 0;}
+\DoxyCodeLine{00163\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_subtract\_fee\_outputs\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00167\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_avoid\_partial\_spends\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_include\_unsafe\_inputs\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00174\ \ \ \ \ uint32\_t\ m\_version\{CTransaction::CURRENT\_VERSION\};}
+\DoxyCodeLine{00176\ \ \ \ \ std::optional<int>\ m\_max\_tx\_weight\{std::nullopt\};}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00178\ \ \ \ \ CoinSelectionParams(FastRandomContext\&\ rng\_fast,\ \textcolor{keywordtype}{int}\ change\_output\_size,\ \textcolor{keywordtype}{int}\ change\_spend\_size,}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CAmount\ min\_change\_target,\ CFeeRate\ effective\_feerate,}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CFeeRate\ long\_term\_feerate,\ CFeeRate\ discard\_feerate,\ \textcolor{keywordtype}{int}\ tx\_noinputs\_size,\ \textcolor{keywordtype}{bool}\ avoid\_partial,}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::optional<int>\ max\_tx\_weight\ =\ std::nullopt)}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ :\ rng\_fast\{rng\_fast\},}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ \ \ change\_output\_size(change\_output\_size),}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ \ \ change\_spend\_size(change\_spend\_size),}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ \ \ m\_min\_change\_target(min\_change\_target),}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \ \ m\_effective\_feerate(effective\_feerate),}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \ \ m\_long\_term\_feerate(long\_term\_feerate),}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \ \ m\_discard\_feerate(discard\_feerate),}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \ \ tx\_noinputs\_size(tx\_noinputs\_size),}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ \ \ m\_avoid\_partial\_spends(avoid\_partial),}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ \ \ m\_max\_tx\_weight(max\_tx\_weight)}
+\DoxyCodeLine{00192\ \ \ \ \ \{}
+\DoxyCodeLine{00193\ \ \ \ \ \}}
+\DoxyCodeLine{00194\ \ \ \ \ CoinSelectionParams(FastRandomContext\&\ rng\_fast)}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ :\ rng\_fast\{rng\_fast\}\ \{\}}
+\DoxyCodeLine{00196\ \};}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00201\ \textcolor{keyword}{struct\ }CoinEligibilityFilter}
+\DoxyCodeLine{00202\ \{}
+\DoxyCodeLine{00205\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ conf\_mine;}
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ conf\_theirs;}
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ max\_ancestors;}
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ max\_descendants;}
+\DoxyCodeLine{00213\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ m\_include\_partial\_groups\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00215\ \ \ \ \ CoinEligibilityFilter()\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00216\ \ \ \ \ CoinEligibilityFilter(\textcolor{keywordtype}{int}\ conf\_mine,\ \textcolor{keywordtype}{int}\ conf\_theirs,\ uint64\_t\ max\_ancestors)\ :\ conf\_mine(conf\_mine),\ conf\_theirs(conf\_theirs),\ max\_ancestors(max\_ancestors),\ max\_descendants(max\_ancestors)\ \{\}}
+\DoxyCodeLine{00217\ \ \ \ \ CoinEligibilityFilter(\textcolor{keywordtype}{int}\ conf\_mine,\ \textcolor{keywordtype}{int}\ conf\_theirs,\ uint64\_t\ max\_ancestors,\ uint64\_t\ max\_descendants)\ :\ conf\_mine(conf\_mine),\ conf\_theirs(conf\_theirs),\ max\_ancestors(max\_ancestors),\ max\_descendants(max\_descendants)\ \{\}}
+\DoxyCodeLine{00218\ \ \ \ \ CoinEligibilityFilter(\textcolor{keywordtype}{int}\ conf\_mine,\ \textcolor{keywordtype}{int}\ conf\_theirs,\ uint64\_t\ max\_ancestors,\ uint64\_t\ max\_descendants,\ \textcolor{keywordtype}{bool}\ include\_partial)\ :\ conf\_mine(conf\_mine),\ conf\_theirs(conf\_theirs),\ max\_ancestors(max\_ancestors),\ max\_descendants(max\_descendants),\ m\_include\_partial\_groups(include\_partial)\ \{\}}
+\DoxyCodeLine{00219\ }
+\DoxyCodeLine{00220\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator<(\textcolor{keyword}{const}\ CoinEligibilityFilter\&\ other)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::tie(conf\_mine,\ conf\_theirs,\ max\_ancestors,\ max\_descendants,\ m\_include\_partial\_groups)}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ <\ std::tie(other.conf\_mine,\ other.conf\_theirs,\ other.max\_ancestors,\ other.max\_descendants,\ other.m\_include\_partial\_groups);}
+\DoxyCodeLine{00223\ \ \ \ \ \}}
+\DoxyCodeLine{00224\ \};}
+\DoxyCodeLine{00225\ }
+\DoxyCodeLine{00227\ \textcolor{keyword}{struct\ }OutputGroup}
+\DoxyCodeLine{00228\ \{}
+\DoxyCodeLine{00230\ \ \ \ \ std::vector<std::shared\_ptr<COutput>>\ m\_outputs;}
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_from\_me\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00236\ \ \ \ \ CAmount\ m\_value\{0\};}
+\DoxyCodeLine{00238\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_depth\{999\};}
+\DoxyCodeLine{00241\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_ancestors\{0\};}
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_descendants\{0\};}
+\DoxyCodeLine{00245\ \ \ \ \ CAmount\ effective\_value\{0\};}
+\DoxyCodeLine{00247\ \ \ \ \ CAmount\ fee\{0\};}
+\DoxyCodeLine{00249\ \ \ \ \ CAmount\ long\_term\_fee\{0\};}
+\DoxyCodeLine{00253\ \ \ \ \ CFeeRate\ m\_long\_term\_feerate\{0\};}
+\DoxyCodeLine{00256\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_subtract\_fee\_outputs\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00258\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_weight\{0\};}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00260\ \ \ \ \ OutputGroup()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00261\ \ \ \ \ OutputGroup(\textcolor{keyword}{const}\ CoinSelectionParams\&\ params)\ :}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ m\_long\_term\_feerate(params.m\_long\_term\_feerate),}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ m\_subtract\_fee\_outputs(params.m\_subtract\_fee\_outputs)}
+\DoxyCodeLine{00264\ \ \ \ \ \{\}}
+\DoxyCodeLine{00265\ }
+\DoxyCodeLine{00266\ \ \ \ \ \textcolor{keywordtype}{void}\ Insert(\textcolor{keyword}{const}\ std::shared\_ptr<COutput>\&\ output,\ \textcolor{keywordtype}{size\_t}\ ancestors,\ \textcolor{keywordtype}{size\_t}\ descendants);}
+\DoxyCodeLine{00267\ \ \ \ \ \textcolor{keywordtype}{bool}\ EligibleForSpending(\textcolor{keyword}{const}\ CoinEligibilityFilter\&\ eligibility\_filter)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00268\ \ \ \ \ CAmount\ GetSelectionAmount()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00269\ \};}
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00271\ \textcolor{keyword}{struct\ }Groups\ \{}
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{comment}{//\ Stores\ 'OutputGroup'\ containing\ only\ positive\ UTXOs\ (value\ >\ 0).}}
+\DoxyCodeLine{00273\ \ \ \ \ std::vector<OutputGroup>\ positive\_group;}
+\DoxyCodeLine{00274\ \ \ \ \ \textcolor{comment}{//\ Stores\ 'OutputGroup'\ which\ may\ contain\ both\ positive\ and\ negative\ UTXOs.}}
+\DoxyCodeLine{00275\ \ \ \ \ std::vector<OutputGroup>\ mixed\_group;}
+\DoxyCodeLine{00276\ \};}
+\DoxyCodeLine{00277\ }
+\DoxyCodeLine{00279\ \textcolor{keyword}{struct\ }OutputGroupTypeMap}
+\DoxyCodeLine{00280\ \{}
+\DoxyCodeLine{00281\ \ \ \ \ \textcolor{comment}{//\ Maps\ output\ type\ to\ output\ groups.}}
+\DoxyCodeLine{00282\ \ \ \ \ std::map<OutputType,\ Groups>\ groups\_by\_type;}
+\DoxyCodeLine{00283\ \ \ \ \ \textcolor{comment}{//\ All\ inserted\ groups,\ no\ type\ distinction.}}
+\DoxyCodeLine{00284\ \ \ \ \ Groups\ all\_groups;}
+\DoxyCodeLine{00285\ }
+\DoxyCodeLine{00286\ \ \ \ \ \textcolor{comment}{//\ Based\ on\ the\ insert\ flag;\ appends\ group\ to\ the\ 'mixed\_group'\ and,\ if\ value\ >\ 0,\ to\ the\ 'positive\_group'.}}
+\DoxyCodeLine{00287\ \ \ \ \ \textcolor{comment}{//\ This\ affects\ both;\ the\ groups\ filtered\ by\ type\ and\ the\ overall\ groups\ container.}}
+\DoxyCodeLine{00288\ \ \ \ \ \textcolor{keywordtype}{void}\ Push(\textcolor{keyword}{const}\ OutputGroup\&\ group,\ OutputType\ type,\ \textcolor{keywordtype}{bool}\ insert\_positive,\ \textcolor{keywordtype}{bool}\ insert\_mixed);}
+\DoxyCodeLine{00289\ \ \ \ \ \textcolor{comment}{//\ Different\ output\ types\ count}}
+\DoxyCodeLine{00290\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ TypesCount()\ \{\ \textcolor{keywordflow}{return}\ groups\_by\_type.size();\ \}}
+\DoxyCodeLine{00291\ \};}
+\DoxyCodeLine{00292\ }
+\DoxyCodeLine{00293\ \textcolor{keyword}{typedef}\ std::map<CoinEligibilityFilter,\ OutputGroupTypeMap>\ FilteredOutputGroups;}
+\DoxyCodeLine{00294\ }
+\DoxyCodeLine{00309\ [[nodiscard]]\ CAmount\ GenerateChangeTarget(\textcolor{keyword}{const}\ CAmount\ payment\_value,\ \textcolor{keyword}{const}\ CAmount\ change\_fee,\ FastRandomContext\&\ rng);}
+\DoxyCodeLine{00310\ }
+\DoxyCodeLine{00311\ \textcolor{keyword}{enum\ class}\ SelectionAlgorithm\ :\ uint8\_t}
+\DoxyCodeLine{00312\ \{}
+\DoxyCodeLine{00313\ \ \ \ \ BNB\ =\ 0,}
+\DoxyCodeLine{00314\ \ \ \ \ KNAPSACK\ =\ 1,}
+\DoxyCodeLine{00315\ \ \ \ \ SRD\ =\ 2,}
+\DoxyCodeLine{00316\ \ \ \ \ CG\ =\ 3,}
+\DoxyCodeLine{00317\ \ \ \ \ MANUAL\ =\ 4,}
+\DoxyCodeLine{00318\ \};}
+\DoxyCodeLine{00319\ }
+\DoxyCodeLine{00320\ std::string\ GetAlgorithmName(\textcolor{keyword}{const}\ SelectionAlgorithm\ algo);}
+\DoxyCodeLine{00321\ }
+\DoxyCodeLine{00322\ \textcolor{keyword}{struct\ }SelectionResult}
+\DoxyCodeLine{00323\ \{}
+\DoxyCodeLine{00324\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00326\ \ \ \ \ std::set<std::shared\_ptr<COutput>>\ m\_selected\_inputs;}
+\DoxyCodeLine{00328\ \ \ \ \ CAmount\ m\_target;}
+\DoxyCodeLine{00330\ \ \ \ \ SelectionAlgorithm\ m\_algo;}
+\DoxyCodeLine{00332\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_use\_effective\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00334\ \ \ \ \ std::optional<CAmount>\ m\_waste;}
+\DoxyCodeLine{00336\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_algo\_completed\{\textcolor{keyword}{true}\};}
+\DoxyCodeLine{00338\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_selections\_evaluated;}
+\DoxyCodeLine{00340\ \ \ \ \ \textcolor{keywordtype}{int}\ m\_weight\{0\};}
+\DoxyCodeLine{00342\ \ \ \ \ CAmount\ bump\_fee\_group\_discount\{0\};}
+\DoxyCodeLine{00343\ }
+\DoxyCodeLine{00344\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00345\ \ \ \ \ \textcolor{keywordtype}{void}\ InsertInputs(\textcolor{keyword}{const}\ T\&\ inputs)}
+\DoxyCodeLine{00346\ \ \ \ \ \{}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Store\ sum\ of\ combined\ input\ sets\ to\ check\ that\ the\ results\ have\ no\ shared\ UTXOs}}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ expected\_count\ =\ m\_selected\_inputs.size()\ +\ inputs.size();}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ util::insert(m\_selected\_inputs,\ inputs);}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_selected\_inputs.size()\ !=\ expected\_count)\ \{}
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::runtime\_error(STR\_INTERNAL\_BUG(\textcolor{stringliteral}{"{}Shared\ UTXOs\ among\ selection\ results"{}}));}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00353\ \ \ \ \ \}}
+\DoxyCodeLine{00354\ }
+\DoxyCodeLine{00355\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00356\ \ \ \ \ \textcolor{keyword}{explicit}\ SelectionResult(\textcolor{keyword}{const}\ CAmount\ target,\ SelectionAlgorithm\ algo)}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ :\ m\_target(target),\ m\_algo(algo)\ \{\}}
+\DoxyCodeLine{00358\ }
+\DoxyCodeLine{00359\ \ \ \ \ SelectionResult()\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00360\ }
+\DoxyCodeLine{00362\ \ \ \ \ [[nodiscard]]\ CAmount\ GetSelectedValue()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00363\ }
+\DoxyCodeLine{00364\ \ \ \ \ [[nodiscard]]\ CAmount\ GetSelectedEffectiveValue()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00365\ }
+\DoxyCodeLine{00366\ \ \ \ \ [[nodiscard]]\ CAmount\ GetTotalBumpFees()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00367\ }
+\DoxyCodeLine{00368\ \ \ \ \ \textcolor{keywordtype}{void}\ Clear();}
+\DoxyCodeLine{00369\ }
+\DoxyCodeLine{00370\ \ \ \ \ \textcolor{keywordtype}{void}\ AddInput(\textcolor{keyword}{const}\ OutputGroup\&\ group);}
+\DoxyCodeLine{00371\ \ \ \ \ \textcolor{keywordtype}{void}\ AddInputs(\textcolor{keyword}{const}\ std::set<std::shared\_ptr<COutput>>\&\ inputs,\ \textcolor{keywordtype}{bool}\ subtract\_fee\_outputs);}
+\DoxyCodeLine{00372\ }
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keywordtype}{void}\ SetBumpFeeDiscount(\textcolor{keyword}{const}\ CAmount\ discount);}
+\DoxyCodeLine{00375\ }
+\DoxyCodeLine{00388\ \ \ \ \ \textcolor{keywordtype}{void}\ RecalculateWaste(\textcolor{keyword}{const}\ CAmount\ min\_viable\_change,\ \textcolor{keyword}{const}\ CAmount\ change\_cost,\ \textcolor{keyword}{const}\ CAmount\ change\_fee);}
+\DoxyCodeLine{00389\ \ \ \ \ [[nodiscard]]\ CAmount\ GetWaste()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00390\ }
+\DoxyCodeLine{00392\ \ \ \ \ \textcolor{keywordtype}{void}\ SetAlgoCompleted(\textcolor{keywordtype}{bool}\ algo\_completed);}
+\DoxyCodeLine{00393\ }
+\DoxyCodeLine{00395\ \ \ \ \ \textcolor{keywordtype}{bool}\ GetAlgoCompleted()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00396\ }
+\DoxyCodeLine{00398\ \ \ \ \ \textcolor{keywordtype}{void}\ SetSelectionsEvaluated(\textcolor{keywordtype}{size\_t}\ attempts);}
+\DoxyCodeLine{00399\ }
+\DoxyCodeLine{00401\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ GetSelectionsEvaluated()\ \textcolor{keyword}{const}\ ;}
+\DoxyCodeLine{00402\ }
+\DoxyCodeLine{00409\ \ \ \ \ \textcolor{keywordtype}{void}\ Merge(\textcolor{keyword}{const}\ SelectionResult\&\ other);}
+\DoxyCodeLine{00410\ }
+\DoxyCodeLine{00412\ \ \ \ \ \textcolor{keyword}{const}\ std::set<std::shared\_ptr<COutput>>\&\ GetInputSet()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00414\ \ \ \ \ std::vector<std::shared\_ptr<COutput>>\ GetShuffledInputVector()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00415\ }
+\DoxyCodeLine{00416\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator<(SelectionResult\ other)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00417\ }
+\DoxyCodeLine{00435\ \ \ \ \ CAmount\ GetChange(\textcolor{keyword}{const}\ CAmount\ min\_viable\_change,\ \textcolor{keyword}{const}\ CAmount\ change\_fee)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00436\ }
+\DoxyCodeLine{00437\ \ \ \ \ CAmount\ GetTarget()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_target;\ \}}
+\DoxyCodeLine{00438\ }
+\DoxyCodeLine{00439\ \ \ \ \ SelectionAlgorithm\ GetAlgo()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_algo;\ \}}
+\DoxyCodeLine{00440\ }
+\DoxyCodeLine{00441\ \ \ \ \ \textcolor{keywordtype}{int}\ GetWeight()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ m\_weight;\ \}}
+\DoxyCodeLine{00442\ \};}
+\DoxyCodeLine{00443\ }
+\DoxyCodeLine{00444\ util::Result<SelectionResult>\ SelectCoinsBnB(std::vector<OutputGroup>\&\ utxo\_pool,\ \textcolor{keyword}{const}\ CAmount\&\ selection\_target,\ \textcolor{keyword}{const}\ CAmount\&\ cost\_of\_change,}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ max\_selection\_weight);}
+\DoxyCodeLine{00446\ }
+\DoxyCodeLine{00447\ util::Result<SelectionResult>\ CoinGrinder(std::vector<OutputGroup>\&\ utxo\_pool,\ \textcolor{keyword}{const}\ CAmount\&\ selection\_target,\ CAmount\ change\_target,\ \textcolor{keywordtype}{int}\ max\_selection\_weight);}
+\DoxyCodeLine{00448\ }
+\DoxyCodeLine{00458\ util::Result<SelectionResult>\ SelectCoinsSRD(\textcolor{keyword}{const}\ std::vector<OutputGroup>\&\ utxo\_pool,\ CAmount\ target\_value,\ CAmount\ change\_fee,\ FastRandomContext\&\ rng,}
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ max\_selection\_weight);}
+\DoxyCodeLine{00460\ }
+\DoxyCodeLine{00461\ \textcolor{comment}{//\ Original\ coin\ selection\ algorithm\ as\ a\ fallback}}
+\DoxyCodeLine{00462\ util::Result<SelectionResult>\ KnapsackSolver(std::vector<OutputGroup>\&\ groups,\ \textcolor{keyword}{const}\ CAmount\&\ nTargetValue,}
+\DoxyCodeLine{00463\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CAmount\ change\_target,\ FastRandomContext\&\ rng,\ \textcolor{keywordtype}{int}\ max\_selection\_weight);}
+\DoxyCodeLine{00464\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{00465\ }
+\DoxyCodeLine{00466\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_WALLET\_COINSELECTION\_H}}
+
+\end{DoxyCode}

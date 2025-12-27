@@ -1,0 +1,46 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="md_src_2secp256k1_2doc_2musig" kind="page">
+    <compoundname>md_src_2secp256k1_2doc_2musig</compoundname>
+    <title>Notes on the musig module API</title>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>The following sections contain additional notes on the API of the musig module (<computeroutput><ref refid="secp256k1__musig_8h" kindref="compound">include/secp256k1_musig.h</ref></computeroutput>). A usage example can be found in <computeroutput><ref refid="musig_8c" kindref="compound">examples/musig.c</ref></computeroutput>.</para>
+<sect1 id="md_src_2secp256k1_2doc_2musig_1autotoc_md194">
+<title>API misuse</title><para>The musig API is designed with a focus on misuse resistance. However, due to the interactive nature of the MuSig protocol, there are additional failure modes that are not present in regular (single-party) Schnorr signature creation. While the results can be catastrophic (e.g. leaking of the secret key), it is unfortunately not possible for the musig implementation to prevent all such failure modes.</para>
+<para>Therefore, users of the musig module must take great care to make sure of the following:</para>
+<para><orderedlist>
+<listitem><para>A unique nonce per signing session is generated in <computeroutput><ref refid="secp256k1__musig_8h_1a7ec24f575d1e46794f3ce3532a03615b" kindref="member">secp256k1_musig_nonce_gen</ref></computeroutput>. See the corresponding comment in <computeroutput><ref refid="secp256k1__musig_8h" kindref="compound">include/secp256k1_musig.h</ref></computeroutput> for how to ensure that.</para>
+</listitem><listitem><para>The <computeroutput><ref refid="structsecp256k1__musig__secnonce" kindref="compound">secp256k1_musig_secnonce</ref></computeroutput> structure is never copied or serialized. See also the comment on <computeroutput><ref refid="structsecp256k1__musig__secnonce" kindref="compound">secp256k1_musig_secnonce</ref></computeroutput> in <computeroutput><ref refid="secp256k1__musig_8h" kindref="compound">include/secp256k1_musig.h</ref></computeroutput>.</para>
+</listitem><listitem><para>Opaque data structures are never written to or read from directly. Instead, only the provided accessor functions are used.</para>
+</listitem></orderedlist>
+</para>
+</sect1>
+<sect1 id="md_src_2secp256k1_2doc_2musig_1autotoc_md195">
+<title>Key Aggregation and (Taproot) Tweaking</title><para>Given a set of public keys, the aggregate public key is computed with <computeroutput><ref refid="secp256k1__musig_8h_1ad0ad82976282fb6cbc20e24994ab6d94" kindref="member">secp256k1_musig_pubkey_agg</ref></computeroutput>. A plain tweak can be added to the resulting public key with <computeroutput><ref refid="secp256k1_8h_1aaac0a0211f7ebfa1af55ab571cd57751" kindref="member">secp256k1_ec_pubkey_tweak_add</ref></computeroutput> by setting the <computeroutput>tweak32</computeroutput> argument to the hash defined in BIP 32. Similarly, a Taproot tweak can be added with <computeroutput><ref refid="secp256k1__extrakeys_8h_1aaf832fa110c2610d69dee6ca74c856e8" kindref="member">secp256k1_xonly_pubkey_tweak_add</ref></computeroutput> by setting the <computeroutput>tweak32</computeroutput> argument to the TapTweak hash defined in BIP 341. Both types of tweaking can be combined and invoked multiple times if the specific application requires it.</para>
+</sect1>
+<sect1 id="md_src_2secp256k1_2doc_2musig_1autotoc_md196">
+<title>Signing</title><para>This is covered by <computeroutput><ref refid="musig_8c" kindref="compound">examples/musig.c</ref></computeroutput>. Essentially, the protocol proceeds in the following steps:</para>
+<para><orderedlist>
+<listitem><para>Generate a keypair with <computeroutput><ref refid="secp256k1__extrakeys_8h_1a61b1362ada2435ab10240e52ff738476" kindref="member">secp256k1_keypair_create</ref></computeroutput> and obtain the public key with <computeroutput><ref refid="secp256k1__extrakeys_8h_1af9c115df738fabe6b04574d4880495bc" kindref="member">secp256k1_keypair_pub</ref></computeroutput>.</para>
+</listitem><listitem><para>Call <computeroutput><ref refid="secp256k1__musig_8h_1ad0ad82976282fb6cbc20e24994ab6d94" kindref="member">secp256k1_musig_pubkey_agg</ref></computeroutput> with the pubkeys of all participants.</para>
+</listitem><listitem><para>Optionally add a (Taproot) tweak with <computeroutput><ref refid="secp256k1__musig_8h_1a10a46b293f9744518c660bcbc8775db1" kindref="member">secp256k1_musig_pubkey_xonly_tweak_add</ref></computeroutput> and a plain tweak with <computeroutput><ref refid="secp256k1__musig_8h_1a01eeb0d31dee13d208245a478b777d9c" kindref="member">secp256k1_musig_pubkey_ec_tweak_add</ref></computeroutput>.</para>
+</listitem><listitem><para>Generate a pair of secret and public nonce with <computeroutput><ref refid="secp256k1__musig_8h_1a7ec24f575d1e46794f3ce3532a03615b" kindref="member">secp256k1_musig_nonce_gen</ref></computeroutput> and send the public nonce to the other signers.</para>
+</listitem><listitem><para>Someone (not necessarily the signer) aggregates the public nonces with <computeroutput><ref refid="secp256k1__musig_8h_1a32c50c1197c2e1c817893b037cd8d721" kindref="member">secp256k1_musig_nonce_agg</ref></computeroutput> and sends it to the signers.</para>
+</listitem><listitem><para>Process the aggregate nonce with <computeroutput><ref refid="secp256k1__musig_8h_1ae2294b047f341afacce48e9f9a509f11" kindref="member">secp256k1_musig_nonce_process</ref></computeroutput>.</para>
+</listitem><listitem><para>Create a partial signature with <computeroutput><ref refid="secp256k1__musig_8h_1a37c235ba487df277f97464708c06f98e" kindref="member">secp256k1_musig_partial_sign</ref></computeroutput>.</para>
+</listitem><listitem><para>Verify the partial signatures (optional in some scenarios) with <computeroutput><ref refid="secp256k1__musig_8h_1a94cce9a0b321047ba1f341bc8f3f8ee3" kindref="member">secp256k1_musig_partial_sig_verify</ref></computeroutput>.</para>
+</listitem><listitem><para>Someone (not necessarily the signer) obtains all partial signatures and aggregates them into the final Schnorr signature using <computeroutput><ref refid="secp256k1__musig_8h_1aa001ebd3ea7185c01e571e27e736cde1" kindref="member">secp256k1_musig_partial_sig_agg</ref></computeroutput>.</para>
+</listitem></orderedlist>
+</para>
+<para>The aggregate signature can be verified with <computeroutput><ref refid="secp256k1__schnorrsig_8h_1ad8c9ecde1b1b561bb0a864ef307a48cb" kindref="member">secp256k1_schnorrsig_verify</ref></computeroutput>.</para>
+<para>Steps 1 through 5 above can occur before or after the signers are aware of the message to be signed. Whenever possible, it is recommended to generate the nonces only after the message is known. This provides enhanced defense-in-depth measures, protecting against potential API misuse in certain scenarios. However, it does require two rounds of communication during the signing process. The alternative, generating the nonces in a pre-processing step before the message is known, eliminates these additional protective measures but allows for non-interactive signing. Similarly, the API supports an alternative protocol flow where generating the aggregate key (steps 1 to 3) is allowed to happen after exchanging nonces (steps 4 to 5).</para>
+</sect1>
+<sect1 id="md_src_2secp256k1_2doc_2musig_1autotoc_md197">
+<title>Verification</title><para>A participant who wants to verify the partial signatures, but does not sign itself may do so using the above instructions except that the verifier skips steps 1, 4 and 7. </para>
+</sect1>
+    </detaileddescription>
+    <location file="src/secp256k1/doc/musig.md"/>
+  </compounddef>
+</doxygen>

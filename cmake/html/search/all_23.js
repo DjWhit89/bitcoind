@@ -1,0 +1,10 @@
+var searchData=
+[
+  ['x_0',['X',['../net_8cpp.html#a826edd40636cbaa44266b97c8c6a4fa3',1,'net.cpp']]],
+  ['x_1',['x',['../structnontrivial__t.html#a6150e0515f7202e2fb518f7206ed97dc',1,'nontrivial_t::x'],['../structsecp256k1__ge.html#af089d748d95dc12c1185adae8e11972d',1,'secp256k1_ge::x'],['../structsecp256k1__gej.html#af089d748d95dc12c1185adae8e11972d',1,'secp256k1_gej::x'],['../structsecp256k1__ge__storage.html#aa9b83389d3e62c5c63492a22b2fa40b5',1,'secp256k1_ge_storage::x'],['../structellswift__xswiftec__inv__test.html#af089d748d95dc12c1185adae8e11972d',1,'ellswift_xswiftec_inv_test::x'],['../structellswift__decode__test.html#af089d748d95dc12c1185adae8e11972d',1,'ellswift_decode_test::x']]],
+  ['x_20y_20coordinates_2',['4. Encoding and decoding full &lt;em&gt;(x, y)&lt;/em&gt; coordinates',['../C:/Users/jazzw/source/repos/DjWhit89/bitcoind/src/secp256k1/doc/ellswift.md#autotoc_md192',1,'']]],
+  ['x_20y_20coordinates_20for_20secp256k1_3',['4.1 Full &lt;em&gt;(x, y)&lt;/em&gt; coordinates for &lt;span class=&quot;tt&quot;&gt;secp256k1&lt;/span&gt;',['../C:/Users/jazzw/source/repos/DjWhit89/bitcoind/src/secp256k1/doc/ellswift.md#autotoc_md193',1,'']]],
+  ['xmargin_4',['XMARGIN',['../trafficgraphwidget_8cpp.html#a0a70bb3d7aecc8f2760b6911e4698e0f',1,'trafficgraphwidget.cpp']]],
+  ['xonlypubkey_5',['XOnlyPubKey',['../class_x_only_pub_key.html',1,'XOnlyPubKey'],['../class_x_only_pub_key.html#a8d0259611552c71eee58a913c16b8340',1,'XOnlyPubKey::XOnlyPubKey()=default'],['../class_x_only_pub_key.html#af34a800b6f8e4af00f3c912a8b35ddec',1,'XOnlyPubKey::XOnlyPubKey(const XOnlyPubKey &amp;)=default'],['../class_x_only_pub_key.html#a700cd617ecaa14800794a99a0d8a257b',1,'XOnlyPubKey::XOnlyPubKey(std::span&lt; const unsigned char &gt; bytes)'],['../class_x_only_pub_key.html#a4cfec2ce2f0074a6085e4609a202c61f',1,'XOnlyPubKey::XOnlyPubKey(const CPubKey &amp;pubkey)']]],
+  ['xor_6',['XOR',['../crypto__diff__fuzz__chacha20_8cpp.html#afb73ad5e5dd2ba223f10bdc8daf4d208',1,'crypto_diff_fuzz_chacha20.cpp']]]
+];

@@ -1,0 +1,69 @@
+\doxysection{random.\+h}
+\label{leveldb_2util_2random_8h_source}\index{src/leveldb/util/random.h@{src/leveldb/util/random.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_UTIL\_RANDOM\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_UTIL\_RANDOM\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{comment}{//\ A\ very\ simple\ random\ number\ generator.\ \ Not\ especially\ good\ at}}
+\DoxyCodeLine{00013\ \textcolor{comment}{//\ generating\ truly\ random\ bits,\ but\ good\ enough\ for\ our\ needs\ in\ this}}
+\DoxyCodeLine{00014\ \textcolor{comment}{//\ package.}}
+\DoxyCodeLine{00015\ \textcolor{keyword}{class\ }Random\ \{}
+\DoxyCodeLine{00016\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00017\ \ \ uint32\_t\ seed\_;}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00020\ \ \ \textcolor{keyword}{explicit}\ Random(uint32\_t\ s)\ :\ seed\_(s\ \&\ 0x7fffffffu)\ \{}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{comment}{//\ Avoid\ bad\ seeds.}}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keywordflow}{if}\ (seed\_\ ==\ 0\ ||\ seed\_\ ==\ 2147483647L)\ \{}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ seed\_\ =\ 1;}
+\DoxyCodeLine{00024\ \ \ \ \ \}}
+\DoxyCodeLine{00025\ \ \ \}}
+\DoxyCodeLine{00026\ \ \ uint32\_t\ Next()\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint32\_t\ M\ =\ 2147483647L;\ \ \textcolor{comment}{//\ 2\string^31-\/1}}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ uint64\_t\ A\ =\ 16807;\ \ \ \ \ \ \ \ \textcolor{comment}{//\ bits\ 14,\ 8,\ 7,\ 5,\ 2,\ 1,\ 0}}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{comment}{//\ We\ are\ computing}}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ seed\_\ =\ (seed\_\ *\ A)\ \%\ M,\ \ \ \ where\ M\ =\ 2\string^31-\/1}}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{comment}{//\ seed\_\ must\ not\ be\ zero\ or\ M,\ or\ else\ all\ subsequent\ computed\ values}}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{comment}{//\ will\ be\ zero\ or\ M\ respectively.\ \ For\ all\ other\ values,\ seed\_\ will\ end}}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{comment}{//\ up\ cycling\ through\ every\ number\ in\ [1,M-\/1]}}
+\DoxyCodeLine{00035\ \ \ \ \ uint64\_t\ product\ =\ seed\_\ *\ A;}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{comment}{//\ Compute\ (product\ \%\ M)\ using\ the\ fact\ that\ ((x\ <<\ 31)\ \%\ M)\ ==\ x.}}
+\DoxyCodeLine{00038\ \ \ \ \ seed\_\ =\ \textcolor{keyword}{static\_cast<}uint32\_t\textcolor{keyword}{>}((product\ >>\ 31)\ +\ (product\ \&\ M));}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{comment}{//\ The\ first\ reduction\ may\ overflow\ by\ 1\ bit,\ so\ we\ may\ need\ to}}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{comment}{//\ repeat.\ \ mod\ ==\ M\ is\ not\ possible;\ using\ >\ allows\ the\ faster}}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{comment}{//\ sign-\/bit-\/based\ test.}}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keywordflow}{if}\ (seed\_\ >\ M)\ \{}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ seed\_\ -\/=\ M;}
+\DoxyCodeLine{00044\ \ \ \ \ \}}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keywordflow}{return}\ seed\_;}
+\DoxyCodeLine{00046\ \ \ \}}
+\DoxyCodeLine{00047\ \ \ \textcolor{comment}{//\ Returns\ a\ uniformly\ distributed\ value\ in\ the\ range\ [0..n-\/1]}}
+\DoxyCodeLine{00048\ \ \ \textcolor{comment}{//\ REQUIRES:\ n\ >\ 0}}
+\DoxyCodeLine{00049\ \ \ uint32\_t\ Uniform(\textcolor{keywordtype}{int}\ n)\ \{\ \textcolor{keywordflow}{return}\ Next()\ \%\ n;\ \}}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \textcolor{comment}{//\ Randomly\ returns\ true\ \string~"{}1/n"{}\ of\ the\ time,\ and\ false\ otherwise.}}
+\DoxyCodeLine{00052\ \ \ \textcolor{comment}{//\ REQUIRES:\ n\ >\ 0}}
+\DoxyCodeLine{00053\ \ \ \textcolor{keywordtype}{bool}\ OneIn(\textcolor{keywordtype}{int}\ n)\ \{\ \textcolor{keywordflow}{return}\ (Next()\ \%\ n)\ ==\ 0;\ \}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \textcolor{comment}{//\ Skewed:\ pick\ "{}base"{}\ uniformly\ from\ range\ [0,max\_log]\ and\ then}}
+\DoxyCodeLine{00056\ \ \ \textcolor{comment}{//\ return\ "{}base"{}\ random\ bits.\ \ The\ effect\ is\ to\ pick\ a\ number\ in\ the}}
+\DoxyCodeLine{00057\ \ \ \textcolor{comment}{//\ range\ [0,2\string^max\_log-\/1]\ with\ exponential\ bias\ towards\ smaller\ numbers.}}
+\DoxyCodeLine{00058\ \ \ uint32\_t\ Skewed(\textcolor{keywordtype}{int}\ max\_log)\ \{\ \textcolor{keywordflow}{return}\ Uniform(1\ <<\ Uniform(max\_log\ +\ 1));\ \}}
+\DoxyCodeLine{00059\ \};}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_UTIL\_RANDOM\_H\_}}
+
+\end{DoxyCode}

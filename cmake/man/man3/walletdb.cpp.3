@@ -1,0 +1,208 @@
+.TH "src/wallet/walletdb.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/wallet/walletdb.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <bitcoin\-build\-config\&.h>\fP
+.br
+\fR#include <wallet/walletdb\&.h>\fP
+.br
+\fR#include <common/system\&.h>\fP
+.br
+\fR#include <key_io\&.h>\fP
+.br
+\fR#include <primitives/transaction_identifier\&.h>\fP
+.br
+\fR#include <protocol\&.h>\fP
+.br
+\fR#include <script/script\&.h>\fP
+.br
+\fR#include <serialize\&.h>\fP
+.br
+\fR#include <sync\&.h>\fP
+.br
+\fR#include <util/bip32\&.h>\fP
+.br
+\fR#include <util/check\&.h>\fP
+.br
+\fR#include <util/fs\&.h>\fP
+.br
+\fR#include <util/time\&.h>\fP
+.br
+\fR#include <util/translation\&.h>\fP
+.br
+\fR#include <wallet/migrate\&.h>\fP
+.br
+\fR#include <wallet/sqlite\&.h>\fP
+.br
+\fR#include <wallet/wallet\&.h>\fP
+.br
+\fR#include <atomic>\fP
+.br
+\fR#include <optional>\fP
+.br
+\fR#include <string>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBLoadResult\fP"
+.br
+.in -1c
+.SS "Namespaces"
+
+.in +1c
+.ti -1c
+.RI "namespace \fBwallet\fP"
+.br
+.ti -1c
+.RI "namespace \fBwallet::DBKeys\fP"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "using \fBLoadFunc\fP = std::function<\fBDBErrors\fP(\fBCWallet\fP* pwallet, \fBDataStream\fP& key, \fBDataStream\fP& value, std::string& err)>"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "void \fBLogDBInfo\fP ()"
+.br
+.ti -1c
+.RI "bool \fBLoadKey\fP (\fBCWallet\fP *pwallet, \fBDataStream\fP &ssKey, \fBDataStream\fP &ssValue, std::string &strErr)"
+.br
+.ti -1c
+.RI "bool \fBLoadCryptedKey\fP (\fBCWallet\fP *pwallet, \fBDataStream\fP &ssKey, \fBDataStream\fP &ssValue, std::string &strErr)"
+.br
+.ti -1c
+.RI "bool \fBLoadEncryptionKey\fP (\fBCWallet\fP *pwallet, \fBDataStream\fP &ssKey, \fBDataStream\fP &ssValue, std::string &strErr)"
+.br
+.ti -1c
+.RI "bool \fBLoadHDChain\fP (\fBCWallet\fP *pwallet, \fBDataStream\fP &ssValue, std::string &strErr)"
+.br
+.ti -1c
+.RI "bool \fBHasLegacyRecords\fP (\fBCWallet\fP &\fBwallet\fP)"
+.br
+.RI "Returns true if there are any \fBDBKeys::LEGACY_TYPES\fP record in the wallet db\&. "
+.ti -1c
+.RI "bool \fBHasLegacyRecords\fP (\fBCWallet\fP &\fBwallet\fP, \fBDatabaseBatch\fP &batch)"
+.br
+.ti -1c
+.RI "bool \fBRunWithinTxn\fP (\fBWalletDatabase\fP &database, std::string_view process_desc, const std::function< bool(\fBWalletBatch\fP &)> &func)"
+.br
+.ti -1c
+.RI "std::unique_ptr< \fBWalletDatabase\fP > \fBMakeDatabase\fP (const \fBfs::path\fP &path, const \fBDatabaseOptions\fP &options, \fBDatabaseStatus\fP &status, \fBbilingual_str\fP &error)"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "const std::string \fBACENTRY\fP {'acentry'}"
+.br
+.ti -1c
+.RI "const std::string \fBACTIVEEXTERNALSPK\fP {'activeexternalspk'}"
+.br
+.ti -1c
+.RI "const std::string \fBACTIVEINTERNALSPK\fP {'activeinternalspk'}"
+.br
+.ti -1c
+.RI "const std::string \fBBESTBLOCK_NOMERKLE\fP {'bestblock_nomerkle'}"
+.br
+.ti -1c
+.RI "const std::string \fBBESTBLOCK\fP {'bestblock'}"
+.br
+.ti -1c
+.RI "const std::string \fBCRYPTED_KEY\fP {'ckey'}"
+.br
+.ti -1c
+.RI "const std::string \fBCSCRIPT\fP {'cscript'}"
+.br
+.ti -1c
+.RI "const std::string \fBDEFAULTKEY\fP {'defaultkey'}"
+.br
+.ti -1c
+.RI "const std::string \fBDESTDATA\fP {'destdata'}"
+.br
+.ti -1c
+.RI "const std::string \fBFLAGS\fP {'flags'}"
+.br
+.ti -1c
+.RI "const std::string \fBHDCHAIN\fP {'hdchain'}"
+.br
+.ti -1c
+.RI "const std::string \fBKEYMETA\fP {'keymeta'}"
+.br
+.ti -1c
+.RI "const std::string \fBKEY\fP {'key'}"
+.br
+.ti -1c
+.RI "const std::string \fBLOCKED_UTXO\fP {'lockedutxo'}"
+.br
+.ti -1c
+.RI "const std::string \fBMASTER_KEY\fP {'mkey'}"
+.br
+.ti -1c
+.RI "const std::string \fBMINVERSION\fP {'minversion'}"
+.br
+.ti -1c
+.RI "const std::string \fBNAME\fP {'name'}"
+.br
+.ti -1c
+.RI "const std::string \fBOLD_KEY\fP {'wkey'}"
+.br
+.ti -1c
+.RI "const std::string \fBORDERPOSNEXT\fP {'orderposnext'}"
+.br
+.ti -1c
+.RI "const std::string \fBPOOL\fP {'pool'}"
+.br
+.ti -1c
+.RI "const std::string \fBPURPOSE\fP {'purpose'}"
+.br
+.ti -1c
+.RI "const std::string \fBSETTINGS\fP {'settings'}"
+.br
+.ti -1c
+.RI "const std::string \fBTX\fP {'tx'}"
+.br
+.ti -1c
+.RI "const std::string \fBVERSION\fP {'version'}"
+.br
+.ti -1c
+.RI "const std::string \fBWALLETDESCRIPTOR\fP {'walletdescriptor'}"
+.br
+.ti -1c
+.RI "const std::string \fBWALLETDESCRIPTORCACHE\fP {'walletdescriptorcache'}"
+.br
+.ti -1c
+.RI "const std::string \fBWALLETDESCRIPTORLHCACHE\fP {'walletdescriptorlhcache'}"
+.br
+.ti -1c
+.RI "const std::string \fBWALLETDESCRIPTORCKEY\fP {'walletdescriptorckey'}"
+.br
+.ti -1c
+.RI "const std::string \fBWALLETDESCRIPTORKEY\fP {'walletdescriptorkey'}"
+.br
+.ti -1c
+.RI "const std::string \fBWATCHMETA\fP {'watchmeta'}"
+.br
+.ti -1c
+.RI "const std::string \fBWATCHS\fP {'watchs'}"
+.br
+.ti -1c
+.RI "const std::unordered_set< std::string > \fBLEGACY_TYPES\fP {\fBCRYPTED_KEY\fP, \fBCSCRIPT\fP, \fBDEFAULTKEY\fP, \fBHDCHAIN\fP, \fBKEYMETA\fP, \fBKEY\fP, \fBOLD_KEY\fP, \fBPOOL\fP, \fBWATCHMETA\fP, \fBWATCHS\fP}"
+.br
+.in -1c
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

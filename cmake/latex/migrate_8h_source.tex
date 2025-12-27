@@ -1,0 +1,99 @@
+\doxysection{migrate.\+h}
+\label{migrate_8h_source}\index{src/wallet/migrate.h@{src/wallet/migrate.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2021-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_WALLET\_MIGRATE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_WALLET\_MIGRATE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <wallet/db.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00014\ \textcolor{keyword}{using\ }BerkeleyROData\ =\ std::map<SerializeData,\ SerializeData,\ std::less<>>;}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00020\ \textcolor{keyword}{class\ }BerkeleyRODatabase\ :\ \textcolor{keyword}{public}\ WalletDatabase}
+\DoxyCodeLine{00021\ \{}
+\DoxyCodeLine{00022\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keyword}{const}\ fs::path\ m\_filepath;}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00027\ \ \ \ \ BerkeleyRODatabase(\textcolor{keyword}{const}\ fs::path\&\ filepath,\ \textcolor{keywordtype}{bool}\ open\ =\ \textcolor{keyword}{true})\ :\ WalletDatabase(),\ m\_filepath(filepath)}
+\DoxyCodeLine{00028\ \ \ \ \ \{}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (open)\ Open();}
+\DoxyCodeLine{00030\ \ \ \ \ \}}
+\DoxyCodeLine{00031\ \ \ \ \ \string~BerkeleyRODatabase()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \ \ \ \ BerkeleyROData\ m\_records;}
+\DoxyCodeLine{00034\ }
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordtype}{void}\ Open()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordtype}{bool}\ Rewrite()\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordtype}{bool}\ Backup(\textcolor{keyword}{const}\ std::string\&\ strDest)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordtype}{void}\ Close()\textcolor{keyword}{\ override\ }\{\}}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00052\ \ \ \ \ std::string\ Filename()\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ fs::PathToString(m\_filepath);\ \}}
+\DoxyCodeLine{00053\ \ \ \ \ std::vector<fs::path>\ Files()\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ \{m\_filepath\};\ \}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \ \ std::string\ Format()\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{stringliteral}{"{}bdb\_ro"{}};\ \}}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00058\ \ \ \ \ std::unique\_ptr<DatabaseBatch>\ MakeBatch()\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00059\ \};}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \textcolor{keyword}{class\ }BerkeleyROCursor\ :\ \textcolor{keyword}{public}\ DatabaseCursor}
+\DoxyCodeLine{00062\ \{}
+\DoxyCodeLine{00063\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{keyword}{const}\ BerkeleyRODatabase\&\ m\_database;}
+\DoxyCodeLine{00065\ \ \ \ \ BerkeleyROData::const\_iterator\ m\_cursor;}
+\DoxyCodeLine{00066\ \ \ \ \ BerkeleyROData::const\_iterator\ m\_cursor\_end;}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keyword}{explicit}\ BerkeleyROCursor(\textcolor{keyword}{const}\ BerkeleyRODatabase\&\ database,\ std::span<const\ std::byte>\ prefix\ =\ \{\});}
+\DoxyCodeLine{00070\ \ \ \ \ \string~BerkeleyROCursor()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ Status\ Next(DataStream\&\ key,\ DataStream\&\ value)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00073\ \};}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00076\ \textcolor{keyword}{class\ }BerkeleyROBatch\ :\ \textcolor{keyword}{public}\ DatabaseBatch}
+\DoxyCodeLine{00077\ \{}
+\DoxyCodeLine{00078\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keyword}{const}\ BerkeleyRODatabase\&\ m\_database;}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{keywordtype}{bool}\ ReadKey(DataStream\&\&\ key,\ DataStream\&\ value)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{comment}{//\ WriteKey\ returns\ true\ since\ various\ automatic\ upgrades\ for\ older\ wallets\ will\ expect\ writing\ to\ not\ fail.}}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{comment}{//\ It\ is\ okay\ for\ this\ batch\ type\ to\ not\ actually\ write\ anything\ as\ those\ automatic\ upgrades\ will\ occur\ again\ after\ migration.}}
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keywordtype}{bool}\ WriteKey(DataStream\&\&\ key,\ DataStream\&\&\ value,\ \textcolor{keywordtype}{bool}\ overwrite\ =\ \textcolor{keyword}{true})\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};\ \}}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordtype}{bool}\ EraseKey(DataStream\&\&\ key)\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00086\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasKey(DataStream\&\&\ key)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{keywordtype}{bool}\ ErasePrefix(std::span<const\ std::byte>\ prefix)\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{keyword}{explicit}\ BerkeleyROBatch(\textcolor{keyword}{const}\ BerkeleyRODatabase\&\ database)\ :\ m\_database(database)\ \{\}}
+\DoxyCodeLine{00091\ \ \ \ \ \string~BerkeleyROBatch()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \ \ \ \ BerkeleyROBatch(\textcolor{keyword}{const}\ BerkeleyROBatch\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00094\ \ \ \ \ BerkeleyROBatch\&\ operator=(\textcolor{keyword}{const}\ BerkeleyROBatch\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordtype}{void}\ Close()\textcolor{keyword}{\ override\ }\{\}}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \ \ \ \ std::unique\_ptr<DatabaseCursor>\ GetNewCursor()\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ std::make\_unique<BerkeleyROCursor>(m\_database);\ \}}
+\DoxyCodeLine{00099\ \ \ \ \ std::unique\_ptr<DatabaseCursor>\ GetNewPrefixCursor(std::span<const\ std::byte>\ prefix)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{keywordtype}{bool}\ TxnBegin()\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{keywordtype}{bool}\ TxnCommit()\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{keywordtype}{bool}\ TxnAbort()\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasActiveTxn()\textcolor{keyword}{\ override\ }\{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{00104\ \};}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00107\ std::unique\_ptr<BerkeleyRODatabase>\ MakeBerkeleyRODatabase(\textcolor{keyword}{const}\ fs::path\&\ path,\ \textcolor{keyword}{const}\ DatabaseOptions\&\ options,\ DatabaseStatus\&\ status,\ bilingual\_str\&\ error);}
+\DoxyCodeLine{00108\ \}\ \textcolor{comment}{//\ namespace\ wallet}}
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_WALLET\_MIGRATE\_H}}
+
+\end{DoxyCode}

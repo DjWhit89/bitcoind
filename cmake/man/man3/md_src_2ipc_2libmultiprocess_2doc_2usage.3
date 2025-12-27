@@ -1,0 +1,41 @@
+.TH "md_src_2ipc_2libmultiprocess_2doc_2usage" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+md_src_2ipc_2libmultiprocess_2doc_2usage \- libmultiprocess Usage 
+.PP
+
+.SH "Overview"
+.PP
+\fIlibmultiprocess\fP is a library and code generator that allows calling C++ class interfaces across different processes\&. For an interface to be available from other processes, it needs two definitions:
+
+.PP
+.IP "\(bu" 2
+An \fBAPI definition\fP declaring how the interface is called\&. Included examples: \fRcalculator\&.h\fP, \fRprinter\&.h\fP, \fRinit\&.h\fP\&. Bitcoin examples: \fRnode\&.h\fP, \fRwallet\&.h\fP, \fRecho\&.h\fP, \fRinit\&.h\fP\&.
+.IP "\(bu" 2
+A \fBdata definition\fP declaring how interface calls get sent across the wire\&. Included examples: \fRcalculator\&.capnp\fP, \fRprinter\&.capnp\fP, \fRinit\&.capnp\fP\&. Bitcoin examples: \fRnode\&.capnp\fP, \fRwallet\&.capnp\fP, \fRecho\&.capnp\fP, \fRinit\&.capnp\fP\&.
+.PP
+
+.PP
+The \fR*\&.capnp\fP data definition files are consumed by the \fIlibmultiprocess\fP code generator and each \fRX\&.capnp\fP file generates \fRX\&.capnp\&.c++\fP, \fRX\&.capnp\&.h\fP, \fRX\&.capnp\&.proxy-client\&.c++\fP, \fRX\&.capnp\&.proxy-server\&.c++\fP, \fRX\&.capnp\&.proxy-types\&.c++\fP, \fRX\&.capnp\&.proxy-types\&.h\fP, and \fRX\&.capnp\&.proxy\&.h\fP output files\&. The generated files include \fR\fBmp::ProxyClient\fP<Interface>\fP and \fR\fBmp::ProxyServer\fP<Interface>\fP class specializations for all the interfaces in the \fR\&.capnp\fP files\&. These allow methods on C++ objects in one process to be called from other processes over IPC sockets\&.
+
+.PP
+The \fRProxyServer\fP objects help translate IPC requests from a socket to method calls on a local object\&. The \fRProxyServer\fP objects are just used internally by the \fRmp::ServeStream(loop, socket, wrapped_object)\fP and \fRmp::ListenConnections(loop, socket, wrapped_object)\fP functions, and aren't exposed externally\&. The \fRProxyClient\fP classes are exposed, and returned from the \fRmp::ConnectStream(loop, socket)\fP function and meant to be used directly\&. The classes implement methods described in \fR\&.capnp\fP definitions, and whenever any method is called, a request with the method arguments is sent over the associated IPC connection, and the corresponding \fRwrapped_object\fP method on the other end of the connection is called, with the \fRProxyClient\fP method blocking until it returns and forwarding back any return value to the \fRProxyClient\fP method caller\&.
+.SH "Example"
+.PP
+A simple interface description can be found at \fRtest/mp/test/foo\&.capnp\fP, implementation in \fRtest/mp/test/foo\&.h\fP, and usage in \fRtest/mp/test/test\&.cpp\fP\&.
+
+.PP
+A more complete example can be found in \fRexample\fP and run with:
+
+.PP
+.PP
+.nf
+mkdir build
+cd build
+cmake \&.\&.
+make mpexamples
+example/mpexample
+.fi
+.PP
+ 

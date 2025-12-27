@@ -1,0 +1,1232 @@
+\doxysection{cluster\+\_\+linearize.\+h}
+\label{cluster__linearize_8h_source}\index{src/cluster\_linearize.h@{src/cluster\_linearize.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_CLUSTER\_LINEARIZE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_CLUSTER\_LINEARIZE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <numeric>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <memusage.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <random.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <util/feefrac.h>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <util/vecdeque.h>}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{keyword}{namespace\ }cluster\_linearize\ \{}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{using\ }DepGraphIndex\ =\ uint32\_t;}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{00029\ \textcolor{keyword}{class\ }DepGraph}
+\DoxyCodeLine{00030\ \{}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keyword}{struct\ }Entry}
+\DoxyCodeLine{00033\ \ \ \ \ \{}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ FeeFrac\ feerate;}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ SetType\ ancestors;}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ SetType\ descendants;}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ Entry\&,\ \textcolor{keyword}{const}\ Entry\&)\ \textcolor{keyword}{noexcept}\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ Entry()\ \textcolor{keyword}{noexcept}\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ Entry(\textcolor{keyword}{const}\ FeeFrac\&\ f,\ \textcolor{keyword}{const}\ SetType\&\ a,\ \textcolor{keyword}{const}\ SetType\&\ d)\ noexcept\ :\ feerate(f),\ ancestors(a),\ descendants(d)\ \{\}}
+\DoxyCodeLine{00048\ \ \ \ \ \};}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00051\ \ \ \ \ std::vector<Entry>\ entries;}
+\DoxyCodeLine{00052\ }
+\DoxyCodeLine{00054\ \ \ \ \ SetType\ m\_used;}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00056\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ DepGraph\&\ a,\ \textcolor{keyword}{const}\ DepGraph\&\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00059\ \ \ \ \ \{}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (a.m\_used\ !=\ b.m\_used)\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Only\ compare\ the\ used\ positions\ within\ the\ entries\ vector.}}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ idx\ :\ a.m\_used)\ \{}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (a.entries[idx]\ !=\ b.entries[idx])\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00066\ \ \ \ \ \}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{comment}{//\ Default\ constructors.}}
+\DoxyCodeLine{00069\ \ \ \ \ DepGraph()\ noexcept\ =\ default;}
+\DoxyCodeLine{00070\ \ \ \ \ DepGraph(const\ DepGraph\&)\ noexcept\ =\ default;}
+\DoxyCodeLine{00071\ \ \ \ \ DepGraph(DepGraph\&\&)\ noexcept\ =\ default;}
+\DoxyCodeLine{00072\ \ \ \ \ DepGraph\&\ operator=(const\ DepGraph\&)\ noexcept\ =\ default;}
+\DoxyCodeLine{00073\ \ \ \ \ DepGraph\&\ operator=(DepGraph\&\&)\ noexcept\ =\ default;}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00090\ \ \ \ \ DepGraph(const\ DepGraph<SetType>\&\ depgraph,\ std::span<const\ DepGraphIndex>\ mapping,\ DepGraphIndex\ pos\_range)\ noexcept\ :\ entries(pos\_range)}
+\DoxyCodeLine{00091\ \ \ \ \ \{}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ Assume(mapping.size()\ ==\ depgraph.PositionRange());}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ Assume((pos\_range\ ==\ 0)\ ==\ (depgraph.TxCount()\ ==\ 0));}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ i\ :\ depgraph.Positions())\ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ new\_idx\ =\ mapping[i];}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ Assume(new\_idx\ <\ pos\_range);}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ transaction.}}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ entries[new\_idx].ancestors\ =\ SetType::Singleton(new\_idx);}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ entries[new\_idx].descendants\ =\ SetType::Singleton(new\_idx);}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \ \ \ \ m\_used.Set(new\_idx);}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Fill\ in\ fee\ and\ size.}}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \ \ \ \ entries[new\_idx].feerate\ =\ depgraph.entries[i].feerate;}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ i\ :\ depgraph.Positions())\ \{}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Fill\ in\ dependencies\ by\ mapping\ direct\ parents.}}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \ \ \ \ SetType\ parents;}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ j\ :\ depgraph.GetReducedParents(i))\ parents.Set(mapping[j]);}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \ \ \ \ AddDependencies(parents,\ mapping[i]);}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ that\ the\ provided\ pos\_range\ was\ correct\ (no\ unused\ positions\ at\ the\ end).}}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ Assume(m\_used.None()\ ?\ (pos\_range\ ==\ 0)\ :\ (pos\_range\ ==\ m\_used.Last()\ +\ 1));}
+\DoxyCodeLine{00112\ \ \ \ \ \}}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{keyword}{const}\ SetType\&\ Positions()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_used;\ \}}
+\DoxyCodeLine{00117\ \ \ \ \ DepGraphIndex\ PositionRange()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ entries.size();\ \}}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keyword}{auto}\ TxCount()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_used.Count();\ \}}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keyword}{const}\ FeeFrac\&\ FeeRate(DepGraphIndex\ i)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ entries[i].feerate;\ \}}
+\DoxyCodeLine{00123\ \ \ \ \ FeeFrac\&\ FeeRate(DepGraphIndex\ i)\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ entries[i].feerate;\ \}}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keyword}{const}\ SetType\&\ Ancestors(DepGraphIndex\ i)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ entries[i].ancestors;\ \}}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keyword}{const}\ SetType\&\ Descendants(DepGraphIndex\ i)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ entries[i].descendants;\ \}}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00134\ \ \ \ \ DepGraphIndex\ AddTransaction(\textcolor{keyword}{const}\ FeeFrac\&\ feefrac)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00135\ \ \ \ \ \{}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ ALL\_POSITIONS\ =\ SetType::Fill(SetType::Size());}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ available\ =\ ALL\_POSITIONS\ -\/\ m\_used;}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ Assume(available.Any());}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ DepGraphIndex\ new\_idx\ =\ available.First();}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (new\_idx\ ==\ entries.size())\ \{}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \ \ \ \ entries.emplace\_back(feefrac,\ SetType::Singleton(new\_idx),\ SetType::Singleton(new\_idx));}
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ \ \ \ \ entries[new\_idx]\ =\ Entry(feefrac,\ SetType::Singleton(new\_idx),\ SetType::Singleton(new\_idx));}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ m\_used.Set(new\_idx);}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ new\_idx;}
+\DoxyCodeLine{00147\ \ \ \ \ \}}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00158\ \ \ \ \ \textcolor{keywordtype}{void}\ RemoveTransactions(\textcolor{keyword}{const}\ SetType\&\ del)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00159\ \ \ \ \ \{}
+\DoxyCodeLine{00160\ \ \ \ \ \ \ \ \ m\_used\ -\/=\ del;}
+\DoxyCodeLine{00161\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Remove\ now-\/unused\ trailing\ entries.}}
+\DoxyCodeLine{00162\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (!entries.empty()\ \&\&\ !m\_used[entries.size()\ -\/\ 1])\ \{}
+\DoxyCodeLine{00163\ \ \ \ \ \ \ \ \ \ \ \ \ entries.pop\_back();}
+\DoxyCodeLine{00164\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00165\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Remove\ the\ deleted\ transactions\ from\ ancestors/descendants\ of\ other\ transactions.\ Note}}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ that\ the\ deleted\ positions\ will\ retain\ old\ feerate\ and\ dependency\ information.\ This\ does}}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ not\ matter\ as\ they\ will\ be\ overwritten\ by\ AddTransaction\ if\ they\ get\ used\ again.}}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ entry\ :\ entries)\ \{}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ \ \ \ \ entry.ancestors\ \&=\ m\_used;}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \ \ \ \ entry.descendants\ \&=\ m\_used;}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00172\ \ \ \ \ \}}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keywordtype}{void}\ AddDependencies(\textcolor{keyword}{const}\ SetType\&\ parents,\ DepGraphIndex\ child)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00179\ \ \ \ \ \{}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ Assume(m\_used[child]);}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ Assume(parents.IsSubsetOf(m\_used));}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Compute\ the\ ancestors\ of\ parents\ that\ are\ not\ already\ ancestors\ of\ child.}}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ SetType\ par\_anc;}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ par\ :\ parents\ -\/\ Ancestors(child))\ \{}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ \ \ \ \ par\_anc\ |=\ Ancestors(par);}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ par\_anc\ -\/=\ Ancestors(child);}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Bail\ out\ if\ there\ are\ no\ such\ ancestors.}}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (par\_anc.None())\ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ To\ each\ such\ ancestor,\ add\ as\ descendants\ the\ descendants\ of\ the\ child.}}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ chl\_des\ =\ entries[child].descendants;}
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ anc\_of\_par\ :\ par\_anc)\ \{}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ \ \ \ \ entries[anc\_of\_par].descendants\ |=\ chl\_des;}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ To\ each\ descendant\ of\ the\ child,\ add\ those\ ancestors.}}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ dec\_of\_chl\ :\ Descendants(child))\ \{}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \ \ \ \ entries[dec\_of\_chl].ancestors\ |=\ par\_anc;}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00199\ \ \ \ \ \}}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00209\ \ \ \ \ SetType\ GetReducedParents(DepGraphIndex\ i)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00210\ \ \ \ \ \{}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ SetType\ parents\ =\ Ancestors(i);}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ parents.Reset(i);}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ parent\ :\ parents)\ \{}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (parents[parent])\ \{}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ parents\ -\/=\ Ancestors(parent);}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ parents.Set(parent);}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ parents;}
+\DoxyCodeLine{00220\ \ \ \ \ \}}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00230\ \ \ \ \ SetType\ GetReducedChildren(DepGraphIndex\ i)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00231\ \ \ \ \ \{}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ SetType\ children\ =\ Descendants(i);}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ children.Reset(i);}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ child\ :\ children)\ \{}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (children[child])\ \{}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ children\ -\/=\ Descendants(child);}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ children.Set(child);}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ children;}
+\DoxyCodeLine{00241\ \ \ \ \ \}}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00247\ \ \ \ \ FeeFrac\ FeeRate(\textcolor{keyword}{const}\ SetType\&\ elems)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00248\ \ \ \ \ \{}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ FeeFrac\ ret;}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ pos\ :\ elems)\ ret\ +=\ entries[pos].feerate;}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00252\ \ \ \ \ \}}
+\DoxyCodeLine{00253\ }
+\DoxyCodeLine{00264\ \ \ \ \ SetType\ GetConnectedComponent(\textcolor{keyword}{const}\ SetType\&\ todo,\ DepGraphIndex\ tx)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00265\ \ \ \ \ \{}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ Assume(todo[tx]);}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ Assume(todo.IsSubsetOf(m\_used));}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ to\_add\ =\ SetType::Singleton(tx);}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ SetType\ ret;}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \ \ \ \ SetType\ old\ =\ ret;}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ add\ :\ to\_add)\ \{}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ret\ |=\ Descendants(add);}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ret\ |=\ Ancestors(add);}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \ \ \ \ ret\ \&=\ todo;}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ \ \ \ \ to\_add\ =\ ret\ -\/\ old;}
+\DoxyCodeLine{00278\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{while}\ (to\_add.Any());}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00280\ \ \ \ \ \}}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00289\ \ \ \ \ SetType\ FindConnectedComponent(\textcolor{keyword}{const}\ SetType\&\ todo)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00290\ \ \ \ \ \{}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (todo.None())\ \textcolor{keywordflow}{return}\ todo;}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ GetConnectedComponent(todo,\ todo.First());}
+\DoxyCodeLine{00293\ \ \ \ \ \}}
+\DoxyCodeLine{00294\ }
+\DoxyCodeLine{00299\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsConnected(\textcolor{keyword}{const}\ SetType\&\ subset)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00300\ \ \ \ \ \{}
+\DoxyCodeLine{00301\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ FindConnectedComponent(subset)\ ==\ subset;}
+\DoxyCodeLine{00302\ \ \ \ \ \}}
+\DoxyCodeLine{00303\ }
+\DoxyCodeLine{00308\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsConnected()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ IsConnected(m\_used);\ \}}
+\DoxyCodeLine{00309\ }
+\DoxyCodeLine{00314\ \ \ \ \ \textcolor{keywordtype}{void}\ AppendTopo(std::vector<DepGraphIndex>\&\ list,\ \textcolor{keyword}{const}\ SetType\&\ select)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00315\ \ \ \ \ \{}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ DepGraphIndex\ old\_len\ =\ list.size();}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ i\ :\ select)\ list.push\_back(i);}
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ std::sort(list.begin()\ +\ old\_len,\ list.end(),\ [\&](DepGraphIndex\ a,\ DepGraphIndex\ b)\ \textcolor{keyword}{noexcept}\ \{}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ a\_anc\_count\ =\ entries[a].ancestors.Count();}
+\DoxyCodeLine{00320\ \ \ \ \ \ \ \ \ \ \ \ \ const\ auto\ b\_anc\_count\ =\ entries[b].ancestors.Count();}
+\DoxyCodeLine{00321\ \ \ \ \ \ \ \ \ \ \ \ \ if\ (a\_anc\_count\ !=\ b\_anc\_count)\ return\ a\_anc\_count\ <\ b\_anc\_count;}
+\DoxyCodeLine{00322\ \ \ \ \ \ \ \ \ \ \ \ \ return\ a\ <\ b;}
+\DoxyCodeLine{00323\ \ \ \ \ \ \ \ \ \});}
+\DoxyCodeLine{00324\ \ \ \ \ \}}
+\DoxyCodeLine{00325\ }
+\DoxyCodeLine{00327\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsAcyclic()\ const\ noexcept}
+\DoxyCodeLine{00328\ \ \ \ \ \{}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ i\ :\ Positions())\ \{}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ ((Ancestors(i)\ \&\ Descendants(i))\ !=\ SetType::Singleton(i))\ \{}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00332\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00333\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00335\ \ \ \ \ \}}
+\DoxyCodeLine{00336\ }
+\DoxyCodeLine{00337\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ CountDependencies()\ const\ noexcept}
+\DoxyCodeLine{00338\ \ \ \ \ \{}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ ret\ =\ 0;}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ i\ :\ Positions())\ \{}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ \ \ \ \ ret\ +=\ GetReducedParents(i).Count();}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00344\ \ \ \ \ \}}
+\DoxyCodeLine{00345\ }
+\DoxyCodeLine{00347\ \ \ \ \ \textcolor{keywordtype}{void}\ Compact()\ noexcept}
+\DoxyCodeLine{00348\ \ \ \ \ \{}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ entries.shrink\_to\_fit();}
+\DoxyCodeLine{00350\ \ \ \ \ \}}
+\DoxyCodeLine{00351\ }
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ DynamicMemoryUsage()\ const\ noexcept}
+\DoxyCodeLine{00353\ \ \ \ \ \{}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ memusage::DynamicUsage(entries);}
+\DoxyCodeLine{00355\ \ \ \ \ \}}
+\DoxyCodeLine{00356\ \};}
+\DoxyCodeLine{00357\ }
+\DoxyCodeLine{00359\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{00360\ \textcolor{keyword}{struct\ }SetInfo}
+\DoxyCodeLine{00361\ \{}
+\DoxyCodeLine{00363\ \ \ \ \ SetType\ transactions;}
+\DoxyCodeLine{00365\ \ \ \ \ FeeFrac\ feerate;}
+\DoxyCodeLine{00366\ }
+\DoxyCodeLine{00368\ \ \ \ \ SetInfo()\ noexcept\ =\ default;}
+\DoxyCodeLine{00369\ }
+\DoxyCodeLine{00371\ \ \ \ \ SetInfo(const\ SetType\&\ txn,\ const\ FeeFrac\&\ fr)\ noexcept\ :\ transactions(txn),\ feerate(fr)\ \{\}}
+\DoxyCodeLine{00372\ }
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keyword}{explicit}\ SetInfo(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph,\ DepGraphIndex\ pos)\ noexcept\ :}
+\DoxyCodeLine{00375\ \ \ \ \ \ \ \ \ transactions(SetType::Singleton(pos)),\ feerate(depgraph.FeeRate(pos))\ \{\}}
+\DoxyCodeLine{00376\ }
+\DoxyCodeLine{00378\ \ \ \ \ \textcolor{keyword}{explicit}\ SetInfo(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph,\ \textcolor{keyword}{const}\ SetType\&\ txn)\ noexcept\ :}
+\DoxyCodeLine{00379\ \ \ \ \ \ \ \ \ transactions(txn),\ feerate(depgraph.FeeRate(txn))\ \{\}}
+\DoxyCodeLine{00380\ }
+\DoxyCodeLine{00382\ \ \ \ \ \textcolor{keywordtype}{void}\ Set(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph,\ DepGraphIndex\ pos)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00383\ \ \ \ \ \{}
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ Assume(!transactions[pos]);}
+\DoxyCodeLine{00385\ \ \ \ \ \ \ \ \ transactions.Set(pos);}
+\DoxyCodeLine{00386\ \ \ \ \ \ \ \ \ feerate\ +=\ depgraph.FeeRate(pos);}
+\DoxyCodeLine{00387\ \ \ \ \ \}}
+\DoxyCodeLine{00388\ }
+\DoxyCodeLine{00390\ \ \ \ \ SetInfo\&\ operator|=(\textcolor{keyword}{const}\ SetInfo\&\ other)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00391\ \ \ \ \ \{}
+\DoxyCodeLine{00392\ \ \ \ \ \ \ \ \ Assume(!transactions.Overlaps(other.transactions));}
+\DoxyCodeLine{00393\ \ \ \ \ \ \ \ \ transactions\ |=\ other.transactions;}
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ feerate\ +=\ other.feerate;}
+\DoxyCodeLine{00395\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00396\ \ \ \ \ \}}
+\DoxyCodeLine{00397\ }
+\DoxyCodeLine{00399\ \ \ \ \ SetInfo\&\ operator-\/=(\textcolor{keyword}{const}\ SetInfo\&\ other)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00400\ \ \ \ \ \{}
+\DoxyCodeLine{00401\ \ \ \ \ \ \ \ \ Assume(other.transactions.IsSubsetOf(transactions));}
+\DoxyCodeLine{00402\ \ \ \ \ \ \ \ \ transactions\ -\/=\ other.transactions;}
+\DoxyCodeLine{00403\ \ \ \ \ \ \ \ \ feerate\ -\/=\ other.feerate;}
+\DoxyCodeLine{00404\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00405\ \ \ \ \ \}}
+\DoxyCodeLine{00406\ }
+\DoxyCodeLine{00408\ \ \ \ \ SetInfo\ operator-\/(\textcolor{keyword}{const}\ SetInfo\&\ other)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00409\ \ \ \ \ \{}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ Assume(other.transactions.IsSubsetOf(transactions));}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \{transactions\ -\/\ other.transactions,\ feerate\ -\/\ other.feerate\};}
+\DoxyCodeLine{00412\ \ \ \ \ \}}
+\DoxyCodeLine{00413\ }
+\DoxyCodeLine{00415\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{void}\ swap(SetInfo\&\ a,\ SetInfo\&\ b)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00416\ \ \ \ \ \{}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ swap(a.transactions,\ b.transactions);}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ swap(a.feerate,\ b.feerate);}
+\DoxyCodeLine{00419\ \ \ \ \ \}}
+\DoxyCodeLine{00420\ }
+\DoxyCodeLine{00422\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{bool}\ operator==(\textcolor{keyword}{const}\ SetInfo\&,\ \textcolor{keyword}{const}\ SetInfo\&)\ \textcolor{keyword}{noexcept}\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00423\ \};}
+\DoxyCodeLine{00424\ }
+\DoxyCodeLine{00426\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{00427\ std::vector<SetInfo<SetType>>\ ChunkLinearizationInfo(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph,\ std::span<const\ DepGraphIndex>\ linearization)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00428\ \{}
+\DoxyCodeLine{00429\ \ \ \ \ std::vector<SetInfo<SetType>>\ ret;}
+\DoxyCodeLine{00430\ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ i\ :\ linearization)\ \{}
+\DoxyCodeLine{00432\ \ \ \ \ \ \ \ \ SetInfo<SetType>\ new\_chunk(depgraph,\ i);}
+\DoxyCodeLine{00433\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ As\ long\ as\ the\ new\ chunk\ has\ a\ higher\ feerate\ than\ the\ last\ chunk\ so\ far,\ absorb\ it.}}
+\DoxyCodeLine{00434\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (!ret.empty()\ \&\&\ new\_chunk.feerate\ >>\ ret.back().feerate)\ \{}
+\DoxyCodeLine{00435\ \ \ \ \ \ \ \ \ \ \ \ \ new\_chunk\ |=\ ret.back();}
+\DoxyCodeLine{00436\ \ \ \ \ \ \ \ \ \ \ \ \ ret.pop\_back();}
+\DoxyCodeLine{00437\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00438\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Actually\ move\ that\ new\ chunk\ into\ the\ chunking.}}
+\DoxyCodeLine{00439\ \ \ \ \ \ \ \ \ ret.emplace\_back(std::move(new\_chunk));}
+\DoxyCodeLine{00440\ \ \ \ \ \}}
+\DoxyCodeLine{00441\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00442\ \}}
+\DoxyCodeLine{00443\ }
+\DoxyCodeLine{00446\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{00447\ std::vector<FeeFrac>\ ChunkLinearization(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph,\ std::span<const\ DepGraphIndex>\ linearization)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00448\ \{}
+\DoxyCodeLine{00449\ \ \ \ \ std::vector<FeeFrac>\ ret;}
+\DoxyCodeLine{00450\ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ i\ :\ linearization)\ \{}
+\DoxyCodeLine{00452\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ new\_chunk\ =\ depgraph.FeeRate(i);}
+\DoxyCodeLine{00453\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ As\ long\ as\ the\ new\ chunk\ has\ a\ higher\ feerate\ than\ the\ last\ chunk\ so\ far,\ absorb\ it.}}
+\DoxyCodeLine{00454\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (!ret.empty()\ \&\&\ new\_chunk\ >>\ ret.back())\ \{}
+\DoxyCodeLine{00455\ \ \ \ \ \ \ \ \ \ \ \ \ new\_chunk\ +=\ ret.back();}
+\DoxyCodeLine{00456\ \ \ \ \ \ \ \ \ \ \ \ \ ret.pop\_back();}
+\DoxyCodeLine{00457\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00458\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Actually\ move\ that\ new\ chunk\ into\ the\ chunking.}}
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ ret.push\_back(std::move(new\_chunk));}
+\DoxyCodeLine{00460\ \ \ \ \ \}}
+\DoxyCodeLine{00461\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00462\ \}}
+\DoxyCodeLine{00463\ }
+\DoxyCodeLine{00598\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{00599\ \textcolor{keyword}{class\ }SpanningForestState}
+\DoxyCodeLine{00600\ \{}
+\DoxyCodeLine{00601\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00603\ \ \ \ \ InsecureRandomContext\ m\_rng;}
+\DoxyCodeLine{00604\ }
+\DoxyCodeLine{00606\ \ \ \ \ \textcolor{keyword}{using\ }TxIdx\ =\ uint32\_t;}
+\DoxyCodeLine{00608\ \ \ \ \ \textcolor{keyword}{using\ }DepIdx\ =\ uint32\_t;}
+\DoxyCodeLine{00609\ }
+\DoxyCodeLine{00612\ \ \ \ \ \textcolor{keyword}{struct\ }TxData\ \{}
+\DoxyCodeLine{00614\ \ \ \ \ \ \ \ \ std::vector<DepIdx>\ child\_deps;}
+\DoxyCodeLine{00616\ \ \ \ \ \ \ \ \ SetType\ parents;}
+\DoxyCodeLine{00618\ \ \ \ \ \ \ \ \ SetType\ children;}
+\DoxyCodeLine{00621\ \ \ \ \ \ \ \ \ TxIdx\ chunk\_rep;}
+\DoxyCodeLine{00624\ \ \ \ \ \ \ \ \ SetInfo<SetType>\ chunk\_setinfo;}
+\DoxyCodeLine{00625\ \ \ \ \ \};}
+\DoxyCodeLine{00626\ }
+\DoxyCodeLine{00628\ \ \ \ \ \textcolor{keyword}{struct\ }DepData\ \{}
+\DoxyCodeLine{00630\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ active;}
+\DoxyCodeLine{00632\ \ \ \ \ \ \ \ \ TxIdx\ parent,\ child;}
+\DoxyCodeLine{00635\ \ \ \ \ \ \ \ \ SetInfo<SetType>\ top\_setinfo;}
+\DoxyCodeLine{00636\ \ \ \ \ \};}
+\DoxyCodeLine{00637\ }
+\DoxyCodeLine{00639\ \ \ \ \ SetType\ m\_transaction\_idxs;}
+\DoxyCodeLine{00642\ \ \ \ \ std::vector<TxData>\ m\_tx\_data;}
+\DoxyCodeLine{00644\ \ \ \ \ std::vector<DepData>\ m\_dep\_data;}
+\DoxyCodeLine{00646\ \ \ \ \ VecDeque<TxIdx>\ m\_suboptimal\_chunks;}
+\DoxyCodeLine{00647\ }
+\DoxyCodeLine{00649\ \ \ \ \ uint64\_t\ m\_cost\{0\};}
+\DoxyCodeLine{00650\ }
+\DoxyCodeLine{00656\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{bool}\ Subtract>}
+\DoxyCodeLine{00657\ \ \ \ \ \textcolor{keywordtype}{void}\ UpdateChunk(\textcolor{keyword}{const}\ SetType\&\ chunk,\ TxIdx\ query,\ TxIdx\ chunk\_rep,\ \textcolor{keyword}{const}\ SetInfo<SetType>\&\ dep\_change)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00658\ \ \ \ \ \{}
+\DoxyCodeLine{00659\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Iterate\ over\ all\ the\ chunk's\ transactions.}}
+\DoxyCodeLine{00660\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ tx\_idx\ :\ chunk)\ \{}
+\DoxyCodeLine{00661\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ tx\_data\ =\ m\_tx\_data[tx\_idx];}
+\DoxyCodeLine{00662\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Update\ the\ chunk\ representative.}}
+\DoxyCodeLine{00663\ \ \ \ \ \ \ \ \ \ \ \ \ tx\_data.chunk\_rep\ =\ chunk\_rep;}
+\DoxyCodeLine{00664\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Iterate\ over\ all\ active\ dependencies\ with\ tx\_idx\ as\ parent.\ Combined\ with\ the\ outer}}
+\DoxyCodeLine{00665\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ loop\ this\ iterates\ over\ all\ internal\ active\ dependencies\ of\ the\ chunk.}}
+\DoxyCodeLine{00666\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ child\_deps\ =\ std::span\{tx\_data.child\_deps\};}
+\DoxyCodeLine{00667\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ dep\_idx\ :\ child\_deps)\ \{}
+\DoxyCodeLine{00668\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ dep\_entry\ =\ m\_dep\_data[dep\_idx];}
+\DoxyCodeLine{00669\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Assume(dep\_entry.parent\ ==\ tx\_idx);}
+\DoxyCodeLine{00670\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Skip\ inactive\ dependencies.}}
+\DoxyCodeLine{00671\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!dep\_entry.active)\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00672\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ this\ dependency's\ top\_setinfo\ contains\ query,\ update\ it\ to\ add/remove}}
+\DoxyCodeLine{00673\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ dep\_change.}}
+\DoxyCodeLine{00674\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dep\_entry.top\_setinfo.transactions[query])\ \{}
+\DoxyCodeLine{00675\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (Subtract)\ \{}
+\DoxyCodeLine{00676\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dep\_entry.top\_setinfo\ -\/=\ dep\_change;}
+\DoxyCodeLine{00677\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00678\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dep\_entry.top\_setinfo\ |=\ dep\_change;}
+\DoxyCodeLine{00679\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00680\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00681\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00682\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00683\ \ \ \ \ \}}
+\DoxyCodeLine{00684\ }
+\DoxyCodeLine{00686\ \ \ \ \ TxIdx\ Activate(DepIdx\ dep\_idx)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00687\ \ \ \ \ \{}
+\DoxyCodeLine{00688\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ dep\_data\ =\ m\_dep\_data[dep\_idx];}
+\DoxyCodeLine{00689\ \ \ \ \ \ \ \ \ Assume(!dep\_data.active);}
+\DoxyCodeLine{00690\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ child\_tx\_data\ =\ m\_tx\_data[dep\_data.child];}
+\DoxyCodeLine{00691\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ parent\_tx\_data\ =\ m\_tx\_data[dep\_data.parent];}
+\DoxyCodeLine{00692\ }
+\DoxyCodeLine{00693\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Gather\ information\ about\ the\ parent\ and\ child\ chunks.}}
+\DoxyCodeLine{00694\ \ \ \ \ \ \ \ \ Assume(parent\_tx\_data.chunk\_rep\ !=\ child\_tx\_data.chunk\_rep);}
+\DoxyCodeLine{00695\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ par\_chunk\_data\ =\ m\_tx\_data[parent\_tx\_data.chunk\_rep];}
+\DoxyCodeLine{00696\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ chl\_chunk\_data\ =\ m\_tx\_data[child\_tx\_data.chunk\_rep];}
+\DoxyCodeLine{00697\ \ \ \ \ \ \ \ \ TxIdx\ top\_rep\ =\ parent\_tx\_data.chunk\_rep;}
+\DoxyCodeLine{00698\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ top\_part\ =\ par\_chunk\_data.chunk\_setinfo;}
+\DoxyCodeLine{00699\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ bottom\_part\ =\ chl\_chunk\_data.chunk\_setinfo;}
+\DoxyCodeLine{00700\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Update\ the\ parent\ chunk\ to\ also\ contain\ the\ child.}}
+\DoxyCodeLine{00701\ \ \ \ \ \ \ \ \ par\_chunk\_data.chunk\_setinfo\ |=\ bottom\_part;}
+\DoxyCodeLine{00702\ \ \ \ \ \ \ \ \ m\_cost\ +=\ par\_chunk\_data.chunk\_setinfo.transactions.Count();}
+\DoxyCodeLine{00703\ }
+\DoxyCodeLine{00704\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Consider\ the\ following\ example:}}
+\DoxyCodeLine{00705\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00706\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ \ A\ \ \ \ \ \ \ \ \ \ \ A\ \ \ \ \ There\ are\ two\ chunks,\ ABC\ and\ DEF,\ and\ the\ inactive\ E-\/>C\ dependency}}
+\DoxyCodeLine{00707\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ /\ \(\backslash\)\ \ \ \ \ \ \ \ \ /\ \(\backslash\)\ \ \ \ is\ activated,\ resulting\ in\ a\ single\ chunk\ ABCDEF.}}
+\DoxyCodeLine{00708\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ B\ \ \ C\ \ \ \ \ \ \ B\ \ \ C}}
+\DoxyCodeLine{00709\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ :\ \ ==>\ \ \ \ \ \ |\ \ \ Dependency\ |\ top\ set\ before\ |\ top\ set\ after\ |\ change}}
+\DoxyCodeLine{00710\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ D\ \ \ E\ \ \ \ \ \ \ D\ \ \ E\ \ \ B-\/>A\ \ \ \ \ \ \ |\ AC\ \ \ \ \ \ \ \ \ \ \ \ \ |\ ACDEF\ \ \ \ \ \ \ \ \ |\ +DEF}}
+\DoxyCodeLine{00711\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ \(\backslash\)\ /\ \ \ \ \ \ \ \ \ \(\backslash\)\ /\ \ \ \ C-\/>A\ \ \ \ \ \ \ |\ AB\ \ \ \ \ \ \ \ \ \ \ \ \ |\ AB\ \ \ \ \ \ \ \ \ \ \ \ |}}
+\DoxyCodeLine{00712\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ \ F\ \ \ \ \ \ \ \ \ \ \ F\ \ \ \ \ F-\/>D\ \ \ \ \ \ \ |\ D\ \ \ \ \ \ \ \ \ \ \ \ \ \ |\ D\ \ \ \ \ \ \ \ \ \ \ \ \ |}}
+\DoxyCodeLine{00713\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ F-\/>E\ \ \ \ \ \ \ |\ E\ \ \ \ \ \ \ \ \ \ \ \ \ \ |\ ABCE\ \ \ \ \ \ \ \ \ \ |\ +ABC}}
+\DoxyCodeLine{00714\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00715\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ common\ pattern\ here\ is\ that\ any\ dependency\ which\ has\ the\ parent\ or\ child\ of\ the}}
+\DoxyCodeLine{00716\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ dependency\ being\ activated\ (E-\/>C\ here)\ in\ its\ top\ set,\ will\ have\ the\ opposite\ part\ added}}
+\DoxyCodeLine{00717\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ to\ it.\ This\ is\ true\ for\ B-\/>A\ and\ F-\/>E,\ but\ not\ for\ C-\/>A\ and\ F-\/>D.}}
+\DoxyCodeLine{00718\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00719\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Let\ UpdateChunk\ traverse\ the\ old\ parent\ chunk\ top\_part\ (ABC\ in\ example),\ and\ add}}
+\DoxyCodeLine{00720\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ bottom\_part\ (DEF)\ to\ every\ dependency's\ top\_set\ which\ has\ the\ parent\ (C)\ in\ it.\ The}}
+\DoxyCodeLine{00721\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ representative\ of\ each\ of\ these\ transactions\ was\ already\ top\_rep,\ so\ that\ is\ not\ being}}
+\DoxyCodeLine{00722\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ changed\ here.}}
+\DoxyCodeLine{00723\ \ \ \ \ \ \ \ \ UpdateChunk<false>(\textcolor{comment}{/*chunk=*/}top\_part.transactions,\ \textcolor{comment}{/*query=*/}dep\_data.parent,}
+\DoxyCodeLine{00724\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*chunk\_rep=*/}top\_rep,\ \textcolor{comment}{/*dep\_change=*/}bottom\_part);}
+\DoxyCodeLine{00725\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Let\ UpdateChunk\ traverse\ the\ old\ child\ chunk\ bottom\_part\ (DEF\ in\ example),\ and\ add}}
+\DoxyCodeLine{00726\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ top\_part\ (ABC)\ to\ every\ dependency's\ top\_set\ which\ has\ the\ child\ (E)\ in\ it.\ At\ the\ same}}
+\DoxyCodeLine{00727\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ time,\ change\ the\ representative\ of\ each\ of\ these\ transactions\ to\ be\ top\_rep,\ which}}
+\DoxyCodeLine{00728\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ becomes\ the\ representative\ for\ the\ merged\ chunk.}}
+\DoxyCodeLine{00729\ \ \ \ \ \ \ \ \ UpdateChunk<false>(\textcolor{comment}{/*chunk=*/}bottom\_part.transactions,\ \textcolor{comment}{/*query=*/}dep\_data.child,}
+\DoxyCodeLine{00730\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*chunk\_rep=*/}top\_rep,\ \textcolor{comment}{/*dep\_change=*/}top\_part);}
+\DoxyCodeLine{00731\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ active.}}
+\DoxyCodeLine{00732\ \ \ \ \ \ \ \ \ dep\_data.active\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00733\ \ \ \ \ \ \ \ \ dep\_data.top\_setinfo\ =\ top\_part;}
+\DoxyCodeLine{00734\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ top\_rep;}
+\DoxyCodeLine{00735\ \ \ \ \ \}}
+\DoxyCodeLine{00736\ }
+\DoxyCodeLine{00738\ \ \ \ \ \textcolor{keywordtype}{void}\ Deactivate(DepIdx\ dep\_idx)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00739\ \ \ \ \ \{}
+\DoxyCodeLine{00740\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ dep\_data\ =\ m\_dep\_data[dep\_idx];}
+\DoxyCodeLine{00741\ \ \ \ \ \ \ \ \ Assume(dep\_data.active);}
+\DoxyCodeLine{00742\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ parent\_tx\_data\ =\ m\_tx\_data[dep\_data.parent];}
+\DoxyCodeLine{00743\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ inactive.}}
+\DoxyCodeLine{00744\ \ \ \ \ \ \ \ \ dep\_data.active\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00745\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Update\ representatives.}}
+\DoxyCodeLine{00746\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ chunk\_data\ =\ m\_tx\_data[parent\_tx\_data.chunk\_rep];}
+\DoxyCodeLine{00747\ \ \ \ \ \ \ \ \ m\_cost\ +=\ chunk\_data.chunk\_setinfo.transactions.Count();}
+\DoxyCodeLine{00748\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ top\_part\ =\ dep\_data.top\_setinfo;}
+\DoxyCodeLine{00749\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ bottom\_part\ =\ chunk\_data.chunk\_setinfo\ -\/\ top\_part;}
+\DoxyCodeLine{00750\ \ \ \ \ \ \ \ \ TxIdx\ bottom\_rep\ =\ dep\_data.child;}
+\DoxyCodeLine{00751\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ bottom\_chunk\_data\ =\ m\_tx\_data[bottom\_rep];}
+\DoxyCodeLine{00752\ \ \ \ \ \ \ \ \ bottom\_chunk\_data.chunk\_setinfo\ =\ bottom\_part;}
+\DoxyCodeLine{00753\ \ \ \ \ \ \ \ \ TxIdx\ top\_rep\ =\ dep\_data.parent;}
+\DoxyCodeLine{00754\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ top\_chunk\_data\ =\ m\_tx\_data[top\_rep];}
+\DoxyCodeLine{00755\ \ \ \ \ \ \ \ \ top\_chunk\_data.chunk\_setinfo\ =\ top\_part;}
+\DoxyCodeLine{00756\ }
+\DoxyCodeLine{00757\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ See\ the\ comment\ above\ in\ Activate().\ We\ perform\ the\ opposite\ operations\ here,}}
+\DoxyCodeLine{00758\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ removing\ instead\ of\ adding.}}
+\DoxyCodeLine{00759\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00760\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Let\ UpdateChunk\ traverse\ the\ old\ parent\ chunk\ top\_part,\ and\ remove\ bottom\_part\ from}}
+\DoxyCodeLine{00761\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ every\ dependency's\ top\_set\ which\ has\ the\ parent\ in\ it.\ At\ the\ same\ time,\ change\ the}}
+\DoxyCodeLine{00762\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ representative\ of\ each\ of\ these\ transactions\ to\ be\ top\_rep.}}
+\DoxyCodeLine{00763\ \ \ \ \ \ \ \ \ UpdateChunk<true>(\textcolor{comment}{/*chunk=*/}top\_part.transactions,\ \textcolor{comment}{/*query=*/}dep\_data.parent,}
+\DoxyCodeLine{00764\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*chunk\_rep=*/}top\_rep,\ \textcolor{comment}{/*dep\_change=*/}bottom\_part);}
+\DoxyCodeLine{00765\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Let\ UpdateChunk\ traverse\ the\ old\ child\ chunk\ bottom\_part,\ and\ remove\ top\_part\ from\ every}}
+\DoxyCodeLine{00766\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ dependency's\ top\_set\ which\ has\ the\ child\ in\ it.\ At\ the\ same\ time,\ change\ the}}
+\DoxyCodeLine{00767\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ representative\ of\ each\ of\ these\ transactions\ to\ be\ bottom\_rep.}}
+\DoxyCodeLine{00768\ \ \ \ \ \ \ \ \ UpdateChunk<true>(\textcolor{comment}{/*chunk=*/}bottom\_part.transactions,\ \textcolor{comment}{/*query=*/}dep\_data.child,}
+\DoxyCodeLine{00769\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*chunk\_rep=*/}bottom\_rep,\ \textcolor{comment}{/*dep\_change=*/}top\_part);}
+\DoxyCodeLine{00770\ \ \ \ \ \}}
+\DoxyCodeLine{00771\ }
+\DoxyCodeLine{00774\ \ \ \ \ TxIdx\ MergeChunks(TxIdx\ top\_rep,\ TxIdx\ bottom\_rep)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00775\ \ \ \ \ \{}
+\DoxyCodeLine{00776\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ top\_chunk\ =\ m\_tx\_data[top\_rep];}
+\DoxyCodeLine{00777\ \ \ \ \ \ \ \ \ Assume(top\_chunk.chunk\_rep\ ==\ top\_rep);}
+\DoxyCodeLine{00778\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ bottom\_chunk\ =\ m\_tx\_data[bottom\_rep];}
+\DoxyCodeLine{00779\ \ \ \ \ \ \ \ \ Assume(bottom\_chunk.chunk\_rep\ ==\ bottom\_rep);}
+\DoxyCodeLine{00780\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Count\ the\ number\ of\ dependencies\ between\ bottom\_chunk\ and\ top\_chunk.}}
+\DoxyCodeLine{00781\ \ \ \ \ \ \ \ \ TxIdx\ num\_deps\{0\};}
+\DoxyCodeLine{00782\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ tx\ :\ top\_chunk.chunk\_setinfo.transactions)\ \{}
+\DoxyCodeLine{00783\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ tx\_data\ =\ m\_tx\_data[tx];}
+\DoxyCodeLine{00784\ \ \ \ \ \ \ \ \ \ \ \ \ num\_deps\ +=\ (tx\_data.children\ \&\ bottom\_chunk.chunk\_setinfo.transactions).Count();}
+\DoxyCodeLine{00785\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00786\ \ \ \ \ \ \ \ \ Assume(num\_deps\ >\ 0);}
+\DoxyCodeLine{00787\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Uniformly\ randomly\ pick\ one\ of\ them\ and\ activate\ it.}}
+\DoxyCodeLine{00788\ \ \ \ \ \ \ \ \ TxIdx\ pick\ =\ m\_rng.randrange(num\_deps);}
+\DoxyCodeLine{00789\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ tx\ :\ top\_chunk.chunk\_setinfo.transactions)\ \{}
+\DoxyCodeLine{00790\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ tx\_data\ =\ m\_tx\_data[tx];}
+\DoxyCodeLine{00791\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ intersect\ =\ tx\_data.children\ \&\ bottom\_chunk.chunk\_setinfo.transactions;}
+\DoxyCodeLine{00792\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ count\ =\ intersect.Count();}
+\DoxyCodeLine{00793\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pick\ <\ count)\ \{}
+\DoxyCodeLine{00794\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ dep\ :\ tx\_data.child\_deps)\ \{}
+\DoxyCodeLine{00795\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ dep\_data\ =\ m\_dep\_data[dep];}
+\DoxyCodeLine{00796\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (bottom\_chunk.chunk\_setinfo.transactions[dep\_data.child])\ \{}
+\DoxyCodeLine{00797\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pick\ ==\ 0)\ \textcolor{keywordflow}{return}\ Activate(dep);}
+\DoxyCodeLine{00798\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/-\/pick;}
+\DoxyCodeLine{00799\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00800\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00801\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00802\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00803\ \ \ \ \ \ \ \ \ \ \ \ \ pick\ -\/=\ count;}
+\DoxyCodeLine{00804\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00805\ \ \ \ \ \ \ \ \ Assume(\textcolor{keyword}{false});}
+\DoxyCodeLine{00806\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ TxIdx(-\/1);}
+\DoxyCodeLine{00807\ \ \ \ \ \}}
+\DoxyCodeLine{00808\ }
+\DoxyCodeLine{00811\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{bool}\ DownWard>}
+\DoxyCodeLine{00812\ \ \ \ \ TxIdx\ MergeStep(TxIdx\ chunk\_rep)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00813\ \ \ \ \ \{}
+\DoxyCodeLine{00815\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ chunk\_data\ =\ m\_tx\_data[chunk\_rep];}
+\DoxyCodeLine{00816\ \ \ \ \ \ \ \ \ SetType\ chunk\_txn\ =\ chunk\_data.chunk\_setinfo.transactions;}
+\DoxyCodeLine{00817\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Iterate\ over\ all\ transactions\ in\ the\ chunk,\ figuring\ out\ which\ other\ chunk\ each}}
+\DoxyCodeLine{00818\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ depends\ on,\ but\ only\ testing\ each\ other\ chunk\ once.\ For\ those\ depended-\/on\ chunks,}}
+\DoxyCodeLine{00819\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ remember\ the\ highest-\/feerate\ (if\ DownWard)\ or\ lowest-\/feerate\ (if\ !DownWard)\ one.}}
+\DoxyCodeLine{00820\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ multiple\ equal-\/feerate\ candidate\ chunks\ to\ merge\ with\ exist,\ pick\ a\ random\ one}}
+\DoxyCodeLine{00821\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ among\ them.}}
+\DoxyCodeLine{00822\ }
+\DoxyCodeLine{00825\ \ \ \ \ \ \ \ \ SetType\ explored\ =\ chunk\_txn;}
+\DoxyCodeLine{00829\ \ \ \ \ \ \ \ \ FeeFrac\ best\_other\_chunk\_feerate\ =\ chunk\_data.chunk\_setinfo.feerate;}
+\DoxyCodeLine{00831\ \ \ \ \ \ \ \ \ TxIdx\ best\_other\_chunk\_rep\ =\ TxIdx(-\/1);}
+\DoxyCodeLine{00834\ \ \ \ \ \ \ \ \ uint64\_t\ best\_other\_chunk\_tiebreak\{0\};}
+\DoxyCodeLine{00835\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ tx\ :\ chunk\_txn)\ \{}
+\DoxyCodeLine{00836\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ tx\_data\ =\ m\_tx\_data[tx];}
+\DoxyCodeLine{00839\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ newly\_reached\ =\ (DownWard\ ?\ tx\_data.children\ :\ tx\_data.parents)\ -\/\ explored;}
+\DoxyCodeLine{00840\ \ \ \ \ \ \ \ \ \ \ \ \ explored\ |=\ newly\_reached;}
+\DoxyCodeLine{00841\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (newly\_reached.Any())\ \{}
+\DoxyCodeLine{00842\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Find\ a\ chunk\ inside\ newly\_reached,\ and\ remove\ it\ from\ newly\_reached.}}
+\DoxyCodeLine{00843\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ reached\_chunk\_rep\ =\ m\_tx\_data[newly\_reached.First()].chunk\_rep;}
+\DoxyCodeLine{00844\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ reached\_chunk\ =\ m\_tx\_data[reached\_chunk\_rep].chunk\_setinfo;}
+\DoxyCodeLine{00845\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ newly\_reached\ -\/=\ reached\_chunk.transactions;}
+\DoxyCodeLine{00846\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ See\ if\ it\ has\ an\ acceptable\ feerate.}}
+\DoxyCodeLine{00847\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ cmp\ =\ DownWard\ ?\ FeeRateCompare(best\_other\_chunk\_feerate,\ reached\_chunk.feerate)}
+\DoxyCodeLine{00848\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ :\ FeeRateCompare(reached\_chunk.feerate,\ best\_other\_chunk\_feerate);}
+\DoxyCodeLine{00849\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cmp\ >\ 0)\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00850\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ tiebreak\ =\ m\_rng.rand64();}
+\DoxyCodeLine{00851\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cmp\ <\ 0\ ||\ tiebreak\ >=\ best\_other\_chunk\_tiebreak)\ \{}
+\DoxyCodeLine{00852\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ best\_other\_chunk\_feerate\ =\ reached\_chunk.feerate;}
+\DoxyCodeLine{00853\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ best\_other\_chunk\_rep\ =\ reached\_chunk\_rep;}
+\DoxyCodeLine{00854\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ best\_other\_chunk\_tiebreak\ =\ tiebreak;}
+\DoxyCodeLine{00855\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00856\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00857\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00858\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Stop\ if\ there\ are\ no\ candidate\ chunks\ to\ merge\ with.}}
+\DoxyCodeLine{00859\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (best\_other\_chunk\_rep\ ==\ TxIdx(-\/1))\ \textcolor{keywordflow}{return}\ TxIdx(-\/1);}
+\DoxyCodeLine{00860\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (DownWard)\ \{}
+\DoxyCodeLine{00861\ \ \ \ \ \ \ \ \ \ \ \ \ chunk\_rep\ =\ MergeChunks(chunk\_rep,\ best\_other\_chunk\_rep);}
+\DoxyCodeLine{00862\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00863\ \ \ \ \ \ \ \ \ \ \ \ \ chunk\_rep\ =\ MergeChunks(best\_other\_chunk\_rep,\ chunk\_rep);}
+\DoxyCodeLine{00864\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00865\ \ \ \ \ \ \ \ \ Assume(chunk\_rep\ !=\ TxIdx(-\/1));}
+\DoxyCodeLine{00866\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ chunk\_rep;}
+\DoxyCodeLine{00867\ \ \ \ \ \}}
+\DoxyCodeLine{00868\ }
+\DoxyCodeLine{00869\ }
+\DoxyCodeLine{00871\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keywordtype}{bool}\ DownWard>}
+\DoxyCodeLine{00872\ \ \ \ \ \textcolor{keywordtype}{void}\ MergeSequence(TxIdx\ tx\_idx)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00873\ \ \ \ \ \{}
+\DoxyCodeLine{00874\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ chunk\_rep\ =\ m\_tx\_data[tx\_idx].chunk\_rep;}
+\DoxyCodeLine{00875\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00876\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ merged\_rep\ =\ MergeStep<DownWard>(chunk\_rep);}
+\DoxyCodeLine{00877\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (merged\_rep\ ==\ TxIdx(-\/1))\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00878\ \ \ \ \ \ \ \ \ \ \ \ \ chunk\_rep\ =\ merged\_rep;}
+\DoxyCodeLine{00879\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00880\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ the\ chunk\ to\ the\ queue\ of\ improvable\ chunks.}}
+\DoxyCodeLine{00881\ \ \ \ \ \ \ \ \ m\_suboptimal\_chunks.push\_back(chunk\_rep);}
+\DoxyCodeLine{00882\ \ \ \ \ \}}
+\DoxyCodeLine{00883\ }
+\DoxyCodeLine{00886\ \ \ \ \ \textcolor{keywordtype}{void}\ Improve(DepIdx\ dep\_idx)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00887\ \ \ \ \ \{}
+\DoxyCodeLine{00888\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ dep\_data\ =\ m\_dep\_data[dep\_idx];}
+\DoxyCodeLine{00889\ \ \ \ \ \ \ \ \ Assume(dep\_data.active);}
+\DoxyCodeLine{00890\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Deactivate\ the\ specified\ dependency,\ splitting\ it\ into\ two\ new\ chunks:\ a\ top\ containing}}
+\DoxyCodeLine{00891\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ parent,\ and\ a\ bottom\ containing\ the\ child.\ The\ top\ should\ have\ a\ higher\ feerate.}}
+\DoxyCodeLine{00892\ \ \ \ \ \ \ \ \ Deactivate(dep\_idx);}
+\DoxyCodeLine{00893\ }
+\DoxyCodeLine{00894\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ At\ this\ point\ we\ have\ exactly\ two\ chunks\ which\ may\ violate\ topology\ constraints\ (the}}
+\DoxyCodeLine{00895\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ parent\ chunk\ and\ child\ chunk\ that\ were\ produced\ by\ deactivating\ dep\_idx).\ We\ can\ fix}}
+\DoxyCodeLine{00896\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ these\ using\ just\ merge\ sequences,\ one\ upwards\ and\ one\ downwards,\ avoiding\ the\ need\ for\ a}}
+\DoxyCodeLine{00897\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ full\ MakeTopological.}}
+\DoxyCodeLine{00898\ }
+\DoxyCodeLine{00899\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Merge\ the\ top\ chunk\ with\ lower-\/feerate\ chunks\ it\ depends\ on\ (which\ may\ be\ the\ bottom\ it}}
+\DoxyCodeLine{00900\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ was\ just\ split\ from,\ or\ other\ pre-\/existing\ chunks).}}
+\DoxyCodeLine{00901\ \ \ \ \ \ \ \ \ MergeSequence<false>(dep\_data.parent);}
+\DoxyCodeLine{00902\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Merge\ the\ bottom\ chunk\ with\ higher-\/feerate\ chunks\ that\ depend\ on\ it.}}
+\DoxyCodeLine{00903\ \ \ \ \ \ \ \ \ MergeSequence<true>(dep\_data.child);}
+\DoxyCodeLine{00904\ \ \ \ \ \}}
+\DoxyCodeLine{00905\ }
+\DoxyCodeLine{00906\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00909\ \ \ \ \ \textcolor{keyword}{explicit}\ SpanningForestState(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph,\ uint64\_t\ rng\_seed)\ noexcept\ :\ m\_rng(rng\_seed)}
+\DoxyCodeLine{00910\ \ \ \ \ \{}
+\DoxyCodeLine{00911\ \ \ \ \ \ \ \ \ m\_transaction\_idxs\ =\ depgraph.Positions();}
+\DoxyCodeLine{00912\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ num\_transactions\ =\ m\_transaction\_idxs.Count();}
+\DoxyCodeLine{00913\ \ \ \ \ \ \ \ \ m\_tx\_data.resize(depgraph.PositionRange());}
+\DoxyCodeLine{00914\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Reserve\ the\ maximum\ number\ of\ (reserved)\ dependencies\ the\ cluster\ can\ have,\ so}}
+\DoxyCodeLine{00915\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ m\_dep\_data\ won't\ need\ any\ reallocations\ during\ construction.\ For\ a\ cluster\ with\ N}}
+\DoxyCodeLine{00916\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ transactions,\ the\ worst\ case\ consists\ of\ two\ sets\ of\ transactions,\ the\ parents\ and\ the}}
+\DoxyCodeLine{00917\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ children,\ where\ each\ child\ depends\ on\ each\ parent\ and\ nothing\ else.\ For\ even\ N,\ both}}
+\DoxyCodeLine{00918\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ sets\ can\ be\ sized\ N/2,\ which\ means\ N\string^2/4\ dependencies.\ For\ odd\ N,\ one\ can\ be\ (N\ +\ 1)/2}}
+\DoxyCodeLine{00919\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ and\ the\ other\ can\ be\ (N\ -\/\ 1)/2,\ meaning\ (N\string^2\ -\/\ 1)/4\ dependencies.\ Because\ N\string^2\ is\ odd\ in}}
+\DoxyCodeLine{00920\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ this\ case,\ N\string^2/4\ (with\ rounding-\/down\ division)\ is\ the\ correct\ value\ in\ both\ cases.}}
+\DoxyCodeLine{00921\ \ \ \ \ \ \ \ \ m\_dep\_data.reserve((num\_transactions\ *\ num\_transactions)\ /\ 4);}
+\DoxyCodeLine{00922\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ tx\ :\ m\_transaction\_idxs)\ \{}
+\DoxyCodeLine{00923\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Fill\ in\ transaction\ data.}}
+\DoxyCodeLine{00924\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ tx\_data\ =\ m\_tx\_data[tx];}
+\DoxyCodeLine{00925\ \ \ \ \ \ \ \ \ \ \ \ \ tx\_data.chunk\_rep\ =\ tx;}
+\DoxyCodeLine{00926\ \ \ \ \ \ \ \ \ \ \ \ \ tx\_data.chunk\_setinfo.transactions\ =\ SetType::Singleton(tx);}
+\DoxyCodeLine{00927\ \ \ \ \ \ \ \ \ \ \ \ \ tx\_data.chunk\_setinfo.feerate\ =\ depgraph.FeeRate(tx);}
+\DoxyCodeLine{00928\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ its\ dependencies.}}
+\DoxyCodeLine{00929\ \ \ \ \ \ \ \ \ \ \ \ \ SetType\ parents\ =\ depgraph.GetReducedParents(tx);}
+\DoxyCodeLine{00930\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ par\ :\ parents)\ \{}
+\DoxyCodeLine{00931\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ par\_tx\_data\ =\ m\_tx\_data[par];}
+\DoxyCodeLine{00932\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ dep\_idx\ =\ m\_dep\_data.size();}
+\DoxyCodeLine{00933\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Construct\ new\ dependency.}}
+\DoxyCodeLine{00934\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ dep\ =\ m\_dep\_data.emplace\_back();}
+\DoxyCodeLine{00935\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dep.active\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00936\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dep.parent\ =\ par;}
+\DoxyCodeLine{00937\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ dep.child\ =\ tx;}
+\DoxyCodeLine{00938\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ it\ as\ parent\ of\ the\ child.}}
+\DoxyCodeLine{00939\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ tx\_data.parents.Set(par);}
+\DoxyCodeLine{00940\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ it\ as\ child\ of\ the\ parent.}}
+\DoxyCodeLine{00941\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ par\_tx\_data.child\_deps.push\_back(dep\_idx);}
+\DoxyCodeLine{00942\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ par\_tx\_data.children.Set(tx);}
+\DoxyCodeLine{00943\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00944\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00945\ \ \ \ \ \}}
+\DoxyCodeLine{00946\ }
+\DoxyCodeLine{00950\ \ \ \ \ \textcolor{keywordtype}{void}\ LoadLinearization(std::span<const\ DepGraphIndex>\ old\_linearization)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00951\ \ \ \ \ \{}
+\DoxyCodeLine{00952\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Add\ transactions\ one\ by\ one,\ in\ order\ of\ existing\ linearization.}}
+\DoxyCodeLine{00953\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ tx\ :\ old\_linearization)\ \{}
+\DoxyCodeLine{00954\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ chunk\_rep\ =\ m\_tx\_data[tx].chunk\_rep;}
+\DoxyCodeLine{00955\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Merge\ the\ chunk\ upwards,\ as\ long\ as\ merging\ succeeds.}}
+\DoxyCodeLine{00956\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00957\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ chunk\_rep\ =\ MergeStep<false>(chunk\_rep);}
+\DoxyCodeLine{00958\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (chunk\_rep\ ==\ TxIdx(-\/1))\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00959\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00960\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00961\ \ \ \ \ \}}
+\DoxyCodeLine{00962\ }
+\DoxyCodeLine{00964\ \ \ \ \ \textcolor{keywordtype}{void}\ MakeTopological()\ noexcept}
+\DoxyCodeLine{00965\ \ \ \ \ \{}
+\DoxyCodeLine{00966\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ tx\ :\ m\_transaction\_idxs)\ \{}
+\DoxyCodeLine{00967\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ tx\_data\ =\ m\_tx\_data[tx];}
+\DoxyCodeLine{00968\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (tx\_data.chunk\_rep\ ==\ tx)\ \{}
+\DoxyCodeLine{00969\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_suboptimal\_chunks.emplace\_back(tx);}
+\DoxyCodeLine{00970\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Randomize\ the\ initial\ order\ of\ suboptimal\ chunks\ in\ the\ queue.}}
+\DoxyCodeLine{00971\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ TxIdx\ j\ =\ m\_rng.randrange<TxIdx>(m\_suboptimal\_chunks.size());}
+\DoxyCodeLine{00972\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (j\ !=\ m\_suboptimal\_chunks.size()\ -\/\ 1)\ \{}
+\DoxyCodeLine{00973\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::swap(m\_suboptimal\_chunks.back(),\ m\_suboptimal\_chunks[j]);}
+\DoxyCodeLine{00974\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00975\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00976\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00977\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (!m\_suboptimal\_chunks.empty())\ \{}
+\DoxyCodeLine{00978\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Pop\ an\ entry\ from\ the\ potentially-\/suboptimal\ chunk\ queue.}}
+\DoxyCodeLine{00979\ \ \ \ \ \ \ \ \ \ \ \ \ TxIdx\ chunk\ =\ m\_suboptimal\_chunks.front();}
+\DoxyCodeLine{00980\ \ \ \ \ \ \ \ \ \ \ \ \ m\_suboptimal\_chunks.pop\_front();}
+\DoxyCodeLine{00981\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ chunk\_data\ =\ m\_tx\_data[chunk];}
+\DoxyCodeLine{00982\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ what\ was\ popped\ is\ not\ currently\ a\ chunk\ representative,\ continue.\ This\ may}}
+\DoxyCodeLine{00983\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ happen\ when\ it\ was\ merged\ with\ something\ else\ since\ being\ added.}}
+\DoxyCodeLine{00984\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (chunk\_data.chunk\_rep\ !=\ chunk)\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00985\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ flip\ =\ m\_rng.randbool();}
+\DoxyCodeLine{00986\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ 2;\ ++i)\ \{}
+\DoxyCodeLine{00987\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ \string^\ flip)\ \{}
+\DoxyCodeLine{00988\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Attempt\ to\ merge\ the\ chunk\ upwards.}}
+\DoxyCodeLine{00989\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ result\_up\ =\ MergeStep<false>(chunk);}
+\DoxyCodeLine{00990\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (result\_up\ !=\ TxIdx(-\/1))\ \{}
+\DoxyCodeLine{00991\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_suboptimal\_chunks.push\_back(result\_up);}
+\DoxyCodeLine{00992\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00993\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00994\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00995\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Attempt\ to\ merge\ the\ chunk\ downwards.}}
+\DoxyCodeLine{00996\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ result\_down\ =\ MergeStep<true>(chunk);}
+\DoxyCodeLine{00997\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (result\_down\ !=\ TxIdx(-\/1))\ \{}
+\DoxyCodeLine{00998\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_suboptimal\_chunks.push\_back(result\_down);}
+\DoxyCodeLine{00999\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01000\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01001\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01002\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01003\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01004\ \ \ \ \ \}}
+\DoxyCodeLine{01005\ }
+\DoxyCodeLine{01007\ \ \ \ \ \textcolor{keywordtype}{void}\ StartOptimizing()\ noexcept}
+\DoxyCodeLine{01008\ \ \ \ \ \{}
+\DoxyCodeLine{01009\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Mark\ chunks\ suboptimal.}}
+\DoxyCodeLine{01010\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ tx\ :\ m\_transaction\_idxs)\ \{}
+\DoxyCodeLine{01011\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ tx\_data\ =\ m\_tx\_data[tx];}
+\DoxyCodeLine{01012\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (tx\_data.chunk\_rep\ ==\ tx)\ \{}
+\DoxyCodeLine{01013\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_suboptimal\_chunks.push\_back(tx);}
+\DoxyCodeLine{01014\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Randomize\ the\ initial\ order\ of\ suboptimal\ chunks\ in\ the\ queue.}}
+\DoxyCodeLine{01015\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ TxIdx\ j\ =\ m\_rng.randrange<TxIdx>(m\_suboptimal\_chunks.size());}
+\DoxyCodeLine{01016\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (j\ !=\ m\_suboptimal\_chunks.size()\ -\/\ 1)\ \{}
+\DoxyCodeLine{01017\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::swap(m\_suboptimal\_chunks.back(),\ m\_suboptimal\_chunks[j]);}
+\DoxyCodeLine{01018\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01019\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01020\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01021\ \ \ \ \ \}}
+\DoxyCodeLine{01022\ }
+\DoxyCodeLine{01024\ \ \ \ \ \textcolor{keywordtype}{bool}\ OptimizeStep()\ noexcept}
+\DoxyCodeLine{01025\ \ \ \ \ \{}
+\DoxyCodeLine{01026\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (!m\_suboptimal\_chunks.empty())\ \{}
+\DoxyCodeLine{01027\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Pop\ an\ entry\ from\ the\ potentially-\/suboptimal\ chunk\ queue.}}
+\DoxyCodeLine{01028\ \ \ \ \ \ \ \ \ \ \ \ \ TxIdx\ chunk\ =\ m\_suboptimal\_chunks.front();}
+\DoxyCodeLine{01029\ \ \ \ \ \ \ \ \ \ \ \ \ m\_suboptimal\_chunks.pop\_front();}
+\DoxyCodeLine{01030\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ chunk\_data\ =\ m\_tx\_data[chunk];}
+\DoxyCodeLine{01031\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ what\ was\ popped\ is\ not\ currently\ a\ chunk\ representative,\ continue.\ This\ may}}
+\DoxyCodeLine{01032\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ happen\ when\ a\ split\ chunk\ merges\ in\ Improve()\ with\ one\ or\ more\ existing\ chunks\ that}}
+\DoxyCodeLine{01033\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ are\ themselves\ on\ the\ suboptimal\ queue\ already.}}
+\DoxyCodeLine{01034\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (chunk\_data.chunk\_rep\ !=\ chunk)\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{01035\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Remember\ the\ best\ dependency\ seen\ so\ far.}}
+\DoxyCodeLine{01036\ \ \ \ \ \ \ \ \ \ \ \ \ DepIdx\ candidate\_dep\ =\ DepIdx(-\/1);}
+\DoxyCodeLine{01037\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ candidate\_tiebreak\ =\ 0;}
+\DoxyCodeLine{01038\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Iterate\ over\ all\ transactions.}}
+\DoxyCodeLine{01039\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ tx\ :\ chunk\_data.chunk\_setinfo.transactions)\ \{}
+\DoxyCodeLine{01040\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ tx\_data\ =\ m\_tx\_data[tx];}
+\DoxyCodeLine{01041\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Iterate\ over\ all\ active\ child\ dependencies\ of\ the\ transaction.}}
+\DoxyCodeLine{01042\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ children\ =\ std::span\{tx\_data.child\_deps\};}
+\DoxyCodeLine{01043\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (DepIdx\ dep\_idx\ :\ children)\ \{}
+\DoxyCodeLine{01044\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ dep\_data\ =\ m\_dep\_data[dep\_idx];}
+\DoxyCodeLine{01045\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!dep\_data.active)\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{01046\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Skip\ if\ this\ dependency\ is\ ineligible\ (the\ top\ chunk\ that\ would\ be\ created}}
+\DoxyCodeLine{01047\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ does\ not\ have\ higher\ feerate\ than\ the\ chunk\ it\ is\ currently\ part\ of).}}
+\DoxyCodeLine{01048\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ cmp\ =\ FeeRateCompare(dep\_data.top\_setinfo.feerate,\ chunk\_data.chunk\_setinfo.feerate);}
+\DoxyCodeLine{01049\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cmp\ <=\ 0)\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{01050\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Generate\ a\ random\ tiebreak\ for\ this\ dependency,\ and\ reject\ it\ if\ its\ tiebreak}}
+\DoxyCodeLine{01051\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ is\ worse\ than\ the\ best\ so\ far.\ This\ means\ that\ among\ all\ eligible}}
+\DoxyCodeLine{01052\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ dependencies,\ a\ uniformly\ random\ one\ will\ be\ chosen.}}
+\DoxyCodeLine{01053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ tiebreak\ =\ m\_rng.rand64();}
+\DoxyCodeLine{01054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (tiebreak\ <\ candidate\_tiebreak)\ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{01055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Remember\ this\ as\ our\ (new)\ candidate\ dependency.}}
+\DoxyCodeLine{01056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ candidate\_dep\ =\ dep\_idx;}
+\DoxyCodeLine{01057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ candidate\_tiebreak\ =\ tiebreak;}
+\DoxyCodeLine{01058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01059\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01060\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ a\ candidate\ with\ positive\ gain\ was\ found,\ deactivate\ it\ and\ then\ make\ the\ state}}
+\DoxyCodeLine{01061\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ topological\ again\ with\ a\ sequence\ of\ merges.}}
+\DoxyCodeLine{01062\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (candidate\_dep\ !=\ DepIdx(-\/1))\ Improve(candidate\_dep);}
+\DoxyCodeLine{01063\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Stop\ processing\ for\ now,\ even\ if\ nothing\ was\ activated,\ as\ the\ loop\ above\ may\ have}}
+\DoxyCodeLine{01064\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ had\ a\ nontrivial\ cost.}}
+\DoxyCodeLine{01065\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ !m\_suboptimal\_chunks.empty();}
+\DoxyCodeLine{01066\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01067\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ No\ improvable\ chunk\ was\ found,\ we\ are\ done.}}
+\DoxyCodeLine{01068\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{01069\ \ \ \ \ \}}
+\DoxyCodeLine{01070\ }
+\DoxyCodeLine{01073\ \ \ \ \ std::vector<DepGraphIndex>\ GetLinearization()\ noexcept}
+\DoxyCodeLine{01074\ \ \ \ \ \{}
+\DoxyCodeLine{01076\ \ \ \ \ \ \ \ \ std::vector<DepGraphIndex>\ ret;}
+\DoxyCodeLine{01077\ \ \ \ \ \ \ \ \ ret.reserve(m\_transaction\_idxs.Count());}
+\DoxyCodeLine{01080\ \ \ \ \ \ \ \ \ std::vector<std::pair<TxIdx,\ uint64\_t>>\ ready\_chunks;}
+\DoxyCodeLine{01087\ \ \ \ \ \ \ \ \ std::vector<std::pair<TxIdx,\ TxIdx>>\ chunk\_deps(m\_tx\_data.size(),\ \{0,\ 0\});}
+\DoxyCodeLine{01089\ \ \ \ \ \ \ \ \ SetType\ chunk\_reps;}
+\DoxyCodeLine{01091\ \ \ \ \ \ \ \ \ std::vector<TxIdx>\ ready\_tx;}
+\DoxyCodeLine{01092\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Populate\ chunk\_deps[c]\ with\ the\ number\ of\ \{out-\/of-\/chunk\ dependencies,\ dependencies\}\ the}}
+\DoxyCodeLine{01093\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ child\ has.}}
+\DoxyCodeLine{01094\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (TxIdx\ chl\_idx\ :\ m\_transaction\_idxs)\ \{}
+\DoxyCodeLine{01095\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ chl\_data\ =\ m\_tx\_data[chl\_idx];}
+\DoxyCodeLine{01096\ \ \ \ \ \ \ \ \ \ \ \ \ chunk\_deps[chl\_idx].second\ =\ chl\_data.parents.Count();}
+\DoxyCodeLine{01097\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ chl\_chunk\_rep\ =\ chl\_data.chunk\_rep;}
+\DoxyCodeLine{01098\ \ \ \ \ \ \ \ \ \ \ \ \ chunk\_reps.Set(chl\_chunk\_rep);}
+\DoxyCodeLine{01099\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ par\_idx\ :\ chl\_data.parents)\ \{}
+\DoxyCodeLine{01100\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ par\_chunk\_rep\ =\ m\_tx\_data[par\_idx].chunk\_rep;}
+\DoxyCodeLine{01101\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ chunk\_deps[chl\_chunk\_rep].first\ +=\ (par\_chunk\_rep\ !=\ chl\_chunk\_rep);}
+\DoxyCodeLine{01102\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01103\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01104\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Construct\ a\ heap\ with\ all\ chunks\ that\ have\ no\ out-\/of-\/chunk\ dependencies.}}
+\DoxyCodeLine{01106\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ chunk\_cmp\_fn\ =\ [\&](\textcolor{keyword}{const}\ std::pair<TxIdx,\ uint64\_t>\&\ a,\ \textcolor{keyword}{const}\ std::pair<TxIdx,\ uint64\_t>\&\ b)\ \textcolor{keyword}{noexcept}\ \{}
+\DoxyCodeLine{01107\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ chunk\_a\ =\ m\_tx\_data[a.first];}
+\DoxyCodeLine{01108\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ chunk\_b\ =\ m\_tx\_data[b.first];}
+\DoxyCodeLine{01109\ \ \ \ \ \ \ \ \ \ \ \ \ Assume(chunk\_a.chunk\_rep\ ==\ a.first);}
+\DoxyCodeLine{01110\ \ \ \ \ \ \ \ \ \ \ \ \ Assume(chunk\_b.chunk\_rep\ ==\ b.first);}
+\DoxyCodeLine{01111\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ First\ sort\ by\ chunk\ feerate.}}
+\DoxyCodeLine{01112\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (chunk\_a.chunk\_setinfo.feerate\ !=\ chunk\_b.chunk\_setinfo.feerate)\ \{}
+\DoxyCodeLine{01113\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ chunk\_a.chunk\_setinfo.feerate\ <\ chunk\_b.chunk\_setinfo.feerate;}
+\DoxyCodeLine{01114\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01115\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Tie-\/break\ randomly.}}
+\DoxyCodeLine{01116\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (a.second\ !=\ b.second)\ \textcolor{keywordflow}{return}\ a.second\ <\ b.second;}
+\DoxyCodeLine{01117\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Lastly,\ tie-\/break\ by\ chunk\ representative.}}
+\DoxyCodeLine{01118\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a.first\ <\ b.first;}
+\DoxyCodeLine{01119\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{01120\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (TxIdx\ chunk\_rep\ :\ chunk\_reps)\ \{}
+\DoxyCodeLine{01121\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (chunk\_deps[chunk\_rep].first\ ==\ 0)\ ready\_chunks.emplace\_back(chunk\_rep,\ m\_rng.rand64());}
+\DoxyCodeLine{01122\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01123\ \ \ \ \ \ \ \ \ std::make\_heap(ready\_chunks.begin(),\ ready\_chunks.end(),\ chunk\_cmp\_fn);}
+\DoxyCodeLine{01124\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Pop\ chunks\ off\ the\ heap,\ highest-\/feerate\ ones\ first.}}
+\DoxyCodeLine{01125\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (!ready\_chunks.empty())\ \{}
+\DoxyCodeLine{01126\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ [chunk\_rep,\ \_rnd]\ =\ ready\_chunks.front();}
+\DoxyCodeLine{01127\ \ \ \ \ \ \ \ \ \ \ \ \ std::pop\_heap(ready\_chunks.begin(),\ ready\_chunks.end(),\ chunk\_cmp\_fn);}
+\DoxyCodeLine{01128\ \ \ \ \ \ \ \ \ \ \ \ \ ready\_chunks.pop\_back();}
+\DoxyCodeLine{01129\ \ \ \ \ \ \ \ \ \ \ \ \ Assume(m\_tx\_data[chunk\_rep].chunk\_rep\ ==\ chunk\_rep);}
+\DoxyCodeLine{01130\ \ \ \ \ \ \ \ \ \ \ \ \ Assume(chunk\_deps[chunk\_rep].first\ ==\ 0);}
+\DoxyCodeLine{01131\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ chunk\_txn\ =\ m\_tx\_data[chunk\_rep].chunk\_setinfo.transactions;}
+\DoxyCodeLine{01132\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Build\ heap\ of\ all\ includable\ transactions\ in\ chunk.}}
+\DoxyCodeLine{01133\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (TxIdx\ tx\_idx\ :\ chunk\_txn)\ \{}
+\DoxyCodeLine{01134\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (chunk\_deps[tx\_idx].second\ ==\ 0)\ \{}
+\DoxyCodeLine{01135\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ready\_tx.push\_back(tx\_idx);}
+\DoxyCodeLine{01136\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01137\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01138\ \ \ \ \ \ \ \ \ \ \ \ \ Assume(!ready\_tx.empty());}
+\DoxyCodeLine{01139\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Pick\ transactions\ from\ the\ ready\ queue,\ append\ them\ to\ linearization,\ and\ decrement}}
+\DoxyCodeLine{01140\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ dependency\ counts.}}
+\DoxyCodeLine{01141\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (!ready\_tx.empty())\ \{}
+\DoxyCodeLine{01142\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Move\ a\ random\ queue\ element\ to\ the\ back.}}
+\DoxyCodeLine{01143\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ pos\ =\ m\_rng.randrange(ready\_tx.size());}
+\DoxyCodeLine{01144\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ !=\ ready\_tx.size()\ -\/\ 1)\ std::swap(ready\_tx.back(),\ ready\_tx[pos]);}
+\DoxyCodeLine{01145\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Pop\ from\ the\ back.}}
+\DoxyCodeLine{01146\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ tx\_idx\ =\ ready\_tx.back();}
+\DoxyCodeLine{01147\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Assume(chunk\_txn[tx\_idx]);}
+\DoxyCodeLine{01148\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ready\_tx.pop\_back();}
+\DoxyCodeLine{01149\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Append\ to\ linearization.}}
+\DoxyCodeLine{01150\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ret.push\_back(tx\_idx);}
+\DoxyCodeLine{01151\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Decrement\ dependency\ counts.}}
+\DoxyCodeLine{01152\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ tx\_data\ =\ m\_tx\_data[tx\_idx];}
+\DoxyCodeLine{01153\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (TxIdx\ chl\_idx\ :\ tx\_data.children)\ \{}
+\DoxyCodeLine{01154\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ chl\_data\ =\ m\_tx\_data[chl\_idx];}
+\DoxyCodeLine{01155\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Decrement\ tx\ dependency\ count.}}
+\DoxyCodeLine{01156\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Assume(chunk\_deps[chl\_idx].second\ >\ 0);}
+\DoxyCodeLine{01157\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (-\/-\/chunk\_deps[chl\_idx].second\ ==\ 0\ \&\&\ chunk\_txn[chl\_idx])\ \{}
+\DoxyCodeLine{01158\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Child\ tx\ has\ no\ dependencies\ left,\ and\ is\ in\ this\ chunk.\ Add\ it\ to\ the\ tx\ queue.}}
+\DoxyCodeLine{01159\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ready\_tx.push\_back(chl\_idx);}
+\DoxyCodeLine{01160\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01161\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Decrement\ chunk\ dependency\ count\ if\ this\ is\ out-\/of-\/chunk\ dependency.}}
+\DoxyCodeLine{01162\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (chl\_data.chunk\_rep\ !=\ chunk\_rep)\ \{}
+\DoxyCodeLine{01163\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Assume(chunk\_deps[chl\_data.chunk\_rep].first\ >\ 0);}
+\DoxyCodeLine{01164\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (-\/-\/chunk\_deps[chl\_data.chunk\_rep].first\ ==\ 0)\ \{}
+\DoxyCodeLine{01165\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Child\ chunk\ has\ no\ dependencies\ left.\ Add\ it\ to\ the\ chunk\ heap.}}
+\DoxyCodeLine{01166\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ready\_chunks.emplace\_back(chl\_data.chunk\_rep,\ m\_rng.rand64());}
+\DoxyCodeLine{01167\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::push\_heap(ready\_chunks.begin(),\ ready\_chunks.end(),\ chunk\_cmp\_fn);}
+\DoxyCodeLine{01168\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01169\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01170\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01171\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01172\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01173\ \ \ \ \ \ \ \ \ Assume(ret.size()\ ==\ m\_transaction\_idxs.Count());}
+\DoxyCodeLine{01174\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{01175\ \ \ \ \ \}}
+\DoxyCodeLine{01176\ }
+\DoxyCodeLine{01186\ \ \ \ \ std::vector<FeeFrac>\ GetDiagram()\ const\ noexcept}
+\DoxyCodeLine{01187\ \ \ \ \ \{}
+\DoxyCodeLine{01188\ \ \ \ \ \ \ \ \ std::vector<FeeFrac>\ ret;}
+\DoxyCodeLine{01189\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ tx\ :\ m\_transaction\_idxs)\ \{}
+\DoxyCodeLine{01190\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_tx\_data[tx].chunk\_rep\ ==\ tx)\ \{}
+\DoxyCodeLine{01191\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ret.push\_back(m\_tx\_data[tx].chunk\_setinfo.feerate);}
+\DoxyCodeLine{01192\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01193\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01194\ \ \ \ \ \ \ \ \ std::sort(ret.begin(),\ ret.end(),\ std::greater\{\});}
+\DoxyCodeLine{01195\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{01196\ \ \ \ \ \}}
+\DoxyCodeLine{01197\ }
+\DoxyCodeLine{01199\ \ \ \ \ uint64\_t\ GetCost()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_cost;\ \}}
+\DoxyCodeLine{01200\ }
+\DoxyCodeLine{01202\ \ \ \ \ \textcolor{keywordtype}{void}\ SanityCheck(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{01203\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{01204\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01205\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ dependency\ parent/child\ information,\ and\ build\ list\ of\ (active)\ dependencies.}}
+\DoxyCodeLine{01206\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01207\ \ \ \ \ \ \ \ \ std::vector<std::pair<TxIdx,\ TxIdx>>\ expected\_dependencies;}
+\DoxyCodeLine{01208\ \ \ \ \ \ \ \ \ std::vector<std::tuple<TxIdx,\ TxIdx,\ DepIdx>>\ all\_dependencies;}
+\DoxyCodeLine{01209\ \ \ \ \ \ \ \ \ std::vector<std::tuple<TxIdx,\ TxIdx,\ DepIdx>>\ active\_dependencies;}
+\DoxyCodeLine{01210\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ parent\_idx\ :\ depgraph.Positions())\ \{}
+\DoxyCodeLine{01211\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ child\_idx\ :\ depgraph.GetReducedChildren(parent\_idx))\ \{}
+\DoxyCodeLine{01212\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ expected\_dependencies.emplace\_back(parent\_idx,\ child\_idx);}
+\DoxyCodeLine{01213\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01214\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01215\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (DepIdx\ dep\_idx\ =\ 0;\ dep\_idx\ <\ m\_dep\_data.size();\ ++dep\_idx)\ \{}
+\DoxyCodeLine{01216\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ dep\_data\ =\ m\_dep\_data[dep\_idx];}
+\DoxyCodeLine{01217\ \ \ \ \ \ \ \ \ \ \ \ \ all\_dependencies.emplace\_back(dep\_data.parent,\ dep\_data.child,\ dep\_idx);}
+\DoxyCodeLine{01218\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Also\ add\ to\ active\_dependencies\ if\ it\ is\ active.}}
+\DoxyCodeLine{01219\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_dep\_data[dep\_idx].active)\ \{}
+\DoxyCodeLine{01220\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ active\_dependencies.emplace\_back(dep\_data.parent,\ dep\_data.child,\ dep\_idx);}
+\DoxyCodeLine{01221\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01222\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01223\ \ \ \ \ \ \ \ \ std::sort(expected\_dependencies.begin(),\ expected\_dependencies.end());}
+\DoxyCodeLine{01224\ \ \ \ \ \ \ \ \ std::sort(all\_dependencies.begin(),\ all\_dependencies.end());}
+\DoxyCodeLine{01225\ \ \ \ \ \ \ \ \ assert(expected\_dependencies.size()\ ==\ all\_dependencies.size());}
+\DoxyCodeLine{01226\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ expected\_dependencies.size();\ ++i)\ \{}
+\DoxyCodeLine{01227\ \ \ \ \ \ \ \ \ \ \ \ \ assert(expected\_dependencies[i]\ ==}
+\DoxyCodeLine{01228\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::make\_pair(std::get<0>(all\_dependencies[i]),}
+\DoxyCodeLine{01229\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::get<1>(all\_dependencies[i])));}
+\DoxyCodeLine{01230\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01231\ }
+\DoxyCodeLine{01232\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01233\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ the\ chunks\ against\ the\ list\ of\ active\ dependencies}}
+\DoxyCodeLine{01234\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01235\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ tx\_idx:\ depgraph.Positions())\ \{}
+\DoxyCodeLine{01236\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Only\ process\ chunks\ for\ now.}}
+\DoxyCodeLine{01237\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_tx\_data[tx\_idx].chunk\_rep\ ==\ tx\_idx)\ \{}
+\DoxyCodeLine{01238\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ chunk\_data\ =\ m\_tx\_data[tx\_idx];}
+\DoxyCodeLine{01239\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ that\ transactions\ in\ the\ chunk\ point\ back\ to\ it.\ This\ guarantees}}
+\DoxyCodeLine{01240\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ that\ chunks\ are\ non-\/overlapping.}}
+\DoxyCodeLine{01241\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ chunk\_tx\ :\ chunk\_data.chunk\_setinfo.transactions)\ \{}
+\DoxyCodeLine{01242\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(m\_tx\_data[chunk\_tx].chunk\_rep\ ==\ tx\_idx);}
+\DoxyCodeLine{01243\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01244\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ the\ chunk's\ transaction\ set:\ it\ must\ contain\ the\ representative,\ and\ for}}
+\DoxyCodeLine{01245\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ every\ active\ dependency,\ if\ it\ contains\ the\ parent\ or\ child,\ it\ must\ contain}}
+\DoxyCodeLine{01246\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ both.\ It\ must\ have\ exactly\ N-\/1\ active\ dependencies\ in\ it,\ guaranteeing\ it\ is}}
+\DoxyCodeLine{01247\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ acyclic.}}
+\DoxyCodeLine{01248\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SetType\ expected\_chunk\ =\ SetType::Singleton(tx\_idx);}
+\DoxyCodeLine{01249\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{01250\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ old\ =\ expected\_chunk;}
+\DoxyCodeLine{01251\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ active\_dep\_count\{0\};}
+\DoxyCodeLine{01252\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [par,\ chl,\ \_dep]\ :\ active\_dependencies)\ \{}
+\DoxyCodeLine{01253\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (expected\_chunk[par]\ ||\ expected\_chunk[chl])\ \{}
+\DoxyCodeLine{01254\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ expected\_chunk.Set(par);}
+\DoxyCodeLine{01255\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ expected\_chunk.Set(chl);}
+\DoxyCodeLine{01256\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++active\_dep\_count;}
+\DoxyCodeLine{01257\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01258\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01259\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (old\ ==\ expected\_chunk)\ \{}
+\DoxyCodeLine{01260\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(expected\_chunk.Count()\ ==\ active\_dep\_count\ +\ 1);}
+\DoxyCodeLine{01261\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01262\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01263\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01264\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(chunk\_data.chunk\_setinfo.transactions\ ==\ expected\_chunk);}
+\DoxyCodeLine{01265\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ the\ chunk's\ feerate.}}
+\DoxyCodeLine{01266\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(chunk\_data.chunk\_setinfo.feerate\ ==}
+\DoxyCodeLine{01267\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ depgraph.FeeRate(chunk\_data.chunk\_setinfo.transactions));}
+\DoxyCodeLine{01268\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01269\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01270\ }
+\DoxyCodeLine{01271\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01272\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ other\ transaction\ data.}}
+\DoxyCodeLine{01273\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01274\ \ \ \ \ \ \ \ \ assert(m\_transaction\_idxs\ ==\ depgraph.Positions());}
+\DoxyCodeLine{01275\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\ tx\_idx\ :\ m\_transaction\_idxs)\ \{}
+\DoxyCodeLine{01276\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ tx\_data\ =\ m\_tx\_data[tx\_idx];}
+\DoxyCodeLine{01277\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ it\ has\ a\ valid\ chunk\ representative,\ and\ that\ chunk\ includes\ this}}
+\DoxyCodeLine{01278\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ transaction.}}
+\DoxyCodeLine{01279\ \ \ \ \ \ \ \ \ \ \ \ \ assert(m\_tx\_data[tx\_data.chunk\_rep].chunk\_rep\ ==\ tx\_data.chunk\_rep);}
+\DoxyCodeLine{01280\ \ \ \ \ \ \ \ \ \ \ \ \ assert(m\_tx\_data[tx\_data.chunk\_rep].chunk\_setinfo.transactions[tx\_idx]);}
+\DoxyCodeLine{01281\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ parents/children.}}
+\DoxyCodeLine{01282\ \ \ \ \ \ \ \ \ \ \ \ \ assert(tx\_data.parents\ ==\ depgraph.GetReducedParents(tx\_idx));}
+\DoxyCodeLine{01283\ \ \ \ \ \ \ \ \ \ \ \ \ assert(tx\_data.children\ ==\ depgraph.GetReducedChildren(tx\_idx));}
+\DoxyCodeLine{01284\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ list\ of\ child\ dependencies.}}
+\DoxyCodeLine{01285\ \ \ \ \ \ \ \ \ \ \ \ \ std::vector<DepIdx>\ expected\_child\_deps;}
+\DoxyCodeLine{01286\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [par\_idx,\ chl\_idx,\ dep\_idx]\ :\ all\_dependencies)\ \{}
+\DoxyCodeLine{01287\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (tx\_idx\ ==\ par\_idx)\ \{}
+\DoxyCodeLine{01288\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(tx\_data.children[chl\_idx]);}
+\DoxyCodeLine{01289\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ expected\_child\_deps.push\_back(dep\_idx);}
+\DoxyCodeLine{01290\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01291\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01292\ \ \ \ \ \ \ \ \ \ \ \ \ std::sort(expected\_child\_deps.begin(),\ expected\_child\_deps.end());}
+\DoxyCodeLine{01293\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ child\_deps\_copy\ =\ tx\_data.child\_deps;}
+\DoxyCodeLine{01294\ \ \ \ \ \ \ \ \ \ \ \ \ std::sort(child\_deps\_copy.begin(),\ child\_deps\_copy.end());}
+\DoxyCodeLine{01295\ \ \ \ \ \ \ \ \ \ \ \ \ assert(expected\_child\_deps\ ==\ child\_deps\_copy);}
+\DoxyCodeLine{01296\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01297\ }
+\DoxyCodeLine{01298\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01299\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ active\ dependencies'\ top\_setinfo.}}
+\DoxyCodeLine{01300\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01301\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [par\_idx,\ chl\_idx,\ dep\_idx]\ :\ active\_dependencies)\ \{}
+\DoxyCodeLine{01302\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ dep\_data\ =\ m\_dep\_data[dep\_idx];}
+\DoxyCodeLine{01303\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ the\ top\_info's\ transactions:\ it\ must\ contain\ the\ parent,\ and\ for\ every}}
+\DoxyCodeLine{01304\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ active\ dependency,\ except\ dep\_idx\ itself,\ if\ it\ contains\ the\ parent\ or\ child,\ it}}
+\DoxyCodeLine{01305\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ must\ contain\ both.}}
+\DoxyCodeLine{01306\ \ \ \ \ \ \ \ \ \ \ \ \ SetType\ expected\_top\ =\ SetType::Singleton(par\_idx);}
+\DoxyCodeLine{01307\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{01308\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ old\ =\ expected\_top;}
+\DoxyCodeLine{01309\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ [par2\_idx,\ chl2\_idx,\ dep2\_idx]\ :\ active\_dependencies)\ \{}
+\DoxyCodeLine{01310\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (dep2\_idx\ !=\ dep\_idx\ \&\&\ (expected\_top[par2\_idx]\ ||\ expected\_top[chl2\_idx]))\ \{}
+\DoxyCodeLine{01311\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ expected\_top.Set(par2\_idx);}
+\DoxyCodeLine{01312\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ expected\_top.Set(chl2\_idx);}
+\DoxyCodeLine{01313\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01314\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01315\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (old\ ==\ expected\_top)\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01316\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01317\ \ \ \ \ \ \ \ \ \ \ \ \ assert(!expected\_top[chl\_idx]);}
+\DoxyCodeLine{01318\ \ \ \ \ \ \ \ \ \ \ \ \ assert(dep\_data.top\_setinfo.transactions\ ==\ expected\_top);}
+\DoxyCodeLine{01319\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ the\ top\_info's\ feerate.}}
+\DoxyCodeLine{01320\ \ \ \ \ \ \ \ \ \ \ \ \ assert(dep\_data.top\_setinfo.feerate\ ==}
+\DoxyCodeLine{01321\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ depgraph.FeeRate(dep\_data.top\_setinfo.transactions));}
+\DoxyCodeLine{01322\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01323\ }
+\DoxyCodeLine{01324\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01325\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Verify\ m\_suboptimal\_chunks.}}
+\DoxyCodeLine{01326\ \ \ \ \ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01327\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ m\_suboptimal\_chunks.size();\ ++i)\ \{}
+\DoxyCodeLine{01328\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ tx\_idx\ =\ m\_suboptimal\_chunks[i];}
+\DoxyCodeLine{01329\ \ \ \ \ \ \ \ \ \ \ \ \ assert(m\_transaction\_idxs[tx\_idx]);}
+\DoxyCodeLine{01330\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01331\ \ \ \ \ \}}
+\DoxyCodeLine{01332\ \};}
+\DoxyCodeLine{01333\ }
+\DoxyCodeLine{01350\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{01351\ std::tuple<std::vector<DepGraphIndex>,\ bool,\ uint64\_t>\ Linearize(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph,\ uint64\_t\ max\_iterations,\ uint64\_t\ rng\_seed,\ std::span<const\ DepGraphIndex>\ old\_linearization\ =\ \{\})\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{01352\ \{}
+\DoxyCodeLine{01354\ \ \ \ \ SpanningForestState\ forest(depgraph,\ rng\_seed);}
+\DoxyCodeLine{01355\ \ \ \ \ \textcolor{keywordflow}{if}\ (!old\_linearization.empty())\ \{}
+\DoxyCodeLine{01356\ \ \ \ \ \ \ \ \ forest.LoadLinearization(old\_linearization);}
+\DoxyCodeLine{01357\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{01358\ \ \ \ \ \ \ \ \ forest.MakeTopological();}
+\DoxyCodeLine{01359\ \ \ \ \ \}}
+\DoxyCodeLine{01360\ \ \ \ \ \textcolor{comment}{//\ Make\ improvement\ steps\ to\ it\ until\ we\ hit\ the\ max\_iterations\ limit,\ or\ an\ optimal\ result}}
+\DoxyCodeLine{01361\ \ \ \ \ \textcolor{comment}{//\ is\ found.}}
+\DoxyCodeLine{01362\ \ \ \ \ \textcolor{keywordtype}{bool}\ optimal\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{01363\ \ \ \ \ \textcolor{keywordflow}{if}\ (forest.GetCost()\ <\ max\_iterations)\ \{}
+\DoxyCodeLine{01364\ \ \ \ \ \ \ \ \ forest.StartOptimizing();}
+\DoxyCodeLine{01365\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{01366\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!forest.OptimizeStep())\ \{}
+\DoxyCodeLine{01367\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ optimal\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{01368\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{01369\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01370\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{while}\ (forest.GetCost()\ <\ max\_iterations);}
+\DoxyCodeLine{01371\ \ \ \ \ \}}
+\DoxyCodeLine{01372\ \ \ \ \ \textcolor{keywordflow}{return}\ \{forest.GetLinearization(),\ optimal,\ forest.GetCost()\};}
+\DoxyCodeLine{01373\ \}}
+\DoxyCodeLine{01374\ }
+\DoxyCodeLine{01391\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{01392\ \textcolor{keywordtype}{void}\ PostLinearize(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph,\ std::span<DepGraphIndex>\ linearization)}
+\DoxyCodeLine{01393\ \{}
+\DoxyCodeLine{01394\ \ \ \ \ \textcolor{comment}{//\ This\ algorithm\ performs\ a\ number\ of\ passes\ (currently\ 2);\ the\ even\ ones\ operate\ from\ back\ to}}
+\DoxyCodeLine{01395\ \ \ \ \ \textcolor{comment}{//\ front,\ the\ odd\ ones\ from\ front\ to\ back.\ Each\ results\ in\ an\ equal-\/or-\/better\ linearization}}
+\DoxyCodeLine{01396\ \ \ \ \ \textcolor{comment}{//\ than\ the\ one\ started\ from.}}
+\DoxyCodeLine{01397\ \ \ \ \ \textcolor{comment}{//\ -\/\ One\ pass\ in\ either\ direction\ guarantees\ that\ the\ resulting\ chunks\ are\ connected.}}
+\DoxyCodeLine{01398\ \ \ \ \ \textcolor{comment}{//\ -\/\ Each\ direction\ corresponds\ to\ one\ shape\ of\ tree\ being\ linearized\ optimally\ (forward\ passes}}
+\DoxyCodeLine{01399\ \ \ \ \ \textcolor{comment}{//\ \ \ guarantee\ this\ for\ graphs\ where\ each\ transaction\ has\ at\ most\ one\ child;\ backward\ passes}}
+\DoxyCodeLine{01400\ \ \ \ \ \textcolor{comment}{//\ \ \ guarantee\ this\ for\ graphs\ where\ each\ transaction\ has\ at\ most\ one\ parent).}}
+\DoxyCodeLine{01401\ \ \ \ \ \textcolor{comment}{//\ -\/\ Starting\ with\ a\ backward\ pass\ guarantees\ the\ moved-\/tree\ property.}}
+\DoxyCodeLine{01402\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01403\ \ \ \ \ \textcolor{comment}{//\ During\ an\ odd\ (forward)\ pass,\ the\ high-\/level\ operation\ is:}}
+\DoxyCodeLine{01404\ \ \ \ \ \textcolor{comment}{//\ -\/\ Start\ with\ an\ empty\ list\ of\ groups\ L=[].}}
+\DoxyCodeLine{01405\ \ \ \ \ \textcolor{comment}{//\ -\/\ For\ every\ transaction\ i\ in\ the\ old\ linearization,\ from\ front\ to\ back:}}
+\DoxyCodeLine{01406\ \ \ \ \ \textcolor{comment}{//\ \ \ -\/\ Append\ a\ new\ group\ C=[i],\ containing\ just\ i,\ to\ the\ back\ of\ L.}}
+\DoxyCodeLine{01407\ \ \ \ \ \textcolor{comment}{//\ \ \ -\/\ While\ L\ has\ at\ least\ one\ group\ before\ C,\ and\ the\ group\ immediately\ before\ C\ has\ feerate}}
+\DoxyCodeLine{01408\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ lower\ than\ C:}}
+\DoxyCodeLine{01409\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ -\/\ If\ C\ depends\ on\ P:}}
+\DoxyCodeLine{01410\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ -\/\ Merge\ P\ into\ C,\ making\ C\ the\ concatenation\ of\ P+C,\ continuing\ with\ the\ combined\ C.}}
+\DoxyCodeLine{01411\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ -\/\ Otherwise:}}
+\DoxyCodeLine{01412\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ -\/\ Swap\ P\ with\ C,\ continuing\ with\ the\ now-\/moved\ C.}}
+\DoxyCodeLine{01413\ \ \ \ \ \textcolor{comment}{//\ -\/\ The\ output\ linearization\ is\ the\ concatenation\ of\ the\ groups\ in\ L.}}
+\DoxyCodeLine{01414\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01415\ \ \ \ \ \textcolor{comment}{//\ During\ even\ (backward)\ passes,\ i\ iterates\ from\ the\ back\ to\ the\ front\ of\ the\ existing}}
+\DoxyCodeLine{01416\ \ \ \ \ \textcolor{comment}{//\ linearization,\ and\ new\ groups\ are\ prepended\ instead\ of\ appended\ to\ the\ list\ L.\ To\ enable}}
+\DoxyCodeLine{01417\ \ \ \ \ \textcolor{comment}{//\ more\ code\ reuse,\ both\ passes\ append\ groups,\ but\ during\ even\ passes\ the\ meanings\ of}}
+\DoxyCodeLine{01418\ \ \ \ \ \textcolor{comment}{//\ parent/child,\ and\ of\ high/low\ feerate\ are\ reversed,\ and\ the\ final\ concatenation\ is\ reversed}}
+\DoxyCodeLine{01419\ \ \ \ \ \textcolor{comment}{//\ on\ output.}}
+\DoxyCodeLine{01420\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01421\ \ \ \ \ \textcolor{comment}{//\ In\ the\ implementation\ below,\ the\ groups\ are\ represented\ by\ singly-\/linked\ lists\ (pointing}}
+\DoxyCodeLine{01422\ \ \ \ \ \textcolor{comment}{//\ from\ the\ back\ to\ the\ front),\ which\ are\ themselves\ organized\ in\ a\ singly-\/linked\ circular}}
+\DoxyCodeLine{01423\ \ \ \ \ \textcolor{comment}{//\ list\ (each\ group\ pointing\ to\ its\ predecessor,\ with\ a\ special\ sentinel\ group\ at\ the\ front}}
+\DoxyCodeLine{01424\ \ \ \ \ \textcolor{comment}{//\ that\ points\ back\ to\ the\ last\ group).}}
+\DoxyCodeLine{01425\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01426\ \ \ \ \ \textcolor{comment}{//\ Information\ about\ transaction\ t\ is\ stored\ in\ entries[t\ +\ 1],\ while\ the\ sentinel\ is\ in}}
+\DoxyCodeLine{01427\ \ \ \ \ \textcolor{comment}{//\ entries[0].}}
+\DoxyCodeLine{01428\ }
+\DoxyCodeLine{01430\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ DepGraphIndex\ SENTINEL\{0\};}
+\DoxyCodeLine{01432\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ DepGraphIndex\ NO\_PREV\_TX\{0\};}
+\DoxyCodeLine{01433\ }
+\DoxyCodeLine{01434\ }
+\DoxyCodeLine{01436\ \ \ \ \ \textcolor{keyword}{struct\ }TxEntry}
+\DoxyCodeLine{01437\ \ \ \ \ \{}
+\DoxyCodeLine{01440\ \ \ \ \ \ \ \ \ DepGraphIndex\ prev\_tx;}
+\DoxyCodeLine{01441\ }
+\DoxyCodeLine{01442\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ fields\ below\ are\ only\ used\ for\ transactions\ that\ are\ the\ last\ one\ in\ a\ group}}
+\DoxyCodeLine{01443\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ (referred\ to\ as\ tail\ transactions\ below).}}
+\DoxyCodeLine{01444\ }
+\DoxyCodeLine{01446\ \ \ \ \ \ \ \ \ DepGraphIndex\ first\_tx;}
+\DoxyCodeLine{01449\ \ \ \ \ \ \ \ \ DepGraphIndex\ prev\_group;}
+\DoxyCodeLine{01451\ \ \ \ \ \ \ \ \ SetType\ group;}
+\DoxyCodeLine{01453\ \ \ \ \ \ \ \ \ SetType\ deps;}
+\DoxyCodeLine{01455\ \ \ \ \ \ \ \ \ FeeFrac\ feerate;}
+\DoxyCodeLine{01456\ \ \ \ \ \};}
+\DoxyCodeLine{01457\ }
+\DoxyCodeLine{01458\ \ \ \ \ \textcolor{comment}{//\ As\ an\ example,\ consider\ the\ state\ corresponding\ to\ the\ linearization\ [1,0,3,2],\ with}}
+\DoxyCodeLine{01459\ \ \ \ \ \textcolor{comment}{//\ groups\ [1,0,3]\ and\ [2],\ in\ an\ odd\ pass.\ The\ linked\ lists\ would\ be:}}
+\DoxyCodeLine{01460\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01461\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ +-\/-\/-\/-\/-\/+}}
+\DoxyCodeLine{01462\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 0<-\/P-\/-\/\ |\ 0\ S\ |\ -\/-\/-\/\(\backslash\)\ \ \ \ \ Legend:}}
+\DoxyCodeLine{01463\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ +-\/-\/-\/-\/-\/+\ \ \ \ |}}
+\DoxyCodeLine{01464\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \string^\ \ \ \ \ \ \ |\ \ \ \ \ -\/\ digit\ in\ box:\ entries\ index}}
+\DoxyCodeLine{01465\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ /-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/F-\/-\/-\/-\/-\/-\/-\/-\/-\/+\ \ \ \ G\ \ \ \ \ \ \ |\ \ \ \ \ \ \ (note:\ one\ more\ than\ tx\ value)}}
+\DoxyCodeLine{01466\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ v\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)\ \ \ |\ \ \ \ \ \ \ |\ \ \ \ \ -\/\ S:\ sentinel\ group}}
+\DoxyCodeLine{01467\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ +-\/-\/-\/-\/-\/+\ \ \ \ \ \ \ \ +-\/-\/-\/-\/-\/+\ \ \ \ \ \ \ \ +-\/-\/-\/-\/-\/+\ \ \ \ |\ \ \ \ \ \ \ \ \ \ (empty\ feerate)}}
+\DoxyCodeLine{01468\ \ \ \ \ \textcolor{comment}{//\ \ \ 0<-\/P-\/-\/\ |\ 2\ \ \ |\ <-\/-\/P-\/-\/\ |\ 1\ \ \ |\ <-\/-\/P-\/-\/\ |\ 4\ T\ |\ \ \ \ |\ \ \ \ \ -\/\ T:\ tail\ transaction,\ contains}}
+\DoxyCodeLine{01469\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ +-\/-\/-\/-\/-\/+\ \ \ \ \ \ \ \ +-\/-\/-\/-\/-\/+\ \ \ \ \ \ \ \ +-\/-\/-\/-\/-\/+\ \ \ \ |\ \ \ \ \ \ \ \ \ \ fields\ beyond\ prev\_tv.}}
+\DoxyCodeLine{01470\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \string^\ \ \ \ \ \ \ |\ \ \ \ \ -\/\ P:\ prev\_tx\ reference}}
+\DoxyCodeLine{01471\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ G\ \ \ \ \ \ \ G\ \ \ \ \ -\/\ F:\ first\_tx\ reference}}
+\DoxyCodeLine{01472\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ |\ \ \ \ \ \ \ |\ \ \ \ \ -\/\ G:\ prev\_group\ reference}}
+\DoxyCodeLine{01473\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ +-\/-\/-\/-\/-\/+\ \ \ \ |}}
+\DoxyCodeLine{01474\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 0<-\/P-\/-\/\ |\ 3\ T\ |\ <-\/-\//}}
+\DoxyCodeLine{01475\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ +-\/-\/-\/-\/-\/+}}
+\DoxyCodeLine{01476\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \string^\ \ \ |}}
+\DoxyCodeLine{01477\ \ \ \ \ \textcolor{comment}{//\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)-\/F-\//}}
+\DoxyCodeLine{01478\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{01479\ \ \ \ \ \textcolor{comment}{//\ During\ an\ even\ pass,\ the\ diagram\ above\ would\ correspond\ to\ linearization\ [2,3,0,1],\ with}}
+\DoxyCodeLine{01480\ \ \ \ \ \textcolor{comment}{//\ groups\ [2]\ and\ [3,0,1].}}
+\DoxyCodeLine{01481\ }
+\DoxyCodeLine{01482\ \ \ \ \ std::vector<TxEntry>\ entries(depgraph.PositionRange()\ +\ 1);}
+\DoxyCodeLine{01483\ }
+\DoxyCodeLine{01484\ \ \ \ \ \textcolor{comment}{//\ Perform\ two\ passes\ over\ the\ linearization.}}
+\DoxyCodeLine{01485\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ pass\ =\ 0;\ pass\ <\ 2;\ ++pass)\ \{}
+\DoxyCodeLine{01486\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ rev\ =\ !(pass\ \&\ 1);}
+\DoxyCodeLine{01487\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Construct\ a\ sentinel\ group,\ identifying\ the\ start\ of\ the\ list.}}
+\DoxyCodeLine{01488\ \ \ \ \ \ \ \ \ entries[SENTINEL].prev\_group\ =\ SENTINEL;}
+\DoxyCodeLine{01489\ \ \ \ \ \ \ \ \ Assume(entries[SENTINEL].feerate.IsEmpty());}
+\DoxyCodeLine{01490\ }
+\DoxyCodeLine{01491\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Iterate\ over\ all\ elements\ in\ the\ existing\ linearization.}}
+\DoxyCodeLine{01492\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ i\ =\ 0;\ i\ <\ linearization.size();\ ++i)\ \{}
+\DoxyCodeLine{01493\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Even\ passes\ are\ from\ back\ to\ front;\ odd\ passes\ from\ front\ to\ back.}}
+\DoxyCodeLine{01494\ \ \ \ \ \ \ \ \ \ \ \ \ DepGraphIndex\ idx\ =\ linearization[rev\ ?\ linearization.size()\ -\/\ 1\ -\/\ i\ :\ i];}
+\DoxyCodeLine{01495\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Construct\ a\ new\ group\ containing\ just\ idx.\ In\ even\ passes,\ the\ meaning\ of}}
+\DoxyCodeLine{01496\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ parent/child\ and\ high/low\ feerate\ are\ swapped.}}
+\DoxyCodeLine{01497\ \ \ \ \ \ \ \ \ \ \ \ \ DepGraphIndex\ cur\_group\ =\ idx\ +\ 1;}
+\DoxyCodeLine{01498\ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].group\ =\ SetType::Singleton(idx);}
+\DoxyCodeLine{01499\ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].deps\ =\ rev\ ?\ depgraph.Descendants(idx):\ depgraph.Ancestors(idx);}
+\DoxyCodeLine{01500\ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].feerate\ =\ depgraph.FeeRate(idx);}
+\DoxyCodeLine{01501\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (rev)\ entries[cur\_group].feerate.fee\ =\ -\/entries[cur\_group].feerate.fee;}
+\DoxyCodeLine{01502\ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].prev\_tx\ =\ NO\_PREV\_TX;\ \textcolor{comment}{//\ No\ previous\ transaction\ in\ group.}}
+\DoxyCodeLine{01503\ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].first\_tx\ =\ cur\_group;\ \textcolor{comment}{//\ Transaction\ itself\ is\ first\ of\ group.}}
+\DoxyCodeLine{01504\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Insert\ the\ new\ group\ at\ the\ back\ of\ the\ groups\ linked\ list.}}
+\DoxyCodeLine{01505\ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].prev\_group\ =\ entries[SENTINEL].prev\_group;}
+\DoxyCodeLine{01506\ \ \ \ \ \ \ \ \ \ \ \ \ entries[SENTINEL].prev\_group\ =\ cur\_group;}
+\DoxyCodeLine{01507\ }
+\DoxyCodeLine{01508\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Start\ merge/swap\ cycle.}}
+\DoxyCodeLine{01509\ \ \ \ \ \ \ \ \ \ \ \ \ DepGraphIndex\ next\_group\ =\ SENTINEL;\ \textcolor{comment}{//\ We\ inserted\ at\ the\ end,\ so\ next\ group\ is\ sentinel.}}
+\DoxyCodeLine{01510\ \ \ \ \ \ \ \ \ \ \ \ \ DepGraphIndex\ prev\_group\ =\ entries[cur\_group].prev\_group;}
+\DoxyCodeLine{01511\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Continue\ as\ long\ as\ the\ current\ group\ has\ higher\ feerate\ than\ the\ previous\ one.}}
+\DoxyCodeLine{01512\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (entries[cur\_group].feerate\ >>\ entries[prev\_group].feerate)\ \{}
+\DoxyCodeLine{01513\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ prev\_group/cur\_group/next\_group\ refer\ to\ (the\ last\ transactions\ of)\ 3}}
+\DoxyCodeLine{01514\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ consecutive\ entries\ in\ groups\ list.}}
+\DoxyCodeLine{01515\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Assume(cur\_group\ ==\ entries[next\_group].prev\_group);}
+\DoxyCodeLine{01516\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Assume(prev\_group\ ==\ entries[cur\_group].prev\_group);}
+\DoxyCodeLine{01517\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ sentinel\ has\ empty\ feerate,\ which\ is\ neither\ higher\ or\ lower\ than\ other}}
+\DoxyCodeLine{01518\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ feerates.\ Thus,\ the\ while\ loop\ we\ are\ in\ here\ guarantees\ that\ cur\_group\ and}}
+\DoxyCodeLine{01519\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ prev\_group\ are\ not\ the\ sentinel.}}
+\DoxyCodeLine{01520\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Assume(cur\_group\ !=\ SENTINEL);}
+\DoxyCodeLine{01521\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Assume(prev\_group\ !=\ SENTINEL);}
+\DoxyCodeLine{01522\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (entries[cur\_group].deps.Overlaps(entries[prev\_group].group))\ \{}
+\DoxyCodeLine{01523\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ There\ is\ a\ dependency\ between\ cur\_group\ and\ prev\_group;\ merge\ prev\_group}}
+\DoxyCodeLine{01524\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ into\ cur\_group.\ The\ group/deps/feerate\ fields\ of\ prev\_group\ remain\ unchanged}}
+\DoxyCodeLine{01525\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ but\ become\ unused.}}
+\DoxyCodeLine{01526\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].group\ |=\ entries[prev\_group].group;}
+\DoxyCodeLine{01527\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].deps\ |=\ entries[prev\_group].deps;}
+\DoxyCodeLine{01528\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].feerate\ +=\ entries[prev\_group].feerate;}
+\DoxyCodeLine{01529\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Make\ the\ first\ of\ the\ current\ group\ point\ to\ the\ tail\ of\ the\ previous\ group.}}
+\DoxyCodeLine{01530\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ entries[entries[cur\_group].first\_tx].prev\_tx\ =\ prev\_group;}
+\DoxyCodeLine{01531\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ first\ of\ the\ previous\ group\ becomes\ the\ first\ of\ the\ newly-\/merged\ group.}}
+\DoxyCodeLine{01532\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].first\_tx\ =\ entries[prev\_group].first\_tx;}
+\DoxyCodeLine{01533\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ previous\ group\ becomes\ whatever\ group\ was\ before\ the\ former\ one.}}
+\DoxyCodeLine{01534\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ prev\_group\ =\ entries[prev\_group].prev\_group;}
+\DoxyCodeLine{01535\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].prev\_group\ =\ prev\_group;}
+\DoxyCodeLine{01536\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{01537\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ There\ is\ no\ dependency\ between\ cur\_group\ and\ prev\_group;\ swap\ them.}}
+\DoxyCodeLine{01538\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ DepGraphIndex\ preprev\_group\ =\ entries[prev\_group].prev\_group;}
+\DoxyCodeLine{01539\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ PP,\ P,\ C,\ N\ were\ the\ old\ preprev,\ prev,\ cur,\ next\ groups,\ then\ the\ new}}
+\DoxyCodeLine{01540\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ layout\ becomes\ [PP,\ C,\ P,\ N].\ Update\ prev\_groups\ to\ reflect\ that\ order.}}
+\DoxyCodeLine{01541\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ entries[next\_group].prev\_group\ =\ prev\_group;}
+\DoxyCodeLine{01542\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ entries[prev\_group].prev\_group\ =\ cur\_group;}
+\DoxyCodeLine{01543\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ entries[cur\_group].prev\_group\ =\ preprev\_group;}
+\DoxyCodeLine{01544\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ current\ group\ remains\ the\ same,\ but\ the\ groups\ before/after\ it\ have}}
+\DoxyCodeLine{01545\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ changed.}}
+\DoxyCodeLine{01546\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ next\_group\ =\ prev\_group;}
+\DoxyCodeLine{01547\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ prev\_group\ =\ preprev\_group;}
+\DoxyCodeLine{01548\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01549\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01550\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01551\ }
+\DoxyCodeLine{01552\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Convert\ the\ entries\ back\ to\ linearization\ (overwriting\ the\ existing\ one).}}
+\DoxyCodeLine{01553\ \ \ \ \ \ \ \ \ DepGraphIndex\ cur\_group\ =\ entries[0].prev\_group;}
+\DoxyCodeLine{01554\ \ \ \ \ \ \ \ \ DepGraphIndex\ done\ =\ 0;}
+\DoxyCodeLine{01555\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (cur\_group\ !=\ SENTINEL)\ \{}
+\DoxyCodeLine{01556\ \ \ \ \ \ \ \ \ \ \ \ \ DepGraphIndex\ cur\_tx\ =\ cur\_group;}
+\DoxyCodeLine{01557\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Traverse\ the\ transactions\ of\ cur\_group\ (from\ back\ to\ front),\ and\ write\ them\ in\ the}}
+\DoxyCodeLine{01558\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ same\ order\ during\ odd\ passes,\ and\ reversed\ (front\ to\ back)\ in\ even\ passes.}}
+\DoxyCodeLine{01559\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (rev)\ \{}
+\DoxyCodeLine{01560\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{01561\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *(linearization.begin()\ +\ (done++))\ =\ cur\_tx\ -\/\ 1;}
+\DoxyCodeLine{01562\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cur\_tx\ =\ entries[cur\_tx].prev\_tx;}
+\DoxyCodeLine{01563\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{while}\ (cur\_tx\ !=\ NO\_PREV\_TX);}
+\DoxyCodeLine{01564\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{01565\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{01566\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *(linearization.end()\ -\/\ (++done))\ =\ cur\_tx\ -\/\ 1;}
+\DoxyCodeLine{01567\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cur\_tx\ =\ entries[cur\_tx].prev\_tx;}
+\DoxyCodeLine{01568\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{while}\ (cur\_tx\ !=\ NO\_PREV\_TX);}
+\DoxyCodeLine{01569\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01570\ \ \ \ \ \ \ \ \ \ \ \ \ cur\_group\ =\ entries[cur\_group].prev\_group;}
+\DoxyCodeLine{01571\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01572\ \ \ \ \ \ \ \ \ Assume(done\ ==\ linearization.size());}
+\DoxyCodeLine{01573\ \ \ \ \ \}}
+\DoxyCodeLine{01574\ \}}
+\DoxyCodeLine{01575\ }
+\DoxyCodeLine{01577\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ SetType>}
+\DoxyCodeLine{01578\ \textcolor{keywordtype}{void}\ FixLinearization(\textcolor{keyword}{const}\ DepGraph<SetType>\&\ depgraph,\ std::span<DepGraphIndex>\ linearization)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{01579\ \{}
+\DoxyCodeLine{01580\ \ \ \ \ \textcolor{comment}{//\ This\ algorithm\ can\ be\ summarized\ as\ moving\ every\ element\ in\ the\ linearization\ backwards}}
+\DoxyCodeLine{01581\ \ \ \ \ \textcolor{comment}{//\ until\ it\ is\ placed\ after\ all\ its\ ancestors.}}
+\DoxyCodeLine{01582\ \ \ \ \ SetType\ done;}
+\DoxyCodeLine{01583\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ len\ =\ linearization.size();}
+\DoxyCodeLine{01584\ \ \ \ \ \textcolor{comment}{//\ Iterate\ over\ the\ elements\ of\ linearization\ from\ back\ to\ front\ (i\ is\ distance\ from\ back).}}
+\DoxyCodeLine{01585\ \ \ \ \ \textcolor{keywordflow}{for}\ (DepGraphIndex\ i\ =\ 0;\ i\ <\ len;\ ++i)\ \{}
+\DoxyCodeLine{01587\ \ \ \ \ \ \ \ \ DepGraphIndex\ elem\ =\ linearization[len\ -\/\ 1\ -\/\ i];}
+\DoxyCodeLine{01589\ \ \ \ \ \ \ \ \ DepGraphIndex\ j\ =\ i;}
+\DoxyCodeLine{01590\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Figure\ out\ which\ elements\ need\ to\ be\ moved\ before\ elem.}}
+\DoxyCodeLine{01591\ \ \ \ \ \ \ \ \ SetType\ place\_before\ =\ done\ \&\ depgraph.Ancestors(elem);}
+\DoxyCodeLine{01592\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Find\ which\ position\ to\ place\ elem\ in\ (updating\ j),\ continuously\ moving\ the\ elements}}
+\DoxyCodeLine{01593\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ in\ between\ forward.}}
+\DoxyCodeLine{01594\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (place\_before.Any())\ \{}
+\DoxyCodeLine{01595\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ j\ cannot\ be\ 0\ here;\ if\ it\ was,\ then\ there\ was\ necessarily\ nothing\ earlier\ which}}
+\DoxyCodeLine{01596\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ elem\ needs\ to\ be\ placed\ before\ anymore,\ and\ place\_before\ would\ be\ empty.}}
+\DoxyCodeLine{01597\ \ \ \ \ \ \ \ \ \ \ \ \ Assume(j\ >\ 0);}
+\DoxyCodeLine{01598\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ to\_swap\ =\ linearization[len\ -\/\ 1\ -\/\ (j\ -\/\ 1)];}
+\DoxyCodeLine{01599\ \ \ \ \ \ \ \ \ \ \ \ \ place\_before.Reset(to\_swap);}
+\DoxyCodeLine{01600\ \ \ \ \ \ \ \ \ \ \ \ \ linearization[len\ -\/\ 1\ -\/\ (j-\/-\/)]\ =\ to\_swap;}
+\DoxyCodeLine{01601\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01602\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Put\ elem\ in\ its\ final\ position\ and\ mark\ it\ as\ done.}}
+\DoxyCodeLine{01603\ \ \ \ \ \ \ \ \ linearization[len\ -\/\ 1\ -\/\ j]\ =\ elem;}
+\DoxyCodeLine{01604\ \ \ \ \ \ \ \ \ done.Set(elem);}
+\DoxyCodeLine{01605\ \ \ \ \ \}}
+\DoxyCodeLine{01606\ \}}
+\DoxyCodeLine{01607\ }
+\DoxyCodeLine{01608\ \}\ \textcolor{comment}{//\ namespace\ cluster\_linearize}}
+\DoxyCodeLine{01609\ }
+\DoxyCodeLine{01610\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_CLUSTER\_LINEARIZE\_H}}
+
+\end{DoxyCode}

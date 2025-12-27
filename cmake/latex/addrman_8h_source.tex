@@ -1,0 +1,104 @@
+\doxysection{addrman.\+h}
+\label{addrman_8h_source}\index{src/addrman.h@{src/addrman.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2012\ Pieter\ Wuille}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2012-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_ADDRMAN\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_ADDRMAN\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <netaddress.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <netgroup.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <protocol.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <streams.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <util/time.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <unordered\_set>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{class\ }InvalidAddrManVersionError\ :\ \textcolor{keyword}{public}\ std::ios\_base::failure}
+\DoxyCodeLine{00023\ \{}
+\DoxyCodeLine{00024\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00025\ \ \ \ \ InvalidAddrManVersionError(std::string\ msg)\ :\ std::ios\_base::failure(msg)\ \{\ \}}
+\DoxyCodeLine{00026\ \};}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \textcolor{keyword}{class\ }AddrManImpl;}
+\DoxyCodeLine{00029\ \textcolor{keyword}{class\ }AddrInfo;}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ int32\_t\ DEFAULT\_ADDRMAN\_CONSISTENCY\_CHECKS\{0\};}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00035\ \textcolor{keyword}{struct\ }AddressPosition\ \{}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{comment}{//\ Whether\ the\ address\ is\ in\ the\ new\ or\ tried\ table}}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ tried;}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{comment}{//\ Addresses\ in\ the\ tried\ table\ should\ always\ have\ a\ multiplicity\ of\ 1.}}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{comment}{//\ Addresses\ in\ the\ new\ table\ can\ have\ multiplicity\ between\ 1\ and}}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{comment}{//\ ADDRMAN\_NEW\_BUCKETS\_PER\_ADDRESS}}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ multiplicity;}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{comment}{//\ If\ the\ address\ is\ in\ the\ new\ table,\ the\ bucket\ and\ position\ are}}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{comment}{//\ populated\ based\ on\ the\ first\ source\ who\ sent\ the\ address.}}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{comment}{//\ In\ certain\ edge\ cases,\ this\ may\ not\ be\ where\ the\ address\ is\ currently}}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{comment}{//\ located.}}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ bucket;}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ position;}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keywordtype}{bool}\ operator==(AddressPosition\ other)\ \{}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::tie(tried,\ multiplicity,\ bucket,\ position)\ ==}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::tie(other.tried,\ other.multiplicity,\ other.bucket,\ other.position);}
+\DoxyCodeLine{00054\ \ \ \ \ \}}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keyword}{explicit}\ AddressPosition(\textcolor{keywordtype}{bool}\ tried\_in,\ \textcolor{keywordtype}{int}\ multiplicity\_in,\ \textcolor{keywordtype}{int}\ bucket\_in,\ \textcolor{keywordtype}{int}\ position\_in)}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ :\ tried\{tried\_in\},\ multiplicity\{multiplicity\_in\},\ bucket\{bucket\_in\},\ position\{position\_in\}\ \{\}}
+\DoxyCodeLine{00057\ \};}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00088\ \textcolor{keyword}{class\ }AddrMan}
+\DoxyCodeLine{00089\ \{}
+\DoxyCodeLine{00090\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{keyword}{const}\ std::unique\_ptr<AddrManImpl>\ m\_impl;}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keyword}{explicit}\ AddrMan(\textcolor{keyword}{const}\ NetGroupManager\&\ netgroupman,\ \textcolor{keywordtype}{bool}\ deterministic,\ int32\_t\ consistency\_check\_ratio);}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \ \ \ \ \string~AddrMan();}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s\_)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s\_);}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ Size(std::optional<Network>\ net\ =\ std::nullopt,\ std::optional<bool>\ in\_new\ =\ std::nullopt)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keywordtype}{bool}\ Add(\textcolor{keyword}{const}\ std::vector<CAddress>\&\ vAddr,\ \textcolor{keyword}{const}\ CNetAddr\&\ source,\ std::chrono::seconds\ time\_penalty\ =\ 0s);}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keywordtype}{bool}\ Good(\textcolor{keyword}{const}\ CService\&\ addr,\ NodeSeconds\ time\ =\ Now<NodeSeconds>());}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keywordtype}{void}\ Attempt(\textcolor{keyword}{const}\ CService\&\ addr,\ \textcolor{keywordtype}{bool}\ fCountFailure,\ NodeSeconds\ time\ =\ Now<NodeSeconds>());}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00140\ \ \ \ \ \textcolor{keywordtype}{void}\ ResolveCollisions();}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00149\ \ \ \ \ std::pair<CAddress,\ NodeSeconds>\ SelectTriedCollision();}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00163\ \ \ \ \ std::pair<CAddress,\ NodeSeconds>\ Select(\textcolor{keywordtype}{bool}\ new\_only\ =\ \textcolor{keyword}{false},\ \textcolor{keyword}{const}\ std::unordered\_set<Network>\&\ networks\ =\ \{\})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00164\ }
+\DoxyCodeLine{00175\ \ \ \ \ std::vector<CAddress>\ GetAddr(\textcolor{keywordtype}{size\_t}\ max\_addresses,\ \textcolor{keywordtype}{size\_t}\ max\_pct,\ std::optional<Network>\ network,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ filtered\ =\ \textcolor{keyword}{true})\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00176\ }
+\DoxyCodeLine{00186\ \ \ \ \ std::vector<std::pair<AddrInfo,\ AddressPosition>>\ GetEntries(\textcolor{keywordtype}{bool}\ from\_tried)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00187\ }
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{keywordtype}{void}\ Connected(\textcolor{keyword}{const}\ CService\&\ addr,\ NodeSeconds\ time\ =\ Now<NodeSeconds>());}
+\DoxyCodeLine{00200\ }
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{keywordtype}{void}\ SetServices(\textcolor{keyword}{const}\ CService\&\ addr,\ ServiceFlags\ nServices);}
+\DoxyCodeLine{00203\ }
+\DoxyCodeLine{00211\ \ \ \ \ std::optional<AddressPosition>\ FindAddressEntry(\textcolor{keyword}{const}\ CAddress\&\ addr);}
+\DoxyCodeLine{00212\ \};}
+\DoxyCodeLine{00213\ }
+\DoxyCodeLine{00214\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_ADDRMAN\_H}}
+
+\end{DoxyCode}

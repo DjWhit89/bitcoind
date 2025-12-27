@@ -1,0 +1,79 @@
+\doxysection{vector.\+h}
+\label{vector_8h_source}\index{src/util/vector.h@{src/util/vector.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2019-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_VECTOR\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_VECTOR\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <initializer\_list>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00023\ \textcolor{keyword}{inline}\ std::vector<std::common\_type\_t<Args...>>\ Vector(Args\&\&...\ args)}
+\DoxyCodeLine{00024\ \{}
+\DoxyCodeLine{00025\ \ \ \ \ std::vector<std::common\_type\_t<Args...>>\ ret;}
+\DoxyCodeLine{00026\ \ \ \ \ ret.reserve(\textcolor{keyword}{sizeof}...(args));}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{comment}{//\ The\ line\ below\ uses\ the\ trick\ from\ https://www.experts-\/exchange.com/articles/32502/None-\/recursive-\/variadic-\/templates-\/with-\/std-\/initializer-\/list.html}}
+\DoxyCodeLine{00028\ \ \ \ \ (void)std::initializer\_list<int>\{(ret.emplace\_back(std::forward<Args>(args)),\ 0)...\};}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00030\ \}}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ V>}
+\DoxyCodeLine{00034\ \textcolor{keyword}{inline}\ V\ Cat(V\ v1,\ V\&\&\ v2)}
+\DoxyCodeLine{00035\ \{}
+\DoxyCodeLine{00036\ \ \ \ \ v1.reserve(v1.size()\ +\ v2.size());}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{auto}\&\ arg\ :\ v2)\ \{}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ v1.push\_back(std::move(arg));}
+\DoxyCodeLine{00039\ \ \ \ \ \}}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{keywordflow}{return}\ v1;}
+\DoxyCodeLine{00041\ \}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00044\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ V>}
+\DoxyCodeLine{00045\ \textcolor{keyword}{inline}\ V\ Cat(V\ v1,\ \textcolor{keyword}{const}\ V\&\ v2)}
+\DoxyCodeLine{00046\ \{}
+\DoxyCodeLine{00047\ \ \ \ \ v1.reserve(v1.size()\ +\ v2.size());}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ arg\ :\ v2)\ \{}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ v1.push\_back(arg);}
+\DoxyCodeLine{00050\ \ \ \ \ \}}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keywordflow}{return}\ v1;}
+\DoxyCodeLine{00052\ \}}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ V>}
+\DoxyCodeLine{00056\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ClearShrink(V\&\ v)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00057\ \{}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{comment}{//\ There\ are\ various\ ways\ to\ clear\ a\ vector\ and\ release\ its\ memory:}}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{comment}{//\ 1.\ V\{\}.swap(v)}}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{comment}{//\ 2.\ v\ =\ V\{\}}}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{comment}{//\ 3.\ v\ =\ \{\};\ v.shrink\_to\_fit();}}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{comment}{//\ 4.\ v.clear();\ v.shrink\_to\_fit();}}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{comment}{//\ (2)\ does\ not\ appear\ to\ release\ memory\ in\ glibc\ debug\ mode,\ even\ if\ v.shrink\_to\_fit()}}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{comment}{//\ follows.\ (3)\ and\ (4)\ rely\ on\ std::vector::shrink\_to\_fit,\ which\ is\ only\ a\ non-\/binding}}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{comment}{//\ request.\ Therefore,\ we\ use\ method\ (1).}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \ \ V\{\}.swap(v);}
+\DoxyCodeLine{00070\ \}}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ V,\ \textcolor{keyword}{typename}\ L>}
+\DoxyCodeLine{00073\ \textcolor{keyword}{inline}\ std::optional<V>\ FindFirst(\textcolor{keyword}{const}\ std::vector<V>\&\ vec,\ \textcolor{keyword}{const}\ L\ fnc)}
+\DoxyCodeLine{00074\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ el\ :\ vec)\ \{}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fnc(el))\ \{}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ el;}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00079\ \ \ \ \ \}}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00081\ \}}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00083\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_VECTOR\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,78 @@
+\doxysection{filter\+\_\+policy.\+h}
+\label{filter__policy_8h_source}\index{src/leveldb/include/leveldb/filter\_policy.h@{src/leveldb/include/leveldb/filter\_policy.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2012\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ A\ database\ can\ be\ configured\ with\ a\ custom\ FilterPolicy\ object.}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//\ This\ object\ is\ responsible\ for\ creating\ a\ small\ filter\ from\ a\ set}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//\ of\ keys.\ \ These\ filters\ are\ stored\ in\ leveldb\ and\ are\ consulted}}
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ automatically\ by\ leveldb\ to\ decide\ whether\ or\ not\ to\ read\ some}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//\ information\ from\ disk.\ In\ many\ cases,\ a\ filter\ can\ cut\ down\ the}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//\ number\ of\ disk\ seeks\ form\ a\ handful\ to\ a\ single\ disk\ seek\ per}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//\ DB::Get()\ call.}}
+\DoxyCodeLine{00012\ \textcolor{comment}{//}}
+\DoxyCodeLine{00013\ \textcolor{comment}{//\ Most\ people\ will\ want\ to\ use\ the\ builtin\ bloom\ filter\ support\ (see}}
+\DoxyCodeLine{00014\ \textcolor{comment}{//\ NewBloomFilterPolicy()\ below).}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_INCLUDE\_FILTER\_POLICY\_H\_}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_INCLUDE\_FILTER\_POLICY\_H\_}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ "{}leveldb/export.h"{}}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{class\ }Slice;}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{class\ }LEVELDB\_EXPORT\ FilterPolicy\ \{}
+\DoxyCodeLine{00028\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00029\ \ \ \textcolor{keyword}{virtual}\ \string~FilterPolicy();}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \ \ \textcolor{comment}{//\ Return\ the\ name\ of\ this\ policy.\ \ Note\ that\ if\ the\ filter\ encoding}}
+\DoxyCodeLine{00032\ \ \ \textcolor{comment}{//\ changes\ in\ an\ incompatible\ way,\ the\ name\ returned\ by\ this\ method}}
+\DoxyCodeLine{00033\ \ \ \textcolor{comment}{//\ must\ be\ changed.\ \ Otherwise,\ old\ incompatible\ filters\ may\ be}}
+\DoxyCodeLine{00034\ \ \ \textcolor{comment}{//\ passed\ to\ methods\ of\ this\ type.}}
+\DoxyCodeLine{00035\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ Name()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \textcolor{comment}{//\ keys[0,n-\/1]\ contains\ a\ list\ of\ keys\ (potentially\ with\ duplicates)}}
+\DoxyCodeLine{00038\ \ \ \textcolor{comment}{//\ that\ are\ ordered\ according\ to\ the\ user\ supplied\ comparator.}}
+\DoxyCodeLine{00039\ \ \ \textcolor{comment}{//\ Append\ a\ filter\ that\ summarizes\ keys[0,n-\/1]\ to\ *dst.}}
+\DoxyCodeLine{00040\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00041\ \ \ \textcolor{comment}{//\ Warning:\ do\ not\ change\ the\ initial\ contents\ of\ *dst.\ \ Instead,}}
+\DoxyCodeLine{00042\ \ \ \textcolor{comment}{//\ append\ the\ newly\ constructed\ filter\ to\ *dst.}}
+\DoxyCodeLine{00043\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ CreateFilter(\textcolor{keyword}{const}\ Slice*\ keys,\ \textcolor{keywordtype}{int}\ n,}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::string*\ dst)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \ \textcolor{comment}{//\ "{}filter"{}\ contains\ the\ data\ appended\ by\ a\ preceding\ call\ to}}
+\DoxyCodeLine{00047\ \ \ \textcolor{comment}{//\ CreateFilter()\ on\ this\ class.\ \ This\ method\ must\ return\ true\ if}}
+\DoxyCodeLine{00048\ \ \ \textcolor{comment}{//\ the\ key\ was\ in\ the\ list\ of\ keys\ passed\ to\ CreateFilter().}}
+\DoxyCodeLine{00049\ \ \ \textcolor{comment}{//\ This\ method\ may\ return\ true\ or\ false\ if\ the\ key\ was\ not\ on\ the}}
+\DoxyCodeLine{00050\ \ \ \textcolor{comment}{//\ list,\ but\ it\ should\ aim\ to\ return\ false\ with\ a\ high\ probability.}}
+\DoxyCodeLine{00051\ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ KeyMayMatch(\textcolor{keyword}{const}\ Slice\&\ key,\ \textcolor{keyword}{const}\ Slice\&\ filter)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00052\ \};}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \textcolor{comment}{//\ Return\ a\ new\ filter\ policy\ that\ uses\ a\ bloom\ filter\ with\ approximately}}
+\DoxyCodeLine{00055\ \textcolor{comment}{//\ the\ specified\ number\ of\ bits\ per\ key.\ \ A\ good\ value\ for\ bits\_per\_key}}
+\DoxyCodeLine{00056\ \textcolor{comment}{//\ is\ 10,\ which\ yields\ a\ filter\ with\ \string~\ 1\%\ false\ positive\ rate.}}
+\DoxyCodeLine{00057\ \textcolor{comment}{//}}
+\DoxyCodeLine{00058\ \textcolor{comment}{//\ Callers\ must\ delete\ the\ result\ after\ any\ database\ that\ is\ using\ the}}
+\DoxyCodeLine{00059\ \textcolor{comment}{//\ result\ has\ been\ closed.}}
+\DoxyCodeLine{00060\ \textcolor{comment}{//}}
+\DoxyCodeLine{00061\ \textcolor{comment}{//\ Note:\ if\ you\ are\ using\ a\ custom\ comparator\ that\ ignores\ some\ parts}}
+\DoxyCodeLine{00062\ \textcolor{comment}{//\ of\ the\ keys\ being\ compared,\ you\ must\ not\ use\ NewBloomFilterPolicy()}}
+\DoxyCodeLine{00063\ \textcolor{comment}{//\ and\ must\ provide\ your\ own\ FilterPolicy\ that\ also\ ignores\ the}}
+\DoxyCodeLine{00064\ \textcolor{comment}{//\ corresponding\ parts\ of\ the\ keys.\ \ For\ example,\ if\ the\ comparator}}
+\DoxyCodeLine{00065\ \textcolor{comment}{//\ ignores\ trailing\ spaces,\ it\ would\ be\ incorrect\ to\ use\ a}}
+\DoxyCodeLine{00066\ \textcolor{comment}{//\ FilterPolicy\ (like\ NewBloomFilterPolicy)\ that\ does\ not\ ignore}}
+\DoxyCodeLine{00067\ \textcolor{comment}{//\ trailing\ spaces\ in\ keys.}}
+\DoxyCodeLine{00068\ LEVELDB\_EXPORT\ \textcolor{keyword}{const}\ FilterPolicy*\ NewBloomFilterPolicy(\textcolor{keywordtype}{int}\ bits\_per\_key);}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_INCLUDE\_FILTER\_POLICY\_H\_}}
+
+\end{DoxyCode}

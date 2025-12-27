@@ -1,0 +1,404 @@
+\doxysection{Fuzzed\+Data\+Provider.\+h}
+\label{_fuzzed_data_provider_8h_source}\index{src/test/fuzz/FuzzedDataProvider.h@{src/test/fuzz/FuzzedDataProvider.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//===-\/\ FuzzedDataProvider.h\ -\/\ Utility\ header\ for\ fuzz\ targets\ -\/-\/-\/*-\/\ C++\ -\/*\ ===//}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Part\ of\ the\ LLVM\ Project,\ under\ the\ Apache\ License\ v2.0\ with\ LLVM\ Exceptions.}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ See\ https://llvm.org/LICENSE.txt\ for\ license\ information.}}
+\DoxyCodeLine{00005\ \textcolor{comment}{//\ SPDX-\/License-\/Identifier:\ Apache-\/2.0\ WITH\ LLVM-\/exception}}
+\DoxyCodeLine{00006\ \textcolor{comment}{//}}
+\DoxyCodeLine{00007\ \textcolor{comment}{//===-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/===//}}
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ A\ single\ header\ library\ providing\ an\ utility\ class\ to\ break\ up\ an\ array\ of}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//\ bytes.\ Whenever\ run\ on\ the\ same\ input,\ provides\ the\ same\ output,\ as\ long\ as}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//\ its\ methods\ are\ called\ in\ the\ same\ order,\ with\ the\ same\ arguments.}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//===-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/===//}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#ifndef\ LLVM\_FUZZER\_FUZZED\_DATA\_PROVIDER\_H\_}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#define\ LLVM\_FUZZER\_FUZZED\_DATA\_PROVIDER\_H\_}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <array>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <climits>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <cstdlib>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <initializer\_list>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{comment}{//\ In\ addition\ to\ the\ comments\ below,\ the\ API\ is\ also\ briefly\ documented\ at}}
+\DoxyCodeLine{00031\ \textcolor{comment}{//\ https://github.com/google/fuzzing/blob/master/docs/split-\/inputs.md\#fuzzed-\/data-\/provider}}
+\DoxyCodeLine{00032\ \textcolor{keyword}{class\ }FuzzedDataProvider\ \{}
+\DoxyCodeLine{00033\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00034\ \ \ \textcolor{comment}{//\ |data|\ is\ an\ array\ of\ length\ |size|\ that\ the\ FuzzedDataProvider\ wraps\ to}}
+\DoxyCodeLine{00035\ \ \ \textcolor{comment}{//\ provide\ more\ granular\ access.\ |data|\ must\ outlive\ the\ FuzzedDataProvider.}}
+\DoxyCodeLine{00036\ \ \ FuzzedDataProvider(\textcolor{keyword}{const}\ uint8\_t\ *data,\ \textcolor{keywordtype}{size\_t}\ size)}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ :\ data\_ptr\_(data),\ remaining\_bytes\_(size)\ \{\}}
+\DoxyCodeLine{00038\ \ \ \string~FuzzedDataProvider()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \ \ \textcolor{comment}{//\ See\ the\ implementation\ below\ (after\ the\ class\ definition)\ for\ more\ verbose}}
+\DoxyCodeLine{00041\ \ \ \textcolor{comment}{//\ comments\ for\ each\ of\ the\ methods.}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \textcolor{comment}{//\ Methods\ returning\ std::vector\ of\ bytes.\ These\ are\ the\ most\ popular\ choice}}
+\DoxyCodeLine{00044\ \ \ \textcolor{comment}{//\ when\ splitting\ fuzzing\ input\ into\ pieces,\ as\ every\ piece\ is\ put\ into\ a}}
+\DoxyCodeLine{00045\ \ \ \textcolor{comment}{//\ separate\ buffer\ (i.e.\ ASan\ would\ catch\ any\ under-\//overflow)\ and\ the\ memory}}
+\DoxyCodeLine{00046\ \ \ \textcolor{comment}{//\ will\ be\ released\ automatically.}}
+\DoxyCodeLine{00047\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ std::vector<T>\ ConsumeBytes(\textcolor{keywordtype}{size\_t}\ num\_bytes);}
+\DoxyCodeLine{00048\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00049\ \ \ std::vector<T>\ ConsumeBytesWithTerminator(\textcolor{keywordtype}{size\_t}\ num\_bytes,\ T\ terminator\ =\ 0);}
+\DoxyCodeLine{00050\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ std::vector<T>\ ConsumeRemainingBytes();}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ \textcolor{comment}{//\ Methods\ returning\ strings.\ Use\ only\ when\ you\ need\ a\ std::string\ or\ a\ null}}
+\DoxyCodeLine{00053\ \ \ \textcolor{comment}{//\ terminated\ C-\/string.\ Otherwise,\ prefer\ the\ methods\ returning\ std::vector.}}
+\DoxyCodeLine{00054\ \ \ std::string\ ConsumeBytesAsString(\textcolor{keywordtype}{size\_t}\ num\_bytes);}
+\DoxyCodeLine{00055\ \ \ std::string\ ConsumeRandomLengthString(\textcolor{keywordtype}{size\_t}\ max\_length);}
+\DoxyCodeLine{00056\ \ \ std::string\ ConsumeRandomLengthString();}
+\DoxyCodeLine{00057\ \ \ std::string\ ConsumeRemainingBytesAsString();}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \textcolor{comment}{//\ Methods\ returning\ integer\ values.}}
+\DoxyCodeLine{00060\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ T\ ConsumeIntegral();}
+\DoxyCodeLine{00061\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ T\ ConsumeIntegralInRange(T\ min,\ T\ max);}
+\DoxyCodeLine{00062\ }
+\DoxyCodeLine{00063\ \ \ \textcolor{comment}{//\ Methods\ returning\ floating\ point\ values.}}
+\DoxyCodeLine{00064\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ T\ ConsumeFloatingPoint();}
+\DoxyCodeLine{00065\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ T\ ConsumeFloatingPointInRange(T\ min,\ T\ max);}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \textcolor{comment}{//\ 0\ <=\ return\ value\ <=\ 1.}}
+\DoxyCodeLine{00068\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ T\ ConsumeProbability();}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \ \ \textcolor{keywordtype}{bool}\ ConsumeBool();}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \textcolor{comment}{//\ Returns\ a\ value\ chosen\ from\ the\ given\ enum.}}
+\DoxyCodeLine{00073\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ T\ ConsumeEnum();}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ \textcolor{comment}{//\ Returns\ a\ value\ from\ the\ given\ array.}}
+\DoxyCodeLine{00076\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T,\ \textcolor{keywordtype}{size\_t}\ size>\ T\ PickValueInArray(\textcolor{keyword}{const}\ T\ (\&array)[size]);}
+\DoxyCodeLine{00077\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T,\ \textcolor{keywordtype}{size\_t}\ size>}
+\DoxyCodeLine{00078\ \ \ T\ PickValueInArray(\textcolor{keyword}{const}\ std::array<T,\ size>\ \&array);}
+\DoxyCodeLine{00079\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ T\ PickValueInArray(std::initializer\_list<const\ T>\ list);}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ \textcolor{comment}{//\ Writes\ data\ to\ the\ given\ destination\ and\ returns\ number\ of\ bytes\ written.}}
+\DoxyCodeLine{00082\ \ \ \textcolor{keywordtype}{size\_t}\ ConsumeData(\textcolor{keywordtype}{void}\ *destination,\ \textcolor{keywordtype}{size\_t}\ num\_bytes);}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \ \ \textcolor{comment}{//\ Reports\ the\ remaining\ bytes\ available\ for\ fuzzed\ input.}}
+\DoxyCodeLine{00085\ \ \ \textcolor{keywordtype}{size\_t}\ remaining\_bytes()\ \{\ \textcolor{keywordflow}{return}\ remaining\_bytes\_;\ \}}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00088\ \ \ FuzzedDataProvider(\textcolor{keyword}{const}\ FuzzedDataProvider\ \&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00089\ \ \ FuzzedDataProvider\ \&operator=(\textcolor{keyword}{const}\ FuzzedDataProvider\ \&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00091\ \ \ \textcolor{keywordtype}{void}\ CopyAndAdvance(\textcolor{keywordtype}{void}\ *destination,\ \textcolor{keywordtype}{size\_t}\ num\_bytes);}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \ \ \textcolor{keywordtype}{void}\ Advance(\textcolor{keywordtype}{size\_t}\ num\_bytes);}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00096\ \ \ std::vector<T>\ ConsumeBytes(\textcolor{keywordtype}{size\_t}\ size,\ \textcolor{keywordtype}{size\_t}\ num\_bytes);}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ TS,\ \textcolor{keyword}{typename}\ TU>\ TS\ ConvertUnsignedToSigned(TU\ value);}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \textcolor{keyword}{const}\ uint8\_t\ *data\_ptr\_;}
+\DoxyCodeLine{00101\ \ \ \textcolor{keywordtype}{size\_t}\ remaining\_bytes\_;}
+\DoxyCodeLine{00102\ \};}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \textcolor{comment}{//\ Returns\ a\ std::vector\ containing\ |num\_bytes|\ of\ input\ data.\ If\ fewer\ than}}
+\DoxyCodeLine{00105\ \textcolor{comment}{//\ |num\_bytes|\ of\ data\ remain,\ returns\ a\ shorter\ std::vector\ containing\ all}}
+\DoxyCodeLine{00106\ \textcolor{comment}{//\ of\ the\ data\ that's\ left.\ Can\ be\ used\ with\ any\ byte\ sized\ type,\ such\ as}}
+\DoxyCodeLine{00107\ \textcolor{comment}{//\ char,\ unsigned\ char,\ uint8\_t,\ etc.}}
+\DoxyCodeLine{00108\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00109\ std::vector<T>\ FuzzedDataProvider::ConsumeBytes(\textcolor{keywordtype}{size\_t}\ num\_bytes)\ \{}
+\DoxyCodeLine{00110\ \ \ num\_bytes\ =\ std::min(num\_bytes,\ remaining\_bytes\_);}
+\DoxyCodeLine{00111\ \ \ \textcolor{keywordflow}{return}\ ConsumeBytes<T>(num\_bytes,\ num\_bytes);}
+\DoxyCodeLine{00112\ \}}
+\DoxyCodeLine{00113\ }
+\DoxyCodeLine{00114\ \textcolor{comment}{//\ Similar\ to\ |ConsumeBytes|,\ but\ also\ appends\ the\ terminator\ value\ at\ the\ end}}
+\DoxyCodeLine{00115\ \textcolor{comment}{//\ of\ the\ resulting\ vector.\ Useful,\ when\ a\ mutable\ null-\/terminated\ C-\/string\ is}}
+\DoxyCodeLine{00116\ \textcolor{comment}{//\ needed,\ for\ example.\ But\ that\ is\ a\ rare\ case.\ Better\ avoid\ it,\ if\ possible,}}
+\DoxyCodeLine{00117\ \textcolor{comment}{//\ and\ prefer\ using\ |ConsumeBytes|\ or\ |ConsumeBytesAsString|\ methods.}}
+\DoxyCodeLine{00118\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00119\ std::vector<T>\ FuzzedDataProvider::ConsumeBytesWithTerminator(\textcolor{keywordtype}{size\_t}\ num\_bytes,}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T\ terminator)\ \{}
+\DoxyCodeLine{00121\ \ \ num\_bytes\ =\ std::min(num\_bytes,\ remaining\_bytes\_);}
+\DoxyCodeLine{00122\ \ \ std::vector<T>\ result\ =\ ConsumeBytes<T>(num\_bytes\ +\ 1,\ num\_bytes);}
+\DoxyCodeLine{00123\ \ \ result.back()\ =\ terminator;}
+\DoxyCodeLine{00124\ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00125\ \}}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00127\ \textcolor{comment}{//\ Returns\ a\ std::vector\ containing\ all\ remaining\ bytes\ of\ the\ input\ data.}}
+\DoxyCodeLine{00128\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00129\ std::vector<T>\ FuzzedDataProvider::ConsumeRemainingBytes()\ \{}
+\DoxyCodeLine{00130\ \ \ \textcolor{keywordflow}{return}\ ConsumeBytes<T>(remaining\_bytes\_);}
+\DoxyCodeLine{00131\ \}}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00133\ \textcolor{comment}{//\ Returns\ a\ std::string\ containing\ |num\_bytes|\ of\ input\ data.\ Using\ this\ and}}
+\DoxyCodeLine{00134\ \textcolor{comment}{//\ |.c\_str()|\ on\ the\ resulting\ string\ is\ the\ best\ way\ to\ get\ an\ immutable}}
+\DoxyCodeLine{00135\ \textcolor{comment}{//\ null-\/terminated\ C\ string.\ If\ fewer\ than\ |num\_bytes|\ of\ data\ remain,\ returns}}
+\DoxyCodeLine{00136\ \textcolor{comment}{//\ a\ shorter\ std::string\ containing\ all\ of\ the\ data\ that's\ left.}}
+\DoxyCodeLine{00137\ \textcolor{keyword}{inline}\ std::string\ FuzzedDataProvider::ConsumeBytesAsString(\textcolor{keywordtype}{size\_t}\ num\_bytes)\ \{}
+\DoxyCodeLine{00138\ \ \ \textcolor{keyword}{static\_assert}(\textcolor{keyword}{sizeof}(std::string::value\_type)\ ==\ \textcolor{keyword}{sizeof}(uint8\_t),}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}ConsumeBytesAsString\ cannot\ convert\ the\ data\ to\ a\ string."{}});}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00141\ \ \ num\_bytes\ =\ std::min(num\_bytes,\ remaining\_bytes\_);}
+\DoxyCodeLine{00142\ \ \ std::string\ result(}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }std::string::value\_type\ *\textcolor{keyword}{>}(data\_ptr\_),\ num\_bytes);}
+\DoxyCodeLine{00144\ \ \ Advance(num\_bytes);}
+\DoxyCodeLine{00145\ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00146\ \}}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00148\ \textcolor{comment}{//\ Returns\ a\ std::string\ of\ length\ from\ 0\ to\ |max\_length|.\ When\ it\ runs\ out\ of}}
+\DoxyCodeLine{00149\ \textcolor{comment}{//\ input\ data,\ returns\ what\ remains\ of\ the\ input.\ Designed\ to\ be\ more\ stable}}
+\DoxyCodeLine{00150\ \textcolor{comment}{//\ with\ respect\ to\ a\ fuzzer\ inserting\ characters\ than\ just\ picking\ a\ random}}
+\DoxyCodeLine{00151\ \textcolor{comment}{//\ length\ and\ then\ consuming\ that\ many\ bytes\ with\ |ConsumeBytes|.}}
+\DoxyCodeLine{00152\ \textcolor{keyword}{inline}\ std::string}
+\DoxyCodeLine{00153\ FuzzedDataProvider::ConsumeRandomLengthString(\textcolor{keywordtype}{size\_t}\ max\_length)\ \{}
+\DoxyCodeLine{00154\ \ \ \textcolor{comment}{//\ Reads\ bytes\ from\ the\ start\ of\ |data\_ptr\_|.\ Maps\ "{}\(\backslash\)\(\backslash\)"{}\ to\ "{}\(\backslash\)"{},\ and\ maps\ "{}\(\backslash\)"{}}}
+\DoxyCodeLine{00155\ \ \ \textcolor{comment}{//\ followed\ by\ anything\ else\ to\ the\ end\ of\ the\ string.\ As\ a\ result\ of\ this}}
+\DoxyCodeLine{00156\ \ \ \textcolor{comment}{//\ logic,\ a\ fuzzer\ can\ insert\ characters\ into\ the\ string,\ and\ the\ string}}
+\DoxyCodeLine{00157\ \ \ \textcolor{comment}{//\ will\ be\ lengthened\ to\ include\ those\ new\ characters,\ resulting\ in\ a\ more}}
+\DoxyCodeLine{00158\ \ \ \textcolor{comment}{//\ stable\ fuzzer\ than\ picking\ the\ length\ of\ a\ string\ independently\ from}}
+\DoxyCodeLine{00159\ \ \ \textcolor{comment}{//\ picking\ its\ contents.}}
+\DoxyCodeLine{00160\ \ \ std::string\ result;}
+\DoxyCodeLine{00161\ }
+\DoxyCodeLine{00162\ \ \ \textcolor{comment}{//\ Reserve\ the\ anticipated\ capacity\ to\ prevent\ several\ reallocations.}}
+\DoxyCodeLine{00163\ \ \ result.reserve(std::min(max\_length,\ remaining\_bytes\_));}
+\DoxyCodeLine{00164\ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ max\_length\ \&\&\ remaining\_bytes\_\ !=\ 0;\ ++i)\ \{}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keywordtype}{char}\ next\ =\ ConvertUnsignedToSigned<char>(data\_ptr\_[0]);}
+\DoxyCodeLine{00166\ \ \ \ \ Advance(1);}
+\DoxyCodeLine{00167\ \ \ \ \ \textcolor{keywordflow}{if}\ (next\ ==\ \textcolor{charliteral}{'\(\backslash\)\(\backslash\)'}\ \&\&\ remaining\_bytes\_\ !=\ 0)\ \{}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ next\ =\ ConvertUnsignedToSigned<char>(data\_ptr\_[0]);}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ Advance(1);}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (next\ !=\ \textcolor{charliteral}{'\(\backslash\)\(\backslash\)'})}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00172\ \ \ \ \ \}}
+\DoxyCodeLine{00173\ \ \ \ \ result\ +=\ next;}
+\DoxyCodeLine{00174\ \ \ \}}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ \ \ result.shrink\_to\_fit();}
+\DoxyCodeLine{00177\ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00178\ \}}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00180\ \textcolor{comment}{//\ Returns\ a\ std::string\ of\ length\ from\ 0\ to\ |remaining\_bytes\_|.}}
+\DoxyCodeLine{00181\ \textcolor{keyword}{inline}\ std::string\ FuzzedDataProvider::ConsumeRandomLengthString()\ \{}
+\DoxyCodeLine{00182\ \ \ \textcolor{keywordflow}{return}\ ConsumeRandomLengthString(remaining\_bytes\_);}
+\DoxyCodeLine{00183\ \}}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00185\ \textcolor{comment}{//\ Returns\ a\ std::string\ containing\ all\ remaining\ bytes\ of\ the\ input\ data.}}
+\DoxyCodeLine{00186\ \textcolor{comment}{//\ Prefer\ using\ |ConsumeRemainingBytes|\ unless\ you\ actually\ need\ a\ std::string}}
+\DoxyCodeLine{00187\ \textcolor{comment}{//\ object.}}
+\DoxyCodeLine{00188\ \textcolor{keyword}{inline}\ std::string\ FuzzedDataProvider::ConsumeRemainingBytesAsString()\ \{}
+\DoxyCodeLine{00189\ \ \ \textcolor{keywordflow}{return}\ ConsumeBytesAsString(remaining\_bytes\_);}
+\DoxyCodeLine{00190\ \}}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00192\ \textcolor{comment}{//\ Returns\ a\ number\ in\ the\ range\ [Type's\ min,\ Type's\ max].\ The\ value\ might}}
+\DoxyCodeLine{00193\ \textcolor{comment}{//\ not\ be\ uniformly\ distributed\ in\ the\ given\ range.\ If\ there's\ no\ input\ data}}
+\DoxyCodeLine{00194\ \textcolor{comment}{//\ left,\ always\ returns\ |min|.}}
+\DoxyCodeLine{00195\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ T\ FuzzedDataProvider::ConsumeIntegral()\ \{}
+\DoxyCodeLine{00196\ \ \ \textcolor{keywordflow}{return}\ ConsumeIntegralInRange(std::numeric\_limits<T>::min(),}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::numeric\_limits<T>::max());}
+\DoxyCodeLine{00198\ \}}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \textcolor{comment}{//\ Returns\ a\ number\ in\ the\ range\ [min,\ max]\ by\ consuming\ bytes\ from\ the}}
+\DoxyCodeLine{00201\ \textcolor{comment}{//\ input\ data.\ The\ value\ might\ not\ be\ uniformly\ distributed\ in\ the\ given}}
+\DoxyCodeLine{00202\ \textcolor{comment}{//\ range.\ If\ there's\ no\ input\ data\ left,\ always\ returns\ |min|.\ |min|\ must}}
+\DoxyCodeLine{00203\ \textcolor{comment}{//\ be\ less\ than\ or\ equal\ to\ |max|.}}
+\DoxyCodeLine{00204\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00205\ T\ FuzzedDataProvider::ConsumeIntegralInRange(T\ min,\ T\ max)\ \{}
+\DoxyCodeLine{00206\ \ \ \textcolor{keyword}{static\_assert}(std::is\_integral\_v<T>,\ \textcolor{stringliteral}{"{}An\ integral\ type\ is\ required."{}});}
+\DoxyCodeLine{00207\ \ \ \textcolor{keyword}{static\_assert}(\textcolor{keyword}{sizeof}(T)\ <=\ \textcolor{keyword}{sizeof}(uint64\_t),\ \textcolor{stringliteral}{"{}Unsupported\ integral\ type."{}});}
+\DoxyCodeLine{00208\ }
+\DoxyCodeLine{00209\ \ \ \textcolor{keywordflow}{if}\ (min\ >\ max)}
+\DoxyCodeLine{00210\ \ \ \ \ abort();}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \ \ \textcolor{comment}{//\ Use\ the\ biggest\ type\ possible\ to\ hold\ the\ range\ and\ the\ result.}}
+\DoxyCodeLine{00213\ \ \ uint64\_t\ range\ =\ \textcolor{keyword}{static\_cast<}uint64\_t\textcolor{keyword}{>}(max)\ -\/\ \textcolor{keyword}{static\_cast<}uint64\_t\textcolor{keyword}{>}(min);}
+\DoxyCodeLine{00214\ \ \ uint64\_t\ result\ =\ 0;}
+\DoxyCodeLine{00215\ \ \ \textcolor{keywordtype}{size\_t}\ offset\ =\ 0;}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00217\ \ \ \textcolor{keywordflow}{while}\ (offset\ <\ \textcolor{keyword}{sizeof}(T)\ *\ CHAR\_BIT\ \&\&\ (range\ >>\ offset)\ >\ 0\ \&\&}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \ remaining\_bytes\_\ !=\ 0)\ \{}
+\DoxyCodeLine{00219\ \ \ \ \ \textcolor{comment}{//\ Pull\ bytes\ off\ the\ end\ of\ the\ seed\ data.\ Experimentally,\ this\ seems\ to}}
+\DoxyCodeLine{00220\ \ \ \ \ \textcolor{comment}{//\ allow\ the\ fuzzer\ to\ more\ easily\ explore\ the\ input\ space.\ This\ makes}}
+\DoxyCodeLine{00221\ \ \ \ \ \textcolor{comment}{//\ sense,\ since\ it\ works\ by\ modifying\ inputs\ that\ caused\ new\ code\ to\ run,}}
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{comment}{//\ and\ this\ data\ is\ often\ used\ to\ encode\ length\ of\ data\ read\ by}}
+\DoxyCodeLine{00223\ \ \ \ \ \textcolor{comment}{//\ |ConsumeBytes|.\ Separating\ out\ read\ lengths\ makes\ it\ easier\ modify\ the}}
+\DoxyCodeLine{00224\ \ \ \ \ \textcolor{comment}{//\ contents\ of\ the\ data\ that\ is\ actually\ read.}}
+\DoxyCodeLine{00225\ \ \ \ \ -\/-\/remaining\_bytes\_;}
+\DoxyCodeLine{00226\ \ \ \ \ result\ =\ (result\ <<\ CHAR\_BIT)\ |\ data\_ptr\_[remaining\_bytes\_];}
+\DoxyCodeLine{00227\ \ \ \ \ offset\ +=\ CHAR\_BIT;}
+\DoxyCodeLine{00228\ \ \ \}}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00230\ \ \ \textcolor{comment}{//\ Avoid\ division\ by\ 0,\ in\ case\ |range\ +\ 1|\ results\ in\ overflow.}}
+\DoxyCodeLine{00231\ \ \ \textcolor{keywordflow}{if}\ (range\ !=\ std::numeric\_limits<\textcolor{keyword}{decltype}(range)>::max())}
+\DoxyCodeLine{00232\ \ \ \ \ result\ =\ result\ \%\ (range\ +\ 1);}
+\DoxyCodeLine{00233\ }
+\DoxyCodeLine{00234\ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}T\textcolor{keyword}{>}(\textcolor{keyword}{static\_cast<}uint64\_t\textcolor{keyword}{>}(min)\ +\ result);}
+\DoxyCodeLine{00235\ \}}
+\DoxyCodeLine{00236\ }
+\DoxyCodeLine{00237\ \textcolor{comment}{//\ Returns\ a\ floating\ point\ value\ in\ the\ range\ [Type's\ lowest,\ Type's\ max]\ by}}
+\DoxyCodeLine{00238\ \textcolor{comment}{//\ consuming\ bytes\ from\ the\ input\ data.\ If\ there's\ no\ input\ data\ left,\ always}}
+\DoxyCodeLine{00239\ \textcolor{comment}{//\ returns\ approximately\ 0.}}
+\DoxyCodeLine{00240\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ T\ FuzzedDataProvider::ConsumeFloatingPoint()\ \{}
+\DoxyCodeLine{00241\ \ \ \textcolor{keywordflow}{return}\ ConsumeFloatingPointInRange<T>(std::numeric\_limits<T>::lowest(),}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::numeric\_limits<T>::max());}
+\DoxyCodeLine{00243\ \}}
+\DoxyCodeLine{00244\ }
+\DoxyCodeLine{00245\ \textcolor{comment}{//\ Returns\ a\ floating\ point\ value\ in\ the\ given\ range\ by\ consuming\ bytes\ from}}
+\DoxyCodeLine{00246\ \textcolor{comment}{//\ the\ input\ data.\ If\ there's\ no\ input\ data\ left,\ returns\ |min|.\ Note\ that}}
+\DoxyCodeLine{00247\ \textcolor{comment}{//\ |min|\ must\ be\ less\ than\ or\ equal\ to\ |max|.}}
+\DoxyCodeLine{00248\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00249\ T\ FuzzedDataProvider::ConsumeFloatingPointInRange(T\ min,\ T\ max)\ \{}
+\DoxyCodeLine{00250\ \ \ \textcolor{keywordflow}{if}\ (min\ >\ max)}
+\DoxyCodeLine{00251\ \ \ \ \ abort();}
+\DoxyCodeLine{00252\ }
+\DoxyCodeLine{00253\ \ \ T\ range\ =\ .0;}
+\DoxyCodeLine{00254\ \ \ T\ result\ =\ min;}
+\DoxyCodeLine{00255\ \ \ \textcolor{keyword}{constexpr}\ T\ zero(.0);}
+\DoxyCodeLine{00256\ \ \ \textcolor{keywordflow}{if}\ (max\ >\ zero\ \&\&\ min\ <\ zero\ \&\&\ max\ >\ min\ +\ std::numeric\_limits<T>::max())\ \{}
+\DoxyCodeLine{00257\ \ \ \ \ \textcolor{comment}{//\ The\ diff\ |max\ -\/\ min|\ would\ overflow\ the\ given\ floating\ point\ type.\ Use}}
+\DoxyCodeLine{00258\ \ \ \ \ \textcolor{comment}{//\ the\ half\ of\ the\ diff\ as\ the\ range\ and\ consume\ a\ bool\ to\ decide\ whether}}
+\DoxyCodeLine{00259\ \ \ \ \ \textcolor{comment}{//\ the\ result\ is\ in\ the\ first\ of\ the\ second\ part\ of\ the\ diff.}}
+\DoxyCodeLine{00260\ \ \ \ \ range\ =\ (max\ /\ 2.0)\ -\/\ (min\ /\ 2.0);}
+\DoxyCodeLine{00261\ \ \ \ \ \textcolor{keywordflow}{if}\ (ConsumeBool())\ \{}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ result\ +=\ range;}
+\DoxyCodeLine{00263\ \ \ \ \ \}}
+\DoxyCodeLine{00264\ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00265\ \ \ \ \ range\ =\ max\ -\/\ min;}
+\DoxyCodeLine{00266\ \ \ \}}
+\DoxyCodeLine{00267\ }
+\DoxyCodeLine{00268\ \ \ \textcolor{keywordflow}{return}\ result\ +\ range\ *\ ConsumeProbability<T>();}
+\DoxyCodeLine{00269\ \}}
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00271\ \textcolor{comment}{//\ Returns\ a\ floating\ point\ number\ in\ the\ range\ [0.0,\ 1.0].\ If\ there's\ no}}
+\DoxyCodeLine{00272\ \textcolor{comment}{//\ input\ data\ left,\ always\ returns\ 0.}}
+\DoxyCodeLine{00273\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ T\ FuzzedDataProvider::ConsumeProbability()\ \{}
+\DoxyCodeLine{00274\ \ \ \textcolor{keyword}{static\_assert}(std::is\_floating\_point\_v<T>,}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}A\ floating\ point\ type\ is\ required."{}});}
+\DoxyCodeLine{00276\ }
+\DoxyCodeLine{00277\ \ \ \textcolor{comment}{//\ Use\ different\ integral\ types\ for\ different\ floating\ point\ types\ in\ order}}
+\DoxyCodeLine{00278\ \ \ \textcolor{comment}{//\ to\ provide\ better\ density\ of\ the\ resulting\ values.}}
+\DoxyCodeLine{00279\ \ \ \textcolor{keyword}{using\ }IntegralType\ =}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \textcolor{keyword}{typename}\ std::conditional\_t<(\textcolor{keyword}{sizeof}(T)\ <=\ \textcolor{keyword}{sizeof}(uint32\_t)),\ uint32\_t,}
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t>;}
+\DoxyCodeLine{00282\ }
+\DoxyCodeLine{00283\ \ \ T\ result\ =\ \textcolor{keyword}{static\_cast<}T\textcolor{keyword}{>}(ConsumeIntegral<IntegralType>());}
+\DoxyCodeLine{00284\ \ \ result\ /=\ \textcolor{keyword}{static\_cast<}T\textcolor{keyword}{>}(std::numeric\_limits<IntegralType>::max());}
+\DoxyCodeLine{00285\ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00286\ \}}
+\DoxyCodeLine{00287\ }
+\DoxyCodeLine{00288\ \textcolor{comment}{//\ Reads\ one\ byte\ and\ returns\ a\ bool,\ or\ false\ when\ no\ data\ remains.}}
+\DoxyCodeLine{00289\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ FuzzedDataProvider::ConsumeBool()\ \{}
+\DoxyCodeLine{00290\ \ \ \textcolor{keywordflow}{return}\ 1\ \&\ ConsumeIntegral<uint8\_t>();}
+\DoxyCodeLine{00291\ \}}
+\DoxyCodeLine{00292\ }
+\DoxyCodeLine{00293\ \textcolor{comment}{//\ Returns\ an\ enum\ value.\ The\ enum\ must\ start\ at\ 0\ and\ be\ contiguous.\ It\ must}}
+\DoxyCodeLine{00294\ \textcolor{comment}{//\ also\ contain\ |kMaxValue|\ aliased\ to\ its\ largest\ (inclusive)\ value.\ Such\ as:}}
+\DoxyCodeLine{00295\ \textcolor{comment}{//\ enum\ class\ Foo\ \{\ SomeValue,\ OtherValue,\ kMaxValue\ =\ OtherValue\ \};}}
+\DoxyCodeLine{00296\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>\ T\ FuzzedDataProvider::ConsumeEnum()\ \{}
+\DoxyCodeLine{00297\ \ \ \textcolor{keyword}{static\_assert}(std::is\_enum\_v<T>,\ \textcolor{stringliteral}{"{}|T|\ must\ be\ an\ enum\ type."{}});}
+\DoxyCodeLine{00298\ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}T\textcolor{keyword}{>}(}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ ConsumeIntegralInRange<uint32\_t>(0,\ \textcolor{keyword}{static\_cast<}uint32\_t\textcolor{keyword}{>}(T::kMaxValue)));}
+\DoxyCodeLine{00300\ \}}
+\DoxyCodeLine{00301\ }
+\DoxyCodeLine{00302\ \textcolor{comment}{//\ Returns\ a\ copy\ of\ the\ value\ selected\ from\ the\ given\ fixed-\/size\ |array|.}}
+\DoxyCodeLine{00303\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T,\ \textcolor{keywordtype}{size\_t}\ size>}
+\DoxyCodeLine{00304\ T\ FuzzedDataProvider::PickValueInArray(\textcolor{keyword}{const}\ T\ (\&array)[size])\ \{}
+\DoxyCodeLine{00305\ \ \ \textcolor{keyword}{static\_assert}(size\ >\ 0,\ \textcolor{stringliteral}{"{}The\ array\ must\ be\ non\ empty."{}});}
+\DoxyCodeLine{00306\ \ \ \textcolor{keywordflow}{return}\ array[ConsumeIntegralInRange<size\_t>(0,\ size\ -\/\ 1)];}
+\DoxyCodeLine{00307\ \}}
+\DoxyCodeLine{00308\ }
+\DoxyCodeLine{00309\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T,\ \textcolor{keywordtype}{size\_t}\ size>}
+\DoxyCodeLine{00310\ T\ FuzzedDataProvider::PickValueInArray(\textcolor{keyword}{const}\ std::array<T,\ size>\ \&array)\ \{}
+\DoxyCodeLine{00311\ \ \ \textcolor{keyword}{static\_assert}(size\ >\ 0,\ \textcolor{stringliteral}{"{}The\ array\ must\ be\ non\ empty."{}});}
+\DoxyCodeLine{00312\ \ \ \textcolor{keywordflow}{return}\ array[ConsumeIntegralInRange<size\_t>(0,\ size\ -\/\ 1)];}
+\DoxyCodeLine{00313\ \}}
+\DoxyCodeLine{00314\ }
+\DoxyCodeLine{00315\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00316\ T\ FuzzedDataProvider::PickValueInArray(std::initializer\_list<const\ T>\ list)\ \{}
+\DoxyCodeLine{00317\ \ \ \textcolor{comment}{//\ TODO(Dor1s):\ switch\ to\ static\_assert\ once\ C++14\ is\ allowed.}}
+\DoxyCodeLine{00318\ \ \ \textcolor{keywordflow}{if}\ (!list.size())}
+\DoxyCodeLine{00319\ \ \ \ \ abort();}
+\DoxyCodeLine{00320\ }
+\DoxyCodeLine{00321\ \ \ \textcolor{keywordflow}{return}\ *(list.begin()\ +\ ConsumeIntegralInRange<size\_t>(0,\ list.size()\ -\/\ 1));}
+\DoxyCodeLine{00322\ \}}
+\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00324\ \textcolor{comment}{//\ Writes\ |num\_bytes|\ of\ input\ data\ to\ the\ given\ destination\ pointer.\ If\ there}}
+\DoxyCodeLine{00325\ \textcolor{comment}{//\ is\ not\ enough\ data\ left,\ writes\ all\ remaining\ bytes.\ Return\ value\ is\ the}}
+\DoxyCodeLine{00326\ \textcolor{comment}{//\ number\ of\ bytes\ written.}}
+\DoxyCodeLine{00327\ \textcolor{comment}{//\ In\ general,\ it's\ better\ to\ avoid\ using\ this\ function,\ but\ it\ may\ be\ useful}}
+\DoxyCodeLine{00328\ \textcolor{comment}{//\ in\ cases\ when\ it's\ necessary\ to\ fill\ a\ certain\ buffer\ or\ object\ with}}
+\DoxyCodeLine{00329\ \textcolor{comment}{//\ fuzzing\ data.}}
+\DoxyCodeLine{00330\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{size\_t}\ FuzzedDataProvider::ConsumeData(\textcolor{keywordtype}{void}\ *destination,}
+\DoxyCodeLine{00331\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ num\_bytes)\ \{}
+\DoxyCodeLine{00332\ \ \ num\_bytes\ =\ std::min(num\_bytes,\ remaining\_bytes\_);}
+\DoxyCodeLine{00333\ \ \ CopyAndAdvance(destination,\ num\_bytes);}
+\DoxyCodeLine{00334\ \ \ \textcolor{keywordflow}{return}\ num\_bytes;}
+\DoxyCodeLine{00335\ \}}
+\DoxyCodeLine{00336\ }
+\DoxyCodeLine{00337\ \textcolor{comment}{//\ Private\ methods.}}
+\DoxyCodeLine{00338\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ FuzzedDataProvider::CopyAndAdvance(\textcolor{keywordtype}{void}\ *destination,}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ num\_bytes)\ \{}
+\DoxyCodeLine{00340\ \ \ std::memcpy(destination,\ data\_ptr\_,\ num\_bytes);}
+\DoxyCodeLine{00341\ \ \ Advance(num\_bytes);}
+\DoxyCodeLine{00342\ \}}
+\DoxyCodeLine{00343\ }
+\DoxyCodeLine{00344\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ FuzzedDataProvider::Advance(\textcolor{keywordtype}{size\_t}\ num\_bytes)\ \{}
+\DoxyCodeLine{00345\ \ \ \textcolor{keywordflow}{if}\ (num\_bytes\ >\ remaining\_bytes\_)}
+\DoxyCodeLine{00346\ \ \ \ \ abort();}
+\DoxyCodeLine{00347\ }
+\DoxyCodeLine{00348\ \ \ data\_ptr\_\ +=\ num\_bytes;}
+\DoxyCodeLine{00349\ \ \ remaining\_bytes\_\ -\/=\ num\_bytes;}
+\DoxyCodeLine{00350\ \}}
+\DoxyCodeLine{00351\ }
+\DoxyCodeLine{00352\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00353\ std::vector<T>\ FuzzedDataProvider::ConsumeBytes(\textcolor{keywordtype}{size\_t}\ size,\ \textcolor{keywordtype}{size\_t}\ num\_bytes)\ \{}
+\DoxyCodeLine{00354\ \ \ \textcolor{keyword}{static\_assert}(\textcolor{keyword}{sizeof}(T)\ ==\ \textcolor{keyword}{sizeof}(uint8\_t),\ \textcolor{stringliteral}{"{}Incompatible\ data\ type."{}});}
+\DoxyCodeLine{00355\ }
+\DoxyCodeLine{00356\ \ \ \textcolor{comment}{//\ The\ point\ of\ using\ the\ size-\/based\ constructor\ below\ is\ to\ increase\ the}}
+\DoxyCodeLine{00357\ \ \ \textcolor{comment}{//\ odds\ of\ having\ a\ vector\ object\ with\ capacity\ being\ equal\ to\ the\ length.}}
+\DoxyCodeLine{00358\ \ \ \textcolor{comment}{//\ That\ part\ is\ always\ implementation\ specific,\ but\ at\ least\ both\ libc++\ and}}
+\DoxyCodeLine{00359\ \ \ \textcolor{comment}{//\ libstdc++\ allocate\ the\ requested\ number\ of\ bytes\ in\ that\ constructor,}}
+\DoxyCodeLine{00360\ \ \ \textcolor{comment}{//\ which\ seems\ to\ be\ a\ natural\ choice\ for\ other\ implementations\ as\ well.}}
+\DoxyCodeLine{00361\ \ \ \textcolor{comment}{//\ To\ increase\ the\ odds\ even\ more,\ we\ also\ call\ |shrink\_to\_fit|\ below.}}
+\DoxyCodeLine{00362\ \ \ std::vector<T>\ result(size);}
+\DoxyCodeLine{00363\ \ \ \textcolor{keywordflow}{if}\ (size\ ==\ 0)\ \{}
+\DoxyCodeLine{00364\ \ \ \ \ \textcolor{keywordflow}{if}\ (num\_bytes\ !=\ 0)}
+\DoxyCodeLine{00365\ \ \ \ \ \ \ abort();}
+\DoxyCodeLine{00366\ \ \ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00367\ \ \ \}}
+\DoxyCodeLine{00368\ }
+\DoxyCodeLine{00369\ \ \ CopyAndAdvance(result.data(),\ num\_bytes);}
+\DoxyCodeLine{00370\ }
+\DoxyCodeLine{00371\ \ \ \textcolor{comment}{//\ Even\ though\ |shrink\_to\_fit|\ is\ also\ implementation\ specific,\ we\ expect\ it}}
+\DoxyCodeLine{00372\ \ \ \textcolor{comment}{//\ to\ provide\ an\ additional\ assurance\ in\ case\ vector's\ constructor\ allocated}}
+\DoxyCodeLine{00373\ \ \ \textcolor{comment}{//\ a\ buffer\ which\ is\ larger\ than\ the\ actual\ amount\ of\ data\ we\ put\ inside\ it.}}
+\DoxyCodeLine{00374\ \ \ result.shrink\_to\_fit();}
+\DoxyCodeLine{00375\ \ \ \textcolor{keywordflow}{return}\ result;}
+\DoxyCodeLine{00376\ \}}
+\DoxyCodeLine{00377\ }
+\DoxyCodeLine{00378\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ TS,\ \textcolor{keyword}{typename}\ TU>}
+\DoxyCodeLine{00379\ TS\ FuzzedDataProvider::ConvertUnsignedToSigned(TU\ value)\ \{}
+\DoxyCodeLine{00380\ \ \ \textcolor{keyword}{static\_assert}(\textcolor{keyword}{sizeof}(TS)\ ==\ \textcolor{keyword}{sizeof}(TU),\ \textcolor{stringliteral}{"{}Incompatible\ data\ types."{}});}
+\DoxyCodeLine{00381\ \ \ \textcolor{keyword}{static\_assert}(!std::numeric\_limits<TU>::is\_signed,}
+\DoxyCodeLine{00382\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}Source\ type\ must\ be\ unsigned."{}});}
+\DoxyCodeLine{00383\ }
+\DoxyCodeLine{00384\ \ \ \textcolor{comment}{//\ TODO(Dor1s):\ change\ to\ \`{}if\ constexpr`\ once\ C++17\ becomes\ mainstream.}}
+\DoxyCodeLine{00385\ \ \ \textcolor{keywordflow}{if}\ (std::numeric\_limits<TS>::is\_modulo)}
+\DoxyCodeLine{00386\ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}TS\textcolor{keyword}{>}(value);}
+\DoxyCodeLine{00387\ }
+\DoxyCodeLine{00388\ \ \ \textcolor{comment}{//\ Avoid\ using\ implementation-\/defined\ unsigned\ to\ signed\ conversions.}}
+\DoxyCodeLine{00389\ \ \ \textcolor{comment}{//\ To\ learn\ more,\ see\ https://stackoverflow.com/questions/13150449.}}
+\DoxyCodeLine{00390\ \ \ \textcolor{keywordflow}{if}\ (value\ <=\ std::numeric\_limits<TS>::max())\ \{}
+\DoxyCodeLine{00391\ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}TS\textcolor{keyword}{>}(value);}
+\DoxyCodeLine{00392\ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00393\ \ \ \ \ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{auto}\ TS\_min\ =\ std::numeric\_limits<TS>::min();}
+\DoxyCodeLine{00394\ \ \ \ \ \textcolor{keywordflow}{return}\ TS\_min\ +\ \textcolor{keyword}{static\_cast<}TS\textcolor{keyword}{>}(value\ -\/\ TS\_min);}
+\DoxyCodeLine{00395\ \ \ \}}
+\DoxyCodeLine{00396\ \}}
+\DoxyCodeLine{00397\ }
+\DoxyCodeLine{00398\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ LLVM\_FUZZER\_FUZZED\_DATA\_PROVIDER\_H\_}}
+
+\end{DoxyCode}

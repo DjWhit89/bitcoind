@@ -1,0 +1,248 @@
+\doxysection{Tx\+Request\+Tracker Class Reference}
+\label{class_tx_request_tracker}\index{TxRequestTracker@{TxRequestTracker}}
+
+
+{\ttfamily \#include $<$txrequest.\+h$>$}
+
+\doxysubsubsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+class \textbf{ Impl}
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ Tx\+Request\+Tracker} (bool deterministic=false)
+\begin{DoxyCompactList}\small\item\em Construct a \doxyref{Tx\+Request\+Tracker}{p.}{class_tx_request_tracker}. \end{DoxyCompactList}\item 
+\textbf{ $\sim$\+Tx\+Request\+Tracker} ()
+\item 
+void \textbf{ Received\+Inv} (\textbf{ Node\+Id} peer, const \textbf{ Gen\+Txid} \&gtxid, bool preferred, std\+::chrono\+::microseconds reqtime)
+\item 
+void \textbf{ Disconnected\+Peer} (\textbf{ Node\+Id} peer)
+\item 
+void \textbf{ Forget\+Tx\+Hash} (const \textbf{ uint256} \&txhash)
+\item 
+std\+::vector$<$ \textbf{ Gen\+Txid} $>$ \textbf{ Get\+Requestable} (\textbf{ Node\+Id} peer, std\+::chrono\+::microseconds now, std\+::vector$<$ std\+::pair$<$ \textbf{ Node\+Id}, \textbf{ Gen\+Txid} $>$ $>$ $\ast$expired=nullptr)
+\item 
+void \textbf{ Requested\+Tx} (\textbf{ Node\+Id} peer, const \textbf{ uint256} \&txhash, std\+::chrono\+::microseconds expiry)
+\item 
+void \textbf{ Received\+Response} (\textbf{ Node\+Id} peer, const \textbf{ uint256} \&txhash)
+\item 
+size\+\_\+t \textbf{ Count\+In\+Flight} (\textbf{ Node\+Id} peer) const
+\item 
+size\+\_\+t \textbf{ Count\+Candidates} (\textbf{ Node\+Id} peer) const
+\item 
+size\+\_\+t \textbf{ Count} (\textbf{ Node\+Id} peer) const
+\item 
+size\+\_\+t \textbf{ Size} () const
+\item 
+void \textbf{ Get\+Candidate\+Peers} (const \textbf{ uint256} \&txhash, std\+::vector$<$ \textbf{ Node\+Id} $>$ \&result\+\_\+peers) const
+\item 
+uint64\+\_\+t \textbf{ Compute\+Priority} (const \textbf{ uint256} \&txhash, \textbf{ Node\+Id} peer, bool preferred) const
+\item 
+void \textbf{ Sanity\+Check} () const
+\item 
+void \textbf{ Post\+Get\+Requestable\+Sanity\+Check} (std\+::chrono\+::microseconds now) const
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Data structure to keep track of, and schedule, transaction downloads from peers.
+
+=== Specification ===
+
+We keep track of which peers have announced which transactions, and use that to determine which requests should go to which peer, when, and in what order.
+
+The following information is tracked per peer/tx combination ("{}announcement"{})\+:
+\begin{DoxyItemize}
+\item Which peer announced it (through their \doxyref{Node\+Id}{p.}{net_8h_aa637b11e18b77724b35db2229cd12788})
+\item The txid or wtxid of the transaction (collectively called "{}txhash"{} in what follows)
+\item Whether it was a tx or wtx announcement (see BIP339).
+\item What the earliest permitted time is that that transaction can be requested from that peer (called "{}reqtime"{}).
+\item Whether it\textquotesingle{}s from a "{}preferred"{} peer or not. Which announcements get this flag is determined by the caller, but this is designed for outbound peers, or other peers that we have a higher level of trust in. Even when the peers\textquotesingle{} preferredness changes, the preferred flag of existing announcements from that peer won\textquotesingle{}t change.
+\item Whether or not the transaction was requested already, and if so, when it times out (called "{}expiry"{}).
+\item Whether or not the transaction request failed already (timed out, or invalid transaction or NOTFOUND was received).
+\end{DoxyItemize}
+
+Transaction requests are then assigned to peers, following these rules\+:
+
+
+\begin{DoxyItemize}
+\item No transaction is requested as long as another request for the same txhash is outstanding (it needs to fail first by passing expiry, or a NOTFOUND or invalid transaction has to be received for it).
+
+Rationale\+: to avoid wasting bandwidth on multiple copies of the same transaction. Note that this only works per txhash, so if the same transaction is announced both through txid and wtxid, we have no means to prevent fetching both (the caller can however mitigate this by delaying one, see further).
+\item The same transaction is never requested twice from the same peer, unless the announcement was forgotten in between, and re-\/announced. Announcements are forgotten only\+:
+\begin{DoxyItemize}
+\item If a peer goes offline, all its announcements are forgotten.
+\item If a transaction has been successfully received, or is otherwise no longer needed, the caller can call Forget\+Tx\+Hash, which removes all announcements across all peers with the specified txhash.
+\item If for a given txhash only already-\/failed announcements remain, they are all forgotten.
+\end{DoxyItemize}
+
+Rationale\+: giving a peer multiple chances to announce a transaction would allow them to bias requests in their favor, worsening transaction censoring attacks. The flip side is that as long as an attacker manages to prevent us from receiving a transaction, failed announcements (including those from honest peers) will linger longer, increasing memory usage somewhat. The impact of this is limited by imposing a cap on the number of tracked announcements per peer. As failed requests in response to announcements from honest peers should be rare, this almost solely hinders attackers. Transaction censoring attacks can be done by announcing transactions quickly while not answering requests for them. See {\texttt{https\+://allquantor.\+at/blockchainbib/pdf/miller2015topology.\+pdf}} for more information.
+\item Transactions are not requested from a peer until its reqtime has passed.
+
+Rationale\+: enable the calling code to define a delay for less-\/than-\/ideal peers, so that (presumed) better peers have a chance to give their announcement first.
+\item If multiple viable candidate peers exist according to the above rules, pick a peer as follows\+:
+\begin{DoxyItemize}
+\item If any preferred peers are available, non-\/preferred peers are not considered for what follows.
+
+Rationale\+: preferred peers are more trusted by us, so are less likely to be under attacker control.
+\item Pick a uniformly random peer among the candidates.
+
+Rationale\+: random assignments are hard to influence for attackers.
+\end{DoxyItemize}
+\end{DoxyItemize}
+
+Together these rules strike a balance between being fast in non-\/adverserial conditions and minimizing susceptibility to censorship attacks. An attacker that races the network\+:
+\begin{DoxyItemize}
+\item Will be unsuccessful if all preferred connections are honest (and there is at least one preferred connection).
+\item If there are P preferred connections of which Ph$>$=1 are honest, the attacker can delay us from learning about a transaction by k expiration periods, where k $\sim$ 1 + NHG(N=P-\/1,K=P-\/\+Ph-\/1,r=1), which has mean P/(Ph+1) (where NHG stands for Negative Hypergeometric distribution). The "{}1 +"{} is due to the fact that the attacker can be the first to announce through a preferred connection in this scenario, which very likely means they get the first request.
+\item If all P preferred connections are to the attacker, and there are NP non-\/preferred connections of which NPh$>$=1 are honest, where we assume that the attacker can disconnect and reconnect those connections, the distribution becomes k $\sim$ P + NB(p=1-\/NPh/\+NP,r=1) (where NB stands for Negative Binomial distribution), which has mean P-\/1+\+NP/\+NPh.
+\end{DoxyItemize}
+
+Complexity\+:
+\begin{DoxyItemize}
+\item Memory usage is proportional to the total number of tracked announcements (\doxyref{Size()}{p.}{class_tx_request_tracker_a58f4b9e873b7c1c7d512bd9f7d1489d8}) plus the number of peers with a nonzero number of tracked announcements.
+\item CPU usage is generally logarithmic in the total number of tracked announcements, plus the number of announcements affected by an operation (amortized O(1) per announcement).
+\end{DoxyItemize}
+
+Context\+:
+\begin{DoxyItemize}
+\item In an earlier version of the transaction request logic it was possible for a peer to prevent us from seeing a specific transaction. See {\texttt{https\+://bitcoincore.\+org/en/2024/07/03/disclose\+\_\+already\+\_\+asked\+\_\+for}}. 
+\end{DoxyItemize}
+
+\label{doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{TxRequestTracker@{TxRequestTracker}!TxRequestTracker@{TxRequestTracker}}
+\index{TxRequestTracker@{TxRequestTracker}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{TxRequestTracker()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a91b88cd9d3a7b9dc637648b3fb65966f} 
+\textbf{ Tx\+Request\+Tracker} (\begin{DoxyParamCaption}\item[{bool}]{deterministic}{ = {\ttfamily false}}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [explicit]}}
+
+
+
+Construct a \doxyref{Tx\+Request\+Tracker}{p.}{class_tx_request_tracker}. 
+
+\index{TxRequestTracker@{TxRequestTracker}!````~TxRequestTracker@{$\sim$TxRequestTracker}}
+\index{````~TxRequestTracker@{$\sim$TxRequestTracker}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{$\sim$TxRequestTracker()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a9cf8129fe55c14f6ac59cac978024c30} 
+$\sim$\textbf{ Tx\+Request\+Tracker} (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [default]}}
+
+
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{TxRequestTracker@{TxRequestTracker}!ComputePriority@{ComputePriority}}
+\index{ComputePriority@{ComputePriority}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{ComputePriority()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a80c51bb9a5cfdb46157aab67616c6440} 
+uint64\+\_\+t Compute\+Priority (\begin{DoxyParamCaption}\item[{const \textbf{ uint256} \&}]{txhash}{, }\item[{\textbf{ Node\+Id}}]{peer}{, }\item[{bool}]{preferred}{}\end{DoxyParamCaption}) const}
+
+Access to the internal priority computation (testing only) \index{TxRequestTracker@{TxRequestTracker}!Count@{Count}}
+\index{Count@{Count}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{Count()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a08b340d3405b943de736d5528defa5e9} 
+size\+\_\+t Count (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption}) const}
+
+Count how many announcements a peer has (REQUESTED, CANDIDATE, and COMPLETED combined). \index{TxRequestTracker@{TxRequestTracker}!CountCandidates@{CountCandidates}}
+\index{CountCandidates@{CountCandidates}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{CountCandidates()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_ae6a777cf1e78d119a75680b7c69c361e} 
+size\+\_\+t Count\+Candidates (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption}) const}
+
+Count how many CANDIDATE announcements a peer has. \index{TxRequestTracker@{TxRequestTracker}!CountInFlight@{CountInFlight}}
+\index{CountInFlight@{CountInFlight}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{CountInFlight()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a0dd6f7567b0cf28f74942c089114da35} 
+size\+\_\+t Count\+In\+Flight (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption}) const}
+
+Count how many REQUESTED announcements a peer has. \index{TxRequestTracker@{TxRequestTracker}!DisconnectedPeer@{DisconnectedPeer}}
+\index{DisconnectedPeer@{DisconnectedPeer}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{DisconnectedPeer()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a3d7c67db0b3dd733c3f7846504b71442} 
+void Disconnected\+Peer (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{}\end{DoxyParamCaption})}
+
+Deletes all announcements for a given peer.
+
+It should be called when a peer goes offline. \index{TxRequestTracker@{TxRequestTracker}!ForgetTxHash@{ForgetTxHash}}
+\index{ForgetTxHash@{ForgetTxHash}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{ForgetTxHash()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_ae97e1b0869138b01a54d280f6af14770} 
+void Forget\+Tx\+Hash (\begin{DoxyParamCaption}\item[{const \textbf{ uint256} \&}]{txhash}{}\end{DoxyParamCaption})}
+
+Deletes all announcements for a given txhash (both txid and wtxid ones).
+
+This should be called when a transaction is no longer needed. The caller should ensure that new announcements for the same txhash will not trigger new Received\+Inv calls, at least in the short term after this call. \index{TxRequestTracker@{TxRequestTracker}!GetCandidatePeers@{GetCandidatePeers}}
+\index{GetCandidatePeers@{GetCandidatePeers}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{GetCandidatePeers()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a06102a056fb3da301fb2421e70137681} 
+void Get\+Candidate\+Peers (\begin{DoxyParamCaption}\item[{const \textbf{ uint256} \&}]{txhash}{, }\item[{std\+::vector$<$ \textbf{ Node\+Id} $>$ \&}]{result\+\_\+peers}{}\end{DoxyParamCaption}) const}
+
+For some txhash (txid or wtxid), finds all peers with non-\/\+COMPLETED announcements and appends them to result\+\_\+peers. Does not try to ensure that result\+\_\+peers contains no duplicates. \index{TxRequestTracker@{TxRequestTracker}!GetRequestable@{GetRequestable}}
+\index{GetRequestable@{GetRequestable}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{GetRequestable()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a105957ea1e25a6cdb45a55ada1b1489d} 
+std\+::vector$<$ \textbf{ Gen\+Txid} $>$ Get\+Requestable (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{, }\item[{std\+::chrono\+::microseconds}]{now}{, }\item[{std\+::vector$<$ std\+::pair$<$ \textbf{ Node\+Id}, \textbf{ Gen\+Txid} $>$ $>$ $\ast$}]{expired}{ = {\ttfamily nullptr}}\end{DoxyParamCaption})}
+
+Find the txids to request now from peer.
+
+It does the following\+:
+\begin{DoxyItemize}
+\item Convert all REQUESTED announcements (for all txhashes/peers) with (expiry $<$= now) to COMPLETED ones. These are returned in expired, if non-\/nullptr.
+\item Requestable announcements are selected\+: CANDIDATE announcements from the specified peer with (reqtime $<$= now) for which no existing REQUESTED announcement with the same txhash from a different peer exists, and for which the specified peer is the best choice among all (reqtime $<$= now) CANDIDATE announcements with the same txhash (subject to preferredness rules, and tiebreaking using a deterministic salted hash of peer and txhash).
+\item The selected announcements are returned in announcement order (even if multiple were added at the same time, or when the clock went backwards while they were being added). This is done to minimize disruption from dependent transactions being requested out of order\+: if multiple dependent transactions are announced simultaneously by one peer, and end up being requested from them, the requests will happen in announcement order. 
+\end{DoxyItemize}\index{TxRequestTracker@{TxRequestTracker}!PostGetRequestableSanityCheck@{PostGetRequestableSanityCheck}}
+\index{PostGetRequestableSanityCheck@{PostGetRequestableSanityCheck}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{PostGetRequestableSanityCheck()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_ad8c8fd5aaaffa11a150c6b4684fe2b73} 
+void Post\+Get\+Requestable\+Sanity\+Check (\begin{DoxyParamCaption}\item[{std\+::chrono\+::microseconds}]{now}{}\end{DoxyParamCaption}) const}
+
+Run a time-\/dependent internal consistency check (testing only).
+
+This can only be called immediately after Get\+Requestable, with the same \textquotesingle{}now\textquotesingle{} parameter. \index{TxRequestTracker@{TxRequestTracker}!ReceivedInv@{ReceivedInv}}
+\index{ReceivedInv@{ReceivedInv}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{ReceivedInv()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_acad3e24a428b090855d7ef518e46710b} 
+void Received\+Inv (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{, }\item[{const \textbf{ Gen\+Txid} \&}]{gtxid}{, }\item[{bool}]{preferred}{, }\item[{std\+::chrono\+::microseconds}]{reqtime}{}\end{DoxyParamCaption})}
+
+Adds a new CANDIDATE announcement.
+
+Does nothing if one already exists for that (txhash, peer) combination (whether it\textquotesingle{}s CANDIDATE, REQUESTED, or COMPLETED). Note that the txid/wtxid property is ignored for determining uniqueness, so if an announcement is added for a wtxid H, while one for txid H from the same peer already exists, it will be ignored. This is harmless as the txhashes being equal implies it is a non-\/segwit transaction, so it doesn\textquotesingle{}t matter how it is fetched. The new announcement is given the specified preferred and reqtime values, and takes its is\+\_\+wtxid from the specified gtxid. \index{TxRequestTracker@{TxRequestTracker}!ReceivedResponse@{ReceivedResponse}}
+\index{ReceivedResponse@{ReceivedResponse}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{ReceivedResponse()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a6e0a1fc953d537d7b61258bf7b47e8cc} 
+void Received\+Response (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{, }\item[{const \textbf{ uint256} \&}]{txhash}{}\end{DoxyParamCaption})}
+
+Converts a CANDIDATE or REQUESTED announcement to a COMPLETED one. If no such announcement exists for the provided peer and txhash, nothing happens.
+
+It should be called whenever a transaction or NOTFOUND was received from a peer. When the transaction is not needed entirely anymore, Forget\+Txhash should be called instead of, or in addition to, this call. \index{TxRequestTracker@{TxRequestTracker}!RequestedTx@{RequestedTx}}
+\index{RequestedTx@{RequestedTx}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{RequestedTx()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a9088a92c7af121ce4dcb070b561d3d45} 
+void Requested\+Tx (\begin{DoxyParamCaption}\item[{\textbf{ Node\+Id}}]{peer}{, }\item[{const \textbf{ uint256} \&}]{txhash}{, }\item[{std\+::chrono\+::microseconds}]{expiry}{}\end{DoxyParamCaption})}
+
+Marks a transaction as requested, with a specified expiry.
+
+If no CANDIDATE announcement for the provided peer and txhash exists, this call has no effect. Otherwise\+:
+\begin{DoxyItemize}
+\item That announcement is converted to REQUESTED.
+\item If any other REQUESTED announcement for the same txhash already existed, it means an unexpected request was made (Get\+Requestable will never advise doing so). In this case it is converted to COMPLETED, as we\textquotesingle{}re no longer waiting for a response to it. 
+\end{DoxyItemize}\index{TxRequestTracker@{TxRequestTracker}!SanityCheck@{SanityCheck}}
+\index{SanityCheck@{SanityCheck}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{SanityCheck()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a234d9f2765fec4cf82214f30a06813aa} 
+void Sanity\+Check (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const}
+
+Run internal consistency check (testing only). \index{TxRequestTracker@{TxRequestTracker}!Size@{Size}}
+\index{Size@{Size}!TxRequestTracker@{TxRequestTracker}}
+\doxysubsubsection{Size()}
+{\footnotesize\ttfamily \label{class_tx_request_tracker_a58f4b9e873b7c1c7d512bd9f7d1489d8} 
+size\+\_\+t Size (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const}
+
+Count how many announcements are being tracked in total across all peers and transaction hashes. 
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+src/\textbf{ txrequest.\+h}\item 
+src/\textbf{ txrequest.\+cpp}\end{DoxyCompactItemize}

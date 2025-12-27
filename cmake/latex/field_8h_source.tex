@@ -1,0 +1,175 @@
+\doxysection{field.\+h}
+\label{field_8h_source}\index{src/secp256k1/src/field.h@{src/secp256k1/src/field.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2013,\ 2014\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_FIELD\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_FIELD\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{comment}{/*\ This\ file\ defines\ the\ generic\ interface\ for\ working\ with\ secp256k1\_fe}}
+\DoxyCodeLine{00013\ \textcolor{comment}{\ *\ objects,\ which\ represent\ field\ elements\ (integers\ modulo\ 2\string^256\ -\/\ 2\string^32\ -\/\ 977).}}
+\DoxyCodeLine{00014\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00015\ \textcolor{comment}{\ *\ The\ actual\ definition\ of\ the\ secp256k1\_fe\ type\ depends\ on\ the\ chosen\ field}}
+\DoxyCodeLine{00016\ \textcolor{comment}{\ *\ implementation;\ see\ the\ field\_5x52.h\ and\ field\_10x26.h\ files\ for\ details.}}
+\DoxyCodeLine{00017\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00018\ \textcolor{comment}{\ *\ All\ secp256k1\_fe\ objects\ have\ implicit\ properties\ that\ determine\ what}}
+\DoxyCodeLine{00019\ \textcolor{comment}{\ *\ operations\ are\ permitted\ on\ it.\ These\ are\ purely\ a\ function\ of\ what}}
+\DoxyCodeLine{00020\ \textcolor{comment}{\ *\ secp256k1\_fe\_\ operations\ are\ applied\ on\ it,\ generally\ (implicitly)\ fixed\ at}}
+\DoxyCodeLine{00021\ \textcolor{comment}{\ *\ compile\ time,\ and\ do\ not\ depend\ on\ the\ chosen\ field\ implementation.\ Despite}}
+\DoxyCodeLine{00022\ \textcolor{comment}{\ *\ that,\ what\ these\ properties\ actually\ entail\ for\ the\ field\ representation}}
+\DoxyCodeLine{00023\ \textcolor{comment}{\ *\ values\ depends\ on\ the\ chosen\ field\ implementation.\ These\ properties\ are:}}
+\DoxyCodeLine{00024\ \textcolor{comment}{\ *\ -\/\ magnitude:\ an\ integer\ in\ [0,32]}}
+\DoxyCodeLine{00025\ \textcolor{comment}{\ *\ -\/\ normalized:\ 0\ or\ 1;\ normalized=1\ implies\ magnitude\ <=\ 1.}}
+\DoxyCodeLine{00026\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00027\ \textcolor{comment}{\ *\ In\ VERIFY\ mode,\ they\ are\ materialized\ explicitly\ as\ fields\ in\ the\ struct,}}
+\DoxyCodeLine{00028\ \textcolor{comment}{\ *\ allowing\ run-\/time\ verification\ of\ these\ properties.\ In\ that\ case,\ the\ field}}
+\DoxyCodeLine{00029\ \textcolor{comment}{\ *\ implementation\ also\ provides\ a\ secp256k1\_fe\_verify\ routine\ to\ verify\ that}}
+\DoxyCodeLine{00030\ \textcolor{comment}{\ *\ these\ fields\ match\ the\ run-\/time\ value\ and\ perform\ internal\ consistency}}
+\DoxyCodeLine{00031\ \textcolor{comment}{\ *\ checks.\ */}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#\ \ define\ SECP256K1\_FE\_VERIFY\_FIELDS\ \(\backslash\)}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\ \ \ \ int\ magnitude;\ \(\backslash\)}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\ \ \ \ int\ normalized;}}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#\ \ define\ SECP256K1\_FE\_VERIFY\_FIELDS}}
+\DoxyCodeLine{00038\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00039\ }
+\DoxyCodeLine{00040\ \textcolor{preprocessor}{\#if\ defined(SECP256K1\_WIDEMUL\_INT128)}}
+\DoxyCodeLine{00041\ \textcolor{preprocessor}{\#include\ "{}field\_5x52.h"{}}}
+\DoxyCodeLine{00042\ \textcolor{preprocessor}{\#elif\ defined(SECP256K1\_WIDEMUL\_INT64)}}
+\DoxyCodeLine{00043\ \textcolor{preprocessor}{\#include\ "{}field\_10x26.h"{}}}
+\DoxyCodeLine{00044\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00045\ \textcolor{preprocessor}{\#error\ "{}Please\ select\ wide\ multiplication\ implementation"{}}}
+\DoxyCodeLine{00046\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00049\ \textcolor{comment}{/*\ Magnitude\ and\ normalized\ value\ for\ constants.\ */}}
+\DoxyCodeLine{00050\ \textcolor{preprocessor}{\#define\ SECP256K1\_FE\_VERIFY\_CONST(d7,\ d6,\ d5,\ d4,\ d3,\ d2,\ d1,\ d0)\ \(\backslash\)}}
+\DoxyCodeLine{00051\ \textcolor{preprocessor}{\ \ \ \ }\textcolor{comment}{/*\ Magnitude\ is\ 0\ for\ constant\ 0;\ 1\ otherwise.\ */}\textcolor{preprocessor}{\ \(\backslash\)}}
+\DoxyCodeLine{00052\ \textcolor{preprocessor}{\ \ \ \ ,\ (((d7)\ |\ (d6)\ |\ (d5)\ |\ (d4)\ |\ (d3)\ |\ (d2)\ |\ (d1)\ |\ (d0))\ !=\ 0)\ \(\backslash\)}}
+\DoxyCodeLine{00053\ \textcolor{preprocessor}{\ \ \ \ }\textcolor{comment}{/*\ Normalized\ is\ 1\ unless\ sum(d\_i<<(32*i)\ for\ i=0..7)\ exceeds\ field\ modulus.\ */}\textcolor{preprocessor}{\ \(\backslash\)}}
+\DoxyCodeLine{00054\ \textcolor{preprocessor}{\ \ \ \ ,\ (!(((d7)\ \&\ (d6)\ \&\ (d5)\ \&\ (d4)\ \&\ (d3)\ \&\ (d2))\ ==\ 0xfffffffful\ \&\&\ ((d1)\ ==\ 0xfffffffful\ ||\ ((d1)\ ==\ 0xfffffffe\ \&\&\ (d0\ >=\ 0xfffffc2f)))))}}
+\DoxyCodeLine{00055\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00056\ \textcolor{preprocessor}{\#define\ SECP256K1\_FE\_VERIFY\_CONST(d7,\ d6,\ d5,\ d4,\ d3,\ d2,\ d1,\ d0)}}
+\DoxyCodeLine{00057\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00066\ \textcolor{preprocessor}{\#define\ SECP256K1\_FE\_CONST(d7,\ d6,\ d5,\ d4,\ d3,\ d2,\ d1,\ d0)\ \{SECP256K1\_FE\_CONST\_INNER((d7),\ (d6),\ (d5),\ (d4),\ (d3),\ (d2),\ (d1),\ (d0))\ SECP256K1\_FE\_VERIFY\_CONST((d7),\ (d6),\ (d5),\ (d4),\ (d3),\ (d2),\ (d1),\ (d0))\ \}}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_fe\ secp256k1\_fe\_one\ =\ SECP256K1\_FE\_CONST(0,\ 0,\ 0,\ 0,\ 0,\ 0,\ 0,\ 1);}
+\DoxyCodeLine{00069\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_fe\ secp256k1\_const\_beta\ =\ SECP256K1\_FE\_CONST(}
+\DoxyCodeLine{00070\ \ \ \ \ 0x7ae96a2bul,\ 0x657c0710ul,\ 0x6e64479eul,\ 0xac3434e9ul,}
+\DoxyCodeLine{00071\ \ \ \ \ 0x9cf04975ul,\ 0x12f58995ul,\ 0xc1396c28ul,\ 0x719501eeul}
+\DoxyCodeLine{00072\ );}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00074\ \textcolor{preprocessor}{\#ifndef\ VERIFY}}
+\DoxyCodeLine{00075\ \textcolor{comment}{/*\ In\ non-\/VERIFY\ mode,\ we\ \#define\ the\ fe\ operations\ to\ be\ identical\ to\ their}}
+\DoxyCodeLine{00076\ \textcolor{comment}{\ *\ internal\ field\ implementation,\ to\ avoid\ the\ potential\ overhead\ of\ a}}
+\DoxyCodeLine{00077\ \textcolor{comment}{\ *\ function\ call\ (even\ though\ presumably\ inlinable).\ */}}
+\DoxyCodeLine{00078\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_normalize\ secp256k1\_fe\_impl\_normalize}}
+\DoxyCodeLine{00079\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_normalize\_weak\ secp256k1\_fe\_impl\_normalize\_weak}}
+\DoxyCodeLine{00080\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_normalize\_var\ secp256k1\_fe\_impl\_normalize\_var}}
+\DoxyCodeLine{00081\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_normalizes\_to\_zero\ secp256k1\_fe\_impl\_normalizes\_to\_zero}}
+\DoxyCodeLine{00082\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_normalizes\_to\_zero\_var\ secp256k1\_fe\_impl\_normalizes\_to\_zero\_var}}
+\DoxyCodeLine{00083\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_set\_int\ secp256k1\_fe\_impl\_set\_int}}
+\DoxyCodeLine{00084\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_is\_zero\ secp256k1\_fe\_impl\_is\_zero}}
+\DoxyCodeLine{00085\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_is\_odd\ secp256k1\_fe\_impl\_is\_odd}}
+\DoxyCodeLine{00086\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_cmp\_var\ secp256k1\_fe\_impl\_cmp\_var}}
+\DoxyCodeLine{00087\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_set\_b32\_mod\ secp256k1\_fe\_impl\_set\_b32\_mod}}
+\DoxyCodeLine{00088\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_set\_b32\_limit\ secp256k1\_fe\_impl\_set\_b32\_limit}}
+\DoxyCodeLine{00089\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_get\_b32\ secp256k1\_fe\_impl\_get\_b32}}
+\DoxyCodeLine{00090\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_negate\_unchecked\ secp256k1\_fe\_impl\_negate\_unchecked}}
+\DoxyCodeLine{00091\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_mul\_int\_unchecked\ secp256k1\_fe\_impl\_mul\_int\_unchecked}}
+\DoxyCodeLine{00092\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_add\ secp256k1\_fe\_impl\_add}}
+\DoxyCodeLine{00093\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_mul\ secp256k1\_fe\_impl\_mul}}
+\DoxyCodeLine{00094\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_sqr\ secp256k1\_fe\_impl\_sqr}}
+\DoxyCodeLine{00095\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_cmov\ secp256k1\_fe\_impl\_cmov}}
+\DoxyCodeLine{00096\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_to\_storage\ secp256k1\_fe\_impl\_to\_storage}}
+\DoxyCodeLine{00097\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_from\_storage\ secp256k1\_fe\_impl\_from\_storage}}
+\DoxyCodeLine{00098\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_inv\ secp256k1\_fe\_impl\_inv}}
+\DoxyCodeLine{00099\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_inv\_var\ secp256k1\_fe\_impl\_inv\_var}}
+\DoxyCodeLine{00100\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_get\_bounds\ secp256k1\_fe\_impl\_get\_bounds}}
+\DoxyCodeLine{00101\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_half\ secp256k1\_fe\_impl\_half}}
+\DoxyCodeLine{00102\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_add\_int\ secp256k1\_fe\_impl\_add\_int}}
+\DoxyCodeLine{00103\ \textcolor{preprocessor}{\#\ \ define\ secp256k1\_fe\_is\_square\_var\ secp256k1\_fe\_impl\_is\_square\_var}}
+\DoxyCodeLine{00104\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ !defined(VERIFY)\ */}\textcolor{preprocessor}{}}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00111\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_normalize(secp256k1\_fe\ *r);}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00118\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_normalize\_weak(secp256k1\_fe\ *r);}
+\DoxyCodeLine{00119\ }
+\DoxyCodeLine{00124\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_normalize\_var(secp256k1\_fe\ *r);}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00131\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_normalizes\_to\_zero(\textcolor{keyword}{const}\ secp256k1\_fe\ *r);}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00137\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_normalizes\_to\_zero\_var(\textcolor{keyword}{const}\ secp256k1\_fe\ *r);}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00144\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_set\_int(secp256k1\_fe\ *r,\ \textcolor{keywordtype}{int}\ a);}
+\DoxyCodeLine{00145\ }
+\DoxyCodeLine{00147\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_clear(secp256k1\_fe\ *a);}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00157\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_is\_zero(\textcolor{keyword}{const}\ secp256k1\_fe\ *a);}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00164\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_is\_odd(\textcolor{keyword}{const}\ secp256k1\_fe\ *a);}
+\DoxyCodeLine{00165\ }
+\DoxyCodeLine{00172\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_equal(\textcolor{keyword}{const}\ secp256k1\_fe\ *a,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *b);}
+\DoxyCodeLine{00173\ }
+\DoxyCodeLine{00180\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_cmp\_var(\textcolor{keyword}{const}\ secp256k1\_fe\ *a,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *b);}
+\DoxyCodeLine{00181\ }
+\DoxyCodeLine{00188\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_set\_b32\_mod(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *a);}
+\DoxyCodeLine{00189\ }
+\DoxyCodeLine{00196\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_set\_b32\_limit(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *a);}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00202\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_get\_b32(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a);}
+\DoxyCodeLine{00203\ }
+\DoxyCodeLine{00211\ \textcolor{preprocessor}{\#define\ secp256k1\_fe\_negate(r,\ a,\ m)\ ASSERT\_INT\_CONST\_AND\_DO(m,\ secp256k1\_fe\_negate\_unchecked(r,\ a,\ m))}}
+\DoxyCodeLine{00212\ }
+\DoxyCodeLine{00217\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_negate\_unchecked(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a,\ \textcolor{keywordtype}{int}\ m);}
+\DoxyCodeLine{00218\ }
+\DoxyCodeLine{00224\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_add\_int(secp256k1\_fe\ *r,\ \textcolor{keywordtype}{int}\ a);}
+\DoxyCodeLine{00225\ }
+\DoxyCodeLine{00233\ \textcolor{preprocessor}{\#define\ secp256k1\_fe\_mul\_int(r,\ a)\ ASSERT\_INT\_CONST\_AND\_DO(a,\ secp256k1\_fe\_mul\_int\_unchecked(r,\ a))}}
+\DoxyCodeLine{00234\ }
+\DoxyCodeLine{00239\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_mul\_int\_unchecked(secp256k1\_fe\ *r,\ \textcolor{keywordtype}{int}\ a);}
+\DoxyCodeLine{00240\ }
+\DoxyCodeLine{00248\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_add(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a);}
+\DoxyCodeLine{00249\ }
+\DoxyCodeLine{00258\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_mul(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *\ SECP256K1\_RESTRICT\ b);}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00267\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_sqr(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a);}
+\DoxyCodeLine{00268\ }
+\DoxyCodeLine{00278\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_sqrt(secp256k1\_fe\ *\ SECP256K1\_RESTRICT\ r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *\ SECP256K1\_RESTRICT\ a);}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00287\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_inv(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a);}
+\DoxyCodeLine{00288\ }
+\DoxyCodeLine{00293\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_inv\_var(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a);}
+\DoxyCodeLine{00294\ }
+\DoxyCodeLine{00300\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_to\_storage(secp256k1\_fe\_storage\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a);}
+\DoxyCodeLine{00301\ }
+\DoxyCodeLine{00308\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_from\_storage(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\_storage\ *a);}
+\DoxyCodeLine{00309\ }
+\DoxyCodeLine{00311\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_storage\_cmov(secp256k1\_fe\_storage\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\_storage\ *a,\ \textcolor{keywordtype}{int}\ flag);}
+\DoxyCodeLine{00312\ }
+\DoxyCodeLine{00321\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_cmov(secp256k1\_fe\ *r,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *a,\ \textcolor{keywordtype}{int}\ flag);}
+\DoxyCodeLine{00322\ }
+\DoxyCodeLine{00329\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_half(secp256k1\_fe\ *r);}
+\DoxyCodeLine{00330\ }
+\DoxyCodeLine{00334\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_get\_bounds(secp256k1\_fe\ *r,\ \textcolor{keywordtype}{int}\ m);}
+\DoxyCodeLine{00335\ }
+\DoxyCodeLine{00340\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_fe\_is\_square\_var(\textcolor{keyword}{const}\ secp256k1\_fe\ *a);}
+\DoxyCodeLine{00341\ }
+\DoxyCodeLine{00343\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_verify(\textcolor{keyword}{const}\ secp256k1\_fe\ *a);}
+\DoxyCodeLine{00344\ \textcolor{preprocessor}{\#define\ SECP256K1\_FE\_VERIFY(a)\ secp256k1\_fe\_verify(a)}}
+\DoxyCodeLine{00345\ }
+\DoxyCodeLine{00347\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_verify\_magnitude(\textcolor{keyword}{const}\ secp256k1\_fe\ *a,\ \textcolor{keywordtype}{int}\ m);}
+\DoxyCodeLine{00348\ \textcolor{preprocessor}{\#define\ SECP256K1\_FE\_VERIFY\_MAGNITUDE(a,\ m)\ secp256k1\_fe\_verify\_magnitude(a,\ m)}}
+\DoxyCodeLine{00349\ }
+\DoxyCodeLine{00350\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_FIELD\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

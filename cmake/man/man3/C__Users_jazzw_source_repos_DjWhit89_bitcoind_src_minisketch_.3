@@ -1,0 +1,409 @@
+.TH "src/minisketch Directory Reference" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/minisketch Directory Reference
+.SH SYNOPSIS
+.br
+.PP
+.SS "Directories"
+
+.in +1c
+.ti -1c
+.RI "directory \fBdoc\fP"
+.br
+.ti -1c
+.RI "directory \fBinclude\fP"
+.br
+.ti -1c
+.RI "directory \fBsrc\fP"
+.br
+.ti -1c
+.RI "directory \fBtests\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+
+.SH "Minisketch: a library for [BCH](https://en.wikipedia.org/wiki/BCH_code)-based set reconciliation"
+.PP
+
+.PP
+\fRlibminisketch\fP is an optimized standalone MIT-licensed library with C API for constructing and decoding \fIset sketches\fP, which can be used for compact set reconciliation and other applications\&. It is an implementation of the PinSketch\*{\fB[1]\fP\*}  algorithm\&. An explanation of the algorithm can be found \fBhere\fP\&.
+.SH "Sketches for set reconciliation"
+.PP
+Sketches, as produced by this library, can be seen as "set checksums" with two peculiar properties:
+.IP "\(bu" 2
+Sketches have a predetermined capacity, and when the number of elements in the set is not higher than the capacity, \fRlibminisketch\fP will always recover the entire set from the sketch\&. A sketch of \fIb\fP-bit elements with capacity \fIc\fP can be stored in \fIbc\fP bits\&.
+.IP "\(bu" 2
+The sketches of two sets can be combined by adding them (XOR) to obtain a sketch of the \fRsymmetric difference\fP between the two sets (\fIi\&.e\&.\fP, all elements that occur in one but not both input sets)\&.
+.PP
+
+.PP
+This makes them appropriate for a very bandwidth-efficient set reconciliation protocol\&. If Alice and Bob each have a set of elements, and they suspect that the sets largely but not entirely overlap, they can use the following protocol to let both parties learn all the elements:
+.IP "\(bu" 2
+Alice and Bob both compute a sketch of their set elements\&.
+.IP "\(bu" 2
+Alice sends her sketch to Bob\&.
+.IP "\(bu" 2
+Bob combines the two sketches, and obtains a sketch of the symmetric difference\&.
+.IP "\(bu" 2
+Bob tries to recover the elements from the difference sketch\&.
+.IP "\(bu" 2
+Bob sends every element in the difference that he has to Alice\&.
+.PP
+
+.PP
+This will always succeed when the size of the difference (elements that Alice has but Bob doesn't plus elements that Bob has but Alice doesn't) does not exceed the capacity of the sketch that Alice sent\&. The interesting part is that this works regardless of the actual set sizes—only the difference matters\&.
+
+.PP
+If the elements are large, it may be preferable to compute the sketches over \fIhashes\fP of the set elements\&. In that case an additional step is added to the protocol, where Bob also sends the hash of every element he does not have to Alice, who responds with the requested elements\&.
+
+.PP
+The doc/ directory has additional \fBtips for designing reconciliation protocols using libminisketch\fP\&.
+.SH "Evaluation"
+.PP
+ 
+
+.PP
+ 
+
+.PP
+\fBThe first graph\fP above shows a benchmark of \fRlibminisketch\fP against three other set reconciliation algorithms/implementations\&. The benchmarks were performed using a single core on a system with an Intel Core i7-7820HQ CPU with clock speed locked at 2\&.4 GHz\&. The diagram shows the time needed for merging of two sketches and decoding the result\&. The creation of a sketch on the same machine takes around 5 ns per capacity and per set element\&. The other implementations are:
+.IP "\(bu" 2
+\fR\fRpinsketch\fP\fP, the original PinSketch implementation\&.
+.IP "\(bu" 2
+\fR\fRcpisync\fP\fP, a software project which implements a number of set reconciliation algorithms and protocols\&. The included benchmark analyzes the non-probabilistic version of the original CPISync algorithm\*{\fB[5]\fP\*}  only\&.
+.IP "\(bu" 2
+A high-performance custom IBLT implementation using 4 hash functions and 32-bit checksums\&.
+.PP
+
+.PP
+For the largest sizes currently of interest to the authors, such as a set of capacity 4096 with 1024 differences, \fRlibminisketch\fP is forty-nine times faster than \fRpinsketch\fP and over eight thousand times faster than \fRcpisync\fP\&. \fRlibminisketch\fP is fast enough on realistic set sizes for use on high-traffic network servers where computational resources are limited\&.
+
+.PP
+Even where performance is latency-limited, small minisketches can be fast enough to improve performance\&. On the above i7-7820HQ, a set of 2500 30-bit entries with a difference of 20 elements can be communicated in less time with a minisketch than sending the raw set so long as the communications bandwidth is 1 gigabit per second or less; an eight-element difference can be communicated in better than one-fifth the time on a gigabit link\&.
+
+.PP
+\fBThe second graph\fP above shows the performance of the same algorithms on the same system, but this time keeping the capacity constant at 128, while varying the number of differences to reconcile between 1 and 128\&. It shows how \fRcpisync\fP's reconciliation speed is mostly dependent on capacity, while \fRpinsketch\fP/\fRlibminisketch\fP are more dependent on number of differences\&.
+
+.PP
+\fBThe third graph\fP above shows the size overhead of a typical IBLT scheme over the other algorithms (which are near-optimal bandwidth), for various levels of failure probability\&. IBLT takes tens of times the bandwidth of \fRlibminisketch\fP sketches when the set difference size is small and the required failure rate is low\&.
+
+.PP
+\fBThe fourth graph\fP above shows the effect of the field size on speed in \fRlibminisketch\fP\&. The three lines correspond to:
+.IP "\(bu" 2
+CLMUL 64-bit: Intel Core i7-7820HQ system at 2\&.4 GHz
+.IP "\(bu" 2
+Generic 64-bit: POWER9 CP9M06 system at 2\&.8 GHz (Talos II)
+.IP "\(bu" 2
+Generic 32-bit: Cortex-A53 at 1\&.2 GHz (Raspberry Pi 3B)
+.PP
+
+.PP
+It shows how CLMUL implementations are faster for certain fields (specifically, field sizes for which an irreducible polynomial of the form *x\*{b\*}  + x + 1* over \fIGF(2)\fP exists, and to a lesser extent, fields which are a multiple of 8 bits)\&. It also shows how (for now) a significant performance drop exists for fields larger than 32 bits on 32-bit platforms\&. Note that the three lines are not at the same scale (the Raspberry Pi 3B is around 10x slower for 32-bit fields than the Core i7; the POWER9 is around 1\&.3x slower)\&.
+
+.PP
+Below we compare the PinSketch algorithm (which \fRlibminisketch\fP is an implementation of) with other set reconciliation algorithms:
+
+.PP
+Algorithm  \fBSketch\fP size  Decode success  Decoding complexity  Difference type  Secure sketch  CPISync\*{\fB[2]\fP\*}   \fI(b+1)c\fP  Always  *O(n\*{3\*} )*  Both  Yes  PinSketch\*{\fB[1]\fP\*}   \fIbc\fP  Always  *O(n\*{2\*} )*  Symmetric only  Yes  IBLT\*{\fB[6]\fP\fB[7]\fP\*}   \fIbc\fP (see graph 3)  Probabilistic  \fIO(n)\fP  Depends  No  
+
+.PP
+.IP "\(bu" 2
+\fB\fBSketch\fP size:\fP This column shows the size in bits of a sketch designed for reconciling \fIc\fP different \fIb\fP-bit elements\&. PinSketch and CPISync have a near-optimal\*{\fB[11]\fP\*}  communication overhead, which in practice means the sketch size is very close (or equal to) \fIbc\fP bits\&. That is the same size as would be needed to transfer the elements of the difference naively (which is remarkable, as the difference isn't even known by the sender)\&. For IBLT there is an overhead factor \fI\fP, which depends on various design parameters, but is often between \fI2\fP and \fI10\fP\&.
+.IP "\(bu" 2
+\fBDecode success:\fP Whenever a sketch is designed with a capacity not lower than the actual difference size, CPISync and PinSketch guarantee that decoding of the difference will always succeed\&. IBLT always has a chance of failure, though that chance can be made arbitrarily small by increasing the communication overhead\&.
+.IP "\(bu" 2
+\fBDecoding complexity:\fP The space savings achieved by near-optimal algorithms come at a cost in performance, as their asymptotic decode complexity is quadratic or cubic, while IBLT is linear\&. This means that using near-optimal algorithms can be too expensive for applications where the difference is sufficiently large\&.
+.IP "\(bu" 2
+\fBDifference type:\fP PinSketch can only compute the symmetric difference from a merged sketch, while CPISync and IBLT can distinguish which side certain elements were missing on\&. When the decoder has access to one of the sets, this generally doesn't matter, as he can look up each of the elements in the symmetric difference with one of the sets\&.
+.IP "\(bu" 2
+\fBSecure sketch:\fP Whether the sketch satisfies the definition of a secure sketch\*{\fB[1]\fP\*} , which implies a minimal amount about a set can be extracted from a sketch by anyone who does not know most of the elements already\&. This makes the algorithm appropriate for applications like fingerprint authentication\&.
+.PP
+.SH "Building with Autotools"
+.PP
+The build system is very rudimentary for now, and \fRimprovements\fP are welcome\&.
+
+.PP
+The following may work and produce a \fRlibminisketch\&.a\fP file you can link against:
+
+.PP
+.PP
+.nf
+git clone https://github\&.com/bitcoin\-core/minisketch
+cd minisketch
+\&./autogen\&.sh && \&./configure && make
+.fi
+.PP
+.SH "Building with CMake"
+.PP
+To maintain a pristine source tree, CMake encourages performing an out-of-source build by using a separate dedicated build directory\&.
+.SS "Building on POSIX systems"
+The following commands will produce the same \fRlibminisketch\&.a\fP file as in the example \fBabove\fP:
+
+.PP
+.PP
+.nf
+cmake \-B build \-DCMAKE_CXX_FLAGS="\-g \-O2"  # Generate a build system in subdirectory "build"
+cmake \-\-build build                        # Run the actual build process
+ctest \-\-test\-dir build                     # Run the test suite
+sudo cmake \-\-install build                 # Install the library into the system (optional)
+.fi
+.PP
+
+.PP
+Run \fRcmake -\fBB\fP build -LH\fP or \fRccmake -\fBB\fP build\fP to see the full list of configurable build options\&.
+.SS "Cross compiling"
+The following example works on modern Ubuntu/Debian systems:
+
+.PP
+.PP
+.nf
+sudo apt install g++\-mingw\-w64\-x86\-64\-posix
+cmake \-B build \-DCMAKE_SYSTEM_NAME=Windows \-DCMAKE_CXX_COMPILER=x86_64\-w64\-mingw32\-g++\-posix
+cmake \-\-build build
+.fi
+.PP
+.SS "Building on Windows"
+The following example assumes the use of Visual Studio 2022 and CMake v3\&.21 or newer\&.
+
+.PP
+In "Developer Command Prompt for VS 2022":
+
+.PP
+.PP
+.nf
+cmake \-B build
+cmake \-\-build build \-\-config Release
+.fi
+.PP
+.SH "Usage"
+.PP
+In this section Alice and Bob are trying to find the difference between their sets\&. Alice has the set \fI[3000 \&.\&.\&. 3009]\fP, while Bob has \fI[3002 \&.\&.\&. 3011]\fP\&.
+
+.PP
+First, Alice creates a sketch:
+
+.PP
+.PP
+.nf
+#include <stdio\&.h>
+#include <assert\&.h>
+#include "\&.\&./include/minisketch\&.h"
+int main(void) {
+
+  minisketch *sketch_a = minisketch_create(12, 0, 4);
+.fi
+.PP
+
+.PP
+The arguments are:
+.IP "\(bu" 2
+The field size \fIb\fP, which specifies the size of the elements being reconciled\&. With a field size \fIb\fP, the supported range of set elements is the integers from \fI1\fP to *2\*{b* \fI- 1\fP, inclusive\&. Note that elements cannot be zero\&.\*} 
+.IP "\(bu" 2
+\*{The implementation number\&. Implementation \fI0\fP is always supported, but more efficient algorithms may be available on some hardware\&. The serialized form of a sketch is independent of the implementation, so different implementations can interoperate\&.\*} 
+.IP "\(bu" 2
+\*{The capacity \fIc\fP, which specifies how many differences the resulting sketch can reconcile\&.\*} 
+.PP
+
+.PP
+\*{Then Alice adds her elements to her sketch\&. Note that adding the same element a second time removes it again, as sketches have set semantics, not multiset semantics\&.\*} 
+
+.PP
+\*{
+.PP
+.nf
+for (int i = 3000; i < 3010; ++i) {
+  minisketch_add_uint64(sketch_a, i);
+}
+
+.fi
+.PP
+\*} 
+
+.PP
+\*{The next step is serializing the sketch into a byte array:\*} 
+
+.PP
+\*{
+.PP
+.nf
+size_t sersize = minisketch_serialized_size(sketch_a);
+assert(sersize == 12 * 4 / 8); // 4 12\-bit values is 6 bytes\&.
+unsigned char *buffer_a = malloc(sersize);
+minisketch_serialize(sketch_a, buffer_a);
+minisketch_destroy(sketch_a);
+
+.fi
+.PP
+\*} 
+
+.PP
+\*{The contents of the buffer can then be submitted to Bob, who can create his own sketch:\*} 
+
+.PP
+\*{
+.PP
+.nf
+minisketch *sketch_b = minisketch_create(12, 0, 4); // Bob's own sketch
+for (int i = 3002; i < 3012; ++i) {
+  minisketch_add_uint64(sketch_b, i);
+}
+
+.fi
+.PP
+\*} 
+
+.PP
+\*{After Bob receives Alice's serialized sketch, he can reconcile:\*} 
+
+.PP
+\*{
+.PP
+.nf
+  sketch_a = minisketch_create(12, 0, 4);     // Alice's sketch
+  minisketch_deserialize(sketch_a, buffer_a); // Load Alice's sketch
+  free(buffer_a);
+
+  // Merge the elements from sketch_a into sketch_b\&. The result is a sketch_b
+  // which contains all elements that occurred in Alice's or Bob's sets, but not
+  // in both\&.
+  minisketch_merge(sketch_b, sketch_a);
+
+  uint64_t differences[4];
+  ssize_t num_differences = minisketch_decode(sketch_b, 4, differences);
+  minisketch_destroy(sketch_a);
+  minisketch_destroy(sketch_b);
+  if (num_differences < 0) {
+    printf("More than 4 differences!\\n");
+  } else {
+    ssize_t i;
+    for (i = 0; i < num_differences; ++i) {
+      printf("%u is in only one of the two sets\\n", (unsigned)differences[i]);
+    }
+  }
+}
+
+.fi
+.PP
+\*} 
+
+.PP
+\*{In this example Bob would see output such as:\*} 
+
+.PP
+\*{
+.PP
+.nf
+$ gcc \-std=c99 \-Wall \-Wextra \-o example \&./doc/example\&.c \-Lsrc/ \-lminisketch \-lstdc++ && \&./example
+3000 is in only one of the two sets
+3011 is in only one of the two sets
+3001 is in only one of the two sets
+3010 is in only one of the two sets
+
+.fi
+.PP
+\*} 
+
+.PP
+\*{The order of the output is arbitrary and will differ on different runs of \fBminisketch_decode()\fP\&.\*} 
+
+.PP
+\*{\*} 
+.SH "\*{Applications\*} "
+.PP
+\*{\*} 
+
+.PP
+\*{Communications efficient set reconciliation has been proposed to optimize Bitcoin transaction distribution\*{\fB[8]\fP\*} , which would allow Bitcoin nodes to have many more peers while reducing bandwidth usage\&. It could also be used for Bitcoin block distribution\*{\fB[9]\fP\*} , particularly for very low bandwidth links such as satellite\&. A similar approach (CPISync) is used by PGP SKS keyservers to synchronize their databases efficiently\&. Secure sketches can also be used as helper data to reliably extract a consistent cryptographic key from fuzzy biometric data while leaking minimal information\*{\fB[1]\fP\*} \&. They can be combined with \fRdcnets\fP to create cryptographic multiparty anonymous communication\*{\fB[10]\fP\*} \&.\*} 
+
+.PP
+\*{\*} 
+.SH "\*{Implementation notes\*} "
+.PP
+\*{\*} 
+
+.PP
+\*{\fRlibminisketch\fP is written in C++11, but has a \fRC API\fP for compatibility reasons\&.\*} 
+
+.PP
+\*{Specific algorithms and optimizations used:
+.IP "\(bu" 2
+Finite field implementations:
+.IP "  \(bu" 4
+A generic implementation using C unsigned integer bit operations, and one using the \fRCLMUL instruction\fP where available\&. The latter has specializations for different classes of fields that permit optimizations (those with trinomial irreducible polynomials, and those whose size is a multiple of 8 bits)\&.
+.IP "  \(bu" 4
+Precomputed tables for (repeated) squaring, and for solving equations of the form *x\*{2\*}  + x = a*\*{\fB[2]\fP\*} \&.
+.IP "  \(bu" 4
+Inverses are computed using an \fRexponentiation ladder\fP\*{\fB[12]\fP\*}  on systems where multiplications are relatively fast, and using an \fRextended GCD algorithm\fP otherwise\&.
+.IP "  \(bu" 4
+Repeated multiplications are accelerated using runtime precomputations on systems where multiplications are relatively slow\&.
+.IP "  \(bu" 4
+The serialization of field elements always represents them as bits that are coefficients of the lowest-weight (using lexicographic order as tie breaker) irreducible polynomials over \fIGF(2)\fP (see \fBthis list\fP), but for some implementations they are converted to a different representation internally\&.
+.PP
+
+.IP "\(bu" 2
+The sketch algorithms are specialized for each separate field implementation, permitting inlining and specific optimizations while avoiding dynamic allocations and branching costs\&.
+.IP "\(bu" 2
+Decoding of sketches uses the \fRBerlekamp-Massey algorithm\fP\*{\fB[3]\fP\*}  to compute the characteristic polynomial\&.
+.IP "\(bu" 2
+Finding the roots of polynomials is done using the Berlekamp trace algorithm with explicit formula for quadratic polynomials\*{\fB[4]\fP\*} \&. The root finding is randomized to prevent adversarial inputs that intentionally trigger worst-case decode time\&.
+.IP "\(bu" 2
+A (possibly) novel optimization combines a test for unique roots with the Berlekamp trace algorithm\&.
+.PP
+\*} 
+
+.PP
+\*{Some improvements that are still TODO:
+.IP "\(bu" 2
+Explicit formulas for the roots of polynomials of higher degree than 2
+.IP "\(bu" 2
+Subquadratic multiplication and modulus algorithms
+.IP "\(bu" 2
+The \fRHalf-GCD algorithm\fP for faster GCDs
+.IP "\(bu" 2
+An interface for incremental decoding: most of the computation in most failed decodes can be reused when attempting to decode a longer sketch of the same set
+.IP "\(bu" 2
+Platform specific optimizations for platforms other than x86
+.IP "\(bu" 2
+Avoid using slow uint64_t for calculations on 32-bit hosts
+.IP "\(bu" 2
+Optional IBLT / Hybrid and set entropy coder under the same interface
+.PP
+\*} 
+
+.PP
+\*{\*} 
+.SH "\*{References\*} "
+.PP
+\*{\*} 
+
+.PP
+\*{
+.IP "\(bu" 2
+[1] Dodis, Ostrovsky, Reyzin and Smith\&. \fIFuzzy Extractors: How to Generate Strong Keys from Biometrics and Other Noisy Data\&.\fP SIAM Journal on Computing, volume 38, number 1, pages 97-139, 2008)\&. \fR[URL]\fP \fR[PDF]\fP
+.IP "\(bu" 2
+[5] A\&. Trachtenberg, D\&. Starobinski and S\&. Agarwal\&. \fIFast PDA synchronization using characteristic polynomial interpolation\&.\fP Proceedings, Twenty-First Annual Joint Conference of the IEEE Computer and Communications Societies, New York, NY, USA, 2002, pp\&. 1510-1519 vol\&.3\&. \fR[PDF]\fP
+.IP "\(bu" 2
+[2] Cherly, Jørgen, Luis Gallardo, Leonid Vaserstein, and Ethel Wheland\&. \fISolving quadratic equations over polynomial rings of characteristic two\&.\fP Publicacions Matemàtiques (1998): 131-142\&. \fR[PDF]\fP
+.IP "\(bu" 2
+[3] J\&. Massey\&. \fIShift-register synthesis and BCH decoding\&.\fP IEEE Transactions on Information Theory, vol\&. 15, no\&. 1, pp\&. 122-127, January 1969\&. \fR[PDF]\fP
+.IP "\(bu" 2
+[4] Bhaskar Biswas, Vincent Herbert\&. \fIEfficient Root Finding of Polynomials over Fields of Characteristic 2\&.\fP 2009\&. hal-00626997\&. \fR[URL]\fP \fR[PDF]\fP
+.IP "\(bu" 2
+[6] Eppstein, David, Michael T\&. Goodrich, Frank Uyeda, and George Varghese\&. \fIWhat's the difference?: efficient set reconciliation without prior context\&.\fP ACM SIGCOMM Computer Communication Review, vol\&. 41, no\&. 4, pp\&. 218-229\&. ACM, 2011\&. \fR[PDF]\fP
+.IP "\(bu" 2
+[7] Goodrich, Michael T\&. and Michael Mitzenmacher\&. \fIInvertible bloom lookup tables\&.\fP 2011 49th Annual Allerton Conference on Communication, Control, and Computing (Allerton) (2011): 792-799\&. \fR[PDF]\fP
+.IP "\(bu" 2
+[8] Maxwell, Gregory F\&. \fI\fRBlocksonly mode BW savings, the limits of efficient block xfer, and better relay\fP\fP Bitcointalk 2016, \fI\fRTechnical notes on mempool synchronizing relay\fP\fP #bitcoin-wizards 2016\&.
+.IP "\(bu" 2
+[9] Maxwell, Gregory F\&. \fI\fRBlock network coding\fP\fP Bitcoin Wiki 2014, \fI\fRTechnical notes on efficient block xfer\fP\fP #bitcoin-wizards 2015\&.
+.IP "\(bu" 2
+[10] Ruffing, Tim, Moreno-Sanchez, Pedro, Aniket, Kate, \fIP2P Mixing and Unlinkable Bitcoin Transactions\fP NDSS Symposium 2017 \fR[URL]\fP \fR[PDF]\fP
+.IP "\(bu" 2
+[11] Y\&. Misky, A\&. Trachtenberg, R\&. Zippel\&. \fISet Reconciliation with Nearly Optimal Communication Complexity\&.\fP Cornell University, 2000\&. \fR[URL]\fP \fR[PDF]\fP
+.IP "\(bu" 2
+[12] Itoh, Toshiya, and Shigeo Tsujii\&. "A fast algorithm for computing multiplicative inverses in GF (2m) using normal bases\&." Information and computation 78, no\&. 3 (1988): 171-177\&. \fR[URL]\fP 
+.PP
+\*} 

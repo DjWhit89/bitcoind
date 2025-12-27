@@ -1,0 +1,144 @@
+.TH "PoolResource< MAX_BLOCK_SIZE_BYTES, ALIGN_BYTES >" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+PoolResource< MAX_BLOCK_SIZE_BYTES, ALIGN_BYTES >
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <pool\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBPoolResource\fP (std::size_t chunk_size_bytes)"
+.br
+.ti -1c
+.RI "\fBPoolResource\fP ()"
+.br
+.ti -1c
+.RI "\fBPoolResource\fP (const \fBPoolResource\fP &)=delete"
+.br
+.ti -1c
+.RI "\fBPoolResource\fP & \fBoperator=\fP (const \fBPoolResource\fP &)=delete"
+.br
+.ti -1c
+.RI "\fBPoolResource\fP (\fBPoolResource\fP &&)=delete"
+.br
+.ti -1c
+.RI "\fBPoolResource\fP & \fBoperator=\fP (\fBPoolResource\fP &&)=delete"
+.br
+.ti -1c
+.RI "\fB~PoolResource\fP ()"
+.br
+.ti -1c
+.RI "void * \fBAllocate\fP (std::size_t bytes, std::size_t alignment)"
+.br
+.ti -1c
+.RI "void \fBDeallocate\fP (void *p, std::size_t bytes, std::size_t alignment) noexcept"
+.br
+.ti -1c
+.RI "std::size_t \fBNumAllocatedChunks\fP () const"
+.br
+.ti -1c
+.RI "size_t \fBChunkSizeBytes\fP () const"
+.br
+.in -1c
+.SS "Friends"
+
+.in +1c
+.ti -1c
+.RI "class \fBPoolResourceTester\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES>
+.br
+class PoolResource< MAX_BLOCK_SIZE_BYTES, ALIGN_BYTES >"A memory resource similar to std::pmr::unsynchronized_pool_resource, but optimized for node-based containers\&. It has the following properties:
+
+.PP
+.IP "\(bu" 2
+Owns the allocated memory and frees it on destruction, even when deallocate has not been called on the allocated blocks\&.
+.IP "\(bu" 2
+Consists of a number of pools, each one for a different block size\&. Each pool holds blocks of uniform size in a freelist\&.
+.IP "\(bu" 2
+Exhausting memory in a freelist causes a new allocation of a fixed size chunk\&. This chunk is used to carve out blocks\&.
+.IP "\(bu" 2
+Block sizes or alignments that can not be served by the pools are allocated and deallocated by operator new()\&.
+.PP
+
+.PP
+\fBPoolResource\fP is not thread-safe\&. It is intended to be used by \fBPoolAllocator\fP\&.
+
+.PP
+\fBTemplate Parameters\fP
+.RS 4
+\fIMAX_BLOCK_SIZE_BYTES\fP Maximum size to allocate with the pool\&. If larger sizes are requested, allocation falls back to new()\&.
+.br
+\fIALIGN_BYTES\fP Required alignment for the allocations\&.
+.RE
+.PP
+An example: If you create a PoolResource<128, 8>(262144) and perform a bunch of allocations and deallocate 2 blocks with size 8 bytes, and 3 blocks with size 16, the members will look like this: 
+.PP
+.nf
+m_free_lists                         m_allocated_chunks
+   ┌───┐                                ┌───┐  ┌────────────-------──────┐
+   │   │  blocks                        │   ├─►│    262144 B             │
+   │   │  ┌─────┐  ┌─────┐              └─┬─┘  └────────────-------──────┘
+   │ 1 ├─►│ 8 B ├─►│ 8 B │                │
+   │   │  └─────┘  └─────┘                :
+   │   │                                  │
+   │   │  ┌─────┐  ┌─────┐  ┌─────┐       ▼
+   │ 2 ├─►│16 B ├─►│16 B ├─►│16 B │     ┌───┐  ┌─────────────────────────┐
+   │   │  └─────┘  └─────┘  └─────┘     │   ├─►│          ▲              │ ▲
+   │   │                                └───┘  └──────────┬──────────────┘ │
+   │ \&. │                                                  │    m_available_memory_end
+   │ \&. │                                         m_available_memory_it
+   │ \&. │
+   │   │
+   │   │
+   │16 │
+   └───┘
+
+.fi
+.PP
+
+.PP
+Here m_free_lists[1] holds the 2 blocks of size 8 bytes, and m_free_lists[2] holds the 3 blocks of size 16\&. The blocks came from the data stored in the m_allocated_chunks list\&. Each chunk has bytes 262144\&. The last chunk has still some memory available for the blocks, and when m_available_memory_it is at the end, a new chunk will be allocated and added to the list\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> \fBPoolResource\fP (std::size_t chunk_size_bytes)\fR [inline]\fP, \fR [explicit]\fP"
+Construct a new \fBPoolResource\fP object which allocates the first chunk\&. chunk_size_bytes will be rounded up to next multiple of ELEM_ALIGN_BYTES\&. 
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> \fBPoolResource\fP ()\fR [inline]\fP"
+Construct a new Pool Resource object, defaults to 2^18=262144 chunk size\&. 
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> \fBPoolResource\fP (const \fBPoolResource\fP< MAX_BLOCK_SIZE_BYTES, ALIGN_BYTES > & )\fR [delete]\fP"
+Disable copy & move semantics, these are not supported for the resource\&. 
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> \fBPoolResource\fP (\fBPoolResource\fP< MAX_BLOCK_SIZE_BYTES, ALIGN_BYTES > && )\fR [delete]\fP"
+
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> ~\fBPoolResource\fP ()\fR [inline]\fP"
+Deallocates all memory allocated associated with the memory resource\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> void * Allocate (std::size_t bytes, std::size_t alignment)\fR [inline]\fP"
+Allocates a block of bytes\&. If possible the freelist is used, otherwise allocation is forwarded to ::operator new()\&. 
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> size_t ChunkSizeBytes () const\fR [inline]\fP, \fR [nodiscard]\fP"
+Size in bytes to allocate per chunk, currently hardcoded to a fixed size\&. 
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> void Deallocate (void * p, std::size_t bytes, std::size_t alignment)\fR [inline]\fP, \fR [noexcept]\fP"
+Returns a block to the freelists, or deletes the block when it did not come from the chunks\&. 
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> std::size_t NumAllocatedChunks () const\fR [inline]\fP, \fR [nodiscard]\fP"
+Number of allocated chunks 
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> \fBPoolResource\fP & operator= (const \fBPoolResource\fP< MAX_BLOCK_SIZE_BYTES, ALIGN_BYTES > & )\fR [delete]\fP"
+
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> \fBPoolResource\fP & operator= (\fBPoolResource\fP< MAX_BLOCK_SIZE_BYTES, ALIGN_BYTES > && )\fR [delete]\fP"
+
+.SH "Friends And Related Symbol Documentation"
+.PP 
+.SS "template<std::size_t MAX_BLOCK_SIZE_BYTES, std::size_t ALIGN_BYTES> friend class \fBPoolResourceTester\fP\fR [friend]\fP"
+Access to internals for testing purpose only 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

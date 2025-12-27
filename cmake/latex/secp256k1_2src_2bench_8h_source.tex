@@ -1,0 +1,174 @@
+\doxysection{bench.\+h}
+\label{secp256k1_2src_2bench_8h_source}\index{src/secp256k1/src/bench.h@{src/secp256k1/src/bench.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2014\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_BENCH\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_BENCH\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <stdlib.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <stdio.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <string.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}tests\_common.h"{}}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#define\ FP\_EXP\ (6)}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#define\ FP\_MULT\ (1000000LL)}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{comment}{/*\ Format\ fixed\ point\ number.\ */}}
+\DoxyCodeLine{00021\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ print\_number(\textcolor{keyword}{const}\ int64\_t\ x)\ \{}
+\DoxyCodeLine{00022\ \ \ \ \ int64\_t\ x\_abs,\ y;}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{keywordtype}{int}\ c,\ i,\ rounding,\ g;\ \textcolor{comment}{/*\ g\ =\ integer\ part\ size,\ c\ =\ fractional\ part\ size\ */}}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ ptr;}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{keywordtype}{char}\ buffer[30];}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keywordflow}{if}\ (x\ ==\ INT64\_MIN)\ \{}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Prevent\ UB.\ */}}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ printf(\textcolor{stringliteral}{"{}ERR"{}});}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00031\ \ \ \ \ \}}
+\DoxyCodeLine{00032\ \ \ \ \ x\_abs\ =\ x\ <\ 0\ ?\ -\/x\ :\ x;}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{comment}{/*\ Determine\ how\ many\ decimals\ we\ want\ to\ show\ (more\ than\ FP\_EXP\ makes\ no}}
+\DoxyCodeLine{00035\ \textcolor{comment}{\ \ \ \ \ *\ sense).\ */}}
+\DoxyCodeLine{00036\ \ \ \ \ y\ =\ x\_abs;}
+\DoxyCodeLine{00037\ \ \ \ \ c\ =\ 0;}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordflow}{while}\ (y\ >\ 0LL\ \&\&\ y\ <\ 100LL\ *\ FP\_MULT\ \&\&\ c\ <\ FP\_EXP)\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ y\ *=\ 10LL;}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ c++;}
+\DoxyCodeLine{00041\ \ \ \ \ \}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{comment}{/*\ Round\ to\ 'c'\ decimals.\ */}}
+\DoxyCodeLine{00044\ \ \ \ \ y\ =\ x\_abs;}
+\DoxyCodeLine{00045\ \ \ \ \ rounding\ =\ 0;}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ c;\ i\ <\ FP\_EXP;\ ++i)\ \{}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ rounding\ =\ (y\ \%\ 10)\ >=\ 5;}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ y\ /=\ 10;}
+\DoxyCodeLine{00049\ \ \ \ \ \}}
+\DoxyCodeLine{00050\ \ \ \ \ y\ +=\ rounding;}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{comment}{/*\ Format\ and\ print\ the\ number.\ */}}
+\DoxyCodeLine{00053\ \ \ \ \ ptr\ =\ \textcolor{keyword}{sizeof}(buffer)\ -\/\ 1;}
+\DoxyCodeLine{00054\ \ \ \ \ buffer[ptr]\ =\ 0;}
+\DoxyCodeLine{00055\ \ \ \ \ g\ =\ 0;}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{keywordflow}{if}\ (c\ !=\ 0)\ \{\ \textcolor{comment}{/*\ non\ zero\ fractional\ part\ */}}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ c;\ ++i)\ \{}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ buffer[-\/-\/ptr]\ =\ \textcolor{charliteral}{'0'}\ +\ (y\ \%\ 10);}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ y\ /=\ 10;}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00061\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (c\ ==\ 0)\ \{\ \textcolor{comment}{/*\ fractional\ part\ is\ 0\ */}}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ buffer[-\/-\/ptr]\ =\ \textcolor{charliteral}{'0'};\ }
+\DoxyCodeLine{00063\ \ \ \ \ \}}
+\DoxyCodeLine{00064\ \ \ \ \ buffer[-\/-\/ptr]\ =\ \textcolor{charliteral}{'.'};}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ buffer[-\/-\/ptr]\ =\ \textcolor{charliteral}{'0'}\ +\ (y\ \%\ 10);}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ y\ /=\ 10;}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ g++;}
+\DoxyCodeLine{00069\ \ \ \ \ \}\ \textcolor{keywordflow}{while}\ (y\ !=\ 0);}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keywordflow}{if}\ (x\ <\ 0)\ \{}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ buffer[-\/-\/ptr]\ =\ \textcolor{charliteral}{'-\/'};}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ g++;}
+\DoxyCodeLine{00073\ \ \ \ \ \}}
+\DoxyCodeLine{00074\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\%5.*s"{}},\ g,\ \&buffer[ptr]);\ \textcolor{comment}{/*\ Prints\ integer\ part\ */}}
+\DoxyCodeLine{00075\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\%-\/*s"{}},\ FP\_EXP,\ \&buffer[ptr\ +\ g]);\ \textcolor{comment}{/*\ Prints\ fractional\ part\ */}}
+\DoxyCodeLine{00076\ \}}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ run\_benchmark(\textcolor{keywordtype}{char}\ *name,\ \textcolor{keywordtype}{void}\ (*benchmark)(\textcolor{keywordtype}{void}*,\ \textcolor{keywordtype}{int}),\ \textcolor{keywordtype}{void}\ (*setup)(\textcolor{keywordtype}{void}*),\ \textcolor{keywordtype}{void}\ (*teardown)(\textcolor{keywordtype}{void}*,\ \textcolor{keywordtype}{int}),\ \textcolor{keywordtype}{void}*\ data,\ \textcolor{keywordtype}{int}\ count,\ \textcolor{keywordtype}{int}\ iter)\ \{}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00080\ \ \ \ \ int64\_t\ min\ =\ INT64\_MAX;}
+\DoxyCodeLine{00081\ \ \ \ \ int64\_t\ sum\ =\ 0;}
+\DoxyCodeLine{00082\ \ \ \ \ int64\_t\ max\ =\ 0;}
+\DoxyCodeLine{00083\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ count;\ i++)\ \{}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ int64\_t\ begin,\ total;}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (setup\ !=\ NULL)\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ setup(data);}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ begin\ =\ gettime\_i64();}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ benchmark(data,\ iter);}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ total\ =\ gettime\_i64()\ -\/\ begin;}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (teardown\ !=\ NULL)\ \{}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ teardown(data,\ iter);}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (total\ <\ min)\ \{}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ min\ =\ total;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (total\ >\ max)\ \{}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ max\ =\ total;}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ sum\ +=\ total;}
+\DoxyCodeLine{00101\ \ \ \ \ \}}
+\DoxyCodeLine{00102\ \ \ \ \ \textcolor{comment}{/*\ ','\ is\ used\ as\ a\ column\ delimiter\ */}}
+\DoxyCodeLine{00103\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\%-\/30s,\ "{}},\ name);}
+\DoxyCodeLine{00104\ \ \ \ \ print\_number(min\ *\ FP\_MULT\ /\ iter);}
+\DoxyCodeLine{00105\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ ,\ "{}});}
+\DoxyCodeLine{00106\ \ \ \ \ print\_number(((sum\ *\ FP\_MULT)\ /\ count)\ /\ iter);}
+\DoxyCodeLine{00107\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\ \ \ ,\ "{}});}
+\DoxyCodeLine{00108\ \ \ \ \ print\_number(max\ *\ FP\_MULT\ /\ iter);}
+\DoxyCodeLine{00109\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\(\backslash\)n"{}});}
+\DoxyCodeLine{00110\ \}}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ have\_flag(\textcolor{keywordtype}{int}\ argc,\ \textcolor{keywordtype}{char}**\ argv,\ \textcolor{keywordtype}{char}\ *flag)\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{keywordtype}{char}**\ argm\ =\ argv\ +\ argc;}
+\DoxyCodeLine{00114\ \ \ \ \ argv++;}
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{keywordflow}{while}\ (argv\ !=\ argm)\ \{}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (strcmp(*argv,\ flag)\ ==\ 0)\ \{}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ argv++;}
+\DoxyCodeLine{00120\ \ \ \ \ \}}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00122\ \}}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \textcolor{comment}{/*\ takes\ an\ array\ containing\ the\ arguments\ that\ the\ user\ is\ allowed\ to\ enter\ on\ the\ command-\/line}}
+\DoxyCodeLine{00125\ \textcolor{comment}{\ \ \ returns:}}
+\DoxyCodeLine{00126\ \textcolor{comment}{\ \ \ \ \ \ -\/\ 1\ if\ the\ user\ entered\ an\ invalid\ argument}}
+\DoxyCodeLine{00127\ \textcolor{comment}{\ \ \ \ \ \ -\/\ 0\ if\ all\ the\ user\ entered\ arguments\ are\ valid\ */}}
+\DoxyCodeLine{00128\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ have\_invalid\_args(\textcolor{keywordtype}{int}\ argc,\ \textcolor{keywordtype}{char}**\ argv,\ \textcolor{keywordtype}{char}**\ valid\_args,\ \textcolor{keywordtype}{size\_t}\ n)\ \{}
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i;}
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{keywordtype}{int}\ found\_valid;}
+\DoxyCodeLine{00131\ \ \ \ \ \textcolor{keywordtype}{char}**\ argm\ =\ argv\ +\ argc;}
+\DoxyCodeLine{00132\ \ \ \ \ argv++;}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keywordflow}{while}\ (argv\ !=\ argm)\ \{}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ found\_valid\ =\ 0;}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ n;\ i++)\ \{}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (strcmp(*argv,\ valid\_args[i])\ ==\ 0)\ \{}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ found\_valid\ =\ 1;\ \textcolor{comment}{/*\ user\ entered\ a\ valid\ arg\ from\ the\ list\ */}}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (found\_valid\ ==\ 0)\ \{}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;\ \textcolor{comment}{/*\ invalid\ arg\ found\ */}}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ argv++;}
+\DoxyCodeLine{00146\ \ \ \ \ \}}
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00148\ \}}
+\DoxyCodeLine{00149\ }
+\DoxyCodeLine{00150\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ get\_iters(\textcolor{keywordtype}{int}\ default\_iters)\ \{}
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{keywordtype}{char}*\ env\ =\ getenv(\textcolor{stringliteral}{"{}SECP256K1\_BENCH\_ITERS"{}});}
+\DoxyCodeLine{00152\ \ \ \ \ \textcolor{keywordflow}{if}\ (env)\ \{}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ strtol(env,\ NULL,\ 0);}
+\DoxyCodeLine{00154\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ default\_iters;}
+\DoxyCodeLine{00156\ \ \ \ \ \}}
+\DoxyCodeLine{00157\ \}}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00159\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ print\_output\_table\_header\_row(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{keywordtype}{char}*\ bench\_str\ =\ \textcolor{stringliteral}{"{}Benchmark"{}};\ \ \ \ \ \textcolor{comment}{/*\ left\ justified\ */}}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordtype}{char}*\ min\_str\ =\ \textcolor{stringliteral}{"{}\ \ \ \ Min(us)\ \ \ \ "{}};\ \textcolor{comment}{/*\ center\ alignment\ */}}
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{keywordtype}{char}*\ avg\_str\ =\ \textcolor{stringliteral}{"{}\ \ \ \ Avg(us)\ \ \ \ "{}};}
+\DoxyCodeLine{00163\ \ \ \ \ \textcolor{keywordtype}{char}*\ max\_str\ =\ \textcolor{stringliteral}{"{}\ \ \ \ Max(us)\ \ \ \ "{}};}
+\DoxyCodeLine{00164\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\%-\/30s,\%-\/15s,\%-\/15s,\%-\/15s\(\backslash\)n"{}},\ bench\_str,\ min\_str,\ avg\_str,\ max\_str);}
+\DoxyCodeLine{00165\ \ \ \ \ printf(\textcolor{stringliteral}{"{}\(\backslash\)n"{}});}
+\DoxyCodeLine{00166\ \}}
+\DoxyCodeLine{00167\ }
+\DoxyCodeLine{00168\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_BENCH\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

@@ -1,0 +1,192 @@
+\doxysection{V1\+Transport Class Reference}
+\label{class_v1_transport}\index{V1Transport@{V1Transport}}
+
+
+{\ttfamily \#include $<$net.\+h$>$}
+
+Inheritance diagram for V1\+Transport\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{class_v1_transport}
+\end{center}
+\end{figure}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ V1\+Transport} (const \textbf{ Node\+Id} node\+\_\+id) noexcept
+\item 
+bool \textbf{ Received\+Message\+Complete} () const override \textbf{ EXCLUSIVE\+\_\+\+LOCKS\+\_\+\+REQUIRED}(!m\+\_\+recv\+\_\+mutex)
+\item 
+\textbf{ Info} \textbf{ Get\+Info} () const noexcept override
+\item 
+bool \textbf{ Received\+Bytes} (std\+::span$<$ const uint8\+\_\+t $>$ \&msg\+\_\+bytes) override \textbf{ EXCLUSIVE\+\_\+\+LOCKS\+\_\+\+REQUIRED}(!m\+\_\+recv\+\_\+mutex)
+\item 
+\textbf{ CNet\+Message} \textbf{ Get\+Received\+Message} (std\+::chrono\+::microseconds time, bool \&reject\+\_\+message) override \textbf{ EXCLUSIVE\+\_\+\+LOCKS\+\_\+\+REQUIRED}(!m\+\_\+recv\+\_\+mutex)
+\item 
+bool \textbf{ Set\+Message\+To\+Send} (\textbf{ CSerialized\+Net\+Msg} \&msg) noexcept override \textbf{ EXCLUSIVE\+\_\+\+LOCKS\+\_\+\+REQUIRED}(!m\+\_\+send\+\_\+mutex)
+\item 
+\textbf{ Bytes\+To\+Send} \textbf{ Get\+Bytes\+To\+Send} (bool have\+\_\+next\+\_\+message) const noexcept override \textbf{ EXCLUSIVE\+\_\+\+LOCKS\+\_\+\+REQUIRED}(!m\+\_\+send\+\_\+mutex)
+\item 
+void \textbf{ Mark\+Bytes\+Sent} (size\+\_\+t bytes\+\_\+sent) noexcept override \textbf{ EXCLUSIVE\+\_\+\+LOCKS\+\_\+\+REQUIRED}(!m\+\_\+send\+\_\+mutex)
+\item 
+size\+\_\+t \textbf{ Get\+Send\+Memory\+Usage} () const noexcept override \textbf{ EXCLUSIVE\+\_\+\+LOCKS\+\_\+\+REQUIRED}(!m\+\_\+send\+\_\+mutex)
+\item 
+bool \textbf{ Should\+Reconnect\+V1} () const noexcept override
+\end{DoxyCompactItemize}
+\doxysubsection*{Public Member Functions inherited from \textbf{ Transport}}
+\begin{DoxyCompactItemize}
+\item 
+virtual \textbf{ $\sim$\+Transport} ()=default
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Additional Inherited Members}
+\doxysubsection*{Public Types inherited from \textbf{ Transport}}
+\begin{DoxyCompactItemize}
+\item 
+using \textbf{ Bytes\+To\+Send}
+\end{DoxyCompactItemize}
+
+
+\label{doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{V1Transport@{V1Transport}!V1Transport@{V1Transport}}
+\index{V1Transport@{V1Transport}!V1Transport@{V1Transport}}
+\doxysubsubsection{V1Transport()}
+{\footnotesize\ttfamily \label{class_v1_transport_a0781b80db5ebfb79cb7ac171fb034952} 
+\textbf{ V1\+Transport} (\begin{DoxyParamCaption}\item[{const \textbf{ Node\+Id}}]{node\+\_\+id}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [explicit]}, {\ttfamily [noexcept]}}
+
+
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{V1Transport@{V1Transport}!GetBytesToSend@{GetBytesToSend}}
+\index{GetBytesToSend@{GetBytesToSend}!V1Transport@{V1Transport}}
+\doxysubsubsection{GetBytesToSend()}
+{\footnotesize\ttfamily \label{class_v1_transport_a39dcf7de09089dc617df00c6850647b3} 
+\textbf{ Transport\+::\+Bytes\+To\+Send} Get\+Bytes\+To\+Send (\begin{DoxyParamCaption}\item[{bool}]{have\+\_\+next\+\_\+message}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [virtual]}, {\ttfamily [noexcept]}}
+
+Get bytes to send on the wire, if any, along with other information about it.
+
+As a const function, it does not modify the transport\textquotesingle{}s observable state, and is thus safe to be called multiple times.
+
+
+\begin{DoxyParams}[1]{Parameters}
+\mbox{\texttt{in}}  & {\em have\+\_\+next\+\_\+message} & If true, the "{}more"{} return value reports whether more will be sendable after a Set\+Message\+To\+Send call. It is set by the caller when they know they have another message ready to send, and only care about what happens after that. The have\+\_\+next\+\_\+message argument only affects this "{}more"{} return value and nothing else.\\
+\hline
+\end{DoxyParams}
+Effectively, there are three possible outcomes about whether there are more bytes to send\+:
+\begin{DoxyItemize}
+\item Yes\+: the transport itself has more bytes to send later. For example, for \doxyref{V1\+Transport}{p.}{class_v1_transport} this happens during the sending of the header of a message, when there is a non-\/empty payload that follows.
+\item No\+: the transport itself has no more bytes to send, but will have bytes to send if handed a message through Set\+Message\+To\+Send. In \doxyref{V1\+Transport}{p.}{class_v1_transport} this happens when sending the payload of a message.
+\item Blocked\+: the transport itself has no more bytes to send, and is also incapable of sending anything more at all now, if it were handed another message to send. This occurs in \doxyref{V2\+Transport}{p.}{class_v2_transport} before the handshake is complete, as the encryption ciphers are not set up for sending messages before that point.
+\end{DoxyItemize}
+
+The boolean \textquotesingle{}more\textquotesingle{} is true for Yes, false for Blocked, and have\+\_\+next\+\_\+message controls what is returned for No.
+
+\begin{DoxyReturn}{Returns}
+a \doxyref{Bytes\+To\+Send}{p.}{class_transport_af6ca4dbfbf45f9bd26bc6bf4a6adfb9f} object. The to\+\_\+send member returned acts as a stream which is only ever appended to. This means that with the exception of Mark\+Bytes\+Sent (which pops bytes off the front of later to\+\_\+sends), operations on the transport can only append to what is being returned. Also note that m\+\_\+type and to\+\_\+send refer to data that is internal to the transport, and calling any non-\/const function on this object may invalidate them. 
+\end{DoxyReturn}
+
+
+Implements \textbf{ Transport} \doxyref{}{p.}{class_transport_afe903c5a52b321e189d97c6edbb64e95}.
+
+\index{V1Transport@{V1Transport}!GetInfo@{GetInfo}}
+\index{GetInfo@{GetInfo}!V1Transport@{V1Transport}}
+\doxysubsubsection{GetInfo()}
+{\footnotesize\ttfamily \label{class_v1_transport_a58bd1ab368e66f029f6029a004871f34} 
+\textbf{ Transport\+::\+Info} Get\+Info (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [virtual]}, {\ttfamily [noexcept]}}
+
+Retrieve information about this transport. 
+
+Implements \textbf{ Transport} \doxyref{}{p.}{class_transport_a48296f31d432a8809164b3f97bbc1e4a}.
+
+\index{V1Transport@{V1Transport}!GetReceivedMessage@{GetReceivedMessage}}
+\index{GetReceivedMessage@{GetReceivedMessage}!V1Transport@{V1Transport}}
+\doxysubsubsection{GetReceivedMessage()}
+{\footnotesize\ttfamily \label{class_v1_transport_ada4775fac2b99d16d44d7e811cc8d5ef} 
+\textbf{ CNet\+Message} Get\+Received\+Message (\begin{DoxyParamCaption}\item[{std\+::chrono\+::microseconds}]{time}{, }\item[{bool \&}]{reject\+\_\+message}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [virtual]}}
+
+Retrieve a completed message from transport.
+
+This can only be called when \doxyref{Received\+Message\+Complete()}{p.}{class_v1_transport_a8d29e67c1f1ec0f0bc1e0adcdb458c0d} is true.
+
+If reject\+\_\+message=true is returned the message itself is invalid, but (other than false returned by Received\+Bytes) the transport is not in an inconsistent state. 
+
+Implements \textbf{ Transport} \doxyref{}{p.}{class_transport_a65899c32e93818026372178488912881}.
+
+\index{V1Transport@{V1Transport}!GetSendMemoryUsage@{GetSendMemoryUsage}}
+\index{GetSendMemoryUsage@{GetSendMemoryUsage}!V1Transport@{V1Transport}}
+\doxysubsubsection{GetSendMemoryUsage()}
+{\footnotesize\ttfamily \label{class_v1_transport_a6064b63ffba8cdc3f48a4217f75e3f93} 
+size\+\_\+t Get\+Send\+Memory\+Usage (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [virtual]}, {\ttfamily [noexcept]}}
+
+Return the memory usage of this transport attributable to buffered data to send. 
+
+Implements \textbf{ Transport} \doxyref{}{p.}{class_transport_a091196a6bab12cd2fe571129015bba8b}.
+
+\index{V1Transport@{V1Transport}!MarkBytesSent@{MarkBytesSent}}
+\index{MarkBytesSent@{MarkBytesSent}!V1Transport@{V1Transport}}
+\doxysubsubsection{MarkBytesSent()}
+{\footnotesize\ttfamily \label{class_v1_transport_ac69707799060ee90f662f6139bf01505} 
+void Mark\+Bytes\+Sent (\begin{DoxyParamCaption}\item[{size\+\_\+t}]{bytes\+\_\+sent}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [virtual]}, {\ttfamily [noexcept]}}
+
+Report how many bytes returned by the last \doxyref{Get\+Bytes\+To\+Send()}{p.}{class_v1_transport_a39dcf7de09089dc617df00c6850647b3} have been sent.
+
+bytes\+\_\+sent cannot exceed to\+\_\+send.\+size() of the last \doxyref{Get\+Bytes\+To\+Send()}{p.}{class_v1_transport_a39dcf7de09089dc617df00c6850647b3} result.
+
+If bytes\+\_\+sent=0, this call has no effect. 
+
+Implements \textbf{ Transport} \doxyref{}{p.}{class_transport_a915249a31c6d363883f933cbbd07d22f}.
+
+\index{V1Transport@{V1Transport}!ReceivedBytes@{ReceivedBytes}}
+\index{ReceivedBytes@{ReceivedBytes}!V1Transport@{V1Transport}}
+\doxysubsubsection{ReceivedBytes()}
+{\footnotesize\ttfamily \label{class_v1_transport_a7b1c80d6eaf17aa27556eb6ed47315c0} 
+bool Received\+Bytes (\begin{DoxyParamCaption}\item[{std\+::span$<$ const uint8\+\_\+t $>$ \&}]{msg\+\_\+bytes}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+Feed wire bytes to the transport.
+
+\begin{DoxyReturn}{Returns}
+false if some bytes were invalid, in which case the transport can\textquotesingle{}t be used anymore.
+\end{DoxyReturn}
+Consumed bytes are chopped off the front of msg\+\_\+bytes. 
+
+Implements \textbf{ Transport} \doxyref{}{p.}{class_transport_af5340b2062e8681b6fb7d8f5a724102d}.
+
+\index{V1Transport@{V1Transport}!ReceivedMessageComplete@{ReceivedMessageComplete}}
+\index{ReceivedMessageComplete@{ReceivedMessageComplete}!V1Transport@{V1Transport}}
+\doxysubsubsection{ReceivedMessageComplete()}
+{\footnotesize\ttfamily \label{class_v1_transport_a8d29e67c1f1ec0f0bc1e0adcdb458c0d} 
+bool Received\+Message\+Complete (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}}
+
+Returns true if the current message is complete (so Get\+Received\+Message can be called). 
+
+Implements \textbf{ Transport} \doxyref{}{p.}{class_transport_ad72f1df14e7c2b557c3f780d25361073}.
+
+\index{V1Transport@{V1Transport}!SetMessageToSend@{SetMessageToSend}}
+\index{SetMessageToSend@{SetMessageToSend}!V1Transport@{V1Transport}}
+\doxysubsubsection{SetMessageToSend()}
+{\footnotesize\ttfamily \label{class_v1_transport_ae61bb32e8ff51cb3802156ab3eb10556} 
+bool Set\+Message\+To\+Send (\begin{DoxyParamCaption}\item[{\textbf{ CSerialized\+Net\+Msg} \&}]{msg}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [override]}, {\ttfamily [virtual]}, {\ttfamily [noexcept]}}
+
+Set the next message to send.
+
+If no message can currently be set (perhaps because the previous one is not yet done being sent), returns false, and msg will be unmodified. Otherwise msg is enqueued (and possibly moved-\/from) and true is returned. 
+
+Implements \textbf{ Transport} \doxyref{}{p.}{class_transport_a7f7875e9c9bf5903f84dba2123309c01}.
+
+\index{V1Transport@{V1Transport}!ShouldReconnectV1@{ShouldReconnectV1}}
+\index{ShouldReconnectV1@{ShouldReconnectV1}!V1Transport@{V1Transport}}
+\doxysubsubsection{ShouldReconnectV1()}
+{\footnotesize\ttfamily \label{class_v1_transport_a52b4f178e8f2d4477668b401ed7ea8e1} 
+bool Should\+Reconnect\+V1 (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [override]}, {\ttfamily [virtual]}, {\ttfamily [noexcept]}}
+
+Whether upon disconnections, a reconnect with V1 is warranted. 
+
+Implements \textbf{ Transport} \doxyref{}{p.}{class_transport_ab8e03c4ee651c248fe3c67c55844681c}.
+
+
+
+The documentation for this class was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+src/\textbf{ net.\+h}\item 
+src/\textbf{ net.\+cpp}\end{DoxyCompactItemize}

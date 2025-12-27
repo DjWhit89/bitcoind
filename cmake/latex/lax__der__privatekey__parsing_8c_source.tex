@@ -1,0 +1,118 @@
+\doxysection{lax\+\_\+der\+\_\+privatekey\+\_\+parsing.\+c}
+\label{lax__der__privatekey__parsing_8c_source}\index{src/secp256k1/contrib/lax\_der\_privatekey\_parsing.c@{src/secp256k1/contrib/lax\_der\_privatekey\_parsing.c}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2014,\ 2015\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <string.h>}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ "{}lax\_der\_privatekey\_parsing.h"{}}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{keywordtype}{int}\ ec\_privkey\_import\_der(\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *out32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *privkey,\ \textcolor{keywordtype}{size\_t}\ privkeylen)\ \{}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *end\ =\ privkey\ +\ privkeylen;}
+\DoxyCodeLine{00013\ \ \ \ \ \textcolor{keywordtype}{int}\ lenb\ =\ 0;}
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keywordtype}{int}\ len\ =\ 0;}
+\DoxyCodeLine{00015\ \ \ \ \ memset(out32,\ 0,\ 32);}
+\DoxyCodeLine{00016\ \ \ \ \ \textcolor{comment}{/*\ sequence\ header\ */}}
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{keywordflow}{if}\ (end\ <\ privkey+1\ ||\ *privkey\ !=\ 0x30)\ \{}
+\DoxyCodeLine{00018\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00019\ \ \ \ \ \}}
+\DoxyCodeLine{00020\ \ \ \ \ privkey++;}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{comment}{/*\ sequence\ length\ constructor\ */}}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keywordflow}{if}\ (end\ <\ privkey+1\ ||\ !(*privkey\ \&\ 0x80))\ \{}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00024\ \ \ \ \ \}}
+\DoxyCodeLine{00025\ \ \ \ \ lenb\ =\ *privkey\ \&\ \string~0x80;\ privkey++;}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordflow}{if}\ (lenb\ <\ 1\ ||\ lenb\ >\ 2)\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00028\ \ \ \ \ \}}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keywordflow}{if}\ (end\ <\ privkey+lenb)\ \{}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00031\ \ \ \ \ \}}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{comment}{/*\ sequence\ length\ */}}
+\DoxyCodeLine{00033\ \ \ \ \ len\ =\ privkey[lenb-\/1]\ |\ (lenb\ >\ 1\ ?\ privkey[lenb-\/2]\ <<\ 8\ :\ 0);}
+\DoxyCodeLine{00034\ \ \ \ \ privkey\ +=\ lenb;}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordflow}{if}\ (end\ <\ privkey+len)\ \{}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00037\ \ \ \ \ \}}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{comment}{/*\ sequence\ element\ 0:\ version\ number\ (=1)\ */}}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordflow}{if}\ (end\ <\ privkey+3\ ||\ privkey[0]\ !=\ 0x02\ ||\ privkey[1]\ !=\ 0x01\ ||\ privkey[2]\ !=\ 0x01)\ \{}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00041\ \ \ \ \ \}}
+\DoxyCodeLine{00042\ \ \ \ \ privkey\ +=\ 3;}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{comment}{/*\ sequence\ element\ 1:\ octet\ string,\ up\ to\ 32\ bytes\ */}}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordflow}{if}\ (end\ <\ privkey+2\ ||\ privkey[0]\ !=\ 0x04\ ||\ privkey[1]\ >\ 0x20\ ||\ end\ <\ privkey+2+privkey[1])\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00046\ \ \ \ \ \}}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordflow}{if}\ (privkey[1])\ memcpy(out32\ +\ 32\ -\/\ privkey[1],\ privkey\ +\ 2,\ privkey[1]);}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_ec\_seckey\_verify(ctx,\ out32))\ \{}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ memset(out32,\ 0,\ 32);}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00051\ \ \ \ \ \}}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00053\ \}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{keywordtype}{int}\ ec\_privkey\_export\_der(\textcolor{keyword}{const}\ secp256k1\_context\ *ctx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *privkey,\ \textcolor{keywordtype}{size\_t}\ *privkeylen,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *key32,\ \textcolor{keywordtype}{int}\ compressed)\ \{}
+\DoxyCodeLine{00056\ \ \ \ \ secp256k1\_pubkey\ pubkey;}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ pubkeylen\ =\ 0;}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_ec\_pubkey\_create(ctx,\ \&pubkey,\ key32))\ \{}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ *privkeylen\ =\ 0;}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00061\ \ \ \ \ \}}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordflow}{if}\ (compressed)\ \{}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ begin[]\ =\ \{}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ 0x30,0x81,0xD3,0x02,0x01,0x01,0x04,0x20}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ middle[]\ =\ \{}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA0,0x81,0x85,0x30,0x81,0x82,0x02,0x01,0x01,0x30,0x2C,0x06,0x07,0x2A,0x86,0x48,}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ 0xCE,0x3D,0x01,0x01,0x02,0x21,0x00,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,0xFF,0xFE,0xFF,0xFF,0xFC,0x2F,0x30,0x06,0x04,0x01,0x00,0x04,0x01,0x07,0x04,}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ 0x21,0x02,0x79,0xBE,0x66,0x7E,0xF9,0xDC,0xBB,0xAC,0x55,0xA0,0x62,0x95,0xCE,0x87,}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ 0x0B,0x07,0x02,0x9B,0xFC,0xDB,0x2D,0xCE,0x28,0xD9,0x59,0xF2,0x81,0x5B,0x16,0xF8,}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ 0x17,0x98,0x02,0x21,0x00,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,0xFF,0xFF,0xFF,0xFE,0xBA,0xAE,0xDC,0xE6,0xAF,0x48,0xA0,0x3B,0xBF,0xD2,0x5E,}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ \ \ \ \ 0x8C,0xD0,0x36,0x41,0x41,0x02,0x01,0x01,0xA1,0x24,0x03,0x22,0x00}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ptr\ =\ privkey;}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ memcpy(ptr,\ begin,\ \textcolor{keyword}{sizeof}(begin));\ ptr\ +=\ \textcolor{keyword}{sizeof}(begin);}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ memcpy(ptr,\ key32,\ 32);\ ptr\ +=\ 32;}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ memcpy(ptr,\ middle,\ \textcolor{keyword}{sizeof}(middle));\ ptr\ +=\ \textcolor{keyword}{sizeof}(middle);}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ pubkeylen\ =\ 33;}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ secp256k1\_ec\_pubkey\_serialize(ctx,\ ptr,\ \&pubkeylen,\ \&pubkey,\ SECP256K1\_EC\_COMPRESSED);}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ ptr\ +=\ pubkeylen;}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ *privkeylen\ =\ ptr\ -\/\ privkey;}
+\DoxyCodeLine{00085\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ begin[]\ =\ \{}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ 0x30,0x82,0x01,0x13,0x02,0x01,0x01,0x04,0x20}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ middle[]\ =\ \{}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ 0xA0,0x81,0xA5,0x30,0x81,0xA2,0x02,0x01,0x01,0x30,0x2C,0x06,0x07,0x2A,0x86,0x48,}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ 0xCE,0x3D,0x01,0x01,0x02,0x21,0x00,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,0xFF,0xFE,0xFF,0xFF,0xFC,0x2F,0x30,0x06,0x04,0x01,0x00,0x04,0x01,0x07,0x04,}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \ \ 0x41,0x04,0x79,0xBE,0x66,0x7E,0xF9,0xDC,0xBB,0xAC,0x55,0xA0,0x62,0x95,0xCE,0x87,}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ 0x0B,0x07,0x02,0x9B,0xFC,0xDB,0x2D,0xCE,0x28,0xD9,0x59,0xF2,0x81,0x5B,0x16,0xF8,}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ 0x17,0x98,0x48,0x3A,0xDA,0x77,0x26,0xA3,0xC4,0x65,0x5D,0xA4,0xFB,0xFC,0x0E,0x11,}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ 0x08,0xA8,0xFD,0x17,0xB4,0x48,0xA6,0x85,0x54,0x19,0x9C,0x47,0xD0,0x8F,0xFB,0x10,}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ 0xD4,0xB8,0x02,0x21,0x00,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ 0xFF,0xFF,0xFF,0xFF,0xFE,0xBA,0xAE,0xDC,0xE6,0xAF,0x48,0xA0,0x3B,0xBF,0xD2,0x5E,}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \ \ \ \ 0x8C,0xD0,0x36,0x41,0x41,0x02,0x01,0x01,0xA1,0x44,0x03,0x42,0x00}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ptr\ =\ privkey;}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ memcpy(ptr,\ begin,\ \textcolor{keyword}{sizeof}(begin));\ ptr\ +=\ \textcolor{keyword}{sizeof}(begin);}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ memcpy(ptr,\ key32,\ 32);\ ptr\ +=\ 32;}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ memcpy(ptr,\ middle,\ \textcolor{keyword}{sizeof}(middle));\ ptr\ +=\ \textcolor{keyword}{sizeof}(middle);}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ pubkeylen\ =\ 65;}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ secp256k1\_ec\_pubkey\_serialize(ctx,\ ptr,\ \&pubkeylen,\ \&pubkey,\ SECP256K1\_EC\_UNCOMPRESSED);}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ ptr\ +=\ pubkeylen;}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ *privkeylen\ =\ ptr\ -\/\ privkey;}
+\DoxyCodeLine{00110\ \ \ \ \ \}}
+\DoxyCodeLine{00111\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00112\ \}}
+
+\end{DoxyCode}

@@ -1,0 +1,547 @@
+\doxysection{ctaes.\+c}
+\label{ctaes_8c_source}\index{src/crypto/ctaes/ctaes.c@{src/crypto/ctaes/ctaes.c}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{\ /*********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2016\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ **********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{comment}{/*\ Constant\ time,\ unoptimized,\ concise,\ plain\ C,\ AES\ implementation}}
+\DoxyCodeLine{00008\ \textcolor{comment}{\ *\ Based\ On:}}
+\DoxyCodeLine{00009\ \textcolor{comment}{\ *\ \ \ Emilia\ Kasper\ and\ Peter\ Schwabe,\ Faster\ and\ Timing-\/Attack\ Resistant\ AES-\/GCM}}
+\DoxyCodeLine{00010\ \textcolor{comment}{\ *\ \ \ http://www.iacr.org/archive/ches2009/57470001/57470001.pdf}}
+\DoxyCodeLine{00011\ \textcolor{comment}{\ *\ But\ using\ 8\ 16-\/bit\ integers\ representing\ a\ single\ AES\ state\ rather\ than\ 8\ 128-\/bit}}
+\DoxyCodeLine{00012\ \textcolor{comment}{\ *\ integers\ representing\ 8\ AES\ states.}}
+\DoxyCodeLine{00013\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}ctaes.h"{}}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{comment}{/*\ Slice\ variable\ slice\_i\ contains\ the\ i'th\ bit\ of\ the\ 16\ state\ variables\ in\ this\ order:}}
+\DoxyCodeLine{00018\ \textcolor{comment}{\ *\ \ 0\ \ 1\ \ 2\ \ 3}}
+\DoxyCodeLine{00019\ \textcolor{comment}{\ *\ \ 4\ \ 5\ \ 6\ \ 7}}
+\DoxyCodeLine{00020\ \textcolor{comment}{\ *\ \ 8\ \ 9\ 10\ 11}}
+\DoxyCodeLine{00021\ \textcolor{comment}{\ *\ 12\ 13\ 14\ 15}}
+\DoxyCodeLine{00022\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ LoadByte(AES\_state*\ s,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ \textcolor{keywordtype}{byte},\ \textcolor{keywordtype}{int}\ r,\ \textcolor{keywordtype}{int}\ c)\ \{}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00027\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 8;\ i++)\ \{}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ s-\/>slice[i]\ |=\ (\textcolor{keywordtype}{byte}\ \&\ 1)\ <<\ (r\ *\ 4\ +\ c);}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{byte}\ >>=\ 1;}
+\DoxyCodeLine{00030\ \ \ \ \ \}}
+\DoxyCodeLine{00031\ \}}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00034\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ LoadBytes(AES\_state\ *s,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ data16)\ \{}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordtype}{int}\ c;}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{keywordflow}{for}\ (c\ =\ 0;\ c\ <\ 4;\ c++)\ \{}
+\DoxyCodeLine{00037\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ r;}
+\DoxyCodeLine{00038\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (r\ =\ 0;\ r\ <\ 4;\ r++)\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ \ \ \ \ \ \ \ \ LoadByte(s,\ *(data16++),\ r,\ c);}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00041\ \ \ \ \ \}}
+\DoxyCodeLine{00042\ \}}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00045\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ SaveBytes(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ data16,\ \textcolor{keyword}{const}\ AES\_state\ *s)\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{int}\ c;}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordflow}{for}\ (c\ =\ 0;\ c\ <\ 4;\ c++)\ \{}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ r;}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (r\ =\ 0;\ r\ <\ 4;\ r++)\ \{}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ b;}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \ \ \ \ uint8\_t\ v\ =\ 0;}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (b\ =\ 0;\ b\ <\ 8;\ b++)\ \{}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ v\ |=\ ((s-\/>slice[b]\ >>\ (r\ *\ 4\ +\ c))\ \&\ 1)\ <<\ b;}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ *(data16++)\ =\ v;}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00057\ \ \ \ \ \}}
+\DoxyCodeLine{00058\ \}}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \textcolor{comment}{/*\ S-\/box\ implementation\ based\ on\ the\ gate\ logic\ from:}}
+\DoxyCodeLine{00061\ \textcolor{comment}{\ *\ \ \ Joan\ Boyar\ and\ Rene\ Peralta,\ A\ depth-\/16\ circuit\ for\ the\ AES\ S-\/box.}}
+\DoxyCodeLine{00062\ \textcolor{comment}{\ *\ \ \ https://eprint.iacr.org/2011/332.pdf}}
+\DoxyCodeLine{00063\ \textcolor{comment}{*/}}
+\DoxyCodeLine{00064\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ SubBytes(AES\_state\ *s,\ \textcolor{keywordtype}{int}\ inv)\ \{}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{comment}{/*\ Load\ the\ bit\ slices\ */}}
+\DoxyCodeLine{00066\ \ \ \ \ uint16\_t\ U0\ =\ s-\/>slice[7],\ U1\ =\ s-\/>slice[6],\ U2\ =\ s-\/>slice[5],\ U3\ =\ s-\/>slice[4];}
+\DoxyCodeLine{00067\ \ \ \ \ uint16\_t\ U4\ =\ s-\/>slice[3],\ U5\ =\ s-\/>slice[2],\ U6\ =\ s-\/>slice[1],\ U7\ =\ s-\/>slice[0];}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \ \ uint16\_t\ T1,\ T2,\ T3,\ T4,\ T5,\ T6,\ T7,\ T8,\ T9,\ T10,\ T11,\ T12,\ T13,\ T14,\ T15,\ T16;}
+\DoxyCodeLine{00070\ \ \ \ \ uint16\_t\ T17,\ T18,\ T19,\ T20,\ T21,\ T22,\ T23,\ T24,\ T25,\ T26,\ T27,\ D;}
+\DoxyCodeLine{00071\ \ \ \ \ uint16\_t\ M1,\ M6,\ M11,\ M13,\ M15,\ M20,\ M21,\ M22,\ M23,\ M25,\ M37,\ M38,\ M39,\ M40;}
+\DoxyCodeLine{00072\ \ \ \ \ uint16\_t\ M41,\ M42,\ M43,\ M44,\ M45,\ M46,\ M47,\ M48,\ M49,\ M50,\ M51,\ M52,\ M53,\ M54;}
+\DoxyCodeLine{00073\ \ \ \ \ uint16\_t\ M55,\ M56,\ M57,\ M58,\ M59,\ M60,\ M61,\ M62,\ M63;}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keywordflow}{if}\ (inv)\ \{}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ uint16\_t\ R5,\ R13,\ R17,\ R18,\ R19;}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Undo\ linear\ postprocessing\ */}}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ T23\ =\ U0\ \string^\ U3;}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ T22\ =\ \string~(U1\ \string^\ U3);}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ T2\ =\ \string~(U0\ \string^\ U1);}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ T1\ =\ U3\ \string^\ U4;}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ T24\ =\ \string~(U4\ \string^\ U7);}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ R5\ =\ U6\ \string^\ U7;}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ T8\ =\ \string~(U1\ \string^\ T23);}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ T19\ =\ T22\ \string^\ R5;}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ T9\ =\ \string~(U7\ \string^\ T1);}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ T10\ =\ T2\ \string^\ T24;}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ T13\ =\ T2\ \string^\ R5;}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ T3\ =\ T1\ \string^\ R5;}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ T25\ =\ \string~(U2\ \string^\ T1);}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ R13\ =\ U1\ \string^\ U6;}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ T17\ =\ \string~(U2\ \string^\ T19);}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ T20\ =\ T24\ \string^\ R13;}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ T4\ =\ U4\ \string^\ T8;}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ R17\ =\ \string~(U2\ \string^\ U5);}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ R18\ =\ \string~(U5\ \string^\ U6);}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ R19\ =\ \string~(U2\ \string^\ U4);}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ D\ =\ U0\ \string^\ R17;}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ T6\ =\ T22\ \string^\ R17;}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ T16\ =\ R13\ \string^\ R19;}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ T27\ =\ T1\ \string^\ R18;}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ T15\ =\ T10\ \string^\ T27;}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ T14\ =\ T10\ \string^\ R18;}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ T26\ =\ T3\ \string^\ T16;}
+\DoxyCodeLine{00105\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Linear\ preprocessing.\ */}}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ T1\ =\ U0\ \string^\ U3;}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ T2\ =\ U0\ \string^\ U5;}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ T3\ =\ U0\ \string^\ U6;}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ T4\ =\ U3\ \string^\ U5;}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ T5\ =\ U4\ \string^\ U6;}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ T6\ =\ T1\ \string^\ T5;}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ T7\ =\ U1\ \string^\ U2;}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ T8\ =\ U7\ \string^\ T6;}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ T9\ =\ U7\ \string^\ T7;}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ T10\ =\ T6\ \string^\ T7;}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ T11\ =\ U1\ \string^\ U5;}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ T12\ =\ U2\ \string^\ U5;}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ T13\ =\ T3\ \string^\ T4;}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ T14\ =\ T6\ \string^\ T11;}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ T15\ =\ T5\ \string^\ T11;}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ T16\ =\ T5\ \string^\ T12;}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ T17\ =\ T9\ \string^\ T16;}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ T18\ =\ U3\ \string^\ U7;}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ T19\ =\ T7\ \string^\ T18;}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ T20\ =\ T1\ \string^\ T19;}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ T21\ =\ U6\ \string^\ U7;}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ T22\ =\ T7\ \string^\ T21;}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ T23\ =\ T2\ \string^\ T22;}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ T24\ =\ T2\ \string^\ T10;}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ T25\ =\ T20\ \string^\ T17;}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ T26\ =\ T3\ \string^\ T16;}
+\DoxyCodeLine{00133\ \ \ \ \ \ \ \ \ T27\ =\ T1\ \string^\ T12;}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ D\ =\ U7;}
+\DoxyCodeLine{00135\ \ \ \ \ \}}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{comment}{/*\ Non-\/linear\ transformation\ (shared\ between\ the\ forward\ and\ backward\ case)\ */}}
+\DoxyCodeLine{00138\ \ \ \ \ M1\ =\ T13\ \&\ T6;}
+\DoxyCodeLine{00139\ \ \ \ \ M6\ =\ T3\ \&\ T16;}
+\DoxyCodeLine{00140\ \ \ \ \ M11\ =\ T1\ \&\ T15;}
+\DoxyCodeLine{00141\ \ \ \ \ M13\ =\ (T4\ \&\ T27)\ \string^\ M11;}
+\DoxyCodeLine{00142\ \ \ \ \ M15\ =\ (T2\ \&\ T10)\ \string^\ M11;}
+\DoxyCodeLine{00143\ \ \ \ \ M20\ =\ T14\ \string^\ M1\ \string^\ (T23\ \&\ T8)\ \string^\ M13;}
+\DoxyCodeLine{00144\ \ \ \ \ M21\ =\ (T19\ \&\ D)\ \string^\ M1\ \string^\ T24\ \string^\ M15;}
+\DoxyCodeLine{00145\ \ \ \ \ M22\ =\ T26\ \string^\ M6\ \string^\ (T22\ \&\ T9)\ \string^\ M13;}
+\DoxyCodeLine{00146\ \ \ \ \ M23\ =\ (T20\ \&\ T17)\ \string^\ M6\ \string^\ M15\ \string^\ T25;}
+\DoxyCodeLine{00147\ \ \ \ \ M25\ =\ M22\ \&\ M20;}
+\DoxyCodeLine{00148\ \ \ \ \ M37\ =\ M21\ \string^\ ((M20\ \string^\ M21)\ \&\ (M23\ \string^\ M25));}
+\DoxyCodeLine{00149\ \ \ \ \ M38\ =\ M20\ \string^\ M25\ \string^\ (M21\ |\ (M20\ \&\ M23));}
+\DoxyCodeLine{00150\ \ \ \ \ M39\ =\ M23\ \string^\ ((M22\ \string^\ M23)\ \&\ (M21\ \string^\ M25));}
+\DoxyCodeLine{00151\ \ \ \ \ M40\ =\ M22\ \string^\ M25\ \string^\ (M23\ |\ (M21\ \&\ M22));}
+\DoxyCodeLine{00152\ \ \ \ \ M41\ =\ M38\ \string^\ M40;}
+\DoxyCodeLine{00153\ \ \ \ \ M42\ =\ M37\ \string^\ M39;}
+\DoxyCodeLine{00154\ \ \ \ \ M43\ =\ M37\ \string^\ M38;}
+\DoxyCodeLine{00155\ \ \ \ \ M44\ =\ M39\ \string^\ M40;}
+\DoxyCodeLine{00156\ \ \ \ \ M45\ =\ M42\ \string^\ M41;}
+\DoxyCodeLine{00157\ \ \ \ \ M46\ =\ M44\ \&\ T6;}
+\DoxyCodeLine{00158\ \ \ \ \ M47\ =\ M40\ \&\ T8;}
+\DoxyCodeLine{00159\ \ \ \ \ M48\ =\ M39\ \&\ D;}
+\DoxyCodeLine{00160\ \ \ \ \ M49\ =\ M43\ \&\ T16;}
+\DoxyCodeLine{00161\ \ \ \ \ M50\ =\ M38\ \&\ T9;}
+\DoxyCodeLine{00162\ \ \ \ \ M51\ =\ M37\ \&\ T17;}
+\DoxyCodeLine{00163\ \ \ \ \ M52\ =\ M42\ \&\ T15;}
+\DoxyCodeLine{00164\ \ \ \ \ M53\ =\ M45\ \&\ T27;}
+\DoxyCodeLine{00165\ \ \ \ \ M54\ =\ M41\ \&\ T10;}
+\DoxyCodeLine{00166\ \ \ \ \ M55\ =\ M44\ \&\ T13;}
+\DoxyCodeLine{00167\ \ \ \ \ M56\ =\ M40\ \&\ T23;}
+\DoxyCodeLine{00168\ \ \ \ \ M57\ =\ M39\ \&\ T19;}
+\DoxyCodeLine{00169\ \ \ \ \ M58\ =\ M43\ \&\ T3;}
+\DoxyCodeLine{00170\ \ \ \ \ M59\ =\ M38\ \&\ T22;}
+\DoxyCodeLine{00171\ \ \ \ \ M60\ =\ M37\ \&\ T20;}
+\DoxyCodeLine{00172\ \ \ \ \ M61\ =\ M42\ \&\ T1;}
+\DoxyCodeLine{00173\ \ \ \ \ M62\ =\ M45\ \&\ T4;}
+\DoxyCodeLine{00174\ \ \ \ \ M63\ =\ M41\ \&\ T2;}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ \ \ \ \ \textcolor{keywordflow}{if}\ (inv)\{}
+\DoxyCodeLine{00177\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Undo\ linear\ preprocessing\ */}}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ uint16\_t\ P0\ =\ M52\ \string^\ M61;}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ uint16\_t\ P1\ =\ M58\ \string^\ M59;}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ uint16\_t\ P2\ =\ M54\ \string^\ M62;}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ uint16\_t\ P3\ =\ M47\ \string^\ M50;}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ uint16\_t\ P4\ =\ M48\ \string^\ M56;}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ uint16\_t\ P5\ =\ M46\ \string^\ M51;}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ uint16\_t\ P6\ =\ M49\ \string^\ M60;}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ uint16\_t\ P7\ =\ P0\ \string^\ P1;}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ uint16\_t\ P8\ =\ M50\ \string^\ M53;}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ uint16\_t\ P9\ =\ M55\ \string^\ M63;}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ uint16\_t\ P10\ =\ M57\ \string^\ P4;}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ uint16\_t\ P11\ =\ P0\ \string^\ P3;}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ uint16\_t\ P12\ =\ M46\ \string^\ M48;}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ uint16\_t\ P13\ =\ M49\ \string^\ M51;}
+\DoxyCodeLine{00192\ \ \ \ \ \ \ \ \ uint16\_t\ P14\ =\ M49\ \string^\ M62;}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ uint16\_t\ P15\ =\ M54\ \string^\ M59;}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ uint16\_t\ P16\ =\ M57\ \string^\ M61;}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ uint16\_t\ P17\ =\ M58\ \string^\ P2;}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ uint16\_t\ P18\ =\ M63\ \string^\ P5;}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ uint16\_t\ P19\ =\ P2\ \string^\ P3;}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ uint16\_t\ P20\ =\ P4\ \string^\ P6;}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ uint16\_t\ P22\ =\ P2\ \string^\ P7;}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ uint16\_t\ P23\ =\ P7\ \string^\ P8;}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ uint16\_t\ P24\ =\ P5\ \string^\ P7;}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ uint16\_t\ P25\ =\ P6\ \string^\ P10;}
+\DoxyCodeLine{00203\ \ \ \ \ \ \ \ \ uint16\_t\ P26\ =\ P9\ \string^\ P11;}
+\DoxyCodeLine{00204\ \ \ \ \ \ \ \ \ uint16\_t\ P27\ =\ P10\ \string^\ P18;}
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ uint16\_t\ P28\ =\ P11\ \string^\ P25;}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ uint16\_t\ P29\ =\ P15\ \string^\ P20;}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ s-\/>slice[7]\ =\ P13\ \string^\ P22;}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ s-\/>slice[6]\ =\ P26\ \string^\ P29;}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ s-\/>slice[5]\ =\ P17\ \string^\ P28;}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ s-\/>slice[4]\ =\ P12\ \string^\ P22;}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ s-\/>slice[3]\ =\ P23\ \string^\ P27;}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ s-\/>slice[2]\ =\ P19\ \string^\ P24;}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ s-\/>slice[1]\ =\ P14\ \string^\ P23;}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ s-\/>slice[0]\ =\ P9\ \string^\ P16;}
+\DoxyCodeLine{00215\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Linear\ postprocessing\ */}}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ uint16\_t\ L0\ =\ M61\ \string^\ M62;}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ uint16\_t\ L1\ =\ M50\ \string^\ M56;}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ uint16\_t\ L2\ =\ M46\ \string^\ M48;}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ uint16\_t\ L3\ =\ M47\ \string^\ M55;}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ uint16\_t\ L4\ =\ M54\ \string^\ M58;}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ uint16\_t\ L5\ =\ M49\ \string^\ M61;}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ uint16\_t\ L6\ =\ M62\ \string^\ L5;}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ uint16\_t\ L7\ =\ M46\ \string^\ L3;}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ uint16\_t\ L8\ =\ M51\ \string^\ M59;}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ uint16\_t\ L9\ =\ M52\ \string^\ M53;}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ uint16\_t\ L10\ =\ M53\ \string^\ L4;}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ uint16\_t\ L11\ =\ M60\ \string^\ L2;}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ uint16\_t\ L12\ =\ M48\ \string^\ M51;}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ uint16\_t\ L13\ =\ M50\ \string^\ L0;}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ uint16\_t\ L14\ =\ M52\ \string^\ M61;}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ uint16\_t\ L15\ =\ M55\ \string^\ L1;}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ uint16\_t\ L16\ =\ M56\ \string^\ L0;}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ uint16\_t\ L17\ =\ M57\ \string^\ L1;}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ uint16\_t\ L18\ =\ M58\ \string^\ L8;}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ uint16\_t\ L19\ =\ M63\ \string^\ L4;}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ uint16\_t\ L20\ =\ L0\ \string^\ L1;}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ uint16\_t\ L21\ =\ L1\ \string^\ L7;}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ uint16\_t\ L22\ =\ L3\ \string^\ L12;}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ uint16\_t\ L23\ =\ L18\ \string^\ L2;}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ uint16\_t\ L24\ =\ L15\ \string^\ L9;}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ uint16\_t\ L25\ =\ L6\ \string^\ L10;}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ uint16\_t\ L26\ =\ L7\ \string^\ L9;}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ uint16\_t\ L27\ =\ L8\ \string^\ L10;}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ uint16\_t\ L28\ =\ L11\ \string^\ L14;}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ uint16\_t\ L29\ =\ L11\ \string^\ L17;}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ s-\/>slice[7]\ =\ L6\ \string^\ L24;}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ s-\/>slice[6]\ =\ \string~(L16\ \string^\ L26);}
+\DoxyCodeLine{00249\ \ \ \ \ \ \ \ \ s-\/>slice[5]\ =\ \string~(L19\ \string^\ L28);}
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ s-\/>slice[4]\ =\ L6\ \string^\ L21;}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ s-\/>slice[3]\ =\ L20\ \string^\ L22;}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ s-\/>slice[2]\ =\ L25\ \string^\ L29;}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ s-\/>slice[1]\ =\ \string~(L13\ \string^\ L27);}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ s-\/>slice[0]\ =\ \string~(L6\ \string^\ L23);}
+\DoxyCodeLine{00255\ \ \ \ \ \}}
+\DoxyCodeLine{00256\ \}}
+\DoxyCodeLine{00257\ }
+\DoxyCodeLine{00258\ \textcolor{preprocessor}{\#define\ BIT\_RANGE(from,to)\ (((1\ <<\ ((to)\ -\/\ (from)))\ -\/\ 1)\ <<\ (from))}}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00260\ \textcolor{preprocessor}{\#define\ BIT\_RANGE\_LEFT(x,from,to,shift)\ (((x)\ \&\ BIT\_RANGE((from),\ (to)))\ <<\ (shift))}}
+\DoxyCodeLine{00261\ \textcolor{preprocessor}{\#define\ BIT\_RANGE\_RIGHT(x,from,to,shift)\ (((x)\ \&\ BIT\_RANGE((from),\ (to)))\ >>\ (shift))}}
+\DoxyCodeLine{00262\ }
+\DoxyCodeLine{00263\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ ShiftRows(AES\_state*\ s)\ \{}
+\DoxyCodeLine{00264\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00265\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 8;\ i++)\ \{}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ uint16\_t\ v\ =\ s-\/>slice[i];}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ s-\/>slice[i]\ =}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \ \ \ \ (v\ \&\ BIT\_RANGE(0,\ 4))\ |}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ \ \ \ \ BIT\_RANGE\_LEFT(v,\ 4,\ 5,\ 3)\ |\ BIT\_RANGE\_RIGHT(v,\ 5,\ 8,\ 1)\ |}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ \ \ \ \ BIT\_RANGE\_LEFT(v,\ 8,\ 10,\ 2)\ |\ BIT\_RANGE\_RIGHT(v,\ 10,\ 12,\ 2)\ |}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \ \ \ \ BIT\_RANGE\_LEFT(v,\ 12,\ 15,\ 1)\ |\ BIT\_RANGE\_RIGHT(v,\ 15,\ 16,\ 3);}
+\DoxyCodeLine{00272\ \ \ \ \ \}}
+\DoxyCodeLine{00273\ \}}
+\DoxyCodeLine{00274\ }
+\DoxyCodeLine{00275\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ InvShiftRows(AES\_state*\ s)\ \{}
+\DoxyCodeLine{00276\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 8;\ i++)\ \{}
+\DoxyCodeLine{00278\ \ \ \ \ \ \ \ \ uint16\_t\ v\ =\ s-\/>slice[i];}
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ s-\/>slice[i]\ =}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \ \ \ \ (v\ \&\ BIT\_RANGE(0,\ 4))\ |}
+\DoxyCodeLine{00281\ \ \ \ \ \ \ \ \ \ \ \ \ BIT\_RANGE\_LEFT(v,\ 4,\ 7,\ 1)\ |\ BIT\_RANGE\_RIGHT(v,\ 7,\ 8,\ 3)\ |}
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \ \ \ \ BIT\_RANGE\_LEFT(v,\ 8,\ 10,\ 2)\ |\ BIT\_RANGE\_RIGHT(v,\ 10,\ 12,\ 2)\ |}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ \ \ \ \ BIT\_RANGE\_LEFT(v,\ 12,\ 13,\ 3)\ |\ BIT\_RANGE\_RIGHT(v,\ 13,\ 16,\ 1);}
+\DoxyCodeLine{00284\ \ \ \ \ \}}
+\DoxyCodeLine{00285\ \}}
+\DoxyCodeLine{00286\ }
+\DoxyCodeLine{00287\ \textcolor{preprocessor}{\#define\ ROT(x,b)\ (((x)\ >>\ ((b)\ *\ 4))\ |\ ((x)\ <<\ ((4-\/(b))\ *\ 4)))}}
+\DoxyCodeLine{00288\ }
+\DoxyCodeLine{00289\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ MixColumns(AES\_state*\ s,\ \textcolor{keywordtype}{int}\ inv)\ \{}
+\DoxyCodeLine{00290\ \ \ \ \ \textcolor{comment}{/*\ The\ MixColumns\ transform\ treats\ the\ bytes\ of\ the\ columns\ of\ the\ state\ as}}
+\DoxyCodeLine{00291\ \textcolor{comment}{\ \ \ \ \ *\ coefficients\ of\ a\ 3rd\ degree\ polynomial\ over\ GF(2\string^8)\ and\ multiplies\ them}}
+\DoxyCodeLine{00292\ \textcolor{comment}{\ \ \ \ \ *\ by\ the\ fixed\ polynomial\ a(x)\ =\ \{03\}x\string^3\ +\ \{01\}x\string^2\ +\ \{01\}x\ +\ \{02\},\ modulo}}
+\DoxyCodeLine{00293\ \textcolor{comment}{\ \ \ \ \ *\ x\string^4\ +\ \{01\}.}}
+\DoxyCodeLine{00294\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00295\ \textcolor{comment}{\ \ \ \ \ *\ In\ the\ inverse\ transform,\ we\ multiply\ by\ the\ inverse\ of\ a(x),}}
+\DoxyCodeLine{00296\ \textcolor{comment}{\ \ \ \ \ *\ a\string^-\/1(x)\ =\ \{0b\}x\string^3\ +\ \{0d\}x\string^2\ +\ \{09\}x\ +\ \{0e\}.\ This\ is\ equal\ to}}
+\DoxyCodeLine{00297\ \textcolor{comment}{\ \ \ \ \ *\ a(x)\ *\ (\{04\}x\string^2\ +\ \{05\}),\ so\ we\ can\ reuse\ the\ forward\ transform's\ code}}
+\DoxyCodeLine{00298\ \textcolor{comment}{\ \ \ \ \ *\ (found\ in\ OpenSSL's\ bsaes-\/x86\_64.pl,\ attributed\ to\ Jussi\ Kivilinna)}}
+\DoxyCodeLine{00299\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00300\ \textcolor{comment}{\ \ \ \ \ *\ In\ the\ bitsliced\ representation,\ a\ multiplication\ of\ every\ column\ by\ x}}
+\DoxyCodeLine{00301\ \textcolor{comment}{\ \ \ \ \ *\ mod\ x\string^4\ +\ 1\ is\ simply\ a\ right\ rotation.}}
+\DoxyCodeLine{00302\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00303\ }
+\DoxyCodeLine{00304\ \ \ \ \ \textcolor{comment}{/*\ Shared\ for\ both\ directions\ is\ a\ multiplication\ by\ a(x),\ which\ can\ be}}
+\DoxyCodeLine{00305\ \textcolor{comment}{\ \ \ \ \ *\ rewritten\ as\ (x\string^3\ +\ x\string^2\ +\ x)\ +\ \{02\}*(x\string^3\ +\ \{01\}).}}
+\DoxyCodeLine{00306\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00307\ \textcolor{comment}{\ \ \ \ \ *\ First\ compute\ s\ into\ the\ s?\ variables,\ (x\string^3\ +\ \{01\})\ *\ s\ into\ the\ s?\_01}}
+\DoxyCodeLine{00308\ \textcolor{comment}{\ \ \ \ \ *\ variables\ and\ (x\string^3\ +\ x\string^2\ +\ x)*s\ into\ the\ s?\_123\ variables.}}
+\DoxyCodeLine{00309\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00310\ \ \ \ \ uint16\_t\ s0\ =\ s-\/>slice[0],\ s1\ =\ s-\/>slice[1],\ s2\ =\ s-\/>slice[2],\ s3\ =\ s-\/>slice[3];}
+\DoxyCodeLine{00311\ \ \ \ \ uint16\_t\ s4\ =\ s-\/>slice[4],\ s5\ =\ s-\/>slice[5],\ s6\ =\ s-\/>slice[6],\ s7\ =\ s-\/>slice[7];}
+\DoxyCodeLine{00312\ \ \ \ \ uint16\_t\ s0\_01\ =\ s0\ \string^\ ROT(s0,\ 1),\ s0\_123\ =\ ROT(s0\_01,\ 1)\ \string^\ ROT(s0,\ 3);}
+\DoxyCodeLine{00313\ \ \ \ \ uint16\_t\ s1\_01\ =\ s1\ \string^\ ROT(s1,\ 1),\ s1\_123\ =\ ROT(s1\_01,\ 1)\ \string^\ ROT(s1,\ 3);}
+\DoxyCodeLine{00314\ \ \ \ \ uint16\_t\ s2\_01\ =\ s2\ \string^\ ROT(s2,\ 1),\ s2\_123\ =\ ROT(s2\_01,\ 1)\ \string^\ ROT(s2,\ 3);}
+\DoxyCodeLine{00315\ \ \ \ \ uint16\_t\ s3\_01\ =\ s3\ \string^\ ROT(s3,\ 1),\ s3\_123\ =\ ROT(s3\_01,\ 1)\ \string^\ ROT(s3,\ 3);}
+\DoxyCodeLine{00316\ \ \ \ \ uint16\_t\ s4\_01\ =\ s4\ \string^\ ROT(s4,\ 1),\ s4\_123\ =\ ROT(s4\_01,\ 1)\ \string^\ ROT(s4,\ 3);}
+\DoxyCodeLine{00317\ \ \ \ \ uint16\_t\ s5\_01\ =\ s5\ \string^\ ROT(s5,\ 1),\ s5\_123\ =\ ROT(s5\_01,\ 1)\ \string^\ ROT(s5,\ 3);}
+\DoxyCodeLine{00318\ \ \ \ \ uint16\_t\ s6\_01\ =\ s6\ \string^\ ROT(s6,\ 1),\ s6\_123\ =\ ROT(s6\_01,\ 1)\ \string^\ ROT(s6,\ 3);}
+\DoxyCodeLine{00319\ \ \ \ \ uint16\_t\ s7\_01\ =\ s7\ \string^\ ROT(s7,\ 1),\ s7\_123\ =\ ROT(s7\_01,\ 1)\ \string^\ ROT(s7,\ 3);}
+\DoxyCodeLine{00320\ \ \ \ \ \textcolor{comment}{/*\ Now\ compute\ s\ =\ s?\_123\ +\ \{02\}\ *\ s?\_01.\ */}}
+\DoxyCodeLine{00321\ \ \ \ \ s-\/>slice[0]\ =\ s7\_01\ \string^\ s0\_123;}
+\DoxyCodeLine{00322\ \ \ \ \ s-\/>slice[1]\ =\ s7\_01\ \string^\ s0\_01\ \string^\ s1\_123;}
+\DoxyCodeLine{00323\ \ \ \ \ s-\/>slice[2]\ =\ s1\_01\ \string^\ s2\_123;}
+\DoxyCodeLine{00324\ \ \ \ \ s-\/>slice[3]\ =\ s7\_01\ \string^\ s2\_01\ \string^\ s3\_123;}
+\DoxyCodeLine{00325\ \ \ \ \ s-\/>slice[4]\ =\ s7\_01\ \string^\ s3\_01\ \string^\ s4\_123;}
+\DoxyCodeLine{00326\ \ \ \ \ s-\/>slice[5]\ =\ s4\_01\ \string^\ s5\_123;}
+\DoxyCodeLine{00327\ \ \ \ \ s-\/>slice[6]\ =\ s5\_01\ \string^\ s6\_123;}
+\DoxyCodeLine{00328\ \ \ \ \ s-\/>slice[7]\ =\ s6\_01\ \string^\ s7\_123;}
+\DoxyCodeLine{00329\ \ \ \ \ \textcolor{keywordflow}{if}\ (inv)\ \{}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ In\ the\ reverse\ direction,\ we\ further\ need\ to\ multiply\ by}}
+\DoxyCodeLine{00331\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ \{04\}x\string^2\ +\ \{05\},\ which\ can\ be\ written\ as\ \{04\}\ *\ (x\string^2\ +\ \{01\})\ +\ \{01\}.}}
+\DoxyCodeLine{00332\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00333\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ First\ compute\ (x\string^2\ +\ \{01\})\ *\ s\ into\ the\ t?\_02\ variables:\ */}}
+\DoxyCodeLine{00334\ \ \ \ \ \ \ \ \ uint16\_t\ t0\_02\ =\ s-\/>slice[0]\ \string^\ ROT(s-\/>slice[0],\ 2);}
+\DoxyCodeLine{00335\ \ \ \ \ \ \ \ \ uint16\_t\ t1\_02\ =\ s-\/>slice[1]\ \string^\ ROT(s-\/>slice[1],\ 2);}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ uint16\_t\ t2\_02\ =\ s-\/>slice[2]\ \string^\ ROT(s-\/>slice[2],\ 2);}
+\DoxyCodeLine{00337\ \ \ \ \ \ \ \ \ uint16\_t\ t3\_02\ =\ s-\/>slice[3]\ \string^\ ROT(s-\/>slice[3],\ 2);}
+\DoxyCodeLine{00338\ \ \ \ \ \ \ \ \ uint16\_t\ t4\_02\ =\ s-\/>slice[4]\ \string^\ ROT(s-\/>slice[4],\ 2);}
+\DoxyCodeLine{00339\ \ \ \ \ \ \ \ \ uint16\_t\ t5\_02\ =\ s-\/>slice[5]\ \string^\ ROT(s-\/>slice[5],\ 2);}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ uint16\_t\ t6\_02\ =\ s-\/>slice[6]\ \string^\ ROT(s-\/>slice[6],\ 2);}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ uint16\_t\ t7\_02\ =\ s-\/>slice[7]\ \string^\ ROT(s-\/>slice[7],\ 2);}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ And\ then\ update\ s\ +=\ \{04\}\ *\ t?\_02\ */}}
+\DoxyCodeLine{00343\ \ \ \ \ \ \ \ \ s-\/>slice[0]\ \string^=\ t6\_02;}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ s-\/>slice[1]\ \string^=\ t6\_02\ \string^\ t7\_02;}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ s-\/>slice[2]\ \string^=\ t0\_02\ \string^\ t7\_02;}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ s-\/>slice[3]\ \string^=\ t1\_02\ \string^\ t6\_02;}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ s-\/>slice[4]\ \string^=\ t2\_02\ \string^\ t6\_02\ \string^\ t7\_02;}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ s-\/>slice[5]\ \string^=\ t3\_02\ \string^\ t7\_02;}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ s-\/>slice[6]\ \string^=\ t4\_02;}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ s-\/>slice[7]\ \string^=\ t5\_02;}
+\DoxyCodeLine{00351\ \ \ \ \ \}}
+\DoxyCodeLine{00352\ \}}
+\DoxyCodeLine{00353\ }
+\DoxyCodeLine{00354\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ AddRoundKey(AES\_state*\ s,\ \textcolor{keyword}{const}\ AES\_state*\ round)\ \{}
+\DoxyCodeLine{00355\ \ \ \ \ \textcolor{keywordtype}{int}\ b;}
+\DoxyCodeLine{00356\ \ \ \ \ \textcolor{keywordflow}{for}\ (b\ =\ 0;\ b\ <\ 8;\ b++)\ \{}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ s-\/>slice[b]\ \string^=\ round-\/>slice[b];}
+\DoxyCodeLine{00358\ \ \ \ \ \}}
+\DoxyCodeLine{00359\ \}}
+\DoxyCodeLine{00360\ }
+\DoxyCodeLine{00362\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ GetOneColumn(AES\_state*\ s,\ \textcolor{keyword}{const}\ AES\_state*\ a,\ \textcolor{keywordtype}{int}\ c)\ \{}
+\DoxyCodeLine{00363\ \ \ \ \ \textcolor{keywordtype}{int}\ b;}
+\DoxyCodeLine{00364\ \ \ \ \ \textcolor{keywordflow}{for}\ (b\ =\ 0;\ b\ <\ 8;\ b++)\ \{}
+\DoxyCodeLine{00365\ \ \ \ \ \ \ \ \ s-\/>slice[b]\ =\ (a-\/>slice[b]\ >>\ c)\ \&\ 0x1111;}
+\DoxyCodeLine{00366\ \ \ \ \ \}}
+\DoxyCodeLine{00367\ \}}
+\DoxyCodeLine{00368\ }
+\DoxyCodeLine{00370\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ KeySetupColumnMix(AES\_state*\ s,\ AES\_state*\ r,\ \textcolor{keyword}{const}\ AES\_state*\ a,\ \textcolor{keywordtype}{int}\ c1,\ \textcolor{keywordtype}{int}\ c2)\ \{}
+\DoxyCodeLine{00371\ \ \ \ \ \textcolor{keywordtype}{int}\ b;}
+\DoxyCodeLine{00372\ \ \ \ \ \textcolor{keywordflow}{for}\ (b\ =\ 0;\ b\ <\ 8;\ b++)\ \{}
+\DoxyCodeLine{00373\ \ \ \ \ \ \ \ \ r-\/>slice[b]\ |=\ ((s-\/>slice[b]\ \string^=\ ((a-\/>slice[b]\ >>\ c2)\ \&\ 0x1111))\ \&\ 0x1111)\ <<\ c1;}
+\DoxyCodeLine{00374\ \ \ \ \ \}}
+\DoxyCodeLine{00375\ \}}
+\DoxyCodeLine{00376\ }
+\DoxyCodeLine{00378\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ KeySetupTransform(AES\_state*\ s,\ \textcolor{keyword}{const}\ AES\_state*\ r)\ \{}
+\DoxyCodeLine{00379\ \ \ \ \ \textcolor{keywordtype}{int}\ b;}
+\DoxyCodeLine{00380\ \ \ \ \ \textcolor{keywordflow}{for}\ (b\ =\ 0;\ b\ <\ 8;\ b++)\ \{}
+\DoxyCodeLine{00381\ \ \ \ \ \ \ \ \ s-\/>slice[b]\ =\ ((s-\/>slice[b]\ >>\ 4)\ |\ (s-\/>slice[b]\ <<\ 12))\ \string^\ r-\/>slice[b];}
+\DoxyCodeLine{00382\ \ \ \ \ \}}
+\DoxyCodeLine{00383\ \}}
+\DoxyCodeLine{00384\ }
+\DoxyCodeLine{00385\ \textcolor{comment}{/*\ Multiply\ the\ cells\ in\ s\ by\ x,\ as\ polynomials\ over\ GF(2)\ mod\ x\string^8\ +\ x\string^4\ +\ x\string^3\ +\ x\ +\ 1\ */}}
+\DoxyCodeLine{00386\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ MultX(AES\_state*\ s)\ \{}
+\DoxyCodeLine{00387\ \ \ \ \ uint16\_t\ top\ =\ s-\/>slice[7];}
+\DoxyCodeLine{00388\ \ \ \ \ s-\/>slice[7]\ =\ s-\/>slice[6];}
+\DoxyCodeLine{00389\ \ \ \ \ s-\/>slice[6]\ =\ s-\/>slice[5];}
+\DoxyCodeLine{00390\ \ \ \ \ s-\/>slice[5]\ =\ s-\/>slice[4];}
+\DoxyCodeLine{00391\ \ \ \ \ s-\/>slice[4]\ =\ s-\/>slice[3]\ \string^\ top;}
+\DoxyCodeLine{00392\ \ \ \ \ s-\/>slice[3]\ =\ s-\/>slice[2]\ \string^\ top;}
+\DoxyCodeLine{00393\ \ \ \ \ s-\/>slice[2]\ =\ s-\/>slice[1];}
+\DoxyCodeLine{00394\ \ \ \ \ s-\/>slice[1]\ =\ s-\/>slice[0]\ \string^\ top;}
+\DoxyCodeLine{00395\ \ \ \ \ s-\/>slice[0]\ =\ top;}
+\DoxyCodeLine{00396\ \}}
+\DoxyCodeLine{00397\ }
+\DoxyCodeLine{00407\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ AES\_setup(AES\_state*\ rounds,\ \textcolor{keyword}{const}\ uint8\_t*\ key,\ \textcolor{keywordtype}{int}\ nkeywords,\ \textcolor{keywordtype}{int}\ nrounds)}
+\DoxyCodeLine{00408\ \{}
+\DoxyCodeLine{00409\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00410\ }
+\DoxyCodeLine{00411\ \ \ \ \ \textcolor{comment}{/*\ The\ one-\/byte\ round\ constant\ */}}
+\DoxyCodeLine{00412\ \ \ \ \ AES\_state\ rcon\ =\ \{\{1,0,0,0,0,0,0,0\}\};}
+\DoxyCodeLine{00413\ \ \ \ \ \textcolor{comment}{/*\ The\ number\ of\ the\ word\ being\ generated,\ modulo\ nkeywords\ */}}
+\DoxyCodeLine{00414\ \ \ \ \ \textcolor{keywordtype}{int}\ pos\ =\ 0;}
+\DoxyCodeLine{00415\ \ \ \ \ \textcolor{comment}{/*\ The\ column\ representing\ the\ word\ currently\ being\ processed\ */}}
+\DoxyCodeLine{00416\ \ \ \ \ AES\_state\ column;}
+\DoxyCodeLine{00417\ }
+\DoxyCodeLine{00418\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ nrounds\ +\ 1;\ i++)\ \{}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ b;}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (b\ =\ 0;\ b\ <\ 8;\ b++)\ \{}
+\DoxyCodeLine{00421\ \ \ \ \ \ \ \ \ \ \ \ \ rounds[i].slice[b]\ =\ 0;}
+\DoxyCodeLine{00422\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00423\ \ \ \ \ \}}
+\DoxyCodeLine{00424\ }
+\DoxyCodeLine{00425\ \ \ \ \ \textcolor{comment}{/*\ The\ first\ nkeywords\ round\ columns\ are\ just\ taken\ from\ the\ key\ directly.\ */}}
+\DoxyCodeLine{00426\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ nkeywords;\ i++)\ \{}
+\DoxyCodeLine{00427\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ r;}
+\DoxyCodeLine{00428\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (r\ =\ 0;\ r\ <\ 4;\ r++)\ \{}
+\DoxyCodeLine{00429\ \ \ \ \ \ \ \ \ \ \ \ \ LoadByte(\&rounds[i\ >>\ 2],\ *(key++),\ r,\ i\ \&\ 3);}
+\DoxyCodeLine{00430\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00431\ \ \ \ \ \}}
+\DoxyCodeLine{00432\ }
+\DoxyCodeLine{00433\ \ \ \ \ GetOneColumn(\&column,\ \&rounds[(nkeywords\ -\/\ 1)\ >>\ 2],\ (nkeywords\ -\/\ 1)\ \&\ 3);}
+\DoxyCodeLine{00434\ }
+\DoxyCodeLine{00435\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ nkeywords;\ i\ <\ 4\ *\ (nrounds\ +\ 1);\ i++)\ \{}
+\DoxyCodeLine{00436\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Transform\ column\ */}}
+\DoxyCodeLine{00437\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ ==\ 0)\ \{}
+\DoxyCodeLine{00438\ \ \ \ \ \ \ \ \ \ \ \ \ SubBytes(\&column,\ 0);}
+\DoxyCodeLine{00439\ \ \ \ \ \ \ \ \ \ \ \ \ KeySetupTransform(\&column,\ \&rcon);}
+\DoxyCodeLine{00440\ \ \ \ \ \ \ \ \ \ \ \ \ MultX(\&rcon);}
+\DoxyCodeLine{00441\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (nkeywords\ >\ 6\ \&\&\ pos\ ==\ 4)\ \{}
+\DoxyCodeLine{00442\ \ \ \ \ \ \ \ \ \ \ \ \ SubBytes(\&column,\ 0);}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (++pos\ ==\ nkeywords)\ pos\ =\ 0;}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ KeySetupColumnMix(\&column,\ \&rounds[i\ >>\ 2],\ \&rounds[(i\ -\/\ nkeywords)\ >>\ 2],\ i\ \&\ 3,\ (i\ -\/\ nkeywords)\ \&\ 3);}
+\DoxyCodeLine{00446\ \ \ \ \ \}}
+\DoxyCodeLine{00447\ \}}
+\DoxyCodeLine{00448\ }
+\DoxyCodeLine{00449\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ AES\_encrypt(\textcolor{keyword}{const}\ AES\_state*\ rounds,\ \textcolor{keywordtype}{int}\ nrounds,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ cipher16,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ plain16)\ \{}
+\DoxyCodeLine{00450\ \ \ \ \ AES\_state\ s\ =\ \{\{0\}\};}
+\DoxyCodeLine{00451\ \ \ \ \ \textcolor{keywordtype}{int}\ round;}
+\DoxyCodeLine{00452\ }
+\DoxyCodeLine{00453\ \ \ \ \ LoadBytes(\&s,\ plain16);}
+\DoxyCodeLine{00454\ \ \ \ \ AddRoundKey(\&s,\ rounds++);}
+\DoxyCodeLine{00455\ }
+\DoxyCodeLine{00456\ \ \ \ \ \textcolor{keywordflow}{for}\ (round\ =\ 1;\ round\ <\ nrounds;\ round++)\ \{}
+\DoxyCodeLine{00457\ \ \ \ \ \ \ \ \ SubBytes(\&s,\ 0);}
+\DoxyCodeLine{00458\ \ \ \ \ \ \ \ \ ShiftRows(\&s);}
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ MixColumns(\&s,\ 0);}
+\DoxyCodeLine{00460\ \ \ \ \ \ \ \ \ AddRoundKey(\&s,\ rounds++);}
+\DoxyCodeLine{00461\ \ \ \ \ \}}
+\DoxyCodeLine{00462\ }
+\DoxyCodeLine{00463\ \ \ \ \ SubBytes(\&s,\ 0);}
+\DoxyCodeLine{00464\ \ \ \ \ ShiftRows(\&s);}
+\DoxyCodeLine{00465\ \ \ \ \ AddRoundKey(\&s,\ rounds);}
+\DoxyCodeLine{00466\ }
+\DoxyCodeLine{00467\ \ \ \ \ SaveBytes(cipher16,\ \&s);}
+\DoxyCodeLine{00468\ \}}
+\DoxyCodeLine{00469\ }
+\DoxyCodeLine{00470\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ AES\_decrypt(\textcolor{keyword}{const}\ AES\_state*\ rounds,\ \textcolor{keywordtype}{int}\ nrounds,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ plain16,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ cipher16)\ \{}
+\DoxyCodeLine{00471\ \ \ \ \ \textcolor{comment}{/*\ Most\ AES\ decryption\ implementations\ use\ the\ alternate\ scheme}}
+\DoxyCodeLine{00472\ \textcolor{comment}{\ \ \ \ \ *\ (the\ Equivalent\ Inverse\ Cipher),\ which\ allows\ for\ more\ code\ reuse\ between}}
+\DoxyCodeLine{00473\ \textcolor{comment}{\ \ \ \ \ *\ the\ encryption\ and\ decryption\ code,\ but\ requires\ separate\ setup\ for\ both.}}
+\DoxyCodeLine{00474\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00475\ \ \ \ \ AES\_state\ s\ =\ \{\{0\}\};}
+\DoxyCodeLine{00476\ \ \ \ \ \textcolor{keywordtype}{int}\ round;}
+\DoxyCodeLine{00477\ }
+\DoxyCodeLine{00478\ \ \ \ \ rounds\ +=\ nrounds;}
+\DoxyCodeLine{00479\ }
+\DoxyCodeLine{00480\ \ \ \ \ LoadBytes(\&s,\ cipher16);}
+\DoxyCodeLine{00481\ \ \ \ \ AddRoundKey(\&s,\ rounds-\/-\/);}
+\DoxyCodeLine{00482\ }
+\DoxyCodeLine{00483\ \ \ \ \ \textcolor{keywordflow}{for}\ (round\ =\ 1;\ round\ <\ nrounds;\ round++)\ \{}
+\DoxyCodeLine{00484\ \ \ \ \ \ \ \ \ InvShiftRows(\&s);}
+\DoxyCodeLine{00485\ \ \ \ \ \ \ \ \ SubBytes(\&s,\ 1);}
+\DoxyCodeLine{00486\ \ \ \ \ \ \ \ \ AddRoundKey(\&s,\ rounds-\/-\/);}
+\DoxyCodeLine{00487\ \ \ \ \ \ \ \ \ MixColumns(\&s,\ 1);}
+\DoxyCodeLine{00488\ \ \ \ \ \}}
+\DoxyCodeLine{00489\ }
+\DoxyCodeLine{00490\ \ \ \ \ InvShiftRows(\&s);}
+\DoxyCodeLine{00491\ \ \ \ \ SubBytes(\&s,\ 1);}
+\DoxyCodeLine{00492\ \ \ \ \ AddRoundKey(\&s,\ rounds);}
+\DoxyCodeLine{00493\ }
+\DoxyCodeLine{00494\ \ \ \ \ SaveBytes(plain16,\ \&s);}
+\DoxyCodeLine{00495\ \}}
+\DoxyCodeLine{00496\ }
+\DoxyCodeLine{00497\ \textcolor{keywordtype}{void}\ AES128\_init(AES128\_ctx*\ ctx,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ key16)\ \{}
+\DoxyCodeLine{00498\ \ \ \ \ AES\_setup(ctx-\/>rk,\ key16,\ 4,\ 10);}
+\DoxyCodeLine{00499\ \}}
+\DoxyCodeLine{00500\ }
+\DoxyCodeLine{00501\ \textcolor{keywordtype}{void}\ AES128\_encrypt(\textcolor{keyword}{const}\ AES128\_ctx*\ ctx,\ \textcolor{keywordtype}{size\_t}\ blocks,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ cipher16,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ plain16)\ \{}
+\DoxyCodeLine{00502\ \ \ \ \ \textcolor{keywordflow}{while}\ (blocks-\/-\/)\ \{}
+\DoxyCodeLine{00503\ \ \ \ \ \ \ \ \ AES\_encrypt(ctx-\/>rk,\ 10,\ cipher16,\ plain16);}
+\DoxyCodeLine{00504\ \ \ \ \ \ \ \ \ cipher16\ +=\ 16;}
+\DoxyCodeLine{00505\ \ \ \ \ \ \ \ \ plain16\ +=\ 16;}
+\DoxyCodeLine{00506\ \ \ \ \ \}}
+\DoxyCodeLine{00507\ \}}
+\DoxyCodeLine{00508\ }
+\DoxyCodeLine{00509\ \textcolor{keywordtype}{void}\ AES128\_decrypt(\textcolor{keyword}{const}\ AES128\_ctx*\ ctx,\ \textcolor{keywordtype}{size\_t}\ blocks,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ plain16,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ cipher16)\ \{}
+\DoxyCodeLine{00510\ \ \ \ \ \textcolor{keywordflow}{while}\ (blocks-\/-\/)\ \{}
+\DoxyCodeLine{00511\ \ \ \ \ \ \ \ \ AES\_decrypt(ctx-\/>rk,\ 10,\ plain16,\ cipher16);}
+\DoxyCodeLine{00512\ \ \ \ \ \ \ \ \ cipher16\ +=\ 16;}
+\DoxyCodeLine{00513\ \ \ \ \ \ \ \ \ plain16\ +=\ 16;}
+\DoxyCodeLine{00514\ \ \ \ \ \}}
+\DoxyCodeLine{00515\ \}}
+\DoxyCodeLine{00516\ }
+\DoxyCodeLine{00517\ \textcolor{keywordtype}{void}\ AES192\_init(AES192\_ctx*\ ctx,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ key24)\ \{}
+\DoxyCodeLine{00518\ \ \ \ \ AES\_setup(ctx-\/>rk,\ key24,\ 6,\ 12);}
+\DoxyCodeLine{00519\ \}}
+\DoxyCodeLine{00520\ }
+\DoxyCodeLine{00521\ \textcolor{keywordtype}{void}\ AES192\_encrypt(\textcolor{keyword}{const}\ AES192\_ctx*\ ctx,\ \textcolor{keywordtype}{size\_t}\ blocks,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ cipher16,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ plain16)\ \{}
+\DoxyCodeLine{00522\ \ \ \ \ \textcolor{keywordflow}{while}\ (blocks-\/-\/)\ \{}
+\DoxyCodeLine{00523\ \ \ \ \ \ \ \ \ AES\_encrypt(ctx-\/>rk,\ 12,\ cipher16,\ plain16);}
+\DoxyCodeLine{00524\ \ \ \ \ \ \ \ \ cipher16\ +=\ 16;}
+\DoxyCodeLine{00525\ \ \ \ \ \ \ \ \ plain16\ +=\ 16;}
+\DoxyCodeLine{00526\ \ \ \ \ \}}
+\DoxyCodeLine{00527\ }
+\DoxyCodeLine{00528\ \}}
+\DoxyCodeLine{00529\ }
+\DoxyCodeLine{00530\ \textcolor{keywordtype}{void}\ AES192\_decrypt(\textcolor{keyword}{const}\ AES192\_ctx*\ ctx,\ \textcolor{keywordtype}{size\_t}\ blocks,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ plain16,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ cipher16)\ \{}
+\DoxyCodeLine{00531\ \ \ \ \ \textcolor{keywordflow}{while}\ (blocks-\/-\/)\ \{}
+\DoxyCodeLine{00532\ \ \ \ \ \ \ \ \ AES\_decrypt(ctx-\/>rk,\ 12,\ plain16,\ cipher16);}
+\DoxyCodeLine{00533\ \ \ \ \ \ \ \ \ cipher16\ +=\ 16;}
+\DoxyCodeLine{00534\ \ \ \ \ \ \ \ \ plain16\ +=\ 16;}
+\DoxyCodeLine{00535\ \ \ \ \ \}}
+\DoxyCodeLine{00536\ \}}
+\DoxyCodeLine{00537\ }
+\DoxyCodeLine{00538\ \textcolor{keywordtype}{void}\ AES256\_init(AES256\_ctx*\ ctx,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ key32)\ \{}
+\DoxyCodeLine{00539\ \ \ \ \ AES\_setup(ctx-\/>rk,\ key32,\ 8,\ 14);}
+\DoxyCodeLine{00540\ \}}
+\DoxyCodeLine{00541\ }
+\DoxyCodeLine{00542\ \textcolor{keywordtype}{void}\ AES256\_encrypt(\textcolor{keyword}{const}\ AES256\_ctx*\ ctx,\ \textcolor{keywordtype}{size\_t}\ blocks,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ cipher16,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ plain16)\ \{}
+\DoxyCodeLine{00543\ \ \ \ \ \textcolor{keywordflow}{while}\ (blocks-\/-\/)\ \{}
+\DoxyCodeLine{00544\ \ \ \ \ \ \ \ \ AES\_encrypt(ctx-\/>rk,\ 14,\ cipher16,\ plain16);}
+\DoxyCodeLine{00545\ \ \ \ \ \ \ \ \ cipher16\ +=\ 16;}
+\DoxyCodeLine{00546\ \ \ \ \ \ \ \ \ plain16\ +=\ 16;}
+\DoxyCodeLine{00547\ \ \ \ \ \}}
+\DoxyCodeLine{00548\ \}}
+\DoxyCodeLine{00549\ }
+\DoxyCodeLine{00550\ \textcolor{keywordtype}{void}\ AES256\_decrypt(\textcolor{keyword}{const}\ AES256\_ctx*\ ctx,\ \textcolor{keywordtype}{size\_t}\ blocks,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ plain16,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ cipher16)\ \{}
+\DoxyCodeLine{00551\ \ \ \ \ \textcolor{keywordflow}{while}\ (blocks-\/-\/)\ \{}
+\DoxyCodeLine{00552\ \ \ \ \ \ \ \ \ AES\_decrypt(ctx-\/>rk,\ 14,\ plain16,\ cipher16);}
+\DoxyCodeLine{00553\ \ \ \ \ \ \ \ \ cipher16\ +=\ 16;}
+\DoxyCodeLine{00554\ \ \ \ \ \ \ \ \ plain16\ +=\ 16;}
+\DoxyCodeLine{00555\ \ \ \ \ \}}
+\DoxyCodeLine{00556\ \}}
+
+\end{DoxyCode}

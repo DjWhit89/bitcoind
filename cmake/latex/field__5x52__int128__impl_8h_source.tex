@@ -1,0 +1,276 @@
+\doxysection{field\+\_\+5x52\+\_\+int128\+\_\+impl.\+h}
+\label{field__5x52__int128__impl_8h_source}\index{src/secp256k1/src/field\_5x52\_int128\_impl.h@{src/secp256k1/src/field\_5x52\_int128\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Copyright\ (c)\ 2013,\ 2014\ Pieter\ Wuille\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_FIELD\_INNER5X52\_IMPL\_H}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#define\ SECP256K1\_FIELD\_INNER5X52\_IMPL\_H}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <stdint.h>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}int128.h"{}}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}util.h"{}}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#define\ VERIFY\_BITS(x,\ n)\ VERIFY\_CHECK(((x)\ >>\ (n))\ ==\ 0)}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#define\ VERIFY\_BITS\_128(x,\ n)\ VERIFY\_CHECK(secp256k1\_u128\_check\_bits((x),\ (n)))}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_mul\_inner(uint64\_t\ *r,\ \textcolor{keyword}{const}\ uint64\_t\ *a,\ \textcolor{keyword}{const}\ uint64\_t\ *\ SECP256K1\_RESTRICT\ b)\ \{}
+\DoxyCodeLine{00019\ \ \ \ \ secp256k1\_uint128\ c,\ d;}
+\DoxyCodeLine{00020\ \ \ \ \ uint64\_t\ t3,\ t4,\ tx,\ u0;}
+\DoxyCodeLine{00021\ \ \ \ \ uint64\_t\ a0\ =\ a[0],\ a1\ =\ a[1],\ a2\ =\ a[2],\ a3\ =\ a[3],\ a4\ =\ a[4];}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ M\ =\ 0xFFFFFFFFFFFFFULL,\ R\ =\ 0x1000003D10ULL;}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \ \ \ \ VERIFY\_BITS(a[0],\ 56);}
+\DoxyCodeLine{00025\ \ \ \ \ VERIFY\_BITS(a[1],\ 56);}
+\DoxyCodeLine{00026\ \ \ \ \ VERIFY\_BITS(a[2],\ 56);}
+\DoxyCodeLine{00027\ \ \ \ \ VERIFY\_BITS(a[3],\ 56);}
+\DoxyCodeLine{00028\ \ \ \ \ VERIFY\_BITS(a[4],\ 52);}
+\DoxyCodeLine{00029\ \ \ \ \ VERIFY\_BITS(b[0],\ 56);}
+\DoxyCodeLine{00030\ \ \ \ \ VERIFY\_BITS(b[1],\ 56);}
+\DoxyCodeLine{00031\ \ \ \ \ VERIFY\_BITS(b[2],\ 56);}
+\DoxyCodeLine{00032\ \ \ \ \ VERIFY\_BITS(b[3],\ 56);}
+\DoxyCodeLine{00033\ \ \ \ \ VERIFY\_BITS(b[4],\ 52);}
+\DoxyCodeLine{00034\ \ \ \ \ VERIFY\_CHECK(r\ !=\ b);}
+\DoxyCodeLine{00035\ \ \ \ \ VERIFY\_CHECK(a\ !=\ b);}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{comment}{/*\ \ [...\ a\ b\ c]\ is\ a\ shorthand\ for\ ...\ +\ a<<104\ +\ b<<52\ +\ c<<0\ mod\ n.}}
+\DoxyCodeLine{00038\ \textcolor{comment}{\ \ \ \ \ *\ \ for\ 0\ <=\ x\ <=\ 4,\ px\ is\ a\ shorthand\ for\ sum(a[i]*b[x-\/i],\ i=0..x).}}
+\DoxyCodeLine{00039\ \textcolor{comment}{\ \ \ \ \ *\ \ for\ 4\ <=\ x\ <=\ 8,\ px\ is\ a\ shorthand\ for\ sum(a[i]*b[x-\/i],\ i=(x-\/4)..4)}}
+\DoxyCodeLine{00040\ \textcolor{comment}{\ \ \ \ \ *\ \ Note\ that\ [x\ 0\ 0\ 0\ 0\ 0]\ =\ [x*R].}}
+\DoxyCodeLine{00041\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00042\ }
+\DoxyCodeLine{00043\ \ \ \ \ secp256k1\_u128\_mul(\&d,\ a0,\ b[3]);}
+\DoxyCodeLine{00044\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a1,\ b[2]);}
+\DoxyCodeLine{00045\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a2,\ b[1]);}
+\DoxyCodeLine{00046\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a3,\ b[0]);}
+\DoxyCodeLine{00047\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 114);}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ 0\ 0]\ =\ [p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00049\ \ \ \ \ secp256k1\_u128\_mul(\&c,\ a4,\ b[4]);}
+\DoxyCodeLine{00050\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 112);}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{comment}{/*\ [c\ 0\ 0\ 0\ 0\ d\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ 0\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00052\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ R,\ secp256k1\_u128\_to\_u64(\&c));\ secp256k1\_u128\_rshift(\&c,\ 64);}
+\DoxyCodeLine{00053\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 115);}
+\DoxyCodeLine{00054\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 48);}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{comment}{/*\ [(c<<12)\ 0\ 0\ 0\ 0\ 0\ d\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ 0\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00056\ \ \ \ \ t3\ =\ secp256k1\_u128\_to\_u64(\&d)\ \&\ M;\ secp256k1\_u128\_rshift(\&d,\ 52);}
+\DoxyCodeLine{00057\ \ \ \ \ VERIFY\_BITS(t3,\ 52);}
+\DoxyCodeLine{00058\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 63);}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{comment}{/*\ [(c<<12)\ 0\ 0\ 0\ 0\ d\ t3\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ 0\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a0,\ b[4]);}
+\DoxyCodeLine{00062\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a1,\ b[3]);}
+\DoxyCodeLine{00063\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a2,\ b[2]);}
+\DoxyCodeLine{00064\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a3,\ b[1]);}
+\DoxyCodeLine{00065\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a4,\ b[0]);}
+\DoxyCodeLine{00066\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 115);}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{comment}{/*\ [(c<<12)\ 0\ 0\ 0\ 0\ d\ t3\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ p4\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00068\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ R\ <<\ 12,\ secp256k1\_u128\_to\_u64(\&c));}
+\DoxyCodeLine{00069\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 116);}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{comment}{/*\ [d\ t3\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ p4\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00071\ \ \ \ \ t4\ =\ secp256k1\_u128\_to\_u64(\&d)\ \&\ M;\ secp256k1\_u128\_rshift(\&d,\ 52);}
+\DoxyCodeLine{00072\ \ \ \ \ VERIFY\_BITS(t4,\ 52);}
+\DoxyCodeLine{00073\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 64);}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{comment}{/*\ [d\ t4\ t3\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ p4\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00075\ \ \ \ \ tx\ =\ (t4\ >>\ 48);\ t4\ \&=\ (M\ >>\ 4);}
+\DoxyCodeLine{00076\ \ \ \ \ VERIFY\_BITS(tx,\ 4);}
+\DoxyCodeLine{00077\ \ \ \ \ VERIFY\_BITS(t4,\ 48);}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{comment}{/*\ [d\ t4+(tx<<48)\ t3\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ p4\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \ \ \ \ secp256k1\_u128\_mul(\&c,\ a0,\ b[0]);}
+\DoxyCodeLine{00081\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 112);}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{comment}{/*\ [d\ t4+(tx<<48)\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ 0\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00083\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a1,\ b[4]);}
+\DoxyCodeLine{00084\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a2,\ b[3]);}
+\DoxyCodeLine{00085\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a3,\ b[2]);}
+\DoxyCodeLine{00086\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a4,\ b[1]);}
+\DoxyCodeLine{00087\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 114);}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{comment}{/*\ [d\ t4+(tx<<48)\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00089\ \ \ \ \ u0\ =\ secp256k1\_u128\_to\_u64(\&d)\ \&\ M;\ secp256k1\_u128\_rshift(\&d,\ 52);}
+\DoxyCodeLine{00090\ \ \ \ \ VERIFY\_BITS(u0,\ 52);}
+\DoxyCodeLine{00091\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 62);}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{comment}{/*\ [d\ u0\ t4+(tx<<48)\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4+(tx<<48)+(u0<<52)\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00094\ \ \ \ \ u0\ =\ (u0\ <<\ 4)\ |\ tx;}
+\DoxyCodeLine{00095\ \ \ \ \ VERIFY\_BITS(u0,\ 56);}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4+(u0<<48)\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00097\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ u0,\ R\ >>\ 4);}
+\DoxyCodeLine{00098\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 113);}
+\DoxyCodeLine{00099\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00100\ \ \ \ \ r[0]\ =\ secp256k1\_u128\_to\_u64(\&c)\ \&\ M;\ secp256k1\_u128\_rshift(\&c,\ 52);}
+\DoxyCodeLine{00101\ \ \ \ \ VERIFY\_BITS(r[0],\ 52);}
+\DoxyCodeLine{00102\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 61);}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4\ t3\ 0\ c\ r0]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00104\ }
+\DoxyCodeLine{00105\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ a0,\ b[1]);}
+\DoxyCodeLine{00106\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ a1,\ b[0]);}
+\DoxyCodeLine{00107\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 114);}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4\ t3\ 0\ c\ r0]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ p1\ p0]\ */}}
+\DoxyCodeLine{00109\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a2,\ b[4]);}
+\DoxyCodeLine{00110\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a3,\ b[3]);}
+\DoxyCodeLine{00111\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a4,\ b[2]);}
+\DoxyCodeLine{00112\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 114);}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4\ t3\ 0\ c\ r0]\ =\ [p8\ 0\ p6\ p5\ p4\ p3\ 0\ p1\ p0]\ */}}
+\DoxyCodeLine{00114\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ secp256k1\_u128\_to\_u64(\&d)\ \&\ M,\ R);\ secp256k1\_u128\_rshift(\&d,\ 52);}
+\DoxyCodeLine{00115\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 115);}
+\DoxyCodeLine{00116\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 62);}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ 0\ t4\ t3\ 0\ c\ r0]\ =\ [p8\ 0\ p6\ p5\ p4\ p3\ 0\ p1\ p0]\ */}}
+\DoxyCodeLine{00118\ \ \ \ \ r[1]\ =\ secp256k1\_u128\_to\_u64(\&c)\ \&\ M;\ secp256k1\_u128\_rshift(\&c,\ 52);}
+\DoxyCodeLine{00119\ \ \ \ \ VERIFY\_BITS(r[1],\ 52);}
+\DoxyCodeLine{00120\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 63);}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ 0\ t4\ t3\ c\ r1\ r0]\ =\ [p8\ 0\ p6\ p5\ p4\ p3\ 0\ p1\ p0]\ */}}
+\DoxyCodeLine{00122\ }
+\DoxyCodeLine{00123\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ a0,\ b[2]);}
+\DoxyCodeLine{00124\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ a1,\ b[1]);}
+\DoxyCodeLine{00125\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ a2,\ b[0]);}
+\DoxyCodeLine{00126\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 114);}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ 0\ t4\ t3\ c\ r1\ r0]\ =\ [p8\ 0\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00128\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a3,\ b[4]);}
+\DoxyCodeLine{00129\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a4,\ b[3]);}
+\DoxyCodeLine{00130\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 114);}
+\DoxyCodeLine{00131\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ 0\ t4\ t3\ c\ t1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00132\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ R,\ secp256k1\_u128\_to\_u64(\&d));\ secp256k1\_u128\_rshift(\&d,\ 64);}
+\DoxyCodeLine{00133\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 115);}
+\DoxyCodeLine{00134\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 50);}
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{comment}{/*\ [(d<<12)\ 0\ 0\ 0\ t4\ t3\ c\ r1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \ \ \ \ r[2]\ =\ secp256k1\_u128\_to\_u64(\&c)\ \&\ M;\ secp256k1\_u128\_rshift(\&c,\ 52);}
+\DoxyCodeLine{00138\ \ \ \ \ VERIFY\_BITS(r[2],\ 52);}
+\DoxyCodeLine{00139\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 63);}
+\DoxyCodeLine{00140\ \ \ \ \ \textcolor{comment}{/*\ [(d<<12)\ 0\ 0\ 0\ t4\ t3+c\ r2\ r1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00141\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ R\ <<\ 12,\ secp256k1\_u128\_to\_u64(\&d));}
+\DoxyCodeLine{00142\ \ \ \ \ secp256k1\_u128\_accum\_u64(\&c,\ t3);}
+\DoxyCodeLine{00143\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 100);}
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{comment}{/*\ [t4\ c\ r2\ r1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00145\ \ \ \ \ r[3]\ =\ secp256k1\_u128\_to\_u64(\&c)\ \&\ M;\ secp256k1\_u128\_rshift(\&c,\ 52);}
+\DoxyCodeLine{00146\ \ \ \ \ VERIFY\_BITS(r[3],\ 52);}
+\DoxyCodeLine{00147\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 48);}
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{comment}{/*\ [t4+c\ r3\ r2\ r1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00149\ \ \ \ \ r[4]\ =\ secp256k1\_u128\_to\_u64(\&c)\ +\ t4;}
+\DoxyCodeLine{00150\ \ \ \ \ VERIFY\_BITS(r[4],\ 49);}
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{comment}{/*\ [r4\ r3\ r2\ r1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00152\ \}}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ SECP256K1\_INLINE\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_fe\_sqr\_inner(uint64\_t\ *r,\ \textcolor{keyword}{const}\ uint64\_t\ *a)\ \{}
+\DoxyCodeLine{00155\ \ \ \ \ secp256k1\_uint128\ c,\ d;}
+\DoxyCodeLine{00156\ \ \ \ \ uint64\_t\ a0\ =\ a[0],\ a1\ =\ a[1],\ a2\ =\ a[2],\ a3\ =\ a[3],\ a4\ =\ a[4];}
+\DoxyCodeLine{00157\ \ \ \ \ uint64\_t\ t3,\ t4,\ tx,\ u0;}
+\DoxyCodeLine{00158\ \ \ \ \ \textcolor{keyword}{const}\ uint64\_t\ M\ =\ 0xFFFFFFFFFFFFFULL,\ R\ =\ 0x1000003D10ULL;}
+\DoxyCodeLine{00159\ }
+\DoxyCodeLine{00160\ \ \ \ \ VERIFY\_BITS(a[0],\ 56);}
+\DoxyCodeLine{00161\ \ \ \ \ VERIFY\_BITS(a[1],\ 56);}
+\DoxyCodeLine{00162\ \ \ \ \ VERIFY\_BITS(a[2],\ 56);}
+\DoxyCodeLine{00163\ \ \ \ \ VERIFY\_BITS(a[3],\ 56);}
+\DoxyCodeLine{00164\ \ \ \ \ VERIFY\_BITS(a[4],\ 52);}
+\DoxyCodeLine{00165\ }
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00171\ \ \ \ \ secp256k1\_u128\_mul(\&d,\ a0*2,\ a3);}
+\DoxyCodeLine{00172\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a1*2,\ a2);}
+\DoxyCodeLine{00173\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 114);}
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ 0\ 0]\ =\ [p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00175\ \ \ \ \ secp256k1\_u128\_mul(\&c,\ a4,\ a4);}
+\DoxyCodeLine{00176\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 112);}
+\DoxyCodeLine{00177\ \ \ \ \ \textcolor{comment}{/*\ [c\ 0\ 0\ 0\ 0\ d\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ 0\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00178\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ R,\ secp256k1\_u128\_to\_u64(\&c));\ secp256k1\_u128\_rshift(\&c,\ 64);}
+\DoxyCodeLine{00179\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 115);}
+\DoxyCodeLine{00180\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 48);}
+\DoxyCodeLine{00181\ \ \ \ \ \textcolor{comment}{/*\ [(c<<12)\ 0\ 0\ 0\ 0\ 0\ d\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ 0\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00182\ \ \ \ \ t3\ =\ secp256k1\_u128\_to\_u64(\&d)\ \&\ M;\ secp256k1\_u128\_rshift(\&d,\ 52);}
+\DoxyCodeLine{00183\ \ \ \ \ VERIFY\_BITS(t3,\ 52);}
+\DoxyCodeLine{00184\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 63);}
+\DoxyCodeLine{00185\ \ \ \ \ \textcolor{comment}{/*\ [(c<<12)\ 0\ 0\ 0\ 0\ d\ t3\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ 0\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00186\ }
+\DoxyCodeLine{00187\ \ \ \ \ a4\ *=\ 2;}
+\DoxyCodeLine{00188\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a0,\ a4);}
+\DoxyCodeLine{00189\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a1*2,\ a3);}
+\DoxyCodeLine{00190\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a2,\ a2);}
+\DoxyCodeLine{00191\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 115);}
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{comment}{/*\ [(c<<12)\ 0\ 0\ 0\ 0\ d\ t3\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ p4\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00193\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ R\ <<\ 12,\ secp256k1\_u128\_to\_u64(\&c));}
+\DoxyCodeLine{00194\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 116);}
+\DoxyCodeLine{00195\ \ \ \ \ \textcolor{comment}{/*\ [d\ t3\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ p4\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00196\ \ \ \ \ t4\ =\ secp256k1\_u128\_to\_u64(\&d)\ \&\ M;\ secp256k1\_u128\_rshift(\&d,\ 52);}
+\DoxyCodeLine{00197\ \ \ \ \ VERIFY\_BITS(t4,\ 52);}
+\DoxyCodeLine{00198\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 64);}
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{comment}{/*\ [d\ t4\ t3\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ p4\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00200\ \ \ \ \ tx\ =\ (t4\ >>\ 48);\ t4\ \&=\ (M\ >>\ 4);}
+\DoxyCodeLine{00201\ \ \ \ \ VERIFY\_BITS(tx,\ 4);}
+\DoxyCodeLine{00202\ \ \ \ \ VERIFY\_BITS(t4,\ 48);}
+\DoxyCodeLine{00203\ \ \ \ \ \textcolor{comment}{/*\ [d\ t4+(tx<<48)\ t3\ 0\ 0\ 0]\ =\ [p8\ 0\ 0\ 0\ p4\ p3\ 0\ 0\ 0]\ */}}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \ \ \ \ secp256k1\_u128\_mul(\&c,\ a0,\ a0);}
+\DoxyCodeLine{00206\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 112);}
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{comment}{/*\ [d\ t4+(tx<<48)\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ 0\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00208\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a1,\ a4);}
+\DoxyCodeLine{00209\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a2*2,\ a3);}
+\DoxyCodeLine{00210\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 114);}
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{comment}{/*\ [d\ t4+(tx<<48)\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00212\ \ \ \ \ u0\ =\ secp256k1\_u128\_to\_u64(\&d)\ \&\ M;\ secp256k1\_u128\_rshift(\&d,\ 52);}
+\DoxyCodeLine{00213\ \ \ \ \ VERIFY\_BITS(u0,\ 52);}
+\DoxyCodeLine{00214\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 62);}
+\DoxyCodeLine{00215\ \ \ \ \ \textcolor{comment}{/*\ [d\ u0\ t4+(tx<<48)\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00216\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4+(tx<<48)+(u0<<52)\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00217\ \ \ \ \ u0\ =\ (u0\ <<\ 4)\ |\ tx;}
+\DoxyCodeLine{00218\ \ \ \ \ VERIFY\_BITS(u0,\ 56);}
+\DoxyCodeLine{00219\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4+(u0<<48)\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00220\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ u0,\ R\ >>\ 4);}
+\DoxyCodeLine{00221\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 113);}
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4\ t3\ 0\ 0\ c]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00223\ \ \ \ \ r[0]\ =\ secp256k1\_u128\_to\_u64(\&c)\ \&\ M;\ secp256k1\_u128\_rshift(\&c,\ 52);}
+\DoxyCodeLine{00224\ \ \ \ \ VERIFY\_BITS(r[0],\ 52);}
+\DoxyCodeLine{00225\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 61);}
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4\ t3\ 0\ c\ r0]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ 0\ p0]\ */}}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00228\ \ \ \ \ a0\ *=\ 2;}
+\DoxyCodeLine{00229\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ a0,\ a1);}
+\DoxyCodeLine{00230\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 114);}
+\DoxyCodeLine{00231\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4\ t3\ 0\ c\ r0]\ =\ [p8\ 0\ 0\ p5\ p4\ p3\ 0\ p1\ p0]\ */}}
+\DoxyCodeLine{00232\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a2,\ a4);}
+\DoxyCodeLine{00233\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a3,\ a3);}
+\DoxyCodeLine{00234\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 114);}
+\DoxyCodeLine{00235\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ t4\ t3\ 0\ c\ r0]\ =\ [p8\ 0\ p6\ p5\ p4\ p3\ 0\ p1\ p0]\ */}}
+\DoxyCodeLine{00236\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ secp256k1\_u128\_to\_u64(\&d)\ \&\ M,\ R);\ secp256k1\_u128\_rshift(\&d,\ 52);}
+\DoxyCodeLine{00237\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 115);}
+\DoxyCodeLine{00238\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 62);}
+\DoxyCodeLine{00239\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ 0\ t4\ t3\ 0\ c\ r0]\ =\ [p8\ 0\ p6\ p5\ p4\ p3\ 0\ p1\ p0]\ */}}
+\DoxyCodeLine{00240\ \ \ \ \ r[1]\ =\ secp256k1\_u128\_to\_u64(\&c)\ \&\ M;\ secp256k1\_u128\_rshift(\&c,\ 52);}
+\DoxyCodeLine{00241\ \ \ \ \ VERIFY\_BITS(r[1],\ 52);}
+\DoxyCodeLine{00242\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 63);}
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ 0\ t4\ t3\ c\ r1\ r0]\ =\ [p8\ 0\ p6\ p5\ p4\ p3\ 0\ p1\ p0]\ */}}
+\DoxyCodeLine{00244\ }
+\DoxyCodeLine{00245\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ a0,\ a2);}
+\DoxyCodeLine{00246\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ a1,\ a1);}
+\DoxyCodeLine{00247\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 114);}
+\DoxyCodeLine{00248\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ 0\ t4\ t3\ c\ r1\ r0]\ =\ [p8\ 0\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00249\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&d,\ a3,\ a4);}
+\DoxyCodeLine{00250\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 114);}
+\DoxyCodeLine{00251\ \ \ \ \ \textcolor{comment}{/*\ [d\ 0\ 0\ t4\ t3\ c\ r1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00252\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ R,\ secp256k1\_u128\_to\_u64(\&d));\ secp256k1\_u128\_rshift(\&d,\ 64);}
+\DoxyCodeLine{00253\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 115);}
+\DoxyCodeLine{00254\ \ \ \ \ VERIFY\_BITS\_128(\&d,\ 50);}
+\DoxyCodeLine{00255\ \ \ \ \ \textcolor{comment}{/*\ [(d<<12)\ 0\ 0\ 0\ t4\ t3\ c\ r1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00256\ \ \ \ \ r[2]\ =\ secp256k1\_u128\_to\_u64(\&c)\ \&\ M;\ secp256k1\_u128\_rshift(\&c,\ 52);}
+\DoxyCodeLine{00257\ \ \ \ \ VERIFY\_BITS(r[2],\ 52);}
+\DoxyCodeLine{00258\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 63);}
+\DoxyCodeLine{00259\ \ \ \ \ \textcolor{comment}{/*\ [(d<<12)\ 0\ 0\ 0\ t4\ t3+c\ r2\ r1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00260\ }
+\DoxyCodeLine{00261\ \ \ \ \ secp256k1\_u128\_accum\_mul(\&c,\ R\ <<\ 12,\ secp256k1\_u128\_to\_u64(\&d));}
+\DoxyCodeLine{00262\ \ \ \ \ secp256k1\_u128\_accum\_u64(\&c,\ t3);}
+\DoxyCodeLine{00263\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 100);}
+\DoxyCodeLine{00264\ \ \ \ \ \textcolor{comment}{/*\ [t4\ c\ r2\ r1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00265\ \ \ \ \ r[3]\ =\ secp256k1\_u128\_to\_u64(\&c)\ \&\ M;\ secp256k1\_u128\_rshift(\&c,\ 52);}
+\DoxyCodeLine{00266\ \ \ \ \ VERIFY\_BITS(r[3],\ 52);}
+\DoxyCodeLine{00267\ \ \ \ \ VERIFY\_BITS\_128(\&c,\ 48);}
+\DoxyCodeLine{00268\ \ \ \ \ \textcolor{comment}{/*\ [t4+c\ r3\ r2\ r1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00269\ \ \ \ \ r[4]\ =\ secp256k1\_u128\_to\_u64(\&c)\ +\ t4;}
+\DoxyCodeLine{00270\ \ \ \ \ VERIFY\_BITS(r[4],\ 49);}
+\DoxyCodeLine{00271\ \ \ \ \ \textcolor{comment}{/*\ [r4\ r3\ r2\ r1\ r0]\ =\ [p8\ p7\ p6\ p5\ p4\ p3\ p2\ p1\ p0]\ */}}
+\DoxyCodeLine{00272\ \}}
+\DoxyCodeLine{00273\ }
+\DoxyCodeLine{00274\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{/*\ SECP256K1\_FIELD\_INNER5X52\_IMPL\_H\ */}\textcolor{preprocessor}{}}
+
+\end{DoxyCode}

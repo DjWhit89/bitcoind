@@ -1,0 +1,218 @@
+\doxysection{cache$<$ Element, Hash $>$ Class Template Reference}
+\label{class_cuckoo_cache_1_1cache}\index{cache$<$ Element, Hash $>$@{cache$<$ Element, Hash $>$}}
+
+
+{\ttfamily \#include $<$cuckoocache.\+h$>$}
+
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\textbf{ cache} ()
+\item 
+uint32\+\_\+t \textbf{ setup} (uint32\+\_\+t new\+\_\+size)
+\item 
+std\+::pair$<$ uint32\+\_\+t, size\+\_\+t $>$ \textbf{ setup\+\_\+bytes} (size\+\_\+t bytes)
+\item 
+void \textbf{ insert} (Element e)
+\item 
+bool \textbf{ contains} (const Element \&e, const bool erase) const
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\subsubsection*{template$<$typename Element, typename \textbf{ Hash}$>$\newline
+class Cuckoo\+Cache\+::cache$<$ Element, Hash $>$}
+\doxyref{cache}{p.}{class_cuckoo_cache_1_1cache} implements a cache with properties similar to a cuckoo-\/set.
+
+The cache is able to hold up to {\ttfamily ($\sim$(uint32\+\_\+t)0) -\/ 1} elements.
+
+Read Operations\+:
+\begin{DoxyItemize}
+\item \doxyref{contains()}{p.}{class_cuckoo_cache_1_1cache_a0c6c8da8f3b8de3c38a99ed23d92099e} for {\ttfamily erase=false}
+\end{DoxyItemize}
+
+Read+\+Erase Operations\+:
+\begin{DoxyItemize}
+\item \doxyref{contains()}{p.}{class_cuckoo_cache_1_1cache_a0c6c8da8f3b8de3c38a99ed23d92099e} for {\ttfamily erase=true}
+\end{DoxyItemize}
+
+Erase Operations\+:
+\begin{DoxyItemize}
+\item allow\+\_\+erase()
+\end{DoxyItemize}
+
+Write Operations\+:
+\begin{DoxyItemize}
+\item \doxyref{setup()}{p.}{class_cuckoo_cache_1_1cache_a285a84ed8df980e01cf6675f5129a506}
+\item \doxyref{setup\+\_\+bytes()}{p.}{class_cuckoo_cache_1_1cache_abc547a231db5bfa46b6f3912bb894380}
+\item \doxyref{insert()}{p.}{class_cuckoo_cache_1_1cache_ad890f3cd4e0725ea56d7e4a3305a3487}
+\item please\+\_\+keep()
+\end{DoxyItemize}
+
+Synchronization Free Operations\+:
+\begin{DoxyItemize}
+\item invalid()
+\item compute\+\_\+hashes()
+\end{DoxyItemize}
+
+User Must Guarantee\+:
+
+
+\begin{DoxyEnumerate}
+\item Write requires synchronized access (e.\+g. a lock)
+\item Read requires no concurrent Write, synchronized with last insert.
+\item Erase requires no concurrent Write, synchronized with last insert.
+\item An Erase caller must release all memory before allowing a new Writer.
+\end{DoxyEnumerate}
+
+Note on function names\+:
+\begin{DoxyItemize}
+\item The name "{}allow\+\_\+erase"{} is used because the real discard happens later.
+\item The name "{}please\+\_\+keep"{} is used because elements may be erased anyways on insert.
+\end{DoxyItemize}
+
+
+\begin{DoxyTemplParams}{Template Parameters}
+{\em Element} & should be a movable and copyable type \\
+\hline
+{\em Hash} & should be a function/callable which takes a template parameter hash\+\_\+select and an Element and extracts a hash from it. Should return high-\/entropy uint32\+\_\+t hashes for {\ttfamily \doxyref{Hash}{p.}{hash_8h_ac49a4a382d911138c745234f2fe7986d} h; h$<$0$>$(e) ... h$<$7$>$(e)}. \\
+\hline
+\end{DoxyTemplParams}
+
+
+\label{doc-constructors}
+\doxysubsection{Constructor \& Destructor Documentation}
+\index{cache$<$ Element, Hash $>$@{cache$<$ Element, Hash $>$}!cache@{cache}}
+\index{cache@{cache}!cache$<$ Element, Hash $>$@{cache$<$ Element, Hash $>$}}
+\doxysubsubsection{cache()}
+{\footnotesize\ttfamily \label{class_cuckoo_cache_1_1cache_ab23554f62408c63d48b826b5f2bf85d1} 
+template$<$typename Element, typename \textbf{ Hash}$>$ \\
+cache (\begin{DoxyParamCaption}{}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+You must always construct a cache with some elements via a subsequent call to setup or setup\+\_\+bytes, otherwise operations may segfault. 
+
+\label{doc-func-members}
+\doxysubsection{Member Function Documentation}
+\index{cache$<$ Element, Hash $>$@{cache$<$ Element, Hash $>$}!contains@{contains}}
+\index{contains@{contains}!cache$<$ Element, Hash $>$@{cache$<$ Element, Hash $>$}}
+\doxysubsubsection{contains()}
+{\footnotesize\ttfamily \label{class_cuckoo_cache_1_1cache_a0c6c8da8f3b8de3c38a99ed23d92099e} 
+template$<$typename Element, typename \textbf{ Hash}$>$ \\
+bool contains (\begin{DoxyParamCaption}\item[{const Element \&}]{e}{, }\item[{const bool}]{erase}{}\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+contains iterates through the hash locations for a given element and checks to see if it is present.
+
+contains does not check garbage collected state (in other words, garbage is only collected when the space is needed), so\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{insert(x);}
+\DoxyCodeLine{\textcolor{keywordflow}{if}\ (contains(x,\ \textcolor{keyword}{true}))}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordflow}{return}\ contains(x,\ \textcolor{keyword}{false});}
+\DoxyCodeLine{\textcolor{keywordflow}{else}}
+\DoxyCodeLine{\ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+
+\end{DoxyCode}
+
+
+executed on a single thread will always return true!
+
+This is a great property for re-\/org performance for example.
+
+contains returns a bool set true if the element was found.
+
+
+\begin{DoxyParams}{Parameters}
+{\em e} & the element to check \\
+\hline
+{\em erase} & whether to attempt setting the garbage collect flag\\
+\hline
+\end{DoxyParams}
+\begin{DoxyPostcond}{Postcondition}
+if erase is true and the element is found, then the garbage collect flag is set 
+\end{DoxyPostcond}
+\begin{DoxyReturn}{Returns}
+true if the element is found, false otherwise 
+\end{DoxyReturn}
+\index{cache$<$ Element, Hash $>$@{cache$<$ Element, Hash $>$}!insert@{insert}}
+\index{insert@{insert}!cache$<$ Element, Hash $>$@{cache$<$ Element, Hash $>$}}
+\doxysubsubsection{insert()}
+{\footnotesize\ttfamily \label{class_cuckoo_cache_1_1cache_ad890f3cd4e0725ea56d7e4a3305a3487} 
+template$<$typename Element, typename \textbf{ Hash}$>$ \\
+void insert (\begin{DoxyParamCaption}\item[{Element}]{e}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+insert loops at most depth\+\_\+limit times trying to insert a hash at various locations in the table via a variant of the Cuckoo Algorithm with eight hash locations.
+
+It drops the last tried element if it runs out of depth before encountering an open slot.
+
+Thus\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{insert(x);}
+\DoxyCodeLine{\textcolor{keywordflow}{return}\ contains(x,\ \textcolor{keyword}{false});}
+
+\end{DoxyCode}
+
+
+is not guaranteed to return true.
+
+
+\begin{DoxyParams}{Parameters}
+{\em e} & the element to insert \\
+\hline
+\end{DoxyParams}
+\begin{DoxyPostcond}{Postcondition}
+one of the following\+: All previously inserted elements and e are now in the table, one previously inserted element is evicted from the table, the entry attempted to be inserted is evicted. 
+\end{DoxyPostcond}
+Swap with the element at the location that was not the last one looked at. Example\+:
+
+
+\begin{DoxyEnumerate}
+\item On first iteration, last\+\_\+loc == invalid(), find returns last, so last\+\_\+loc defaults to locs[0].
+\item On further iterations, where last\+\_\+loc == locs[k], last\+\_\+loc will go to locs[k+1 \% 8], i.\+e., next of the 8 indices wrapping around to 0 if needed.
+\end{DoxyEnumerate}
+
+This prevents moving the element we just put in.
+
+The swap is not a move -- we must switch onto the evicted element for the next iteration.\index{cache$<$ Element, Hash $>$@{cache$<$ Element, Hash $>$}!setup@{setup}}
+\index{setup@{setup}!cache$<$ Element, Hash $>$@{cache$<$ Element, Hash $>$}}
+\doxysubsubsection{setup()}
+{\footnotesize\ttfamily \label{class_cuckoo_cache_1_1cache_a285a84ed8df980e01cf6675f5129a506} 
+template$<$typename Element, typename \textbf{ Hash}$>$ \\
+uint32\+\_\+t setup (\begin{DoxyParamCaption}\item[{uint32\+\_\+t}]{new\+\_\+size}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+setup initializes the container to store no more than new\+\_\+size elements and no less than 2 elements.
+
+setup should only be called once.
+
+
+\begin{DoxyParams}{Parameters}
+{\em new\+\_\+size} & the desired number of elements to store \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+the maximum number of elements storable 
+\end{DoxyReturn}
+\index{cache$<$ Element, Hash $>$@{cache$<$ Element, Hash $>$}!setup\_bytes@{setup\_bytes}}
+\index{setup\_bytes@{setup\_bytes}!cache$<$ Element, Hash $>$@{cache$<$ Element, Hash $>$}}
+\doxysubsubsection{setup\_bytes()}
+{\footnotesize\ttfamily \label{class_cuckoo_cache_1_1cache_abc547a231db5bfa46b6f3912bb894380} 
+template$<$typename Element, typename \textbf{ Hash}$>$ \\
+std\+::pair$<$ uint32\+\_\+t, size\+\_\+t $>$ setup\+\_\+bytes (\begin{DoxyParamCaption}\item[{size\+\_\+t}]{bytes}{}\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+setup\+\_\+bytes is a convenience function which accounts for internal memory usage when deciding how many elements to store. It isn\textquotesingle{}t perfect because it doesn\textquotesingle{}t account for any overhead (struct size, Malloc\+Usage, collection and epoch flags). This was done to simplify selecting a power of two size. In the expected use case, an extra two bits per entry should be negligible compared to the size of the elements.
+
+
+\begin{DoxyParams}{Parameters}
+{\em bytes} & the approximate number of bytes to use for this data structure \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+A pair of the maximum number of elements storable (see \doxyref{setup()}{p.}{class_cuckoo_cache_1_1cache_a285a84ed8df980e01cf6675f5129a506} documentation for more detail) and the approximate total size of these elements in bytes. 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/\textbf{ cuckoocache.\+h}\end{DoxyCompactItemize}

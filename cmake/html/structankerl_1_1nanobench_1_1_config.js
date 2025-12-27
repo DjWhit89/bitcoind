@@ -1,0 +1,27 @@
+var structankerl_1_1nanobench_1_1_config =
+[
+    [ "Config", "structankerl_1_1nanobench_1_1_config.html#a539a941e29cde8d13e413c515d9801cd", null ],
+    [ "~Config", "structankerl_1_1nanobench_1_1_config.html#a54dfba499c9d9e1003d4c9bcbe6ad1c5", null ],
+    [ "Config", "structankerl_1_1nanobench_1_1_config.html#ae873679eb05cadd56c598e3f45fd6714", null ],
+    [ "Config", "structankerl_1_1nanobench_1_1_config.html#a1029e0e7c866356e005449d44dc89106", null ],
+    [ "operator=", "structankerl_1_1nanobench_1_1_config.html#af96b28c2fb94d6753f889b3f4d5dde77", null ],
+    [ "operator=", "structankerl_1_1nanobench_1_1_config.html#a13ad34a1c8d027f602ecd3cc9228d11c", null ],
+    [ "mBatch", "structankerl_1_1nanobench_1_1_config.html#ad2fd8e527d2ff321c7b97569d37df4bc", null ],
+    [ "mBenchmarkName", "structankerl_1_1nanobench_1_1_config.html#a041139e5b316423630b60ea53787cbc0", null ],
+    [ "mBenchmarkTitle", "structankerl_1_1nanobench_1_1_config.html#a0d0ee048f3e82fc4a792a739d68371c1", null ],
+    [ "mClockResolutionMultiple", "structankerl_1_1nanobench_1_1_config.html#a5dcff1695e56f4ec9d2f3be785b7bddb", null ],
+    [ "mComplexityN", "structankerl_1_1nanobench_1_1_config.html#a2f81cdcc0186c2a2e7751023cedfe149", null ],
+    [ "mContext", "structankerl_1_1nanobench_1_1_config.html#a44c780cd307a91d4788b8f4160195c27", null ],
+    [ "mEpochIterations", "structankerl_1_1nanobench_1_1_config.html#aa087c28efc24c1a281403580213602ad", null ],
+    [ "mIsRelative", "structankerl_1_1nanobench_1_1_config.html#ab13c3a873eef37ff471a7214def4fb1c", null ],
+    [ "mMaxEpochTime", "structankerl_1_1nanobench_1_1_config.html#a380d634914b5dde79d29f39666851dbe", null ],
+    [ "mMinEpochIterations", "structankerl_1_1nanobench_1_1_config.html#a457d60d7f449ea2027b92dc2eaa45ca2", null ],
+    [ "mMinEpochTime", "structankerl_1_1nanobench_1_1_config.html#a2989a1b9546222f35f69b6df0af39377", null ],
+    [ "mNumEpochs", "structankerl_1_1nanobench_1_1_config.html#a1140ef5bae1e3f511c86e9d75d319920", null ],
+    [ "mOut", "structankerl_1_1nanobench_1_1_config.html#a2f2d609a141fb592fd0017de8a903bd2", null ],
+    [ "mShowPerformanceCounters", "structankerl_1_1nanobench_1_1_config.html#a9914d46698ad156ce7025e5e6d865afe", null ],
+    [ "mTimeUnit", "structankerl_1_1nanobench_1_1_config.html#ada9a2728feaa960c4fe6437a03d6fb43", null ],
+    [ "mTimeUnitName", "structankerl_1_1nanobench_1_1_config.html#ab6b8750eec9ede69476ae0d7d763d21b", null ],
+    [ "mUnit", "structankerl_1_1nanobench_1_1_config.html#a90fb5e6eb1931d70d1e9aceeed151429", null ],
+    [ "mWarmup", "structankerl_1_1nanobench_1_1_config.html#ac67bf9acb18544e6ee8fffa2b57381d4", null ]
+];

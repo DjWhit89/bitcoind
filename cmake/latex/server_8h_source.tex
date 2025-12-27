@@ -1,0 +1,96 @@
+\doxysection{server.\+h}
+\label{server_8h_source}\index{src/rpc/server.h@{src/rpc/server.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_RPC\_SERVER\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_RPC\_SERVER\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <rpc/request.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <rpc/util.h>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <univalue.h>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{keyword}{class\ }CRPCCommand;}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00022\ \textcolor{keywordtype}{bool}\ IsRPCRunning();}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00025\ \textcolor{keywordtype}{void}\ RpcInterruptionPoint();}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00031\ \textcolor{keywordtype}{void}\ SetRPCWarmupStatus(\textcolor{keyword}{const}\ std::string\&\ newStatus);}
+\DoxyCodeLine{00032\ \textcolor{keywordtype}{void}\ SetRPCWarmupStarting();}
+\DoxyCodeLine{00033\ \textcolor{comment}{/*\ Mark\ warmup\ as\ done.\ \ RPC\ calls\ will\ be\ processed\ from\ now\ on.\ \ */}}
+\DoxyCodeLine{00034\ \textcolor{keywordtype}{void}\ SetRPCWarmupFinished();}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \textcolor{comment}{/*\ returns\ the\ current\ warmup\ state.\ \ */}}
+\DoxyCodeLine{00037\ \textcolor{keywordtype}{bool}\ RPCIsInWarmup(std::string\ *outStatus);}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{typedef}\ RPCHelpMan\ (*RpcMethodFnType)();}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \textcolor{keyword}{class\ }CRPCCommand}
+\DoxyCodeLine{00042\ \{}
+\DoxyCodeLine{00043\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keyword}{using\ }Actor\ =\ std::function<bool(\textcolor{keyword}{const}\ JSONRPCRequest\&\ request,\ UniValue\&\ result,\ \textcolor{keywordtype}{bool}\ last\_handler)>;}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00050\ \ \ \ \ CRPCCommand(std::string\ category,\ std::string\ name,\ Actor\ actor,\ std::vector<std::pair<std::string,\ bool>>\ args,\ intptr\_t\ unique\_id)}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ :\ category(std::move(category)),\ name(std::move(name)),\ actor(std::move(actor)),\ argNames(std::move(args)),}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ unique\_id(unique\_id)}
+\DoxyCodeLine{00053\ \ \ \ \ \{}
+\DoxyCodeLine{00054\ \ \ \ \ \}}
+\DoxyCodeLine{00055\ }
+\DoxyCodeLine{00057\ \ \ \ \ CRPCCommand(std::string\ category,\ RpcMethodFnType\ fn)}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ :\ CRPCCommand(}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ category,}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fn().m\_name,}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ [fn](const\ JSONRPCRequest\&\ request,\ UniValue\&\ result,\ bool)\ \{\ result\ =\ fn().HandleRequest(request);\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};\ \},}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ fn().GetArgNames(),}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ intptr\_t(fn))}
+\DoxyCodeLine{00064\ \ \ \ \ \{}
+\DoxyCodeLine{00065\ \ \ \ \ \}}
+\DoxyCodeLine{00066\ }
+\DoxyCodeLine{00067\ \ \ \ \ std::string\ category;}
+\DoxyCodeLine{00068\ \ \ \ \ std::string\ name;}
+\DoxyCodeLine{00069\ \ \ \ \ Actor\ actor;}
+\DoxyCodeLine{00079\ \ \ \ \ std::vector<std::pair<std::string,\ bool>>\ argNames;}
+\DoxyCodeLine{00080\ \ \ \ \ intptr\_t\ unique\_id;}
+\DoxyCodeLine{00081\ \};}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00086\ \textcolor{keyword}{class\ }CRPCTable}
+\DoxyCodeLine{00087\ \{}
+\DoxyCodeLine{00088\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00089\ \ \ \ \ std::map<std::string,\ std::vector<const\ CRPCCommand*>>\ mapCommands;}
+\DoxyCodeLine{00090\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00091\ \ \ \ \ CRPCTable();}
+\DoxyCodeLine{00092\ \ \ \ \ std::string\ help(std::string\_view\ name,\ \textcolor{keyword}{const}\ JSONRPCRequest\&\ helpreq)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00100\ \ \ \ \ UniValue\ execute(\textcolor{keyword}{const}\ JSONRPCRequest\ \&request)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00101\ }
+\DoxyCodeLine{00106\ \ \ \ \ std::vector<std::string>\ listCommands()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00111\ \ \ \ \ UniValue\ dumpArgMap(\textcolor{keyword}{const}\ JSONRPCRequest\&\ request)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00112\ }
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keywordtype}{void}\ appendCommand(\textcolor{keyword}{const}\ std::string\&\ name,\ \textcolor{keyword}{const}\ CRPCCommand*\ pcmd);}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keywordtype}{bool}\ removeCommand(\textcolor{keyword}{const}\ std::string\&\ name,\ \textcolor{keyword}{const}\ CRPCCommand*\ pcmd);}
+\DoxyCodeLine{00127\ \};}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00129\ \textcolor{keywordtype}{bool}\ IsDeprecatedRPCEnabled(\textcolor{keyword}{const}\ std::string\&\ method);}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00131\ \textcolor{keyword}{extern}\ CRPCTable\ tableRPC;}
+\DoxyCodeLine{00132\ }
+\DoxyCodeLine{00133\ \textcolor{keywordtype}{void}\ StartRPC();}
+\DoxyCodeLine{00134\ \textcolor{keywordtype}{void}\ InterruptRPC();}
+\DoxyCodeLine{00135\ \textcolor{keywordtype}{void}\ StopRPC();}
+\DoxyCodeLine{00136\ UniValue\ JSONRPCExec(\textcolor{keyword}{const}\ JSONRPCRequest\&\ jreq,\ \textcolor{keywordtype}{bool}\ catch\_errors);}
+\DoxyCodeLine{00137\ }
+\DoxyCodeLine{00138\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_RPC\_SERVER\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,250 @@
+\doxysection{dbwrapper.\+h}
+\label{dbwrapper_8h_source}\index{src/dbwrapper.h@{src/dbwrapper.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2012-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_DBWRAPPER\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_DBWRAPPER\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <streams.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <util/fs.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <exception>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <stdexcept>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ DBWRAPPER\_PREALLOC\_KEY\_SIZE\ =\ 64;}
+\DoxyCodeLine{00023\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ DBWRAPPER\_PREALLOC\_VALUE\_SIZE\ =\ 1024;}
+\DoxyCodeLine{00024\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ DBWRAPPER\_MAX\_FILE\_SIZE\ =\ 32\ <<\ 20;\ \textcolor{comment}{//\ 32\ MiB}}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{struct\ }DBOptions\ \{}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keywordtype}{bool}\ force\_compact\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00030\ \};}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{struct\ }DBParams\ \{}
+\DoxyCodeLine{00035\ \ \ \ \ fs::path\ path;}
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ cache\_bytes;}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{bool}\ memory\_only\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordtype}{bool}\ wipe\_data\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keywordtype}{bool}\ obfuscate\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00046\ \ \ \ \ DBOptions\ options\{\};}
+\DoxyCodeLine{00047\ \};}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \textcolor{keyword}{class\ }dbwrapper\_error\ :\ \textcolor{keyword}{public}\ std::runtime\_error}
+\DoxyCodeLine{00050\ \{}
+\DoxyCodeLine{00051\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keyword}{explicit}\ dbwrapper\_error(\textcolor{keyword}{const}\ std::string\&\ msg)\ :\ std::runtime\_error(msg)\ \{\}}
+\DoxyCodeLine{00053\ \};}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{class\ }CDBWrapper;}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00059\ \textcolor{keyword}{namespace\ }dbwrapper\_private\ \{}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00065\ \textcolor{keyword}{const}\ Obfuscation\&\ GetObfuscation(\textcolor{keyword}{const}\ CDBWrapper\&);}
+\DoxyCodeLine{00066\ \};\ \textcolor{comment}{//\ namespace\ dbwrapper\_private}}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \textcolor{keywordtype}{bool}\ DestroyDB(\textcolor{keyword}{const}\ std::string\&\ path\_str);}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00071\ \textcolor{keyword}{class\ }CDBBatch}
+\DoxyCodeLine{00072\ \{}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }CDBWrapper;}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keyword}{const}\ CDBWrapper\ \&parent;}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keyword}{struct\ }WriteBatchImpl;}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{keyword}{const}\ std::unique\_ptr<WriteBatchImpl>\ m\_impl\_batch;}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ \ \ DataStream\ ssKey\{\};}
+\DoxyCodeLine{00082\ \ \ \ \ DataStream\ ssValue\{\};}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{keywordtype}{void}\ WriteImpl(std::span<const\ std::byte>\ key,\ DataStream\&\ ssValue);}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordtype}{void}\ EraseImpl(std::span<const\ std::byte>\ key);}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{keyword}{explicit}\ CDBBatch(\textcolor{keyword}{const}\ CDBWrapper\&\ \_parent);}
+\DoxyCodeLine{00092\ \ \ \ \ \string~CDBBatch();}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keywordtype}{void}\ Clear();}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ V>}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordtype}{void}\ Write(\textcolor{keyword}{const}\ K\&\ key,\ \textcolor{keyword}{const}\ V\&\ value)}
+\DoxyCodeLine{00097\ \ \ \ \ \{}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ ssKey.reserve(DBWRAPPER\_PREALLOC\_KEY\_SIZE);}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ ssValue.reserve(DBWRAPPER\_PREALLOC\_VALUE\_SIZE);}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ ssKey\ <<\ key;}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ ssValue\ <<\ value;}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ WriteImpl(ssKey,\ ssValue);}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ ssKey.clear();}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ ssValue.clear();}
+\DoxyCodeLine{00105\ \ \ \ \ \}}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K>}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keywordtype}{void}\ Erase(\textcolor{keyword}{const}\ K\&\ key)}
+\DoxyCodeLine{00109\ \ \ \ \ \{}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ ssKey.reserve(DBWRAPPER\_PREALLOC\_KEY\_SIZE);}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ ssKey\ <<\ key;}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ EraseImpl(ssKey);}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ ssKey.clear();}
+\DoxyCodeLine{00114\ \ \ \ \ \}}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ ApproximateSize()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00117\ \};}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00119\ \textcolor{keyword}{class\ }CDBIterator}
+\DoxyCodeLine{00120\ \{}
+\DoxyCodeLine{00121\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{keyword}{struct\ }IteratorImpl;}
+\DoxyCodeLine{00123\ }
+\DoxyCodeLine{00124\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{keyword}{const}\ CDBWrapper\ \&parent;}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keyword}{const}\ std::unique\_ptr<IteratorImpl>\ m\_impl\_iter;}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keywordtype}{void}\ SeekImpl(std::span<const\ std::byte>\ key);}
+\DoxyCodeLine{00129\ \ \ \ \ std::span<const\ std::byte>\ GetKeyImpl()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00130\ \ \ \ \ std::span<const\ std::byte>\ GetValueImpl()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00132\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00138\ \ \ \ \ CDBIterator(\textcolor{keyword}{const}\ CDBWrapper\&\ \_parent,\ std::unique\_ptr<IteratorImpl>\ \_piter);}
+\DoxyCodeLine{00139\ \ \ \ \ \string~CDBIterator();}
+\DoxyCodeLine{00140\ }
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{keywordtype}{bool}\ Valid()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00142\ }
+\DoxyCodeLine{00143\ \ \ \ \ \textcolor{keywordtype}{void}\ SeekToFirst();}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ K>\ \textcolor{keywordtype}{void}\ Seek(\textcolor{keyword}{const}\ K\&\ key)\ \{}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ DataStream\ ssKey\{\};}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ ssKey.reserve(DBWRAPPER\_PREALLOC\_KEY\_SIZE);}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ ssKey\ <<\ key;}
+\DoxyCodeLine{00149\ \ \ \ \ \ \ \ \ SeekImpl(ssKey);}
+\DoxyCodeLine{00150\ \ \ \ \ \}}
+\DoxyCodeLine{00151\ }
+\DoxyCodeLine{00152\ \ \ \ \ \textcolor{keywordtype}{void}\ Next();}
+\DoxyCodeLine{00153\ }
+\DoxyCodeLine{00154\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ K>\ \textcolor{keywordtype}{bool}\ GetKey(K\&\ key)\ \{}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ \ \ \ \ DataStream\ ssKey\{GetKeyImpl()\};}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \ \ \ \ ssKey\ >>\ key;}
+\DoxyCodeLine{00158\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::exception\&)\ \{}
+\DoxyCodeLine{00159\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00160\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00161\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00162\ \ \ \ \ \}}
+\DoxyCodeLine{00163\ }
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ V>\ \textcolor{keywordtype}{bool}\ GetValue(V\&\ value)\ \{}
+\DoxyCodeLine{00165\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ \ \ \ \ DataStream\ ssValue\{GetValueImpl()\};}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ \ \ \ \ dbwrapper\_private::GetObfuscation(parent)(ssValue);}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \ \ \ \ ssValue\ >>\ value;}
+\DoxyCodeLine{00169\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::exception\&)\ \{}
+\DoxyCodeLine{00170\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00171\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00172\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00173\ \ \ \ \ \}}
+\DoxyCodeLine{00174\ \};}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ \textcolor{keyword}{struct\ }LevelDBContext;}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00178\ \textcolor{keyword}{class\ }CDBWrapper}
+\DoxyCodeLine{00179\ \{}
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{const}\ Obfuscation\&\ dbwrapper\_private::GetObfuscation(\textcolor{keyword}{const}\ CDBWrapper\&);}
+\DoxyCodeLine{00181\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00183\ \ \ \ \ std::unique\_ptr<LevelDBContext>\ m\_db\_context;}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00186\ \ \ \ \ std::string\ m\_name;}
+\DoxyCodeLine{00187\ }
+\DoxyCodeLine{00189\ \ \ \ \ Obfuscation\ m\_obfuscation;}
+\DoxyCodeLine{00190\ }
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ std::string\ OBFUSCATION\_KEY\{\textcolor{stringliteral}{"{}\(\backslash\)000obfuscate\_key"{}},\ 14\};\ \textcolor{comment}{//\ explicit\ size\ to\ avoid\ truncation\ at\ leading\ \(\backslash\)0}}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00194\ \ \ \ \ std::optional<std::string>\ ReadImpl(std::span<const\ std::byte>\ key)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00195\ \ \ \ \ \textcolor{keywordtype}{bool}\ ExistsImpl(std::span<const\ std::byte>\ key)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ EstimateSizeImpl(std::span<const\ std::byte>\ key1,\ std::span<const\ std::byte>\ key2)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{keyword}{auto}\&\ DBContext()\ const\ LIFETIMEBOUND\ \{\ \textcolor{keywordflow}{return}\ *Assert(m\_db\_context);\ \}}
+\DoxyCodeLine{00198\ }
+\DoxyCodeLine{00199\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00200\ \ \ \ \ CDBWrapper(\textcolor{keyword}{const}\ DBParams\&\ params);}
+\DoxyCodeLine{00201\ \ \ \ \ \string~CDBWrapper();}
+\DoxyCodeLine{00202\ }
+\DoxyCodeLine{00203\ \ \ \ \ CDBWrapper(\textcolor{keyword}{const}\ CDBWrapper\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00204\ \ \ \ \ CDBWrapper\&\ operator=(\textcolor{keyword}{const}\ CDBWrapper\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ V>}
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{keywordtype}{bool}\ Read(\textcolor{keyword}{const}\ K\&\ key,\ V\&\ value)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00208\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ DataStream\ ssKey\{\};}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ ssKey.reserve(DBWRAPPER\_PREALLOC\_KEY\_SIZE);}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ ssKey\ <<\ key;}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ std::optional<std::string>\ strValue\{ReadImpl(ssKey)\};}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!strValue)\ \{}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00216\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{try}\ \{}
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \ \ \ \ DataStream\ ssValue\{MakeByteSpan(*strValue)\};}
+\DoxyCodeLine{00218\ \ \ \ \ \ \ \ \ \ \ \ \ m\_obfuscation(ssValue);}
+\DoxyCodeLine{00219\ \ \ \ \ \ \ \ \ \ \ \ \ ssValue\ >>\ value;}
+\DoxyCodeLine{00220\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{catch}\ (\textcolor{keyword}{const}\ std::exception\&)\ \{}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00224\ \ \ \ \ \}}
+\DoxyCodeLine{00225\ }
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ V>}
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{keywordtype}{void}\ Write(\textcolor{keyword}{const}\ K\&\ key,\ \textcolor{keyword}{const}\ V\&\ value,\ \textcolor{keywordtype}{bool}\ fSync\ =\ \textcolor{keyword}{false})}
+\DoxyCodeLine{00228\ \ \ \ \ \{}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ CDBBatch\ batch(*\textcolor{keyword}{this});}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ batch.Write(key,\ value);}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ WriteBatch(batch,\ fSync);}
+\DoxyCodeLine{00232\ \ \ \ \ \}}
+\DoxyCodeLine{00233\ }
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K>}
+\DoxyCodeLine{00235\ \ \ \ \ \textcolor{keywordtype}{bool}\ Exists(\textcolor{keyword}{const}\ K\&\ key)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00236\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ DataStream\ ssKey\{\};}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ ssKey.reserve(DBWRAPPER\_PREALLOC\_KEY\_SIZE);}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ ssKey\ <<\ key;}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ExistsImpl(ssKey);}
+\DoxyCodeLine{00241\ \ \ \ \ \}}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ K>}
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keywordtype}{void}\ Erase(\textcolor{keyword}{const}\ K\&\ key,\ \textcolor{keywordtype}{bool}\ fSync\ =\ \textcolor{keyword}{false})}
+\DoxyCodeLine{00245\ \ \ \ \ \{}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ CDBBatch\ batch(*\textcolor{keyword}{this});}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ batch.Erase(key);}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ WriteBatch(batch,\ fSync);}
+\DoxyCodeLine{00249\ \ \ \ \ \}}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00251\ \ \ \ \ \textcolor{keywordtype}{void}\ WriteBatch(CDBBatch\&\ batch,\ \textcolor{keywordtype}{bool}\ fSync\ =\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00252\ }
+\DoxyCodeLine{00253\ \ \ \ \ \textcolor{comment}{//\ Get\ an\ estimate\ of\ LevelDB\ memory\ usage\ (in\ bytes).}}
+\DoxyCodeLine{00254\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ DynamicMemoryUsage()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00255\ }
+\DoxyCodeLine{00256\ \ \ \ \ CDBIterator*\ NewIterator();}
+\DoxyCodeLine{00257\ }
+\DoxyCodeLine{00261\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsEmpty();}
+\DoxyCodeLine{00262\ }
+\DoxyCodeLine{00263\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ K>}
+\DoxyCodeLine{00264\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ EstimateSize(\textcolor{keyword}{const}\ K\&\ key\_begin,\ \textcolor{keyword}{const}\ K\&\ key\_end)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{00265\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ DataStream\ ssKey1\{\},\ ssKey2\{\};}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ ssKey1.reserve(DBWRAPPER\_PREALLOC\_KEY\_SIZE);}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ ssKey2.reserve(DBWRAPPER\_PREALLOC\_KEY\_SIZE);}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ ssKey1\ <<\ key\_begin;}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ ssKey2\ <<\ key\_end;}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ EstimateSizeImpl(ssKey1,\ ssKey2);}
+\DoxyCodeLine{00272\ \ \ \ \ \}}
+\DoxyCodeLine{00273\ \};}
+\DoxyCodeLine{00274\ }
+\DoxyCodeLine{00275\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_DBWRAPPER\_H}}
+
+\end{DoxyCode}

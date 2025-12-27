@@ -1,0 +1,324 @@
+.TH "src/rpc/blockchain.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/rpc/blockchain.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <rpc/blockchain\&.h>\fP
+.br
+\fR#include <blockfilter\&.h>\fP
+.br
+\fR#include <chain\&.h>\fP
+.br
+\fR#include <chainparams\&.h>\fP
+.br
+\fR#include <chainparamsbase\&.h>\fP
+.br
+\fR#include <clientversion\&.h>\fP
+.br
+\fR#include <coins\&.h>\fP
+.br
+\fR#include <common/args\&.h>\fP
+.br
+\fR#include <consensus/amount\&.h>\fP
+.br
+\fR#include <consensus/params\&.h>\fP
+.br
+\fR#include <consensus/validation\&.h>\fP
+.br
+\fR#include <core_io\&.h>\fP
+.br
+\fR#include <deploymentinfo\&.h>\fP
+.br
+\fR#include <deploymentstatus\&.h>\fP
+.br
+\fR#include <flatfile\&.h>\fP
+.br
+\fR#include <hash\&.h>\fP
+.br
+\fR#include <index/blockfilterindex\&.h>\fP
+.br
+\fR#include <index/coinstatsindex\&.h>\fP
+.br
+\fR#include <interfaces/mining\&.h>\fP
+.br
+\fR#include <kernel/coinstats\&.h>\fP
+.br
+\fR#include <logging/timer\&.h>\fP
+.br
+\fR#include <net\&.h>\fP
+.br
+\fR#include <net_processing\&.h>\fP
+.br
+\fR#include <node/blockstorage\&.h>\fP
+.br
+\fR#include <node/context\&.h>\fP
+.br
+\fR#include <node/transaction\&.h>\fP
+.br
+\fR#include <node/utxo_snapshot\&.h>\fP
+.br
+\fR#include <node/warnings\&.h>\fP
+.br
+\fR#include <primitives/transaction\&.h>\fP
+.br
+\fR#include <rpc/server\&.h>\fP
+.br
+\fR#include <rpc/server_util\&.h>\fP
+.br
+\fR#include <rpc/util\&.h>\fP
+.br
+\fR#include <script/descriptor\&.h>\fP
+.br
+\fR#include <serialize\&.h>\fP
+.br
+\fR#include <streams\&.h>\fP
+.br
+\fR#include <sync\&.h>\fP
+.br
+\fR#include <tinyformat\&.h>\fP
+.br
+\fR#include <txdb\&.h>\fP
+.br
+\fR#include <txmempool\&.h>\fP
+.br
+\fR#include <undo\&.h>\fP
+.br
+\fR#include <univalue\&.h>\fP
+.br
+\fR#include <util/check\&.h>\fP
+.br
+\fR#include <util/fs\&.h>\fP
+.br
+\fR#include <util/strencodings\&.h>\fP
+.br
+\fR#include <util/syserror\&.h>\fP
+.br
+\fR#include <util/translation\&.h>\fP
+.br
+\fR#include <validation\&.h>\fP
+.br
+\fR#include <validationinterface\&.h>\fP
+.br
+\fR#include <versionbits\&.h>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include <condition_variable>\fP
+.br
+\fR#include <iterator>\fP
+.br
+\fR#include <memory>\fP
+.br
+\fR#include <mutex>\fP
+.br
+\fR#include <optional>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <string_view>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBCompareBlocksByHeight\fP"
+.br
+.ti -1c
+.RI "class \fBCoinsViewScanReserver\fP"
+.br
+.ti -1c
+.RI "class \fBBlockFiltersScanReserver\fP"
+.br
+.ti -1c
+.RI "class \fBNetworkDisable\fP"
+.br
+.ti -1c
+.RI "class \fBTemporaryRollback\fP"
+.br
+.ti -1c
+.RI "class \fBSnapshotMetadata\fP"
+.br
+.in -1c
+.SS "Enumerations"
+
+.in +1c
+.ti -1c
+.RI "enum class \fBCoinStatsHashType\fP "
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "std::tuple< std::unique_ptr< \fBCCoinsViewCursor\fP >, \fBCCoinsStats\fP, const \fBCBlockIndex\fP * > \fBPrepareUTXOSnapshot\fP(\fBChainstate\fP &chainstate, const std::function< void()> &interruption_point={}) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(\fBUniValue\fP \fBWriteUTXOSnapshot\fP (\fBChainstate\fP &chainstate, \fBCCoinsViewCursor\fP *pcursor, \fBCCoinsStats\fP *maybe_stats, const \fBCBlockIndex\fP *tip, \fBAutoFile\fP &&afile, const \fBfs::path\fP &path, const \fBfs::path\fP &temppath, const std::function< void()> &interruption_point={})"
+.br
+.ti -1c
+.RI "double \fBGetDifficulty\fP (const \fBCBlockIndex\fP &blockindex)"
+.br
+.ti -1c
+.RI "\fBUniValue\fP \fBblockheaderToJSON\fP (const \fBCBlockIndex\fP &tip, const \fBCBlockIndex\fP &blockindex, const \fBuint256\fP pow_limit)"
+.br
+.ti -1c
+.RI "\fBUniValue\fP \fBblockToJSON\fP (\fBBlockManager\fP &blockman, const \fBCBlock\fP &block, const \fBCBlockIndex\fP &tip, const \fBCBlockIndex\fP &blockindex, \fBTxVerbosity\fP verbosity, const \fBuint256\fP pow_limit)"
+.br
+.ti -1c
+.RI "void \fBCheckBlockDataAvailability\fP (\fBBlockManager\fP &blockman, const \fBCBlockIndex\fP &blockindex, bool check_for_undo)"
+.br
+.ti -1c
+.RI "std::optional< int > \fBGetPruneHeight\fP (const \fBBlockManager\fP &blockman, const \fBCChain\fP &chain)"
+.br
+.RI "Return height of highest block that has been pruned, or std::nullopt if no blocks have been pruned\&. "
+.ti -1c
+.RI "\fBCoinStatsHashType\fP \fBParseHashType\fP (std::string_view hash_type_input)"
+.br
+.ti -1c
+.RI "\fBRPCHelpMan\fP \fBgetblockchaininfo\fP ()"
+.br
+.ti -1c
+.RI "\fBRPCHelpMan\fP \fBgetdeploymentinfo\fP ()"
+.br
+.ti -1c
+.RI "void \fBInvalidateBlock\fP (\fBChainstateManager\fP &chainman, const \fBuint256\fP block_hash)"
+.br
+.ti -1c
+.RI "void \fBReconsiderBlock\fP (\fBChainstateManager\fP &chainman, \fBuint256\fP block_hash)"
+.br
+.ti -1c
+.RI "void \fBCalculatePercentilesByWeight\fP (\fBCAmount\fP result[NUM_GETBLOCKSTATS_PERCENTILES], std::vector< std::pair< \fBCAmount\fP, int64_t > > &scores, int64_t total_weight)"
+.br
+.ti -1c
+.RI "std::tuple< std::unique_ptr< \fBCCoinsViewCursor\fP >, \fBCCoinsStats\fP, const \fBCBlockIndex\fP * > \fBPrepareUTXOSnapshot\fP (\fBChainstate\fP &chainstate, const std::function< void()> &interruption_point)"
+.br
+.ti -1c
+.RI "\fBUniValue\fP \fBCreateUTXOSnapshot\fP (\fBnode::NodeContext\fP &\fBnode\fP, \fBChainstate\fP &chainstate, \fBAutoFile\fP &&afile, const \fBfs::path\fP &path, const \fBfs::path\fP &tmppath)"
+.br
+.ti -1c
+.RI "void \fBRegisterBlockchainRPCCommands\fP (\fBCRPCTable\fP &t)"
+.br
+.ti -1c
+.RI "std::string \fBMakeUnorderedList\fP (const std::vector< std::string > &items)"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "const \fBRPCResult\fP \fBgetblock_vin\fP"
+.br
+.ti -1c
+.RI "const std::vector< \fBRPCResult\fP > \fBRPCHelpForChainstate\fP"
+.br
+.in -1c
+.SH "Enumeration Type Documentation"
+.PP 
+.SS "enum class \fBCoinStatsHashType\fP\fR [strong]\fP"
+
+.SH "Function Documentation"
+.PP 
+.SS "\fBUniValue\fP blockheaderToJSON (const \fBCBlockIndex\fP & tip, const \fBCBlockIndex\fP & blockindex, const \fBuint256\fP pow_limit)"
+Block header to JSON 
+.SS "\fBUniValue\fP blockToJSON (\fBnode::BlockManager\fP & blockman, const \fBCBlock\fP & block, const \fBCBlockIndex\fP & tip, const \fBCBlockIndex\fP & blockindex, \fBTxVerbosity\fP verbosity, const \fBuint256\fP pow_limit)"
+Block description to JSON 
+.SS "void CalculatePercentilesByWeight (\fBCAmount\fP result[NUM_GETBLOCKSTATS_PERCENTILES], std::vector< std::pair< \fBCAmount\fP, int64_t > > & scores, int64_t total_weight)"
+Used by getblockstats to get feerates at different percentiles by weight 
+.SS "void CheckBlockDataAvailability (\fBBlockManager\fP & blockman, const \fBCBlockIndex\fP & blockindex, bool check_for_undo)"
+
+.SS "\fBUniValue\fP CreateUTXOSnapshot (\fBnode::NodeContext\fP & node, \fBChainstate\fP & chainstate, \fBAutoFile\fP && afile, const \fBfs::path\fP & path, const \fBfs::path\fP & tmppath)"
+Test-only helper to create UTXO snapshots given a chainstate and a file handle\&. 
+.PP
+\fBReturns\fP
+.RS 4
+a \fBUniValue\fP map containing metadata about the snapshot\&. 
+.RE
+.PP
+
+.SS "\fBRPCHelpMan\fP getblockchaininfo ()"
+
+.SS "\fBRPCHelpMan\fP getdeploymentinfo ()"
+
+.SS "double GetDifficulty (const \fBCBlockIndex\fP & blockindex)"
+Get the difficulty of the net wrt to the given block index\&.
+
+.PP
+\fBReturns\fP
+.RS 4
+A floating point number that is a multiple of the main net minimum difficulty (4295032833 hashes)\&. 
+.RE
+.PP
+
+.SS "std::optional< int > GetPruneHeight (const \fBBlockManager\fP & blockman, const \fBCChain\fP & chain)"
+
+.PP
+Return height of highest block that has been pruned, or std::nullopt if no blocks have been pruned\&. 
+.SS "void InvalidateBlock (\fBChainstateManager\fP & chainman, const \fBuint256\fP block_hash)"
+
+.SS "std::string MakeUnorderedList (const std::vector< std::string > & items)\fR [inline]\fP"
+Create an unordered multi-line list of items\&. 
+.SS "\fBCoinStatsHashType\fP ParseHashType (std::string_view hash_type_input)"
+
+.SS "std::tuple< std::unique_ptr< \fBCCoinsViewCursor\fP >, \fBCCoinsStats\fP, const \fBCBlockIndex\fP * > PrepareUTXOSnapshot (\fBChainstate\fP & chainstate, const std::function< void()> & interruption_point)"
+
+.SS "void ReconsiderBlock (\fBChainstateManager\fP & chainman, \fBuint256\fP block_hash)"
+
+.SS "void RegisterBlockchainRPCCommands (\fBCRPCTable\fP & t)"
+
+.SS "\fBUniValue\fP WriteUTXOSnapshot (\fBChainstate\fP & chainstate, \fBCCoinsViewCursor\fP * pcursor, \fBCCoinsStats\fP * maybe_stats, const \fBCBlockIndex\fP * tip, \fBAutoFile\fP && afile, const \fBfs::path\fP & path, const \fBfs::path\fP & temppath, const std::function< void()> & interruption_point = \fR{}\fP)"
+
+.SH "Variable Documentation"
+.PP 
+.SS "const \fBRPCResult\fP getblock_vin"
+\fBInitial value:\fP
+.nf
+{
+    RPCResult::Type::ARR, "vin", "",
+    {
+        {RPCResult::Type::OBJ, "", "",
+        {
+            {RPCResult::Type::ELISION, "", "The same output as verbosity = 2"},
+            {RPCResult::Type::OBJ, "prevout", "(Only if undo information is available)",
+            {
+                {RPCResult::Type::BOOL, "generated", "Coinbase or not"},
+                {RPCResult::Type::NUM, "height", "The height of the prevout"},
+                {RPCResult::Type::STR_AMOUNT, "value", "The value in " + CURRENCY_UNIT},
+                {RPCResult::Type::OBJ, "scriptPubKey", "",
+                {
+                    {RPCResult::Type::STR, "asm", "Disassembly of the output script"},
+                    {RPCResult::Type::STR, "desc", "Inferred descriptor for the output"},
+                    {RPCResult::Type::STR_HEX, "hex", "The raw output script bytes, hex\-encoded"},
+                    {RPCResult::Type::STR, "address", true, "The Bitcoin address (only if a well\-defined address exists)"},
+                    {RPCResult::Type::STR, "type", "The type (one of: " + GetAllOutputTypes() + ")"},
+                }},
+            }},
+        }},
+    }
+}
+.PP
+.fi
+
+.SS "const std::vector<\fBRPCResult\fP> RPCHelpForChainstate"
+\fBInitial value:\fP
+.nf
+{
+    {RPCResult::Type::NUM, "blocks", "number of blocks in this chainstate"},
+    {RPCResult::Type::STR_HEX, "bestblockhash", "blockhash of the tip"},
+    {RPCResult::Type::STR_HEX, "bits", "nBits: compact representation of the block difficulty target"},
+    {RPCResult::Type::STR_HEX, "target", "The difficulty target"},
+    {RPCResult::Type::NUM, "difficulty", "difficulty of the tip"},
+    {RPCResult::Type::NUM, "verificationprogress", "progress towards the network tip"},
+    {RPCResult::Type::STR_HEX, "snapshot_blockhash", true, "the base block of the snapshot this chainstate is based on, if any"},
+    {RPCResult::Type::NUM, "coins_db_cache_bytes", "size of the coinsdb cache"},
+    {RPCResult::Type::NUM, "coins_tip_cache_bytes", "size of the coinstip cache"},
+    {RPCResult::Type::BOOL, "validated", "whether the chainstate is fully validated\&. True if all blocks in the chainstate were validated, false if the chain is based on a snapshot and the snapshot has not yet been validated\&."},
+}
+.PP
+.fi
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

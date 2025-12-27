@@ -1,0 +1,267 @@
+.TH "md_src_2secp256k1_2doc_2ellswift" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+md_src_2secp256k1_2doc_2ellswift \- ElligatorSwift for secp256k1 explained 
+.PP
+
+
+.PP
+In this document we explain how the \fRellswift\fP module implementation is related to the construction in the \fR"SwiftEC: Shallue–van de Woestijne Indifferentiable Function To Elliptic Curves"\fP paper by Jorge Chávez-Saab, Francisco Rodríguez-Henríquez, and Mehdi Tibouchi\&.
+
+.PP
+.IP "\(bu" 2
+\fB1\&. Introduction\fP
+.IP "\(bu" 2
+\fB2\&. The decoding function\fP
+.IP "  \(bu" 4
+\fB2\&.1 Decoding for `secp256k1`\fP
+.PP
+
+.IP "\(bu" 2
+\fB3\&. The encoding function\fP
+.IP "  \(bu" 4
+\fB3\&.1 Switching to *v, w* coordinates\fP
+.IP "  \(bu" 4
+\fB3\&.2 Avoiding computing all inverses\fP
+.IP "  \(bu" 4
+\fB3\&.3 Finding the inverse\fP
+.IP "  \(bu" 4
+\fB3\&.4 Dealing with special cases\fP
+.IP "  \(bu" 4
+\fB3\&.5 Encoding for `secp256k1`\fP
+.PP
+
+.IP "\(bu" 2
+\fB4\&. Encoding and decoding full *(x, y)* coordinates\fP
+.IP "  \(bu" 4
+\fB4\&.1 Full *(x, y)* coordinates for `secp256k1`\fP
+.PP
+
+.PP
+.SH "1\&. Introduction"
+.PP
+The \fRellswift\fP module effectively introduces a new 64-byte public key format, with the property that (uniformly random) public keys can be encoded as 64-byte arrays which are computationally indistinguishable from uniform byte arrays\&. The module provides functions to convert public keys from and to this format, as well as convenience functions for key generation and ECDH that operate directly on ellswift-encoded keys\&.
+
+.PP
+The encoding consists of the concatenation of two (32-byte big endian) encoded field elements $u$ and $t\&.$ Together they encode an x-coordinate on the curve $x$, or (see further) a full point $(x, y)$ on the curve\&.
+
+.PP
+\fBDecoding\fP consists of decoding the field elements $u$ and $t$ (values above the field size $p$ are taken modulo $p$), and then evaluating $F_u(t)$, which for every $u$ and $t$ results in a valid x-coordinate on the curve\&. The functions $F_u$ will be defined in \fBSection 2\fP\&.
+
+.PP
+\fBEncoding\fP a given $x$ coordinate is conceptually done as follows:
+.IP "\(bu" 2
+Loop:
+.IP "  \(bu" 4
+Pick a uniformly random field element $u\&.$
+.IP "  \(bu" 4
+Compute the set $L = F_u^{-1}(x)$ of $t$ values for which $F_u(t) = x$, which may have up to \fI8\fP elements\&.
+.IP "  \(bu" 4
+With probability $1 - \\dfrac{\\#L}{8}$, restart the loop\&.
+.IP "  \(bu" 4
+Select a uniformly random $t \\in L$ and return $(u, t)\&.$
+.PP
+
+.PP
+
+.PP
+This is the \fIElligatorSwift\fP algorithm, here given for just x-coordinates\&. An extension to full $(x, y)$ points will be given in \fBSection 4\fP\&. The algorithm finds a uniformly random $(u, t)$ among (almost all) those for which $F_u(t) = x\&.$ \fBSection\fP 3\&.2 in the paper proves that the number of such encodings for almost all x-coordinates on the curve (all but at most 39) is close to two times the field size (specifically, it lies in the range $2q \\pm (22\\sqrt{q} + O(1))$, where $q$ is the size of the field)\&.
+.SH "2\&. The decoding function"
+.PP
+First some definitions:
+.IP "\(bu" 2
+$\\mathbb{F}$ is the finite field of size $q$, of characteristic 5 or more, and $q \\equiv 1 \\mod 3\&.$
+.IP "  \(bu" 4
+For \fRsecp256k1\fP, $q = 2^{256} - 2^{32} - 977$, which satisfies that requirement\&.
+.PP
+
+.IP "\(bu" 2
+Let $E$ be the elliptic curve of points $(x, y) \\in \\mathbb{F}^2$ for which $y^2 = x^3 + ax + b$, with $a$ and $b$ public constants, for which $\\Delta_E = -16(4a^3 + 27b^2)$ is a square, and at least one of $(-b \\pm \\sqrt{-3 \\Delta_E} / 36)/2$ is a square\&. This implies that the order of $E$ is either odd, or a multiple of \fI4\fP\&. If $a=0$, this condition is always fulfilled\&.
+.IP "  \(bu" 4
+For \fRsecp256k1\fP, $a=0$ and $b=7\&.$
+.PP
+
+.IP "\(bu" 2
+Let the function $g(x) = x^3 + ax + b$, so the $E$ curve equation is also $y^2 = g(x)\&.$
+.IP "\(bu" 2
+Let the function $h(x) = 3x^3 + 4a\&.$
+.IP "\(bu" 2
+Define $V$ as the set of solutions $(x_1, x_2, x_3, z)$ to $z^2 = g(x_1)g(x_2)g(x_3)\&.$
+.IP "\(bu" 2
+Define $S_u$ as the set of solutions $(X, Y)$ to $X^2 + h(u)Y^2 = -g(u)$ and $Y \\neq 0\&.$
+.IP "\(bu" 2
+$P_u$ is a function from $\\mathbb{F}$ to $S_u$ that will be defined below\&.
+.IP "\(bu" 2
+$\\psi_u$ is a function from $S_u$ to $V$ that will be defined below\&.
+.PP
+
+.PP
+\fBNote\fP: In the paper:
+.IP "\(bu" 2
+$F_u$ corresponds to $F_{0,u}$ there\&.
+.IP "\(bu" 2
+$P_u(t)$ is called $P$ there\&.
+.IP "\(bu" 2
+All $S_u$ sets together correspond to $S$ there\&.
+.IP "\(bu" 2
+All $\\psi_u$ functions together (operating on elements of $S$) correspond to $\\psi$ there\&.
+.PP
+
+.PP
+Note that for $V$, the left hand side of the equation $z^2$ is square, and thus the right hand must also be square\&. As multiplying non-squares results in a square in $\\mathbb{F}$, out of the three right-hand side factors an even number must be non-squares\&. This implies that exactly \fI1\fP or exactly \fI3\fP out of $\\{g(x_1), g(x_2), g(x_3)\\}$ must be square, and thus that for any $(x_1,x_2,x_3,z) \\in V$, at least one of $\\{x_1, x_2, x_3\\}$ must be a valid x-coordinate on $E\&.$ There is one exception to this, namely when $z=0$, but even then one of the three values is a valid x-coordinate\&.
+
+.PP
+\fBDefine\fP the decoding function $F_u(t)$ as:
+.IP "\(bu" 2
+Let $(x_1, x_2, x_3, z) = \\psi_u(P_u(t))\&.$
+.IP "\(bu" 2
+Return the first element $x$ of $(x_3, x_2, x_1)$ which is a valid x-coordinate on $E$ (i\&.e\&., $g(x)$ is square)\&.
+.PP
+
+.PP
+$P_u(t) = (\fBX(u, t)\fP, Y(u, t))$, where:
+
+.PP
+$$ \\begin{array}{lcl} \fBX(u, t)\fP & = & \\left\\{\\begin{array}{ll} \\dfrac{g(u) - t^2}{2t} & a = 0 \\ \\dfrac{g(u) + h(u)(Y_0(u) - X_0(u)t)^2}{X_0(u)(1 + h(u)t^2)} & a \\neq 0 \\end{array}\\right\&. \\ Y(u, t) & = & \\left\\{\\begin{array}{ll} \\dfrac{\fBX(u, t)\fP + t}{u \\sqrt{-3}} = \\dfrac{g(u) + t^2}{2tu\\sqrt{-3}} & a = 0 \\ Y_0(u) + t(\fBX(u, t)\fP - X_0(u)) & a \\neq 0 \\end{array}\\right\&. \\end{array} $$
+
+.PP
+$P_u(t)$ is defined:
+.IP "\(bu" 2
+For $a=0$, unless:
+.IP "  \(bu" 4
+$u = 0$ or $t = 0$ (division by zero)
+.IP "  \(bu" 4
+$g(u) = -t^2$ (would give $Y=0$)\&.
+.PP
+
+.IP "\(bu" 2
+For $a \\neq 0$, unless:
+.IP "  \(bu" 4
+$X_0(u) = 0$ or $h(u)t^2 = -1$ (division by zero)
+.IP "  \(bu" 4
+$Y_0(u) (1 - h(u)t^2) = 2X_0(u)t$ (would give $Y=0$)\&.
+.PP
+
+.PP
+
+.PP
+The functions $X_0(u)$ and $Y_0(u)$ are defined in Appendix A of the paper, and depend on various properties of $E\&.$
+
+.PP
+The function $\\psi_u$ is the same for all curves: $\\psi_u(X, Y) = (x_1, x_2, x_3, z)$, where:
+
+.PP
+$$ \\begin{array}{lcl} x_1 & = & \\dfrac{X}{2Y} - \\dfrac{u}{2} && \\ x_2 & = & -\\dfrac{X}{2Y} - \\dfrac{u}{2} && \\ x_3 & = & u + 4Y^2 && \\ z & = & \\dfrac{g(x_3)}{2Y}(u^2 + ux_1 + x_1^2 + a) = \\dfrac{-g(u)g(x_3)}{8Y^3} \\end{array} $$
+.SS "2\&.1 Decoding for \fRsecp256k1\fP"
+Put together and specialized for $a=0$ curves, decoding $(u, t)$ to an x-coordinate is:
+
+.PP
+\fBDefine\fP $F_u(t)$ as:
+.IP "\(bu" 2
+Let $X = \\dfrac{u^3 + b - t^2}{2t}\&.$
+.IP "\(bu" 2
+Let $Y = \\dfrac{X + t}{u\\sqrt{-3}}\&.$
+.IP "\(bu" 2
+Return the first $x$ in $(u + 4Y^2, \\dfrac{-X}{2Y} - \\dfrac{u}{2}, \\dfrac{X}{2Y} - \\dfrac{u}{2})$ for which $g(x)$ is square\&.
+.PP
+
+.PP
+To make sure that every input decodes to a valid x-coordinate, we remap the inputs in case $P_u$ is not defined (when $u=0$, $t=0$, or $g(u) = -t^2$):
+
+.PP
+\fBDefine\fP $F_u(t)$ as:
+.IP "\(bu" 2
+Let $u'=u$ if $u \\neq 0$; $1$ otherwise (guaranteeing $u' \\neq 0$)\&.
+.IP "\(bu" 2
+Let $t'=t$ if $t \\neq 0$; $1$ otherwise (guaranteeing $t' \\neq 0$)\&.
+.IP "\(bu" 2
+Let $t''=t'$ if $g(u') \\neq -t'^2$; $2t'$ otherwise (guaranteeing $t'' \\neq 0$ and $g(u') \\neq -t''^2$)\&.
+.IP "\(bu" 2
+Let $X = \\dfrac{u'^3 + b - t''^2}{2t''}\&.$
+.IP "\(bu" 2
+Let $Y = \\dfrac{X + t''}{u'\\sqrt{-3}}\&.$
+.IP "\(bu" 2
+Return the first $x$ in $(u' + 4Y^2, \\dfrac{-X}{2Y} - \\dfrac{u'}{2}, \\dfrac{X}{2Y} - \\dfrac{u'}{2})$ for which $x^3 + b$ is square\&.
+.PP
+
+.PP
+The choices here are not strictly necessary\&. Just returning a fixed constant in any of the undefined cases would suffice, but the approach here is simple enough and gives fairly uniform output even in these cases\&.
+
+.PP
+\fBNote\fP: in the paper these conditions result in $\\infty$ as output, due to the use of projective coordinates there\&. We wish to avoid the need for callers to deal with this special case\&.
+
+.PP
+This is implemented in \fRsecp256k1_ellswift_xswiftec_frac_var\fP (which decodes to an x-coordinate represented as a fraction), and in \fRsecp256k1_ellswift_xswiftec_var\fP (which outputs the actual x-coordinate)\&.
+.SH "3\&. The encoding function"
+.PP
+To implement $F_u^{-1}(x)$, the function to find the set of inverses $t$ for which $F_u(t) = x$, we have to reverse the process:
+.IP "\(bu" 2
+Find all the $(X, Y) \\in S_u$ that could have given rise to $x$, through the $x_1$, $x_2$, or $x_3$ formulas in $\\psi_u\&.$
+.IP "\(bu" 2
+Map those $(X, Y)$ solutions to $t$ values using $P_u^{-1}(X, Y)\&.$
+.IP "\(bu" 2
+For each of the found $t$ values, verify that $F_u(t) = x\&.$
+.IP "\(bu" 2
+Return the remaining $t$ values\&.
+.PP
+
+.PP
+The function $P_u^{-1}$, which finds $t$ given $(X, Y) \\in S_u$, is significantly simpler than $P_u:$
+
+.PP
+$$ P_u^{-1}(X, Y) = \\left\\{\\begin{array}{ll} Yu\\sqrt{-3} - X & a = 0 \\ \\dfrac{Y-Y_0(u)}{X-X_0(u)} & a \\neq 0 \\land X \\neq X_0(u) \\ \\dfrac{-X_0(u)}{h(u)Y_0(u)} & a \\neq 0 \\land X = X_0(u) \\land Y = Y_0(u) \\end{array}\\right\&. $$
+
+.PP
+The third step above, verifying that $F_u(t) = x$, is necessary because for the $(X, Y)$ values found through the $x_1$ and $x_2$ expressions, it is possible that decoding through $\\psi_u(X, Y)$ yields a valid $x_3$ on the curve, which would take precedence over the $x_1$ or $x_2$ decoding\&. These $(X, Y)$ solutions must be rejected\&.
+
+.PP
+Since we know that exactly one or exactly three out of $\\{x_1, x_2, x_3\\}$ are valid x-coordinates for any $t$, the case where either $x_1$ or $x_2$ is valid and in addition also $x_3$ is valid must mean that all three are valid\&. This means that instead of checking whether $x_3$ is on the curve, it is also possible to check whether the other one out of $x_1$ and $x_2$ is on the curve\&. This is significantly simpler, as it turns out\&.
+
+.PP
+Observe that $\\psi_u$ guarantees that $x_1 + x_2 = -u\&.$ So given either $x = x_1$ or $x = x_2$, the other one of the two can be computed as $-u - x\&.$ Thus, when encoding $x$ through the $x_1$ or $x_2$ expressions, one can simply check whether $g(-u-x)$ is a square, and if so, not include the corresponding $t$ values in the returned set\&. As this does not need $X$, $Y$, or $t$, this condition can be determined before those values are computed\&.
+
+.PP
+It is not possible that an encoding found through the $x_1$ expression decodes to a different valid x-coordinate using $x_2$ (which would take precedence), for the same reason: if both $x_1$ and $x_2$ decodings were valid, $x_3$ would be valid as well, and thus take precedence over both\&. Because of this, the $g(-u-x)$ being square test for $x_1$ and $x_2$ is the only test necessary to guarantee the found $t$ values round-trip back to the input $x$ correctly\&. This is the reason for choosing the $(x_3, x_2, x_1)$ precedence order in the decoder; any order which does not place $x_3$ first requires more complicated round-trip checks in the encoder\&.
+.SS "3\&.1 Switching to \fIv, w\fP coordinates"
+Before working out the formulas for all this, we switch to different variables for $S_u\&.$ Let $v = (X/Y - u)/2$, and $w = 2Y\&.$ Or in the other direction, $X = w(u/2 + v)$ and $Y = w/2:$
+.IP "\(bu" 2
+$S_u'$ becomes the set of $(v, w)$ for which $w^2 (u^2 + uv + v^2 + a) = -g(u)$ and $w \\neq 0\&.$
+.IP "\(bu" 2
+For $a=0$ curves, $P_u^{-1}$ can be stated for $(v,w)$ as $P_u^{'-1}(v, w) = w\\left(\\frac{\\sqrt{-3}-1}{2}u - v\\right)\&.$
+.IP "\(bu" 2
+$\\psi_u$ can be stated for $(v, w)$ as $\\psi_u'(v, w) = (x_1, x_2, x_3, z)$, where
+.PP
+
+.PP
+$$ \\begin{array}{lcl} x_1 & = & v \\ x_2 & = & -u - v \\ x_3 & = & u + w^2 \\ z & = & \\dfrac{g(x_3)}{w}(u^2 + uv + v^2 + a) = \\dfrac{-g(u)g(x_3)}{w^3} \\end{array} $$
+
+.PP
+We can now write the expressions for finding $(v, w)$ given $x$ explicitly, by solving each of the $\\{x_1, x_2, x_3\\}$ expressions for $v$ or $w$, and using the $S_u'$ equation to find the other variable:
+.IP "\(bu" 2
+Assuming $x = x_1$, we find $v = x$ and $w = \\pm\\sqrt{-g(u)/(u^2 + uv + v^2 + a)}$ (two solutions)\&.
+.IP "\(bu" 2
+Assuming $x = x_2$, we find $v = -u-x$ and $w = \\pm\\sqrt{-g(u)/(u^2 + uv + v^2 + a)}$ (two solutions)\&.
+.IP "\(bu" 2
+Assuming $x = x_3$, we find $w = \\pm\\sqrt{x-u}$ and $v = -u/2 \\pm \\sqrt{-w^2(4g(u) + w^2h(u))}/(2w^2)$ (four solutions)\&.
+.PP
+.SS "3\&.2 Avoiding computing all inverses"
+The \fIElligatorSwift\fP algorithm as stated in \fBSection\fP 1 requires the computation of $L = F_u^{-1}(x)$ (the set of all $t$ such that $(u, t)$ decode to $x$) in full\&. This is unnecessary\&.
+
+.PP
+Observe that the procedure of restarting with probability $(1 - \\frac{\\#L}{8})$ and otherwise returning a uniformly random element from $L$ is actually equivalent to always padding $L$ with $\\bot$ values up to length 8, picking a uniformly random element from that, restarting whenever $\\bot$ is picked:
+
+.PP
+\fBDefine\fP \fIElligatorSwift(x)\fP as:
+.IP "\(bu" 2
+Loop:
+.IP "  \(bu" 4
+Pick a uniformly random field element $u\&.$
+.IP "  \(bu" 4
+Compute the set $L = F_u^{-1}(x)\&.$
+.IP "  \(bu" 4
+Let $T$ be the 8-element vector consisting of the elements of $L$, plus $8 - \\#L$ times $\\{\\bot\\ 
+.PP
+
+.PP
+

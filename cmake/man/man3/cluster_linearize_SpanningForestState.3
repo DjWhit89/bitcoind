@@ -1,0 +1,242 @@
+.TH "SpanningForestState< SetType >" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+SpanningForestState< SetType >
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <cluster_linearize\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBSpanningForestState\fP (const \fBDepGraph\fP< SetType > &depgraph, uint64_t rng_seed) noexcept"
+.br
+.ti -1c
+.RI "void \fBLoadLinearization\fP (std::span< const \fBDepGraphIndex\fP > old_linearization) noexcept"
+.br
+.ti -1c
+.RI "void \fBMakeTopological\fP () noexcept"
+.br
+.ti -1c
+.RI "void \fBStartOptimizing\fP () noexcept"
+.br
+.ti -1c
+.RI "bool \fBOptimizeStep\fP () noexcept"
+.br
+.ti -1c
+.RI "std::vector< \fBDepGraphIndex\fP > \fBGetLinearization\fP () noexcept"
+.br
+.ti -1c
+.RI "std::vector< \fBFeeFrac\fP > \fBGetDiagram\fP () const noexcept"
+.br
+.ti -1c
+.RI "uint64_t \fBGetCost\fP () const noexcept"
+.br
+.ti -1c
+.RI "void \fBSanityCheck\fP (const \fBDepGraph\fP< SetType > &depgraph) const"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+
+.SS "template<typename SetType>
+.br
+class cluster_linearize::SpanningForestState< SetType >"Class to represent the internal state of the spanning-forest linearization (SFL) algorithm\&.
+
+.PP
+At all times, each dependency is marked as either "active" or "inactive"\&. The subset of active dependencies is the state of the SFL algorithm\&. The implementation maintains several other values to speed up operations, but everything is ultimately a function of what that subset of active dependencies is\&.
+
+.PP
+Given such a subset, define a chunk as the set of transactions that are connected through active dependencies (ignoring their parent/child direction)\&. Thus, every state implies a particular partitioning of the graph into chunks (including potential singletons)\&. In the extreme, each transaction may be in its own chunk, or in the other extreme all transactions may form a single chunk\&. A chunk's feerate is its total fee divided by its total size\&.
+
+.PP
+The algorithm consists of switching dependencies between active and inactive\&. The final linearization that is produced at the end consists of these chunks, sorted from high to low feerate, each individually sorted in an arbitrary but topological (= no child before parent) way\&.
+
+.PP
+We define three quality properties the state can have, each being stronger than the previous:
+
+.PP
+.IP "\(bu" 2
+acyclic: The state is acyclic whenever no cycle of active dependencies exists within the graph, ignoring the parent/child direction\&. This is equivalent to saying that within each chunk the set of active dependencies form a tree, and thus the overall set of active dependencies in the graph form a spanning forest, giving the algorithm its name\&. Being acyclic is also equivalent to every chunk of N transactions having exactly N-1 active dependencies\&.
+
+.PP
+For example in a diamond graph, D->{B,C}->A, the 4 dependencies cannot be simultaneously active\&. If at least one is inactive, the state is acyclic\&.
+
+.PP
+The algorithm maintains an acyclic state at \fIall\fP times as an invariant\&. This implies that activating a dependency always corresponds to merging two chunks, and that deactivating one always corresponds to splitting two chunks\&.
+.IP "\(bu" 2
+topological: We say the state is topological whenever it is acyclic and no inactive dependency exists between two distinct chunks such that the child chunk has higher or equal feerate than the parent chunk\&.
+
+.PP
+The relevance is that whenever the state is topological, the produced output linearization will be topological too (i\&.e\&., not have children before parents)\&. Note that the "or equal" part of the definition matters: if not, one can end up in a situation with mutually-dependent equal-feerate chunks that cannot be linearized\&. For example C->{A,B} and D->{A,B}, with C->A and D->B active\&. The AC chunk depends on \fBDB\fP through C->B, and the BD chunk depends on AC through D->A\&. Merging them into a single ABCD chunk fixes this\&.
+
+.PP
+The algorithm attempts to keep the state topological as much as possible, so it can be interrupted to produce an output whenever, but will sometimes need to temporarily deviate from it when improving the state\&.
+.IP "\(bu" 2
+optimal: For every active dependency, define its top and bottom set as the set of transactions in the chunks that would result if the dependency were deactivated; the top being the one with the dependency's parent, and the bottom being the one with the child\&. Note that due to acyclicity, every deactivation splits a chunk exactly in two\&.
+
+.PP
+We say the state is optimal whenever it is topological and it has no active dependency whose top feerate is strictly higher than its bottom feerate\&. The relevance is that it can be proven that whenever the state is optimal, the produced linearization will also be optimal (in the convexified feerate diagram sense)\&. It can also be proven that for every graph at least one optimal state exists\&.
+
+.PP
+Note that it is possible for the SFL state to not be optimal, but the produced linearization to still be optimal\&. This happens when the chunks of a state are identical to those of an optimal state, but the exact set of active dependencies within a chunk differ in such a way that the state optimality condition is not satisfied\&. Thus, the state being optimal is more a "the eventual output is *known*           to be optimal"\&.
+
+.PP
+The algorithm terminates whenever an optimal state is reached\&.
+.PP
+
+.PP
+This leads to the following high-level algorithm:
+.IP "\(bu" 2
+Start with all dependencies inactive, and thus all transactions in their own chunk\&. This is definitely acyclic\&.
+.IP "\(bu" 2
+Activate dependencies (merging chunks) until the state is topological\&.
+.IP "\(bu" 2
+Loop until optimal (no dependencies with higher-feerate top than bottom), or time runs out:
+.IP "  \(bu" 4
+Deactivate a violating dependency, potentially making the state non-topological\&.
+.IP "  \(bu" 4
+Activate other dependencies to make the state topological again\&.
+.PP
+
+.IP "\(bu" 2
+Output the chunks from high to low feerate, each internally sorted topologically\&.
+.PP
+
+.PP
+When merging, we always either:
+.IP "\(bu" 2
+Merge upwards: merge a chunk with the lowest-feerate other chunk it depends on, among those with lower or equal feerate than itself\&.
+.IP "\(bu" 2
+Merge downwards: merge a chunk with the highest-feerate other chunk that depends on it, among those with higher or equal feerate than itself\&.
+.PP
+
+.PP
+Using these strategies in the improvement loop above guarantees that the output linearization after a deactivate + merge step is never worse or incomparable (in the convexified feerate diagram sense) than the output linearization that would be produced before the step\&. With that, we can refine the high-level algorithm to:
+.IP "\(bu" 2
+Start with all dependencies inactive\&.
+.IP "\(bu" 2
+Perform merges as described until none are possible anymore, making the state topological\&.
+.IP "\(bu" 2
+Loop until optimal or time runs out:
+.IP "  \(bu" 4
+Pick a dependency D to deactivate among those with higher feerate top than bottom\&.
+.IP "  \(bu" 4
+Deactivate D, causing the chunk it is in to split into top T and bottom B\&.
+.IP "  \(bu" 4
+Do an upwards merge of T, if possible\&. If so, repeat the same with the merged result\&.
+.IP "  \(bu" 4
+Do a downwards merge of B, if possible\&. If so, repeat the same with the merged result\&.
+.PP
+
+.IP "\(bu" 2
+Output the chunks from high to low feerate, each internally sorted topologically\&.
+.PP
+
+.PP
+Instead of performing merges arbitrarily to make the initial state topological, it is possible to do so guided by an existing linearization\&. This has the advantage that the state's would-be output linearization is immediately as good as the existing linearization it was based on:
+.IP "\(bu" 2
+Start with all dependencies inactive\&.
+.IP "\(bu" 2
+For each transaction t in the existing linearization:
+.IP "  \(bu" 4
+Find the chunk C that transaction is in (which will be singleton)\&.
+.IP "  \(bu" 4
+Do an upwards merge of C, if possible\&. If so, repeat the same with the merged result\&. No downwards merges are needed in this case\&.
+.PP
+
+.PP
+
+.PP
+What remains to be specified are a number of heuristics:
+
+.PP
+.IP "\(bu" 2
+How to decide which chunks to merge:
+.IP "  \(bu" 4
+The merge upwards and downward rules specify that the lowest-feerate respectively highest-feerate candidate chunk is merged with, but if there are multiple equal-feerate candidates, a uniformly random one among them is picked\&.
+.PP
+
+.IP "\(bu" 2
+How to decide what dependency to activate (when merging chunks):
+.IP "  \(bu" 4
+After picking two chunks to be merged (see above), a uniformly random dependency between the two chunks is activated\&.
+.PP
+
+.IP "\(bu" 2
+How to decide which chunk to find a dependency to split in:
+.IP "  \(bu" 4
+A round-robin queue of chunks to improve is maintained\&. The initial ordering of this queue is uniformly randomly permuted\&.
+.PP
+
+.IP "\(bu" 2
+How to decide what dependency to deactivate (when splitting chunks):
+.IP "  \(bu" 4
+Inside the selected chunk (see above), among the dependencies whose top feerate is strictly higher than its bottom feerate in the selected chunk, if any, a uniformly random dependency is deactivated\&.
+.PP
+
+.IP "\(bu" 2
+How to decide the exact output linearization:
+.IP "  \(bu" 4
+When there are multiple equal-feerate chunks with no dependencies between them, output a uniformly random one among the ones with no missing dependent chunks first\&.
+.IP "  \(bu" 4
+Within chunks, repeatedly pick a uniformly random transaction among those with no missing dependencies\&. 
+.PP
+
+.PP
+
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "template<typename SetType> SpanningForestState (const \fBDepGraph\fP< SetType > & depgraph, uint64_t rng_seed)\fR [inline]\fP, \fR [explicit]\fP, \fR [noexcept]\fP"
+Construct a spanning forest for the given \fBDepGraph\fP, with every transaction in its own chunk (not topological)\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "template<typename SetType> uint64_t GetCost () const\fR [inline]\fP, \fR [noexcept]\fP"
+Determine how much work was performed so far\&. 
+.SS "template<typename SetType> std::vector< \fBFeeFrac\fP > GetDiagram () const\fR [inline]\fP, \fR [noexcept]\fP"
+Get the diagram for the current state, which must be topological\&. Test-only\&.
+
+.PP
+The linearization produced by \fBGetLinearization()\fP is always at least as good (in the \fBCompareChunks()\fP sense) as this diagram, but may be better\&.
+
+.PP
+After an \fBOptimizeStep()\fP, the diagram will always be at least as good as before\&. Once \fBOptimizeStep()\fP returns false, the diagram will be equivalent to that produced by \fBGetLinearization()\fP, and optimal\&. 
+.SS "template<typename SetType> std::vector< \fBDepGraphIndex\fP > GetLinearization ()\fR [inline]\fP, \fR [noexcept]\fP"
+Construct a topologically-valid linearization from the current forest state\&. Must be topological\&. The output linearization\&.
+
+.PP
+A heap with all chunks (by representative) that can currently be included, sorted by chunk feerate and a random tie-breaker\&.
+
+.PP
+Information about chunks:
+.IP "\(bu" 2
+The first value is only used for chunk representatives, and counts the number of unmet dependencies this chunk has on other chunks (not including dependencies within the chunk itself)\&.
+.IP "\(bu" 2
+The second value is the number of unmet dependencies overall\&.
+.PP
+
+.PP
+The set of all chunk representatives\&.
+
+.PP
+A list with all transactions within the current chunk that can be included\&.
+
+.PP
+Comparison function for the heap\&.
+.SS "template<typename SetType> void LoadLinearization (std::span< const \fBDepGraphIndex\fP > old_linearization)\fR [inline]\fP, \fR [noexcept]\fP"
+Load an existing linearization\&. Must be called immediately after constructor\&. The result is topological if the linearization is valid\&. Otherwise, MakeTopological still needs to be called\&. 
+.SS "template<typename SetType> void MakeTopological ()\fR [inline]\fP, \fR [noexcept]\fP"
+Make state topological\&. Can be called after constructing, or after LoadLinearization\&. 
+.SS "template<typename SetType> bool OptimizeStep ()\fR [inline]\fP, \fR [noexcept]\fP"
+Try to improve the forest\&. Returns false if it is optimal, true otherwise\&. 
+.SS "template<typename SetType> void SanityCheck (const \fBDepGraph\fP< SetType > & depgraph) const\fR [inline]\fP"
+Verify internal consistency of the data structure\&. 
+.SS "template<typename SetType> void StartOptimizing ()\fR [inline]\fP, \fR [noexcept]\fP"
+Initialize the data structure for optimization\&. It must be topological already\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

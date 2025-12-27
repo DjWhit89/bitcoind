@@ -1,0 +1,114 @@
+.TH "CScheduler" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+CScheduler
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <scheduler\&.h>\fP
+.SS "Public Types"
+
+.in +1c
+.ti -1c
+.RI "typedef std::function< void()> \fBFunction\fP"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBCScheduler\fP ()"
+.br
+.ti -1c
+.RI "\fB~CScheduler\fP ()"
+.br
+.ti -1c
+.RI "void \fBschedule\fP (\fBFunction\fP f, std::chrono::steady_clock::time_point t) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!newTaskMutex)"
+.br
+.ti -1c
+.RI "void \fBscheduleFromNow\fP (\fBFunction\fP f, std::chrono::milliseconds delta) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!newTaskMutex)"
+.br
+.ti -1c
+.RI "void \fBscheduleEvery\fP (\fBFunction\fP f, std::chrono::milliseconds delta) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!newTaskMutex)"
+.br
+.ti -1c
+.RI "void \fBMockForward\fP (std::chrono::seconds delta_seconds) \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!newTaskMutex)"
+.br
+.ti -1c
+.RI "void \fBserviceQueue\fP () \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!newTaskMutex)"
+.br
+.ti -1c
+.RI "void \fBstop\fP () \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!newTaskMutex)"
+.br
+.ti -1c
+.RI "void \fBStopWhenDrained\fP () \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!newTaskMutex)"
+.br
+.ti -1c
+.RI "size_t \fBgetQueueInfo\fP (std::chrono::steady_clock::time_point &first, std::chrono::steady_clock::time_point &last) const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!newTaskMutex)"
+.br
+.ti -1c
+.RI "bool \fBAreThreadsServicingQueue\fP () const \fBEXCLUSIVE_LOCKS_REQUIRED\fP(!newTaskMutex)"
+.br
+.in -1c
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "std::thread \fBm_service_thread\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+Simple class for background tasks that should be run periodically or once "after a while"
+
+.PP
+Usage:
+
+.PP
+CScheduler* s = new \fBCScheduler()\fP; s->scheduleFromNow(doSomething, std::chrono::milliseconds{11}); // Assuming a: void doSomething() { } s->scheduleFromNow([=] { this->func(argument); }, std::chrono::milliseconds{3}); std::thread* t = new std::thread([&] { s->\fBserviceQueue()\fP; });
+
+.PP
+\&.\&.\&. then at program shutdown, make sure to call \fBstop()\fP to clean up the thread(s) running serviceQueue: s->\fBstop()\fP; t->join(); delete t; delete s; // Must be done after thread is interrupted/joined\&. 
+.SH "Member Typedef Documentation"
+.PP 
+.SS "typedef std::function<void()> \fBFunction\fP"
+
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBCScheduler\fP ()\fR [default]\fP"
+
+.SS "~\fBCScheduler\fP ()"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "bool AreThreadsServicingQueue () const"
+Returns true if there are threads actively running in \fBserviceQueue()\fP 
+.SS "size_t getQueueInfo (std::chrono::steady_clock::time_point & first, std::chrono::steady_clock::time_point & last) const"
+Returns number of tasks waiting to be serviced, and first and last task times 
+.SS "void MockForward (std::chrono::seconds delta_seconds)"
+Mock the scheduler to fast forward in time\&. Iterates through items on taskQueue and reschedules them to be delta_seconds sooner\&. 
+.SS "void schedule (\fBCScheduler::Function\fP f, std::chrono::steady_clock::time_point t)"
+Call func at/after time t 
+.SS "void scheduleEvery (\fBCScheduler::Function\fP f, std::chrono::milliseconds delta)"
+Repeat f until the scheduler is stopped\&. First run is after delta has passed once\&.
+
+.PP
+The timing is not exact: Every time f is finished, it is rescheduled to run again after delta\&. If you need more accurate scheduling, don't use this method\&. 
+.SS "void scheduleFromNow (\fBFunction\fP f, std::chrono::milliseconds delta)\fR [inline]\fP"
+Call f once after the delta has passed 
+.SS "void serviceQueue ()"
+Services the queue 'forever'\&. Should be run in a thread\&. 
+.SS "void stop ()\fR [inline]\fP"
+Tell any threads running serviceQueue to stop as soon as the current task is done 
+.SS "void StopWhenDrained ()\fR [inline]\fP"
+Tell any threads running serviceQueue to stop when there is no work left to be done 
+.SH "Field Documentation"
+.PP 
+.SS "std::thread m_service_thread"
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

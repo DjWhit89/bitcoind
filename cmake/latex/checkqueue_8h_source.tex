@@ -1,0 +1,208 @@
+\doxysection{checkqueue.\+h}
+\label{checkqueue_8h_source}\index{src/checkqueue.h@{src/checkqueue.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2012-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_CHECKQUEUE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_CHECKQUEUE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <logging.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <sync.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <tinyformat.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <util/threadnames.h>}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <iterator>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00032\ template\ <typename\ T,\ typename\ R\ =\ std::remove\_cvref\_t<decltype(std::declval<T>()().value())>>}
+\DoxyCodeLine{00033\ \textcolor{keyword}{class}\ CCheckQueue}
+\DoxyCodeLine{00034\ \{}
+\DoxyCodeLine{00035\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00037\ \ \ \ \ Mutex\ m\_mutex;}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00040\ \ \ \ \ std::condition\_variable\ m\_worker\_cv;}
+\DoxyCodeLine{00041\ }
+\DoxyCodeLine{00043\ \ \ \ \ std::condition\_variable\ m\_master\_cv;}
+\DoxyCodeLine{00044\ }
+\DoxyCodeLine{00047\ \ \ \ \ std::vector<T>\ queue\ GUARDED\_BY(m\_mutex);}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{keywordtype}{int}\ nIdle\ GUARDED\_BY(m\_mutex)\{0\};}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{keywordtype}{int}\ nTotal\ GUARDED\_BY(m\_mutex)\{0\};}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00056\ \ \ \ \ std::optional<R>\ m\_result\ GUARDED\_BY(m\_mutex);}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nTodo\ GUARDED\_BY(m\_mutex)\{0\};}
+\DoxyCodeLine{00064\ }
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nBatchSize;}
+\DoxyCodeLine{00067\ }
+\DoxyCodeLine{00068\ \ \ \ \ std::vector<std::thread>\ m\_worker\_threads;}
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_request\_stop\ GUARDED\_BY(m\_mutex)\{\textcolor{keyword}{false}\};}
+\DoxyCodeLine{00070\ }
+\DoxyCodeLine{00072\ \ \ \ \ std::optional<R>\ Loop(\textcolor{keywordtype}{bool}\ fMaster)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00073\ \ \ \ \ \{}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ std::condition\_variable\&\ cond\ =\ fMaster\ ?\ m\_master\_cv\ :\ m\_worker\_cv;}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ std::vector<T>\ vChecks;}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ vChecks.reserve(nBatchSize);}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nNow\ =\ 0;}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ std::optional<R>\ local\_result;}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ do\_work;}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WAIT\_LOCK(m\_mutex,\ lock);}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ first\ do\ the\ clean-\/up\ of\ the\ previous\ loop\ run\ (allowing\ us\ to\ do\ it\ in\ the\ same\ critsect)}}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nNow)\ \{}
+\DoxyCodeLine{00085\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (local\_result.has\_value()\ \&\&\ !m\_result.has\_value())\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::swap(local\_result,\ m\_result);}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00088\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nTodo\ -\/=\ nNow;}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nTodo\ ==\ 0\ \&\&\ !fMaster)\ \{}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ We\ processed\ the\ last\ element;\ inform\ the\ master\ it\ can\ exit\ and\ return\ the\ result}}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_master\_cv.notify\_one();}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ first\ iteration}}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nTotal++;}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ logically,\ the\ do\ loop\ starts\ here}}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (queue.empty()\ \&\&\ !m\_request\_stop)\ \{}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fMaster\ \&\&\ nTodo\ ==\ 0)\ \{}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nTotal-\/-\/;}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::optional<R>\ to\_return\ =\ std::move(m\_result);}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ reset\ the\ status\ for\ new\ work\ later}}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_result\ =\ std::nullopt;}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ return\ the\ current\ status}}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ to\_return;}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00107\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nIdle++;}
+\DoxyCodeLine{00108\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cond.wait(lock);\ \textcolor{comment}{//\ wait}}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nIdle-\/-\/;}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_request\_stop)\ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ return\ value\ does\ not\ matter,\ because\ m\_request\_stop\ is\ only\ set\ in\ the\ destructor.}}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ std::nullopt;}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00115\ }
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Decide\ how\ many\ work\ units\ to\ process\ now.}}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ *\ Do\ not\ try\ to\ do\ everything\ at\ once,\ but\ aim\ for\ increasingly\ smaller\ batches\ so}}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ \ \ all\ workers\ finish\ approximately\ simultaneously.}}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ *\ Try\ to\ account\ for\ idle\ jobs\ which\ will\ instantly\ start\ helping.}}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ *\ Don't\ do\ batches\ smaller\ than\ 1\ (duh),\ or\ larger\ than\ nBatchSize.}}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nNow\ =\ std::max(1U,\ std::min(nBatchSize,\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int})queue.size()\ /\ (nTotal\ +\ nIdle\ +\ 1)));}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ start\_it\ =\ queue.end()\ -\/\ nNow;}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ vChecks.assign(std::make\_move\_iterator(start\_it),\ std::make\_move\_iterator(queue.end()));}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ queue.erase(start\_it,\ queue.end());}
+\DoxyCodeLine{00125\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Check\ whether\ we\ need\ to\ do\ work\ at\ all}}
+\DoxyCodeLine{00126\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ do\_work\ =\ !m\_result.has\_value();}
+\DoxyCodeLine{00127\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00128\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ execute\ work}}
+\DoxyCodeLine{00129\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (do\_work)\ \{}
+\DoxyCodeLine{00130\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (T\&\ check\ :\ vChecks)\ \{}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ local\_result\ =\ check();}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (local\_result.has\_value())\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00133\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \ \ \ \ vChecks.clear();}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true});}
+\DoxyCodeLine{00137\ \ \ \ \ \}}
+\DoxyCodeLine{00138\ }
+\DoxyCodeLine{00139\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00141\ \ \ \ \ Mutex\ m\_control\_mutex;}
+\DoxyCodeLine{00142\ }
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{keyword}{explicit}\ CCheckQueue(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ batch\_size,\ \textcolor{keywordtype}{int}\ worker\_threads\_num)}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ :\ nBatchSize(batch\_size)}
+\DoxyCodeLine{00146\ \ \ \ \ \{}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ LogInfo(\textcolor{stringliteral}{"{}Script\ verification\ uses\ \%d\ additional\ threads"{}},\ worker\_threads\_num);}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ m\_worker\_threads.reserve(worker\_threads\_num);}
+\DoxyCodeLine{00149\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ n\ =\ 0;\ n\ <\ worker\_threads\_num;\ ++n)\ \{}
+\DoxyCodeLine{00150\ \ \ \ \ \ \ \ \ \ \ \ \ m\_worker\_threads.emplace\_back([\textcolor{keyword}{this},\ n]()\ \{}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ util::ThreadRename(strprintf(\textcolor{stringliteral}{"{}scriptch.\%i"{}},\ n));}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Loop(\textcolor{keyword}{false}\ \textcolor{comment}{/*\ worker\ thread\ */});}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \ \ \ \ \});}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00155\ \ \ \ \ \}}
+\DoxyCodeLine{00156\ }
+\DoxyCodeLine{00157\ \ \ \ \ \textcolor{comment}{//\ Since\ this\ class\ manages\ its\ own\ resources,\ which\ is\ a\ thread}}
+\DoxyCodeLine{00158\ \ \ \ \ \textcolor{comment}{//\ pool\ \`{}m\_worker\_threads`,\ copy\ and\ move\ operations\ are\ not\ appropriate.}}
+\DoxyCodeLine{00159\ \ \ \ \ CCheckQueue(\textcolor{keyword}{const}\ CCheckQueue\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00160\ \ \ \ \ CCheckQueue\&\ operator=(\textcolor{keyword}{const}\ CCheckQueue\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00161\ \ \ \ \ CCheckQueue(CCheckQueue\&\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00162\ \ \ \ \ CCheckQueue\&\ operator=(CCheckQueue\&\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00163\ }
+\DoxyCodeLine{00166\ \ \ \ \ std::optional<R>\ Complete()\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00167\ \ \ \ \ \{}
+\DoxyCodeLine{00168\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ Loop(\textcolor{keyword}{true}\ \textcolor{comment}{/*\ master\ thread\ */});}
+\DoxyCodeLine{00169\ \ \ \ \ \}}
+\DoxyCodeLine{00170\ }
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keywordtype}{void}\ Add(std::vector<T>\&\&\ vChecks)\ EXCLUSIVE\_LOCKS\_REQUIRED(!m\_mutex)}
+\DoxyCodeLine{00173\ \ \ \ \ \{}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (vChecks.empty())\ \{}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ \ \ \ \ LOCK(m\_mutex);}
+\DoxyCodeLine{00180\ \ \ \ \ \ \ \ \ \ \ \ \ queue.insert(queue.end(),\ std::make\_move\_iterator(vChecks.begin()),\ std::make\_move\_iterator(vChecks.end()));}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ \ \ \ \ nTodo\ +=\ vChecks.size();}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (vChecks.size()\ ==\ 1)\ \{}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ \ \ \ \ m\_worker\_cv.notify\_one();}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \ \ \ \ m\_worker\_cv.notify\_all();}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00189\ \ \ \ \ \}}
+\DoxyCodeLine{00190\ }
+\DoxyCodeLine{00191\ \ \ \ \ \string~CCheckQueue()}
+\DoxyCodeLine{00192\ \ \ \ \ \{}
+\DoxyCodeLine{00193\ \ \ \ \ \ \ \ \ WITH\_LOCK(m\_mutex,\ m\_request\_stop\ =\ \textcolor{keyword}{true});}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ m\_worker\_cv.notify\_all();}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (std::thread\&\ t\ :\ m\_worker\_threads)\ \{}
+\DoxyCodeLine{00196\ \ \ \ \ \ \ \ \ \ \ \ \ t.join();}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00198\ \ \ \ \ \}}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \ \ \ \ \textcolor{keywordtype}{bool}\ HasThreads()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ !m\_worker\_threads.empty();\ \}}
+\DoxyCodeLine{00201\ \};}
+\DoxyCodeLine{00202\ }
+\DoxyCodeLine{00207\ template\ <typename\ T,\ typename\ R\ =\ std::remove\_cvref\_t<decltype(std::declval<T>()().value())>>}
+\DoxyCodeLine{00208\ \textcolor{keyword}{class}\ SCOPED\_LOCKABLE\ CCheckQueueControl}
+\DoxyCodeLine{00209\ \{}
+\DoxyCodeLine{00210\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00211\ \ \ \ \ CCheckQueue<T,\ R>\&\ m\_queue;}
+\DoxyCodeLine{00212\ \ \ \ \ UniqueLock<Mutex>\ m\_lock;}
+\DoxyCodeLine{00213\ \ \ \ \ \textcolor{keywordtype}{bool}\ fDone;}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00215\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00216\ \ \ \ \ CCheckQueueControl()\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00217\ \ \ \ \ CCheckQueueControl(\textcolor{keyword}{const}\ CCheckQueueControl\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00218\ \ \ \ \ CCheckQueueControl\&\ operator=(\textcolor{keyword}{const}\ CCheckQueueControl\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00219\ \ \ \ \ \textcolor{keyword}{explicit}\ CCheckQueueControl(CCheckQueue<T>\&\ queueIn)\ EXCLUSIVE\_LOCK\_FUNCTION(queueIn.m\_control\_mutex)\ :\ m\_queue(queueIn),\ m\_lock(LOCK\_ARGS(queueIn.m\_control\_mutex)),\ fDone(false)\ \{\}}
+\DoxyCodeLine{00220\ }
+\DoxyCodeLine{00221\ \ \ \ \ std::optional<R>\ Complete()}
+\DoxyCodeLine{00222\ \ \ \ \ \{}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ ret\ =\ m\_queue.Complete();}
+\DoxyCodeLine{00224\ \ \ \ \ \ \ \ \ fDone\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00226\ \ \ \ \ \}}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00228\ \ \ \ \ \textcolor{keywordtype}{void}\ Add(std::vector<T>\&\&\ vChecks)}
+\DoxyCodeLine{00229\ \ \ \ \ \{}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ m\_queue.Add(std::move(vChecks));}
+\DoxyCodeLine{00231\ \ \ \ \ \}}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00233\ \ \ \ \ \string~CCheckQueueControl()\ UNLOCK\_FUNCTION()}
+\DoxyCodeLine{00234\ \ \ \ \ \{}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!fDone)}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \ \ \ \ Complete();}
+\DoxyCodeLine{00237\ \ \ \ \ \}}
+\DoxyCodeLine{00238\ \};}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_CHECKQUEUE\_H}}
+
+\end{DoxyCode}

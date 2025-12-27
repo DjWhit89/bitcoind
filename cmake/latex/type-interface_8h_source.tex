@@ -1,0 +1,118 @@
+\doxysection{type-\/interface.h}
+\label{type-interface_8h_source}\index{src/ipc/libmultiprocess/include/mp/type-\/interface.h@{src/ipc/libmultiprocess/include/mp/type-\/interface.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ MP\_PROXY\_TYPE\_INTERFACE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ MP\_PROXY\_TYPE\_INTERFACE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <mp/util.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{keyword}{namespace\ }mp\ \{}
+\DoxyCodeLine{00011\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Interface,\ \textcolor{keyword}{typename}\ Impl>}
+\DoxyCodeLine{00012\ kj::Own<typename\ Interface::Server>\ MakeProxyServer(InvokeContext\&\ context,\ std::shared\_ptr<Impl>\ impl)}
+\DoxyCodeLine{00013\ \{}
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{keywordflow}{return}\ kj::heap<ProxyServer<Interface>>(std::move(impl),\ context.connection);}
+\DoxyCodeLine{00015\ \}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Interface,\ \textcolor{keyword}{typename}\ Impl>}
+\DoxyCodeLine{00018\ kj::Own<typename\ Interface::Server>\ CustomMakeProxyServer(InvokeContext\&\ context,\ std::shared\_ptr<Impl>\&\&\ impl)}
+\DoxyCodeLine{00019\ \{}
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{keywordflow}{return}\ MakeProxyServer<Interface,\ Impl>(context,\ std::move(impl));}
+\DoxyCodeLine{00021\ \}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Impl,\ \textcolor{keyword}{typename}\ Value,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00024\ \textcolor{keywordtype}{void}\ CustomBuildField(TypeList<std::unique\_ptr<Impl>>,}
+\DoxyCodeLine{00025\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00026\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00027\ \ \ \ \ Value\&\&\ value,}
+\DoxyCodeLine{00028\ \ \ \ \ Output\&\&\ output,}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{keyword}{typename}\ Decay<\textcolor{keyword}{decltype}(output.get())>::Calls*\ enable\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00030\ \{}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{keywordflow}{if}\ (value)\ \{}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }Interface\ =\ \textcolor{keyword}{typename}\ \textcolor{keyword}{decltype}(output.get())::Calls;}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ output.set(CustomMakeProxyServer<Interface,\ Impl>(invoke\_context,\ std::shared\_ptr<Impl>(value.release())));}
+\DoxyCodeLine{00034\ \ \ \ \ \}}
+\DoxyCodeLine{00035\ \}}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Impl,\ \textcolor{keyword}{typename}\ Value,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00038\ \textcolor{keywordtype}{void}\ CustomBuildField(TypeList<std::shared\_ptr<Impl>>,}
+\DoxyCodeLine{00039\ \ \ \ \ Priority<2>,}
+\DoxyCodeLine{00040\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00041\ \ \ \ \ Value\&\&\ value,}
+\DoxyCodeLine{00042\ \ \ \ \ Output\&\&\ output,}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keyword}{typename}\ Decay<\textcolor{keyword}{decltype}(output.get())>::Calls*\ enable\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00044\ \{}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{keywordflow}{if}\ (value)\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }Interface\ =\ \textcolor{keyword}{typename}\ \textcolor{keyword}{decltype}(output.get())::Calls;}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ output.set(CustomMakeProxyServer<Interface,\ Impl>(invoke\_context,\ std::forward<Value>(value)));}
+\DoxyCodeLine{00048\ \ \ \ \ \}}
+\DoxyCodeLine{00049\ \}}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Impl,\ \textcolor{keyword}{typename}\ Output>}
+\DoxyCodeLine{00052\ \textcolor{keywordtype}{void}\ CustomBuildField(TypeList<Impl\&>,}
+\DoxyCodeLine{00053\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00054\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00055\ \ \ \ \ Impl\&\ value,}
+\DoxyCodeLine{00056\ \ \ \ \ Output\&\&\ output,}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keyword}{typename}\ \textcolor{keyword}{decltype}(output.get())::Calls*\ enable\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00058\ \{}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{comment}{//\ Disable\ deleter\ so\ proxy\ server\ object\ doesn't\ attempt\ to\ delete\ the}}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{comment}{//\ wrapped\ implementation\ when\ the\ proxy\ client\ is\ destroyed\ or}}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{comment}{//\ disconnected.}}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keyword}{using\ }Interface\ =\ \textcolor{keyword}{typename}\ \textcolor{keyword}{decltype}(output.get())::Calls;}
+\DoxyCodeLine{00063\ \ \ \ \ output.set(CustomMakeProxyServer<Interface,\ Impl>(invoke\_context,\ std::shared\_ptr<Impl>(\&value,\ [](Impl*)\{\})));}
+\DoxyCodeLine{00064\ \}}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Interface,\ \textcolor{keyword}{typename}\ Impl>}
+\DoxyCodeLine{00067\ std::unique\_ptr<Impl>\ MakeProxyClient(InvokeContext\&\ context,\ \textcolor{keyword}{typename}\ Interface::Client\&\&\ client)}
+\DoxyCodeLine{00068\ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keywordflow}{return}\ std::make\_unique<ProxyClient<Interface>>(}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ std::move(client),\ \&context.connection,\ \textcolor{comment}{/*\ destroy\_connection=\ */}\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00071\ \}}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Interface,\ \textcolor{keyword}{typename}\ Impl>}
+\DoxyCodeLine{00074\ std::unique\_ptr<Impl>\ CustomMakeProxyClient(InvokeContext\&\ context,\ \textcolor{keyword}{typename}\ Interface::Client\&\&\ client)}
+\DoxyCodeLine{00075\ \{}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{keywordflow}{return}\ MakeProxyClient<Interface,\ Impl>(context,\ kj::mv(client));}
+\DoxyCodeLine{00077\ \}}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00079\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00080\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<std::unique\_ptr<LocalType>>,}
+\DoxyCodeLine{00081\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00082\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00083\ \ \ \ \ Input\&\&\ input,}
+\DoxyCodeLine{00084\ \ \ \ \ ReadDest\&\&\ read\_dest,}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keyword}{typename}\ Decay<\textcolor{keyword}{decltype}(input.get())>::Calls*\ enable\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00086\ \{}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{keyword}{using\ }Interface\ =\ \textcolor{keyword}{typename}\ Decay<\textcolor{keyword}{decltype}(input.get())>::Calls;}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keywordflow}{if}\ (input.has())\ \{}
+\DoxyCodeLine{00089\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.construct(}
+\DoxyCodeLine{00090\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CustomMakeProxyClient<Interface,\ LocalType>(invoke\_context,\ std::move(input.get())));}
+\DoxyCodeLine{00091\ \ \ \ \ \}}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.construct();}
+\DoxyCodeLine{00093\ \}}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ LocalType,\ \textcolor{keyword}{typename}\ Input,\ \textcolor{keyword}{typename}\ ReadDest>}
+\DoxyCodeLine{00096\ \textcolor{keyword}{decltype}(\textcolor{keyword}{auto})\ CustomReadField(TypeList<std::shared\_ptr<LocalType>>,}
+\DoxyCodeLine{00097\ \ \ \ \ Priority<1>,}
+\DoxyCodeLine{00098\ \ \ \ \ InvokeContext\&\ invoke\_context,}
+\DoxyCodeLine{00099\ \ \ \ \ Input\&\&\ input,}
+\DoxyCodeLine{00100\ \ \ \ \ ReadDest\&\&\ read\_dest,}
+\DoxyCodeLine{00101\ \ \ \ \ \textcolor{keyword}{typename}\ Decay<\textcolor{keyword}{decltype}(input.get())>::Calls*\ enable\ =\ \textcolor{keyword}{nullptr})}
+\DoxyCodeLine{00102\ \{}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{keyword}{using\ }Interface\ =\ \textcolor{keyword}{typename}\ Decay<\textcolor{keyword}{decltype}(input.get())>::Calls;}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{keywordflow}{if}\ (input.has())\ \{}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.construct(}
+\DoxyCodeLine{00106\ \ \ \ \ \ \ \ \ \ \ \ \ CustomMakeProxyClient<Interface,\ LocalType>(invoke\_context,\ std::move(input.get())));}
+\DoxyCodeLine{00107\ \ \ \ \ \}}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keywordflow}{return}\ read\_dest.construct();}
+\DoxyCodeLine{00109\ \}}
+\DoxyCodeLine{00110\ \}\ \textcolor{comment}{//\ namespace\ mp}}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ MP\_PROXY\_TYPE\_INTERFACE\_H}}
+
+\end{DoxyCode}

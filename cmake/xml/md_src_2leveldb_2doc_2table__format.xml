@@ -1,0 +1,74 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="md_src_2leveldb_2doc_2table__format" kind="page">
+    <compoundname>md_src_2leveldb_2doc_2table__format</compoundname>
+    <title>leveldb File format</title>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><verbatim>&lt;beginning_of_file&gt;
+[data block 1]
+[data block 2]
+...
+[data block N]
+[meta block 1]
+...
+[meta block K]
+[metaindex block]
+[index block]
+[Footer]        (fixed size; starts at file_size - sizeof(Footer))
+&lt;end_of_file&gt;
+</verbatim></para>
+<para>The file contains internal pointers. Each such pointer is called a BlockHandle and contains the following information: <verbatim>offset:   varint64
+size:     varint64
+</verbatim></para>
+<para>See <ulink url="https://developers.google.com/protocol-buffers/docs/encoding#varints">varints</ulink> for an explanation of varint64 format.</para>
+<para><orderedlist>
+<listitem><para>The sequence of key/value pairs in the file are stored in sorted order and partitioned into a sequence of data blocks. These blocks come one after another at the beginning of the file. Each data block is formatted according to the code in <computeroutput><ref refid="block__builder_8cc" kindref="compound">block_builder.cc</ref></computeroutput>, and then optionally compressed.</para>
+</listitem><listitem><para>After the data blocks we store a bunch of meta blocks. The supported meta block types are described below. More meta block types may be added in the future. Each meta block is again formatted using <computeroutput><ref refid="block__builder_8cc" kindref="compound">block_builder.cc</ref></computeroutput> and then optionally compressed.</para>
+</listitem><listitem><para>A &quot;metaindex&quot; block. It contains one entry for every other meta block where the key is the name of the meta block and the value is a BlockHandle pointing to that meta block.</para>
+</listitem><listitem><para>An &quot;index&quot; block. This block contains one entry per data block, where the key is a string &gt;= last key in that data block and before the first key in the successive data block. The value is the BlockHandle for the data block.</para>
+</listitem><listitem><para>At the very end of the file is a fixed length footer that contains the BlockHandle of the metaindex and index blocks as well as a magic number. <verbatim> metaindex_handle: char[p];     // Block handle for metaindex
+ index_handle:     char[q];     // Block handle for index
+ padding:          char[40-p-q];// zeroed bytes to make fixed length
+                                // (40==2*BlockHandle::kMaxEncodedLength)
+ magic:            fixed64;     // == 0xdb4775248b80fb57 (little-endian)
+</verbatim></para>
+</listitem></orderedlist>
+</para>
+<sect1 id="md_src_2leveldb_2doc_2table__format_1autotoc_md67">
+<title>&quot;filter&quot; Meta Block</title><para>If a <computeroutput><ref refid="class_filter_policy" kindref="compound">FilterPolicy</ref></computeroutput> was specified when the database was opened, a filter block is stored in each table. The &quot;metaindex&quot; block contains an entry that maps from <computeroutput>filter.&lt;N&gt;</computeroutput> to the BlockHandle for the filter block where <computeroutput>&lt;N&gt;</computeroutput> is the string returned by the filter policy&apos;s <computeroutput>Name()</computeroutput> method.</para>
+<para>The filter block stores a sequence of filters, where filter i contains the output of <computeroutput><ref refid="class_filter_policy_1a241d436d9ae9acf92f551d2238ad4b71" kindref="member">FilterPolicy::CreateFilter()</ref></computeroutput> on all keys that are stored in a block whose file offset falls within the range <verbatim>[ i*base ... (i+1)*base-1 ]
+</verbatim></para>
+<para>Currently, &quot;base&quot; is 2KB. So for example, if blocks X and Y start in the range <computeroutput>[ 0KB .. 2KB-1 ]</computeroutput>, all of the keys in X and Y will be converted to a filter by calling <computeroutput><ref refid="class_filter_policy_1a241d436d9ae9acf92f551d2238ad4b71" kindref="member">FilterPolicy::CreateFilter()</ref></computeroutput>, and the resulting filter will be stored as the first filter in the filter block.</para>
+<para>The filter block is formatted as follows: <verbatim>[filter 0]
+[filter 1]
+[filter 2]
+...
+[filter N-1]
+
+[offset of filter 0]                  : 4 bytes
+[offset of filter 1]                  : 4 bytes
+[offset of filter 2]                  : 4 bytes
+...
+[offset of filter N-1]                : 4 bytes
+
+[offset of beginning of offset array] : 4 bytes
+lg(base)                              : 1 byte
+</verbatim></para>
+<para>The offset array at the end of the filter block allows efficient mapping from a data block offset to the corresponding filter.</para>
+</sect1>
+<sect1 id="md_src_2leveldb_2doc_2table__format_1autotoc_md68">
+<title>&quot;stats&quot; Meta Block</title><para>This meta block contains a bunch of stats. The key is the name of the statistic. The value contains the statistic.</para>
+<para>TODO(postrelease): record following stats. <verbatim>data size
+index size
+key size (uncompressed)
+value size (uncompressed)
+number of entries
+number of data blocks
+</verbatim> </para>
+</sect1>
+    </detaileddescription>
+    <location file="src/leveldb/doc/table_format.md"/>
+  </compounddef>
+</doxygen>

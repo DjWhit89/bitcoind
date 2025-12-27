@@ -1,0 +1,157 @@
+\doxysection{port\+\_\+stdcxx.\+h}
+\label{port__stdcxx_8h_source}\index{src/leveldb/port/port\_stdcxx.h@{src/leveldb/port/port\_stdcxx.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2018\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_PORT\_PORT\_STDCXX\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_PORT\_PORT\_STDCXX\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ port/port\_config.h\ availability\ is\ automatically\ detected\ via\ \_\_has\_include}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//\ in\ newer\ compilers.\ If\ LEVELDB\_HAS\_PORT\_CONFIG\_H\ is\ defined,\ it\ overrides\ the}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//\ configuration\ detection.}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#if\ defined(LEVELDB\_HAS\_PORT\_CONFIG\_H)}}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#if\ LEVELDB\_HAS\_PORT\_CONFIG\_H}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}port/port\_config.h"{}}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ LEVELDB\_HAS\_PORT\_CONFIG\_H}}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#elif\ defined(\_\_has\_include)}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#if\ \_\_has\_include("{}port/port\_config.h"{})}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ "{}port/port\_config.h"{}}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ \_\_has\_include("{}port/port\_config.h"{})}}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ defined(LEVELDB\_HAS\_PORT\_CONFIG\_H)}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#if\ HAVE\_CRC32C}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <crc32c/crc32c.h>}}
+\DoxyCodeLine{00027\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ HAVE\_CRC32C}}
+\DoxyCodeLine{00028\ \textcolor{preprocessor}{\#if\ HAVE\_SNAPPY}}
+\DoxyCodeLine{00029\ \textcolor{preprocessor}{\#include\ <snappy.h>}}
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ HAVE\_SNAPPY}}
+\DoxyCodeLine{00031\ }
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00033\ \textcolor{preprocessor}{\#include\ <condition\_variable>}\ \ \textcolor{comment}{//\ NOLINT}}
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00036\ \textcolor{preprocessor}{\#include\ <mutex>}\ \ \textcolor{comment}{//\ NOLINT}}
+\DoxyCodeLine{00037\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{preprocessor}{\#include\ "{}port/thread\_annotations.h"{}}}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00042\ \textcolor{keyword}{namespace\ }port\ \{}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \textcolor{keyword}{class\ }CondVar;}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \textcolor{comment}{//\ Thinly\ wraps\ std::mutex.}}
+\DoxyCodeLine{00047\ \textcolor{keyword}{class\ }LOCKABLE\ Mutex\ \{}
+\DoxyCodeLine{00048\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00049\ \ \ Mutex()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00050\ \ \ \string~Mutex()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ Mutex(\textcolor{keyword}{const}\ Mutex\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00053\ \ \ Mutex\&\ operator=(\textcolor{keyword}{const}\ Mutex\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \textcolor{keywordtype}{void}\ Lock()\ EXCLUSIVE\_LOCK\_FUNCTION()\ \{\ mu\_.lock();\ \}}
+\DoxyCodeLine{00056\ \ \ \textcolor{keywordtype}{void}\ Unlock()\ UNLOCK\_FUNCTION()\ \{\ mu\_.unlock();\ \}}
+\DoxyCodeLine{00057\ \ \ \textcolor{keywordtype}{void}\ AssertHeld()\ ASSERT\_EXCLUSIVE\_LOCK()\ \{\}}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00060\ \ \ \textcolor{keyword}{friend}\ \textcolor{keyword}{class\ }CondVar;}
+\DoxyCodeLine{00061\ \ \ std::mutex\ mu\_;}
+\DoxyCodeLine{00062\ \};}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \textcolor{comment}{//\ Thinly\ wraps\ std::condition\_variable.}}
+\DoxyCodeLine{00065\ \textcolor{keyword}{class\ }CondVar\ \{}
+\DoxyCodeLine{00066\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00067\ \ \ \textcolor{keyword}{explicit}\ CondVar(Mutex*\ mu)\ :\ mu\_(mu)\ \{\ assert(mu\ !=\ \textcolor{keyword}{nullptr});\ \}}
+\DoxyCodeLine{00068\ \ \ \string~CondVar()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00069\ }
+\DoxyCodeLine{00070\ \ \ CondVar(\textcolor{keyword}{const}\ CondVar\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00071\ \ \ CondVar\&\ operator=(\textcolor{keyword}{const}\ CondVar\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00072\ }
+\DoxyCodeLine{00073\ \ \ \textcolor{keywordtype}{void}\ Wait()\ \{}
+\DoxyCodeLine{00074\ \ \ \ \ std::unique\_lock<std::mutex>\ lock(mu\_-\/>mu\_,\ std::adopt\_lock);}
+\DoxyCodeLine{00075\ \ \ \ \ cv\_.wait(lock);}
+\DoxyCodeLine{00076\ \ \ \ \ lock.release();}
+\DoxyCodeLine{00077\ \ \ \}}
+\DoxyCodeLine{00078\ \ \ \textcolor{keywordtype}{void}\ Signal()\ \{\ cv\_.notify\_one();\ \}}
+\DoxyCodeLine{00079\ \ \ \textcolor{keywordtype}{void}\ SignalAll()\ \{\ cv\_.notify\_all();\ \}}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00082\ \ \ std::condition\_variable\ cv\_;}
+\DoxyCodeLine{00083\ \ \ Mutex*\ \textcolor{keyword}{const}\ mu\_;}
+\DoxyCodeLine{00084\ \};}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ Snappy\_Compress(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ input,\ \textcolor{keywordtype}{size\_t}\ length,}
+\DoxyCodeLine{00087\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::string*\ output)\ \{}
+\DoxyCodeLine{00088\ \textcolor{preprocessor}{\#if\ HAVE\_SNAPPY}}
+\DoxyCodeLine{00089\ \ \ output-\/>resize(snappy::MaxCompressedLength(length));}
+\DoxyCodeLine{00090\ \ \ \textcolor{keywordtype}{size\_t}\ outlen;}
+\DoxyCodeLine{00091\ \ \ snappy::RawCompress(input,\ length,\ \&(*output)[0],\ \&outlen);}
+\DoxyCodeLine{00092\ \ \ output-\/>resize(outlen);}
+\DoxyCodeLine{00093\ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00094\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00095\ \ \ \textcolor{comment}{//\ Silence\ compiler\ warnings\ about\ unused\ arguments.}}
+\DoxyCodeLine{00096\ \ \ (void)input;}
+\DoxyCodeLine{00097\ \ \ (void)length;}
+\DoxyCodeLine{00098\ \ \ (void)output;}
+\DoxyCodeLine{00099\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ HAVE\_SNAPPY}}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00102\ \}}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ Snappy\_GetUncompressedLength(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ input,\ \textcolor{keywordtype}{size\_t}\ length,}
+\DoxyCodeLine{00105\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}*\ result)\ \{}
+\DoxyCodeLine{00106\ \textcolor{preprocessor}{\#if\ HAVE\_SNAPPY}}
+\DoxyCodeLine{00107\ \ \ \textcolor{keywordflow}{return}\ snappy::GetUncompressedLength(input,\ length,\ result);}
+\DoxyCodeLine{00108\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00109\ \ \ \textcolor{comment}{//\ Silence\ compiler\ warnings\ about\ unused\ arguments.}}
+\DoxyCodeLine{00110\ \ \ (void)input;}
+\DoxyCodeLine{00111\ \ \ (void)length;}
+\DoxyCodeLine{00112\ \ \ (void)result;}
+\DoxyCodeLine{00113\ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00114\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ HAVE\_SNAPPY}}
+\DoxyCodeLine{00115\ \}}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00117\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ Snappy\_Uncompress(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ input,\ \textcolor{keywordtype}{size\_t}\ length,\ \textcolor{keywordtype}{char}*\ output)\ \{}
+\DoxyCodeLine{00118\ \textcolor{preprocessor}{\#if\ HAVE\_SNAPPY}}
+\DoxyCodeLine{00119\ \ \ \textcolor{keywordflow}{return}\ snappy::RawUncompress(input,\ length,\ output);}
+\DoxyCodeLine{00120\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00121\ \ \ \textcolor{comment}{//\ Silence\ compiler\ warnings\ about\ unused\ arguments.}}
+\DoxyCodeLine{00122\ \ \ (void)input;}
+\DoxyCodeLine{00123\ \ \ (void)length;}
+\DoxyCodeLine{00124\ \ \ (void)output;}
+\DoxyCodeLine{00125\ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00126\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ HAVE\_SNAPPY}}
+\DoxyCodeLine{00127\ \}}
+\DoxyCodeLine{00128\ }
+\DoxyCodeLine{00129\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ GetHeapProfile(\textcolor{keywordtype}{void}\ (*func)(\textcolor{keywordtype}{void}*,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*,\ \textcolor{keywordtype}{int}),\ \textcolor{keywordtype}{void}*\ arg)\ \{}
+\DoxyCodeLine{00130\ \ \ \textcolor{comment}{//\ Silence\ compiler\ warnings\ about\ unused\ arguments.}}
+\DoxyCodeLine{00131\ \ \ (void)func;}
+\DoxyCodeLine{00132\ \ \ (void)arg;}
+\DoxyCodeLine{00133\ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00134\ \}}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00136\ \textcolor{keyword}{inline}\ uint32\_t\ AcceleratedCRC32C(uint32\_t\ crc,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ buf,\ \textcolor{keywordtype}{size\_t}\ size)\ \{}
+\DoxyCodeLine{00137\ \textcolor{preprocessor}{\#if\ HAVE\_CRC32C}}
+\DoxyCodeLine{00138\ \ \ return\ ::crc32c::Extend(crc,\ \textcolor{keyword}{reinterpret\_cast<}\textcolor{keyword}{const\ }uint8\_t*\textcolor{keyword}{>}(buf),\ size);}
+\DoxyCodeLine{00139\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00140\ \ \ \textcolor{comment}{//\ Silence\ compiler\ warnings\ about\ unused\ arguments.}}
+\DoxyCodeLine{00141\ \ \ (void)crc;}
+\DoxyCodeLine{00142\ \ \ (void)buf;}
+\DoxyCodeLine{00143\ \ \ (void)size;}
+\DoxyCodeLine{00144\ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00145\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ HAVE\_CRC32C}}
+\DoxyCodeLine{00146\ \}}
+\DoxyCodeLine{00147\ }
+\DoxyCodeLine{00148\ \}\ \ \textcolor{comment}{//\ namespace\ port}}
+\DoxyCodeLine{00149\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00151\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_PORT\_PORT\_STDCXX\_H\_}}
+
+\end{DoxyCode}

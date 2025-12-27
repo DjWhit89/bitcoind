@@ -1,0 +1,78 @@
+.TH "MiniMiner" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+MiniMiner
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <mini_miner\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "bool \fBIsReadyToCalculate\fP () const"
+.br
+.ti -1c
+.RI "void \fBBuildMockTemplate\fP (std::optional< \fBCFeeRate\fP > target_feerate)"
+.br
+.ti -1c
+.RI "std::set< \fBTxid\fP > \fBGetMockTemplateTxids\fP () const"
+.br
+.ti -1c
+.RI "\fBMiniMiner\fP (const \fBCTxMemPool\fP &mempool, const std::vector< \fBCOutPoint\fP > &outpoints)"
+.br
+.ti -1c
+.RI "\fBMiniMiner\fP (const std::vector< \fBMiniMinerMempoolEntry\fP > &manual_entries, const std::map< \fBTxid\fP, std::set< \fBTxid\fP > > &descendant_caches)"
+.br
+.ti -1c
+.RI "std::map< \fBCOutPoint\fP, \fBCAmount\fP > \fBCalculateBumpFees\fP (const \fBCFeeRate\fP &target_feerate)"
+.br
+.ti -1c
+.RI "std::optional< \fBCAmount\fP > \fBCalculateTotalBumpFees\fP (const \fBCFeeRate\fP &target_feerate)"
+.br
+.ti -1c
+.RI "std::map< \fBTxid\fP, uint32_t > \fBLinearize\fP ()"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+A minimal version of \fBBlockAssembler\fP, using the same ancestor set scoring algorithm\&. Allows us to run this algorithm on a limited set of transactions (e\&.g\&. subset of mempool or transactions that are not yet in mempool) instead of the entire mempool, ignoring consensus rules\&. Callers may use this to:
+.IP "\(bu" 2
+Calculate the "bump fee" needed to spend an unconfirmed UTXO at a given feerate
+.IP "\(bu" 2
+"Linearize" a list of transactions to see the order in which they would be selected for inclusion in a block 
+.PP
+
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "MiniMiner (const \fBCTxMemPool\fP & mempool, const std::vector< \fBCOutPoint\fP > & outpoints)"
+Constructor that takes a list of outpoints that may or may not belong to transactions in the mempool\&. Copies out information about the relevant transactions in the mempool into MiniMinerMempoolEntrys\&. 
+.SS "MiniMiner (const std::vector< \fBMiniMinerMempoolEntry\fP > & manual_entries, const std::map< \fBTxid\fP, std::set< \fBTxid\fP > > & descendant_caches)"
+Constructor in which the \fBMiniMinerMempoolEntry\fP entries have been constructed manually\&. It is assumed that all entries are unique and their values are correct, otherwise results computed by \fBMiniMiner\fP may be incorrect\&. Callers should check \fBIsReadyToCalculate()\fP after construction\&. 
+.PP
+\fBParameters\fP
+.RS 4
+\fIdescendant_caches\fP A map from each transaction to the set of txids of this transaction's descendant set, including itself\&. Each tx in manual_entries must have a corresponding entry in this map, and all of the txids in a descendant set must correspond to a tx in manual_entries\&. 
+.RE
+.PP
+
+.SH "Member Function Documentation"
+.PP 
+.SS "void BuildMockTemplate (std::optional< \fBCFeeRate\fP > target_feerate)"
+Build a block template until the target feerate is hit\&. If target_feerate is not given, builds a block template until all transactions have been selected\&. 
+.SS "std::map< \fBCOutPoint\fP, \fBCAmount\fP > CalculateBumpFees (const \fBCFeeRate\fP & target_feerate)"
+Construct a new block template and, for each outpoint corresponding to a transaction that did not make it into the block, calculate the cost of bumping those transactions (and their ancestors) to the minimum feerate\&. Returns a map from outpoint to bump fee, or an empty map if they cannot be calculated\&. 
+.SS "std::optional< \fBCAmount\fP > CalculateTotalBumpFees (const \fBCFeeRate\fP & target_feerate)"
+Construct a new block template and, calculate the cost of bumping all transactions that did not make it into the block to the target feerate\&. Returns the total bump fee, or std::nullopt if it cannot be calculated\&. 
+.SS "std::set< \fBTxid\fP > GetMockTemplateTxids () const\fR [inline]\fP"
+Returns set of txids in the block template if one has been constructed\&. 
+.SS "bool IsReadyToCalculate () const\fR [inline]\fP"
+Returns true if CalculateBumpFees may be called, false if not\&. 
+.SS "std::map< \fBTxid\fP, uint32_t > Linearize ()"
+Construct a new block template with all of the transactions and calculate the order in which they are selected\&. Returns the sequence number (lower = selected earlier) with which each transaction was selected, indexed by txid, or an empty map if it cannot be calculated\&. 
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

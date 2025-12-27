@@ -1,0 +1,275 @@
+\doxysection{vecdeque.\+h}
+\label{vecdeque_8h_source}\index{src/util/vecdeque.h@{src/util/vecdeque.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_UTIL\_VECDEQUE\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_UTIL\_VECDEQUE\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00009\ }
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00024\ \textcolor{keyword}{class\ }VecDeque}
+\DoxyCodeLine{00025\ \{}
+\DoxyCodeLine{00027\ \ \ \ \ T*\ m\_buffer\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_offset\{0\};}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_size\{0\};}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ m\_capacity\{0\};}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00037\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ FirstPart()\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ std::min(m\_capacity\ -\/\ m\_offset,\ m\_size);\ \}}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{void}\ Reallocate(\textcolor{keywordtype}{size\_t}\ capacity)}
+\DoxyCodeLine{00040\ \ \ \ \ \{}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ Assume(capacity\ >=\ m\_size);}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ Assume((m\_offset\ ==\ 0\ \&\&\ m\_capacity\ ==\ 0)\ ||\ m\_offset\ <\ m\_capacity);}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Allocate\ new\ buffer.}}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ T*\ new\_buffer\ =\ capacity\ ?\ std::allocator<T>().allocate(capacity)\ :\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (capacity)\ \{}
+\DoxyCodeLine{00046\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_trivially\_copyable\_v<T>)\ \{}
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ When\ T\ is\ trivially\ copyable,\ just\ copy\ the\ data\ over\ from\ old\ to\ new\ buffer.}}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ first\_part\ =\ FirstPart();}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (first\_part\ !=\ 0)\ \{}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::memcpy(new\_buffer,\ m\_buffer\ +\ m\_offset,\ first\_part\ *\ \textcolor{keyword}{sizeof}(T));}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (first\_part\ !=\ m\_size)\ \{}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::memcpy(new\_buffer\ +\ first\_part,\ m\_buffer,\ (m\_size\ -\/\ first\_part)\ *\ \textcolor{keyword}{sizeof}(T));}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Otherwise\ move-\/construct\ in\ place\ in\ the\ new\ buffer,\ and\ destroy\ old\ buffer\ objects.}}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ old\_pos\ =\ m\_offset;}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ new\_pos\ =\ 0;\ new\_pos\ <\ m\_size;\ ++new\_pos)\ \{}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::construct\_at(new\_buffer\ +\ new\_pos,\ std::move(*(m\_buffer\ +\ old\_pos)));}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::destroy\_at(m\_buffer\ +\ old\_pos);}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++old\_pos;}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (old\_pos\ ==\ m\_capacity)\ old\_pos\ =\ 0;}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Deallocate\ old\ buffer\ and\ update\ housekeeping.}}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ std::allocator<T>().deallocate(m\_buffer,\ m\_capacity);}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ m\_buffer\ =\ new\_buffer;}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ m\_offset\ =\ 0;}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ m\_capacity\ =\ capacity;}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ Assume((m\_offset\ ==\ 0\ \&\&\ m\_capacity\ ==\ 0)\ ||\ m\_offset\ <\ m\_capacity);}
+\DoxyCodeLine{00072\ \ \ \ \ \}}
+\DoxyCodeLine{00073\ }
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ BufferIndex(\textcolor{keywordtype}{size\_t}\ pos)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00076\ \ \ \ \ \{}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ Assume(pos\ <\ m\_capacity);}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ The\ expression\ below\ is\ used\ instead\ of\ the\ more\ obvious\ (pos\ +\ m\_offset\ >=\ m\_capacity),}}
+\DoxyCodeLine{00079\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ because\ the\ addition\ there\ could\ in\ theory\ overflow\ with\ very\ large\ deques.}}
+\DoxyCodeLine{00080\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (pos\ >=\ m\_capacity\ -\/\ m\_offset)\ \{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (m\_offset\ +\ pos)\ -\/\ m\_capacity;}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00083\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_offset\ +\ pos;}
+\DoxyCodeLine{00084\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00085\ \ \ \ \ \}}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordtype}{void}\ ResizeDown(\textcolor{keywordtype}{size\_t}\ size)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00090\ \ \ \ \ \{}
+\DoxyCodeLine{00091\ \ \ \ \ \ \ \ \ Assume(size\ <=\ m\_size);}
+\DoxyCodeLine{00092\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_trivially\_destructible\_v<T>)\ \{}
+\DoxyCodeLine{00093\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ T\ is\ trivially\ destructible,\ we\ do\ not\ need\ to\ do\ anything\ but\ update\ the}}
+\DoxyCodeLine{00094\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ housekeeping\ record.\ Default\ constructor\ or\ zero-\/filling\ will\ be\ used\ when}}
+\DoxyCodeLine{00095\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ the\ space\ is\ reused.}}
+\DoxyCodeLine{00096\ \ \ \ \ \ \ \ \ \ \ \ \ m\_size\ =\ size;}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ not,\ we\ need\ to\ invoke\ the\ destructor\ for\ every\ element\ separately.}}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (m\_size\ >\ size)\ \{}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::destroy\_at(m\_buffer\ +\ BufferIndex(m\_size\ -\/\ 1));}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ -\/-\/m\_size;}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00104\ \ \ \ \ \}}
+\DoxyCodeLine{00105\ }
+\DoxyCodeLine{00106\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00107\ \ \ \ \ VecDeque()\ noexcept\ =\ default;}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{keywordtype}{void}\ resize(\textcolor{keywordtype}{size\_t}\ size)}
+\DoxyCodeLine{00111\ \ \ \ \ \{}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (size\ <\ m\_size)\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Delegate\ to\ ResizeDown\ when\ shrinking.}}
+\DoxyCodeLine{00114\ \ \ \ \ \ \ \ \ \ \ \ \ ResizeDown(size);}
+\DoxyCodeLine{00115\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (size\ >\ m\_size)\ \{}
+\DoxyCodeLine{00116\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ When\ growing,\ first\ see\ if\ we\ need\ to\ allocate\ more\ space.}}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (size\ >\ m\_capacity)\ Reallocate(size);}
+\DoxyCodeLine{00118\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (m\_size\ <\ size)\ \{}
+\DoxyCodeLine{00119\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::construct\_at(m\_buffer\ +\ BufferIndex(m\_size));}
+\DoxyCodeLine{00120\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++m\_size;}
+\DoxyCodeLine{00121\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00123\ \ \ \ \ \}}
+\DoxyCodeLine{00124\ }
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keywordtype}{void}\ clear()\ noexcept\ \{\ ResizeDown(0);\ \}}
+\DoxyCodeLine{00127\ }
+\DoxyCodeLine{00129\ \ \ \ \ \string~VecDeque()}
+\DoxyCodeLine{00130\ \ \ \ \ \{}
+\DoxyCodeLine{00131\ \ \ \ \ \ \ \ \ clear();}
+\DoxyCodeLine{00132\ \ \ \ \ \ \ \ \ Reallocate(0);}
+\DoxyCodeLine{00133\ \ \ \ \ \}}
+\DoxyCodeLine{00134\ }
+\DoxyCodeLine{00136\ \ \ \ \ VecDeque\&\ operator=(\textcolor{keyword}{const}\ VecDeque\&\ other)}
+\DoxyCodeLine{00137\ \ \ \ \ \{}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (\&other\ ==\ \textcolor{keyword}{this})\ [[unlikely]]\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ clear();}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ Reallocate(other.m\_size);}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_trivially\_copyable\_v<T>)\ \{}
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ first\_part\ =\ other.FirstPart();}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ \ \ \ \ Assume(first\_part\ >\ 0\ ||\ m\_size\ ==\ 0);}
+\DoxyCodeLine{00144\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (first\_part\ !=\ 0)\ \{}
+\DoxyCodeLine{00145\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::memcpy(m\_buffer,\ other.m\_buffer\ +\ other.m\_offset,\ first\_part\ *\ \textcolor{keyword}{sizeof}(T));}
+\DoxyCodeLine{00146\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00147\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (first\_part\ !=\ other.m\_size)\ \{}
+\DoxyCodeLine{00148\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::memcpy(m\_buffer\ +\ first\_part,\ other.m\_buffer,\ (other.m\_size\ -\/\ first\_part)\ *\ \textcolor{keyword}{sizeof}(T));}
+\DoxyCodeLine{00149\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00150\ \ \ \ \ \ \ \ \ \ \ \ \ m\_size\ =\ other.m\_size;}
+\DoxyCodeLine{00151\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00152\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (m\_size\ <\ other.m\_size)\ \{}
+\DoxyCodeLine{00153\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::construct\_at(m\_buffer\ +\ BufferIndex(m\_size),\ other[m\_size]);}
+\DoxyCodeLine{00154\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ++m\_size;}
+\DoxyCodeLine{00155\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00156\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00158\ \ \ \ \ \}}
+\DoxyCodeLine{00159\ }
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordtype}{void}\ swap(VecDeque\&\ other)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00162\ \ \ \ \ \{}
+\DoxyCodeLine{00163\ \ \ \ \ \ \ \ \ std::swap(m\_buffer,\ other.m\_buffer);}
+\DoxyCodeLine{00164\ \ \ \ \ \ \ \ \ std::swap(m\_offset,\ other.m\_offset);}
+\DoxyCodeLine{00165\ \ \ \ \ \ \ \ \ std::swap(m\_size,\ other.m\_size);}
+\DoxyCodeLine{00166\ \ \ \ \ \ \ \ \ std::swap(m\_capacity,\ other.m\_capacity);}
+\DoxyCodeLine{00167\ \ \ \ \ \}}
+\DoxyCodeLine{00168\ }
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{keyword}{friend}\ \textcolor{keywordtype}{void}\ swap(VecDeque\&\ a,\ VecDeque\&\ b)\ \textcolor{keyword}{noexcept}\ \{\ a.swap(b);\ \}}
+\DoxyCodeLine{00171\ }
+\DoxyCodeLine{00173\ \ \ \ \ VecDeque\&\ operator=(VecDeque\&\&\ other)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00174\ \ \ \ \ \{}
+\DoxyCodeLine{00175\ \ \ \ \ \ \ \ \ swap(other);}
+\DoxyCodeLine{00176\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{00177\ \ \ \ \ \}}
+\DoxyCodeLine{00178\ }
+\DoxyCodeLine{00180\ \ \ \ \ VecDeque(\textcolor{keyword}{const}\ VecDeque\&\ other)\ \{\ *\textcolor{keyword}{this}\ =\ other;\ \}}
+\DoxyCodeLine{00182\ \ \ \ \ VecDeque(VecDeque\&\&\ other)\ \textcolor{keyword}{noexcept}\ \{\ swap(other);\ \}}
+\DoxyCodeLine{00183\ }
+\DoxyCodeLine{00185\ \ \ \ \ \textcolor{keywordtype}{bool}\ \textcolor{keyword}{friend}\ operator==(\textcolor{keyword}{const}\ VecDeque\&\ a,\ \textcolor{keyword}{const}\ VecDeque\&\ b)}
+\DoxyCodeLine{00186\ \ \ \ \ \{}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (a.m\_size\ !=\ b.m\_size)\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{size\_t}\ i\ =\ 0;\ i\ <\ a.m\_size;\ ++i)\ \{}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (a[i]\ !=\ b[i])\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00191\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00192\ \ \ \ \ \}}
+\DoxyCodeLine{00193\ }
+\DoxyCodeLine{00195\ \ \ \ \ std::strong\_ordering\ \textcolor{keyword}{friend}\ operator<=>(\textcolor{keyword}{const}\ VecDeque\&\ a,\ \textcolor{keyword}{const}\ VecDeque\&\ b)}
+\DoxyCodeLine{00196\ \ \ \ \ \{}
+\DoxyCodeLine{00197\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ pos\_a\{0\},\ pos\_b\{0\};}
+\DoxyCodeLine{00198\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (pos\_a\ <\ a.m\_size\ \&\&\ pos\_b\ <\ b.m\_size)\ \{}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ cmp\ =\ a[pos\_a++]\ <=>\ b[pos\_b++];}
+\DoxyCodeLine{00200\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (cmp\ !=\ 0)\ \textcolor{keywordflow}{return}\ cmp;}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ a.m\_size\ <=>\ b.m\_size;}
+\DoxyCodeLine{00203\ \ \ \ \ \}}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keywordtype}{void}\ reserve(\textcolor{keywordtype}{size\_t}\ capacity)}
+\DoxyCodeLine{00207\ \ \ \ \ \{}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (capacity\ >\ m\_capacity)\ Reallocate(capacity);}
+\DoxyCodeLine{00209\ \ \ \ \ \}}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{keywordtype}{void}\ shrink\_to\_fit()}
+\DoxyCodeLine{00213\ \ \ \ \ \{}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_capacity\ >\ m\_size)\ Reallocate(m\_size);}
+\DoxyCodeLine{00215\ \ \ \ \ \}}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00218\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00219\ \ \ \ \ \textcolor{keywordtype}{void}\ emplace\_back(Args\&\&...\ args)}
+\DoxyCodeLine{00220\ \ \ \ \ \{}
+\DoxyCodeLine{00221\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_size\ ==\ m\_capacity)\ Reallocate((m\_size\ +\ 1)\ *\ 2);}
+\DoxyCodeLine{00222\ \ \ \ \ \ \ \ \ std::construct\_at(m\_buffer\ +\ BufferIndex(m\_size),\ std::forward<Args>(args)...);}
+\DoxyCodeLine{00223\ \ \ \ \ \ \ \ \ ++m\_size;}
+\DoxyCodeLine{00224\ \ \ \ \ \}}
+\DoxyCodeLine{00225\ }
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{keywordtype}{void}\ push\_back(T\&\&\ elem)\ \{\ emplace\_back(std::move(elem));\ \}}
+\DoxyCodeLine{00228\ }
+\DoxyCodeLine{00230\ \ \ \ \ \textcolor{keywordtype}{void}\ push\_back(\textcolor{keyword}{const}\ T\&\ elem)\ \{\ emplace\_back(elem);\ \}}
+\DoxyCodeLine{00231\ }
+\DoxyCodeLine{00233\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{keywordtype}{void}\ emplace\_front(Args\&\&...\ args)}
+\DoxyCodeLine{00235\ \ \ \ \ \{}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_size\ ==\ m\_capacity)\ Reallocate((m\_size\ +\ 1)\ *\ 2);}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ std::construct\_at(m\_buffer\ +\ BufferIndex(m\_capacity\ -\/\ 1),\ std::forward<Args>(args)...);}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_offset\ ==\ 0)\ m\_offset\ =\ m\_capacity;}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ -\/-\/m\_offset;}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ ++m\_size;}
+\DoxyCodeLine{00241\ \ \ \ \ \}}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keywordtype}{void}\ push\_front(\textcolor{keyword}{const}\ T\&\ elem)\ \{\ emplace\_front(elem);\ \}}
+\DoxyCodeLine{00245\ }
+\DoxyCodeLine{00247\ \ \ \ \ \textcolor{keywordtype}{void}\ push\_front(T\&\&\ elem)\ \{\ emplace\_front(std::move(elem));\ \}}
+\DoxyCodeLine{00248\ }
+\DoxyCodeLine{00250\ \ \ \ \ \textcolor{keywordtype}{void}\ pop\_front()}
+\DoxyCodeLine{00251\ \ \ \ \ \{}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ Assume(m\_size);}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ std::destroy\_at(m\_buffer\ +\ m\_offset);}
+\DoxyCodeLine{00254\ \ \ \ \ \ \ \ \ -\/-\/m\_size;}
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ ++m\_offset;}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (m\_offset\ ==\ m\_capacity)\ m\_offset\ =\ 0;}
+\DoxyCodeLine{00257\ \ \ \ \ \}}
+\DoxyCodeLine{00258\ }
+\DoxyCodeLine{00260\ \ \ \ \ \textcolor{keywordtype}{void}\ pop\_back()}
+\DoxyCodeLine{00261\ \ \ \ \ \{}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ Assume(m\_size);}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ std::destroy\_at(m\_buffer\ +\ BufferIndex(m\_size\ -\/\ 1));}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ -\/-\/m\_size;}
+\DoxyCodeLine{00265\ \ \ \ \ \}}
+\DoxyCodeLine{00266\ }
+\DoxyCodeLine{00268\ \ \ \ \ T\&\ front()\ noexcept}
+\DoxyCodeLine{00269\ \ \ \ \ \{}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ \ \ Assume(m\_size);}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_buffer[m\_offset];}
+\DoxyCodeLine{00272\ \ \ \ \ \}}
+\DoxyCodeLine{00273\ }
+\DoxyCodeLine{00275\ \ \ \ \ \textcolor{keyword}{const}\ T\&\ front()\ const\ noexcept}
+\DoxyCodeLine{00276\ \ \ \ \ \{}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ Assume(m\_size);}
+\DoxyCodeLine{00278\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_buffer[m\_offset];}
+\DoxyCodeLine{00279\ \ \ \ \ \}}
+\DoxyCodeLine{00280\ }
+\DoxyCodeLine{00282\ \ \ \ \ T\&\ back()\ noexcept}
+\DoxyCodeLine{00283\ \ \ \ \ \{}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ Assume(m\_size);}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_buffer[BufferIndex(m\_size\ -\/\ 1)];}
+\DoxyCodeLine{00286\ \ \ \ \ \}}
+\DoxyCodeLine{00287\ }
+\DoxyCodeLine{00289\ \ \ \ \ \textcolor{keyword}{const}\ T\&\ back()\ const\ noexcept}
+\DoxyCodeLine{00290\ \ \ \ \ \{}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ Assume(m\_size);}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_buffer[BufferIndex(m\_size\ -\/\ 1)];}
+\DoxyCodeLine{00293\ \ \ \ \ \}}
+\DoxyCodeLine{00294\ }
+\DoxyCodeLine{00296\ \ \ \ \ T\&\ operator[](\textcolor{keywordtype}{size\_t}\ idx)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00297\ \ \ \ \ \{}
+\DoxyCodeLine{00298\ \ \ \ \ \ \ \ \ Assume(idx\ <\ m\_size);}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_buffer[BufferIndex(idx)];}
+\DoxyCodeLine{00300\ \ \ \ \ \}}
+\DoxyCodeLine{00301\ }
+\DoxyCodeLine{00303\ \ \ \ \ \textcolor{keyword}{const}\ T\&\ operator[](\textcolor{keywordtype}{size\_t}\ idx)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00304\ \ \ \ \ \{}
+\DoxyCodeLine{00305\ \ \ \ \ \ \ \ \ Assume(idx\ <\ m\_size);}
+\DoxyCodeLine{00306\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_buffer[BufferIndex(idx)];}
+\DoxyCodeLine{00307\ \ \ \ \ \}}
+\DoxyCodeLine{00308\ }
+\DoxyCodeLine{00310\ \ \ \ \ \textcolor{keywordtype}{bool}\ empty()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_size\ ==\ 0;\ \}}
+\DoxyCodeLine{00312\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_size;\ \}}
+\DoxyCodeLine{00314\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ capacity()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_capacity;\ \}}
+\DoxyCodeLine{00315\ \};}
+\DoxyCodeLine{00316\ }
+\DoxyCodeLine{00317\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_UTIL\_VECDEQUE\_H}}
+
+\end{DoxyCode}

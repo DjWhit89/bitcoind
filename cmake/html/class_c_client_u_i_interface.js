@@ -1,0 +1,38 @@
+var class_c_client_u_i_interface =
+[
+    [ "MessageBoxFlags", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8", [
+      [ "ICON_INFORMATION", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8afa2843b1c124d1413be1441204f36dfb", null ],
+      [ "ICON_WARNING", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a310a264c1c81f449fb6e5136eeb32afd", null ],
+      [ "ICON_ERROR", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8abb9c19d196e0d570a1f921c9d68c3b8c", null ],
+      [ "ICON_MASK", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8af608354ebea4667ec5f401bead6a255c", null ],
+      [ "BTN_OK", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8aaa491a33c96f52990ed44a363763e49d", null ],
+      [ "BTN_YES", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8ab912ad53e8e2d69361af611d9c7623d7", null ],
+      [ "BTN_NO", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a675a62874a01699a577f82ce5290f794", null ],
+      [ "BTN_ABORT", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a9a37c1f08a5958268bde34819734cc88", null ],
+      [ "BTN_RETRY", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a02eeaf8eab709681799294f9ea854aa6", null ],
+      [ "BTN_IGNORE", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a4f5408aa05ba1bddf56f418be0741856", null ],
+      [ "BTN_CLOSE", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a88253b2bac68f973055ae429cffaee0f", null ],
+      [ "BTN_CANCEL", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8afa0d5e40bf55296d90817eea7ef96c56", null ],
+      [ "BTN_DISCARD", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8ace09280c5f3fc6655c7eda9c35145967", null ],
+      [ "BTN_HELP", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a3813375b872614200200d1a31e9f4bf8", null ],
+      [ "BTN_APPLY", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a4fcdf5da71a65937d20f27d642ec362e", null ],
+      [ "BTN_RESET", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8aa2429652a9018d8f4010d0c37b7dfe44", null ],
+      [ "BTN_MASK", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a4da327a12da9317eeda3717dd4b5199c", null ],
+      [ "MODAL", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8acd8abaf8f70170e34d4baf8b131810b0", null ],
+      [ "SECURE", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8aa9dea2ba3f45f7d12b274eb6ab7d28d9", null ],
+      [ "MSG_INFORMATION", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a462ff83676d774b1af21623b517aa44c", null ],
+      [ "MSG_WARNING", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a8c89d217603db55622773ff511cf0ac7", null ],
+      [ "MSG_ERROR", "class_c_client_u_i_interface.html#ab18f2de7469825b7c2fb98cae515ebb8a28aec242413d6eab32c014fd1cecc4f0", null ]
+    ] ],
+    [ "ADD_SIGNALS_DECL_WRAPPER", "class_c_client_u_i_interface.html#a3a257ba8ff3285793bd252bdf13e584c", null ],
+    [ "ADD_SIGNALS_DECL_WRAPPER", "class_c_client_u_i_interface.html#a4b5b8ea67c85c5c19a6303a8edd95918", null ],
+    [ "ADD_SIGNALS_DECL_WRAPPER", "class_c_client_u_i_interface.html#a78638770bdd2c91085583f1fa0a2c6a0", null ],
+    [ "ADD_SIGNALS_DECL_WRAPPER", "class_c_client_u_i_interface.html#a2c097d1ef28a6c318a34fc4c0fe1cce2", null ],
+    [ "ADD_SIGNALS_DECL_WRAPPER", "class_c_client_u_i_interface.html#a539a46287a8be2dae1dba1bd455c669b", null ],
+    [ "ADD_SIGNALS_DECL_WRAPPER", "class_c_client_u_i_interface.html#abecd150716f7083caa7cc7f1d857d444", null ],
+    [ "ADD_SIGNALS_DECL_WRAPPER", "class_c_client_u_i_interface.html#abed75768a2a19c4d383b27d387b7c6fc", null ],
+    [ "ADD_SIGNALS_DECL_WRAPPER", "class_c_client_u_i_interface.html#a841207bf531a1912754c0061fa20699d", null ],
+    [ "ADD_SIGNALS_DECL_WRAPPER", "class_c_client_u_i_interface.html#adc42b3dde8651e0d9fb629944ca07eb2", null ],
+    [ "ADD_SIGNALS_DECL_WRAPPER", "class_c_client_u_i_interface.html#a0a7f05713b41d08bd1a2dbcc31ed83d6", null ],
+    [ "ADD_SIGNALS_DECL_WRAPPER", "class_c_client_u_i_interface.html#a856b2375b74b5a034db8d5add4b86027", null ]
+];

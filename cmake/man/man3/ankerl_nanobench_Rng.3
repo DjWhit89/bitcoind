@@ -1,0 +1,211 @@
+.TH "Rng" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+Rng
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <nanobench\&.h>\fP
+.SS "Public Types"
+
+.in +1c
+.ti -1c
+.RI "using \fBresult_type\fP = uint64_t"
+.br
+.RI "This RNG provides 64bit randomness\&. "
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBRng\fP (Rng const &)=delete"
+.br
+.ti -1c
+.RI "\fBRng\fP & \fBoperator=\fP (\fBRng\fP const &)=delete"
+.br
+.ti -1c
+.RI "\fBRng\fP (Rng &&) noexcept=default"
+.br
+.ti -1c
+.RI "\fBRng\fP & \fBoperator=\fP (\fBRng\fP &&) noexcept=default"
+.br
+.ti -1c
+.RI "\fB~Rng\fP () noexcept=default"
+.br
+.ti -1c
+.RI "\fBRng\fP ()"
+.br
+.RI "Creates a new Random generator with random seed\&. "
+.ti -1c
+.RI "\fBRng\fP (uint64_t seed) noexcept"
+.br
+.ti -1c
+.RI "\fBRng\fP (uint64_t x, uint64_t y) noexcept"
+.br
+.ti -1c
+.RI "\fBRng\fP (std::vector< uint64_t > const &data)"
+.br
+.ti -1c
+.RI "\fBANKERL_NANOBENCH\fP (NODISCARD) \fBRng\fP copy() const noexcept"
+.br
+.ti -1c
+.RI "uint64_t \fBoperator()\fP () noexcept"
+.br
+.RI "Produces a 64bit random value\&. This should be very fast, thus it is marked as inline\&. In my benchmark, this is ~46 times faster than \fRstd::default_random_engine\fP for producing 64bit random values\&. It seems that the fastest std contender is \fRstd::mt19937_64\fP\&. Still, this RNG is 2-3 times as fast\&. "
+.ti -1c
+.RI "uint32_t \fBbounded\fP (uint32_t range) noexcept"
+.br
+.ti -1c
+.RI "double \fBuniform01\fP () noexcept"
+.br
+.ti -1c
+.RI "template<typename Container> void \fBshuffle\fP (Container &container) noexcept"
+.br
+.in -1c
+.SS "Static Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "static constexpr uint64_t \fBmin\fP ()"
+.br
+.ti -1c
+.RI "static constexpr uint64_t \fBmax\fP ()"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+An extremely fast random generator\&. Currently, this implements \fIRomuDuoJr\fP, developed by Mark Overton\&. Source: http://www.romu-random.org/
+
+.PP
+RomuDuoJr is extremely fast and provides reasonable good randomness\&. Not enough for large jobs, but definitely good enough for a benchmarking framework\&.
+
+.PP
+.IP "\(bu" 2
+Estimated capacity: $ 2^{51} $ bytes
+.IP "\(bu" 2
+Register pressure: 4
+.IP "\(bu" 2
+\fBState\fP size: 128 bits
+.PP
+
+.PP
+This random generator is a drop-in replacement for the generators supplied by \fR<random>\fP\&. It is not cryptographically secure\&. It's intended purpose is to be very fast so that benchmarks that make use of randomness are not distorted too much by the random generator\&.
+
+.PP
+\fBRng\fP also provides a few non-standard helpers, optimized for speed\&. 
+.SH "Member Typedef Documentation"
+.PP 
+.SS "using \fBresult_type\fP = uint64_t"
+
+.PP
+This RNG provides 64bit randomness\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "Rng (Rng const & )\fR [delete]\fP"
+As a safety precaution, we don't allow copying\&. Copying a PRNG would mean you would have two random generators that produce the same sequence, which is generally not what one wants\&. Instead create a new rng with the default constructor \fBRng()\fP, which is automatically seeded from \fRstd::random_device\fP\&. If you really need a copy, use \fRcopy()\fP\&. 
+.SS "Rng (Rng && )\fR [default]\fP, \fR [noexcept]\fP"
+
+.SS "~\fBRng\fP ()\fR [default]\fP, \fR [noexcept]\fP"
+
+.SS "Rng ()"
+
+.PP
+Creates a new Random generator with random seed\&. Instead of a default seed (as the random generators from the STD), this properly seeds the random generator from \fRstd::random_device\fP\&. It guarantees correct seeding\&. Note that seeding can be relatively slow, depending on the source of randomness used\&. So it is best to create a \fBRng\fP once and use it for all your randomness purposes\&. 
+.SS "Rng (uint64_t seed)\fR [explicit]\fP, \fR [noexcept]\fP"
+Creates a new \fBRng\fP that is seeded with a specific seed\&. Each \fBRng\fP created from the same seed will produce the same randomness sequence\&. This can be useful for deterministic behavior\&.
+
+.PP
+.PP
+.nf
+embed:rst
+\&.\&. note::
+
+   The random algorithm might change between nanobench releases\&. Whenever a faster and/or better random
+   generator becomes available, I will switch the implementation\&.
+.fi
+.PP
+
+.PP
+As per the Romu paper, this seeds the \fBRng\fP with splitMix64 algorithm and performs 10 initial rounds for further mixing up of the internal state\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIseed\fP The 64bit seed\&. All values are allowed, even 0\&. 
+.RE
+.PP
+
+.SS "Rng (uint64_t x, uint64_t y)\fR [noexcept]\fP"
+
+.SS "Rng (std::vector< uint64_t > const & data)\fR [explicit]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "ANKERL_NANOBENCH (NODISCARD ) const\fR [noexcept]\fP"
+Creates a copy of the \fBRng\fP, thus the copy provides exactly the same random sequence as the original\&. 
+.SS "uint32_t bounded (uint32_t range)\fR [inline]\fP, \fR [noexcept]\fP"
+Generates a random number between 0 and range (excluding range)\&.
+
+.PP
+The algorithm only produces 32bit numbers, and is slightly biased\&. The effect is quite small unless your range is close to the maximum value of an integer\&. It is possible to correct the bias with rejection sampling (see \fRhere\fP, but this is most likely irrelevant in practices for the purposes of this \fBRng\fP\&.
+
+.PP
+See Daniel Lemire's blog post \fRA fast alternative to the modulo reduction\fP
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIrange\fP Upper exclusive range\&. E\&.g a value of 3 will generate random numbers 0, 1, 2\&. 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+uint32_t Generated random values in range [0, range(\&. 
+.RE
+.PP
+
+.SS "uint64_t max ()\fR [static]\fP, \fR [constexpr]\fP"
+
+.SS "uint64_t min ()\fR [static]\fP, \fR [constexpr]\fP"
+
+.SS "uint64_t operator() ()\fR [inline]\fP, \fR [noexcept]\fP"
+
+.PP
+Produces a 64bit random value\&. This should be very fast, thus it is marked as inline\&. In my benchmark, this is ~46 times faster than \fRstd::default_random_engine\fP for producing 64bit random values\&. It seems that the fastest std contender is \fRstd::mt19937_64\fP\&. Still, this RNG is 2-3 times as fast\&. 
+.PP
+\fBReturns\fP
+.RS 4
+uint64_t The next 64 bit random value\&. 
+.RE
+.PP
+
+.SS "\fBRng\fP & operator= (\fBRng\fP && )\fR [default]\fP, \fR [noexcept]\fP"
+
+.SS "\fBRng\fP & operator= (\fBRng\fP const & )\fR [delete]\fP"
+Same as \fBRng(Rng const&)\fP, we don't allow assignment\&. If you need a new \fBRng\fP create one with the default constructor \fBRng()\fP\&. 
+.SS "template<typename Container> void shuffle (Container & container)\fR [noexcept]\fP"
+Shuffles all entries in the given container\&. Although this has a slight bias due to the implementation of \fBbounded()\fP, this is preferable to \fRstd::shuffle\fP because it is over 5 times faster\&. See Daniel Lemire's blog post \fRFast random shuffling\fP\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontainer\fP The whole container will be shuffled\&. 
+.RE
+.PP
+
+.SS "double uniform01 ()\fR [inline]\fP, \fR [noexcept]\fP"
+Provides a random uniform double value between 0 and 1\&. This uses the method described in \fRGenerating uniform doubles in the unit interval\fP, and is extremely fast\&.
+
+.PP
+\fBReturns\fP
+.RS 4
+double Uniformly distributed double value in range [0,1(, excluding 1\&. 
+.RE
+.PP
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

@@ -1,0 +1,83 @@
+\doxysection{wallet.\+h}
+\label{test_2fuzz_2util_2wallet_8h_source}\index{src/test/fuzz/util/wallet.h@{src/test/fuzz/util/wallet.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2024-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_TEST\_FUZZ\_UTIL\_WALLET\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ BITCOIN\_TEST\_FUZZ\_UTIL\_WALLET\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <test/fuzz/FuzzedDataProvider.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <test/fuzz/fuzz.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <test/fuzz/util.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <policy/policy.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <wallet/coincontrol.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <wallet/fees.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <wallet/spend.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <wallet/test/util.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <wallet/wallet.h>}}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \textcolor{keyword}{namespace\ }wallet\ \{}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00023\ \textcolor{keyword}{struct\ }FuzzedWallet\ \{}
+\DoxyCodeLine{00024\ \ \ \ \ std::shared\_ptr<CWallet>\ wallet;}
+\DoxyCodeLine{00025\ \ \ \ \ FuzzedWallet(interfaces::Chain\&\ chain,\ \textcolor{keyword}{const}\ std::string\&\ name,\ \textcolor{keyword}{const}\ std::string\&\ seed\_insecure)}
+\DoxyCodeLine{00026\ \ \ \ \ \{}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ wallet\ =\ std::make\_shared<CWallet>(\&chain,\ name,\ CreateMockableWalletDatabase());}
+\DoxyCodeLine{00028\ \ \ \ \ \ \ \ \ \{}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ \ \ LOCK(wallet-\/>cs\_wallet);}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \ \ \ \ wallet-\/>SetWalletFlag(WALLET\_FLAG\_DESCRIPTORS);}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ height\{*Assert(chain.getHeight())\};}
+\DoxyCodeLine{00032\ \ \ \ \ \ \ \ \ \ \ \ \ wallet-\/>SetLastBlockProcessed(height,\ chain.getBlockHash(height));}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00034\ \ \ \ \ \ \ \ \ wallet-\/>m\_keypool\_size\ =\ 1;\ \textcolor{comment}{//\ Avoid\ timeout\ in\ TopUp()}}
+\DoxyCodeLine{00035\ \ \ \ \ \ \ \ \ assert(wallet-\/>IsWalletFlagSet(WALLET\_FLAG\_DESCRIPTORS));}
+\DoxyCodeLine{00036\ \ \ \ \ \ \ \ \ ImportDescriptors(seed\_insecure);}
+\DoxyCodeLine{00037\ \ \ \ \ \}}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{keywordtype}{void}\ ImportDescriptors(\textcolor{keyword}{const}\ std::string\&\ seed\_insecure)}
+\DoxyCodeLine{00039\ \ \ \ \ \{}
+\DoxyCodeLine{00040\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ std::vector<std::string>\ DESCS\{}
+\DoxyCodeLine{00041\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}pkh(\%s/\%s/*)"{}},}
+\DoxyCodeLine{00042\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}sh(wpkh(\%s/\%s/*))"{}},}
+\DoxyCodeLine{00043\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}tr(\%s/\%s/*)"{}},}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{stringliteral}{"{}wpkh(\%s/\%s/*)"{}},}
+\DoxyCodeLine{00045\ \ \ \ \ \ \ \ \ \};}
+\DoxyCodeLine{00046\ }
+\DoxyCodeLine{00047\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ std::string\&\ desc\_fmt\ :\ DESCS)\ \{}
+\DoxyCodeLine{00048\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{bool}\ internal\ :\ \{\textcolor{keyword}{true},\ \textcolor{keyword}{false}\})\ \{}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ descriptor\{strprintf(tfm::RuntimeFormat\{desc\_fmt\},\ \textcolor{stringliteral}{"{}[5aa9973a/66h/4h/2h]"{}}\ +\ seed\_insecure,\ \textcolor{keywordtype}{int}\{internal\})\};}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ FlatSigningProvider\ keys;}
+\DoxyCodeLine{00052\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::string\ error;}
+\DoxyCodeLine{00053\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ parsed\_desc\ =\ std::move(Parse(descriptor,\ keys,\ error,\ \textcolor{comment}{/*require\_checksum=*/}\textcolor{keyword}{false}).at(0));}
+\DoxyCodeLine{00054\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(parsed\_desc);}
+\DoxyCodeLine{00055\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(error.empty());}
+\DoxyCodeLine{00056\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(parsed\_desc-\/>IsRange());}
+\DoxyCodeLine{00057\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(parsed\_desc-\/>IsSingleType());}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(!keys.keys.empty());}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ WalletDescriptor\ w\_desc\{std::move(parsed\_desc),\ \textcolor{comment}{/*creation\_time=*/}0,\ \textcolor{comment}{/*range\_start=*/}0,\ \textcolor{comment}{/*range\_end=*/}1,\ \textcolor{comment}{/*next\_index=*/}0\};}
+\DoxyCodeLine{00060\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(!wallet-\/>GetDescriptorScriptPubKeyMan(w\_desc));}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ LOCK(wallet-\/>cs\_wallet);}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\&\ spk\_manager\ =\ Assert(wallet-\/>AddWalletDescriptor(w\_desc,\ keys,\ \textcolor{comment}{/*label=*/}\textcolor{stringliteral}{"{}"{}},\ internal))-\/>get();}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ wallet-\/>AddActiveScriptPubKeyMan(spk\_manager.GetID(),\ *Assert(w\_desc.descriptor-\/>GetOutputType()),\ internal);}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00066\ \ \ \ \ \}}
+\DoxyCodeLine{00067\ \ \ \ \ CTxDestination\ GetDestination(FuzzedDataProvider\&\ fuzzed\_data\_provider)}
+\DoxyCodeLine{00068\ \ \ \ \ \{}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \textcolor{keyword}{auto}\ type\{fuzzed\_data\_provider.PickValueInArray(OUTPUT\_TYPES)\};}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (fuzzed\_data\_provider.ConsumeBool())\ \{}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *Assert(wallet-\/>GetNewDestination(type,\ \textcolor{stringliteral}{"{}"{}}));}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *Assert(wallet-\/>GetNewChangeDestination(type));}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00075\ \ \ \ \ \}}
+\DoxyCodeLine{00076\ \ \ \ \ CScript\ GetScriptPubKey(FuzzedDataProvider\&\ fuzzed\_data\_provider)\ \{\ \textcolor{keywordflow}{return}\ GetScriptForDestination(GetDestination(fuzzed\_data\_provider));\ \}}
+\DoxyCodeLine{00077\ \};}
+\DoxyCodeLine{00078\ \}}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_TEST\_FUZZ\_UTIL\_WALLET\_H}}
+
+\end{DoxyCode}

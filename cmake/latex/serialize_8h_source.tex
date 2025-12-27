@@ -1,0 +1,964 @@
+\doxysection{serialize.\+h}
+\label{serialize_8h_source}\index{src/serialize.h@{src/serialize.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_SERIALIZE\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_SERIALIZE\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <attributes.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <compat/assumptions.h>}\ \textcolor{comment}{//\ IWYU\ pragma:\ keep}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <compat/endian.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <prevector.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <span.h>}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <algorithm>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <concepts>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <ios>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <limits>}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ <map>}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <memory>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <set>}}
+\DoxyCodeLine{00024\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00026\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint64\_t\ MAX\_SIZE\ =\ 0x02000000;}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00035\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ MAX\_VECTOR\_ALLOCATE\ =\ 5000000;}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00048\ \textcolor{keyword}{struct\ }deserialize\_type\ \{\};}
+\DoxyCodeLine{00049\ \textcolor{keyword}{constexpr}\ deserialize\_type\ deserialize\ \{\};}
+\DoxyCodeLine{00050\ }
+\DoxyCodeLine{00051\ \textcolor{comment}{/*}}
+\DoxyCodeLine{00052\ \textcolor{comment}{\ *\ Lowest-\/level\ serialization\ and\ conversion.}}
+\DoxyCodeLine{00053\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00054\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ser\_writedata8(Stream\ \&s,\ uint8\_t\ obj)}
+\DoxyCodeLine{00055\ \{}
+\DoxyCodeLine{00056\ \ \ \ \ s.write(std::as\_bytes(std::span\{\&obj,\ 1\}));}
+\DoxyCodeLine{00057\ \}}
+\DoxyCodeLine{00058\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ser\_writedata16(Stream\ \&s,\ uint16\_t\ obj)}
+\DoxyCodeLine{00059\ \{}
+\DoxyCodeLine{00060\ \ \ \ \ obj\ =\ htole16\_internal(obj);}
+\DoxyCodeLine{00061\ \ \ \ \ s.write(std::as\_bytes(std::span\{\&obj,\ 1\}));}
+\DoxyCodeLine{00062\ \}}
+\DoxyCodeLine{00063\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ser\_writedata32(Stream\ \&s,\ uint32\_t\ obj)}
+\DoxyCodeLine{00064\ \{}
+\DoxyCodeLine{00065\ \ \ \ \ obj\ =\ htole32\_internal(obj);}
+\DoxyCodeLine{00066\ \ \ \ \ s.write(std::as\_bytes(std::span\{\&obj,\ 1\}));}
+\DoxyCodeLine{00067\ \}}
+\DoxyCodeLine{00068\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ser\_writedata32be(Stream\ \&s,\ uint32\_t\ obj)}
+\DoxyCodeLine{00069\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ obj\ =\ htobe32\_internal(obj);}
+\DoxyCodeLine{00071\ \ \ \ \ s.write(std::as\_bytes(std::span\{\&obj,\ 1\}));}
+\DoxyCodeLine{00072\ \}}
+\DoxyCodeLine{00073\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ser\_writedata64(Stream\ \&s,\ uint64\_t\ obj)}
+\DoxyCodeLine{00074\ \{}
+\DoxyCodeLine{00075\ \ \ \ \ obj\ =\ htole64\_internal(obj);}
+\DoxyCodeLine{00076\ \ \ \ \ s.write(std::as\_bytes(std::span\{\&obj,\ 1\}));}
+\DoxyCodeLine{00077\ \}}
+\DoxyCodeLine{00078\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keyword}{inline}\ uint8\_t\ ser\_readdata8(Stream\ \&s)}
+\DoxyCodeLine{00079\ \{}
+\DoxyCodeLine{00080\ \ \ \ \ uint8\_t\ obj;}
+\DoxyCodeLine{00081\ \ \ \ \ s.read(std::as\_writable\_bytes(std::span\{\&obj,\ 1\}));}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keywordflow}{return}\ obj;}
+\DoxyCodeLine{00083\ \}}
+\DoxyCodeLine{00084\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keyword}{inline}\ uint16\_t\ ser\_readdata16(Stream\ \&s)}
+\DoxyCodeLine{00085\ \{}
+\DoxyCodeLine{00086\ \ \ \ \ uint16\_t\ obj;}
+\DoxyCodeLine{00087\ \ \ \ \ s.read(std::as\_writable\_bytes(std::span\{\&obj,\ 1\}));}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keywordflow}{return}\ le16toh\_internal(obj);}
+\DoxyCodeLine{00089\ \}}
+\DoxyCodeLine{00090\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keyword}{inline}\ uint32\_t\ ser\_readdata32(Stream\ \&s)}
+\DoxyCodeLine{00091\ \{}
+\DoxyCodeLine{00092\ \ \ \ \ uint32\_t\ obj;}
+\DoxyCodeLine{00093\ \ \ \ \ s.read(std::as\_writable\_bytes(std::span\{\&obj,\ 1\}));}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{keywordflow}{return}\ le32toh\_internal(obj);}
+\DoxyCodeLine{00095\ \}}
+\DoxyCodeLine{00096\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keyword}{inline}\ uint32\_t\ ser\_readdata32be(Stream\ \&s)}
+\DoxyCodeLine{00097\ \{}
+\DoxyCodeLine{00098\ \ \ \ \ uint32\_t\ obj;}
+\DoxyCodeLine{00099\ \ \ \ \ s.read(std::as\_writable\_bytes(std::span\{\&obj,\ 1\}));}
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{keywordflow}{return}\ be32toh\_internal(obj);}
+\DoxyCodeLine{00101\ \}}
+\DoxyCodeLine{00102\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keyword}{inline}\ uint64\_t\ ser\_readdata64(Stream\ \&s)}
+\DoxyCodeLine{00103\ \{}
+\DoxyCodeLine{00104\ \ \ \ \ uint64\_t\ obj;}
+\DoxyCodeLine{00105\ \ \ \ \ s.read(std::as\_writable\_bytes(std::span\{\&obj,\ 1\}));}
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{keywordflow}{return}\ le64toh\_internal(obj);}
+\DoxyCodeLine{00107\ \}}
+\DoxyCodeLine{00108\ }
+\DoxyCodeLine{00109\ }
+\DoxyCodeLine{00110\ \textcolor{keyword}{class\ }SizeComputer;}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00132\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ Out,\ \textcolor{keyword}{class}\ In>}
+\DoxyCodeLine{00133\ Out\&\ AsBase(In\&\ x)}
+\DoxyCodeLine{00134\ \{}
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_base\_of\_v<Out,\ In>);}
+\DoxyCodeLine{00136\ \ \ \ \ \textcolor{keywordflow}{return}\ x;}
+\DoxyCodeLine{00137\ \}}
+\DoxyCodeLine{00138\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ Out,\ \textcolor{keyword}{class}\ In>}
+\DoxyCodeLine{00139\ \textcolor{keyword}{const}\ Out\&\ AsBase(\textcolor{keyword}{const}\ In\&\ x)}
+\DoxyCodeLine{00140\ \{}
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_base\_of\_v<Out,\ In>);}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{keywordflow}{return}\ x;}
+\DoxyCodeLine{00143\ \}}
+\DoxyCodeLine{00144\ }
+\DoxyCodeLine{00145\ \textcolor{preprocessor}{\#define\ READWRITE(...)\ (ser\_action.SerReadWriteMany(s,\ \_\_VA\_ARGS\_\_))}}
+\DoxyCodeLine{00146\ \textcolor{preprocessor}{\#define\ SER\_READ(obj,\ code)\ ser\_action.SerRead(s,\ obj,\ [\&](Stream\&\ s,\ std::remove\_const\_t<Type>\&\ obj)\ \{\ code;\ \})}}
+\DoxyCodeLine{00147\ \textcolor{preprocessor}{\#define\ SER\_WRITE(obj,\ code)\ ser\_action.SerWrite(s,\ obj,\ [\&](Stream\&\ s,\ const\ Type\&\ obj)\ \{\ code;\ \})}}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00165\ \textcolor{preprocessor}{\#define\ FORMATTER\_METHODS(cls,\ obj)\ \(\backslash\)}}
+\DoxyCodeLine{00166\ \textcolor{preprocessor}{\ \ \ \ template<typename\ Stream>\ \(\backslash\)}}
+\DoxyCodeLine{00167\ \textcolor{preprocessor}{\ \ \ \ static\ void\ Ser(Stream\&\ s,\ const\ cls\&\ obj)\ \{\ SerializationOps(obj,\ s,\ ActionSerialize\{\});\ \}\ \(\backslash\)}}
+\DoxyCodeLine{00168\ \textcolor{preprocessor}{\ \ \ \ template<typename\ Stream>\ \(\backslash\)}}
+\DoxyCodeLine{00169\ \textcolor{preprocessor}{\ \ \ \ static\ void\ Unser(Stream\&\ s,\ cls\&\ obj)\ \{\ SerializationOps(obj,\ s,\ ActionUnserialize\{\});\ \}\ \(\backslash\)}}
+\DoxyCodeLine{00170\ \textcolor{preprocessor}{\ \ \ \ template<typename\ Stream,\ typename\ Type,\ typename\ Operation>\ \(\backslash\)}}
+\DoxyCodeLine{00171\ \textcolor{preprocessor}{\ \ \ \ static\ void\ SerializationOps(Type\&\ obj,\ Stream\&\ s,\ Operation\ ser\_action)}}
+\DoxyCodeLine{00172\ }
+\DoxyCodeLine{00206\ \textcolor{preprocessor}{\#define\ SER\_PARAMS(type)\ (s.template\ GetParams<type>())}}
+\DoxyCodeLine{00207\ }
+\DoxyCodeLine{00208\ \textcolor{preprocessor}{\#define\ BASE\_SERIALIZE\_METHODS(cls)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00209\ \textcolor{preprocessor}{\ \ \ \ template\ <typename\ Stream>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00210\ \textcolor{preprocessor}{\ \ \ \ void\ Serialize(Stream\&\ s)\ const\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00211\ \textcolor{preprocessor}{\ \ \ \ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00212\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ static\_assert(std::is\_same\_v<const\ cls\&,\ decltype(*this)>,\ "{}Serialize\ type\ mismatch"{});\ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00213\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ Ser(s,\ *this);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00214\ \textcolor{preprocessor}{\ \ \ \ \}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00215\ \textcolor{preprocessor}{\ \ \ \ template\ <typename\ Stream>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00216\ \textcolor{preprocessor}{\ \ \ \ void\ Unserialize(Stream\&\ s)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00217\ \textcolor{preprocessor}{\ \ \ \ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00218\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ static\_assert(std::is\_same\_v<cls\&,\ decltype(*this)>,\ "{}Unserialize\ type\ mismatch"{});\ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00219\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ Unser(s,\ *this);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00220\ \textcolor{preprocessor}{\ \ \ \ \}}}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00229\ \textcolor{preprocessor}{\#define\ SERIALIZE\_METHODS(cls,\ obj)\ \(\backslash\)}}
+\DoxyCodeLine{00230\ \textcolor{preprocessor}{\ \ \ \ BASE\_SERIALIZE\_METHODS(cls)\ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00231\ \textcolor{preprocessor}{\ \ \ \ FORMATTER\_METHODS(cls,\ obj)}}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00233\ \textcolor{comment}{//\ Templates\ for\ serializing\ to\ anything\ that\ looks\ like\ a\ stream,}}
+\DoxyCodeLine{00234\ \textcolor{comment}{//\ i.e.\ anything\ that\ supports\ .read(std::span<std::byte>)\ and\ .write(std::span<const\ std::byte>)}}
+\DoxyCodeLine{00235\ \textcolor{comment}{//}}
+\DoxyCodeLine{00236\ }
+\DoxyCodeLine{00237\ \textcolor{comment}{//\ Typically\ int8\_t\ and\ char\ are\ distinct\ types,\ but\ some\ systems\ may\ define\ int8\_t}}
+\DoxyCodeLine{00238\ \textcolor{comment}{//\ in\ terms\ of\ char.\ Forbid\ serialization\ of\ char\ in\ the\ typical\ case,\ but\ allow\ it\ if}}
+\DoxyCodeLine{00239\ \textcolor{comment}{//\ it's\ the\ only\ way\ to\ describe\ an\ int8\_t.}}
+\DoxyCodeLine{00240\ \textcolor{keyword}{template}<\textcolor{keyword}{class}\ T>}
+\DoxyCodeLine{00241\ \textcolor{keyword}{concept\ }CharNotInt8\ =\ std::same\_as<T,\ char>\ \&\&\ !std::same\_as<T,\ int8\_t>;}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00243\ \textcolor{comment}{//\ clang-\/format\ off}}
+\DoxyCodeLine{00244\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ CharNotInt8\ V>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&,\ V)\ =\ \textcolor{keyword}{delete};\ \textcolor{comment}{//\ char\ serialization\ forbidden.\ Use\ uint8\_t\ or\ int8\_t}}
+\DoxyCodeLine{00245\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ std::byte\ a)\ \{\ ser\_writedata8(s,\ uint8\_t(a));\ \}}
+\DoxyCodeLine{00246\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ int8\_t\ a)\ \ \ \ \{\ ser\_writedata8(s,\ uint8\_t(a));\ \}}
+\DoxyCodeLine{00247\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ uint8\_t\ a)\ \ \ \{\ ser\_writedata8(s,\ a);\ \}}
+\DoxyCodeLine{00248\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ int16\_t\ a)\ \ \ \{\ ser\_writedata16(s,\ uint16\_t(a));\ \}}
+\DoxyCodeLine{00249\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ uint16\_t\ a)\ \ \{\ ser\_writedata16(s,\ a);\ \}}
+\DoxyCodeLine{00250\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ int32\_t\ a)\ \ \ \{\ ser\_writedata32(s,\ uint32\_t(a));\ \}}
+\DoxyCodeLine{00251\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ uint32\_t\ a)\ \ \{\ ser\_writedata32(s,\ a);\ \}}
+\DoxyCodeLine{00252\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ int64\_t\ a)\ \ \ \{\ ser\_writedata64(s,\ uint64\_t(a));\ \}}
+\DoxyCodeLine{00253\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ uint64\_t\ a)\ \ \{\ ser\_writedata64(s,\ a);\ \}}
+\DoxyCodeLine{00254\ }
+\DoxyCodeLine{00255\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ BasicByte\ B,\ \textcolor{keywordtype}{size\_t}\ N>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ \textcolor{keyword}{const}\ B\ (\&a)[N])\ \ \ \ \ \ \ \ \ \ \ \{\ s.write(MakeByteSpan(a));\ \}}
+\DoxyCodeLine{00256\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ BasicByte\ B,\ \textcolor{keywordtype}{size\_t}\ N>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ \textcolor{keyword}{const}\ std::array<B,\ N>\&\ a)\ \{\ s.write(MakeByteSpan(a));\ \}}
+\DoxyCodeLine{00257\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ BasicByte\ B,\ \textcolor{keywordtype}{size\_t}\ N>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ std::span<B,\ N>\ span)\ \ \ \ \ \ \{\ s.write(std::as\_bytes(span));\ \}}
+\DoxyCodeLine{00258\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ BasicByte\ B>\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ std::span<B>\ span)\ \ \ \ \ \ \ \ \ \{\ s.write(std::as\_bytes(span));\ \}}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00260\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ CharNotInt8\ V>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&,\ V)\ =\ \textcolor{keyword}{delete};\ \textcolor{comment}{//\ char\ serialization\ forbidden.\ Use\ uint8\_t\ or\ int8\_t}}
+\DoxyCodeLine{00261\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ std::byte\&\ a)\ \{\ a\ =\ std::byte(ser\_readdata8(s));\ \}}
+\DoxyCodeLine{00262\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ int8\_t\&\ a)\ \ \ \ \{\ a\ =\ int8\_t(ser\_readdata8(s));\ \}}
+\DoxyCodeLine{00263\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ uint8\_t\&\ a)\ \ \ \{\ a\ =\ ser\_readdata8(s);\ \}}
+\DoxyCodeLine{00264\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ int16\_t\&\ a)\ \ \ \{\ a\ =\ int16\_t(ser\_readdata16(s));\ \}}
+\DoxyCodeLine{00265\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ uint16\_t\&\ a)\ \ \{\ a\ =\ ser\_readdata16(s);\ \}}
+\DoxyCodeLine{00266\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ int32\_t\&\ a)\ \ \ \{\ a\ =\ int32\_t(ser\_readdata32(s));\ \}}
+\DoxyCodeLine{00267\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ uint32\_t\&\ a)\ \ \{\ a\ =\ ser\_readdata32(s);\ \}}
+\DoxyCodeLine{00268\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ int64\_t\&\ a)\ \ \ \{\ a\ =\ int64\_t(ser\_readdata64(s));\ \}}
+\DoxyCodeLine{00269\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ uint64\_t\&\ a)\ \ \{\ a\ =\ ser\_readdata64(s);\ \}}
+\DoxyCodeLine{00270\ }
+\DoxyCodeLine{00271\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ BasicByte\ B,\ \textcolor{keywordtype}{size\_t}\ N>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ B\ (\&a)[N])\ \ \ \ \ \ \ \ \ \ \ \ \{\ s.read(MakeWritableByteSpan(a));\ \}}
+\DoxyCodeLine{00272\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ BasicByte\ B,\ \textcolor{keywordtype}{size\_t}\ N>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ std::array<B,\ N>\&\ a)\ \ \{\ s.read(MakeWritableByteSpan(a));\ \}}
+\DoxyCodeLine{00273\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ BasicByte\ B,\ \textcolor{keywordtype}{size\_t}\ N>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ std::span<B,\ N>\ span)\ \{\ s.read(std::as\_writable\_bytes(span));\ \}}
+\DoxyCodeLine{00274\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ BasicByte\ B>\ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ std::span<B>\ span)\ \ \ \ \{\ s.read(std::as\_writable\_bytes(span));\ \}}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00276\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s,\ \textcolor{keywordtype}{bool}\ a)\ \ \ \ \{\ uint8\_t\ f\ =\ a;\ ser\_writedata8(s,\ f);\ \}}
+\DoxyCodeLine{00277\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s,\ \textcolor{keywordtype}{bool}\&\ a)\ \{\ uint8\_t\ f\ =\ ser\_readdata8(s);\ a\ =\ f;\ \}}
+\DoxyCodeLine{00278\ \textcolor{comment}{//\ clang-\/format\ on}}
+\DoxyCodeLine{00279\ }
+\DoxyCodeLine{00280\ }
+\DoxyCodeLine{00288\ \textcolor{keyword}{constexpr}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ GetSizeOfCompactSize(uint64\_t\ nSize)}
+\DoxyCodeLine{00289\ \{}
+\DoxyCodeLine{00290\ \ \ \ \ \textcolor{keywordflow}{if}\ (nSize\ <\ 253)\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{unsigned}\ char);}
+\DoxyCodeLine{00291\ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (nSize\ <=\ std::numeric\_limits<uint16\_t>::max())\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{unsigned}\ char)\ +\ \textcolor{keyword}{sizeof}(uint16\_t);}
+\DoxyCodeLine{00292\ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (nSize\ <=\ std::numeric\_limits<unsigned\ int>::max())\ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{unsigned}\ char)\ +\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int});}
+\DoxyCodeLine{00293\ \ \ \ \ \textcolor{keywordflow}{else}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{unsigned}\ char)\ +\ \textcolor{keyword}{sizeof}(uint64\_t);}
+\DoxyCodeLine{00294\ \}}
+\DoxyCodeLine{00295\ }
+\DoxyCodeLine{00296\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ WriteCompactSize(SizeComputer\&\ os,\ uint64\_t\ nSize);}
+\DoxyCodeLine{00297\ }
+\DoxyCodeLine{00298\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00299\ \textcolor{keywordtype}{void}\ WriteCompactSize(Stream\&\ os,\ uint64\_t\ nSize)}
+\DoxyCodeLine{00300\ \{}
+\DoxyCodeLine{00301\ \ \ \ \ \textcolor{keywordflow}{if}\ (nSize\ <\ 253)}
+\DoxyCodeLine{00302\ \ \ \ \ \{}
+\DoxyCodeLine{00303\ \ \ \ \ \ \ \ \ ser\_writedata8(os,\ nSize);}
+\DoxyCodeLine{00304\ \ \ \ \ \}}
+\DoxyCodeLine{00305\ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (nSize\ <=\ std::numeric\_limits<uint16\_t>::max())}
+\DoxyCodeLine{00306\ \ \ \ \ \{}
+\DoxyCodeLine{00307\ \ \ \ \ \ \ \ \ ser\_writedata8(os,\ 253);}
+\DoxyCodeLine{00308\ \ \ \ \ \ \ \ \ ser\_writedata16(os,\ nSize);}
+\DoxyCodeLine{00309\ \ \ \ \ \}}
+\DoxyCodeLine{00310\ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (nSize\ <=\ std::numeric\_limits<unsigned\ int>::max())}
+\DoxyCodeLine{00311\ \ \ \ \ \{}
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \ \ ser\_writedata8(os,\ 254);}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ ser\_writedata32(os,\ nSize);}
+\DoxyCodeLine{00314\ \ \ \ \ \}}
+\DoxyCodeLine{00315\ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{00316\ \ \ \ \ \{}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \ \ ser\_writedata8(os,\ 255);}
+\DoxyCodeLine{00318\ \ \ \ \ \ \ \ \ ser\_writedata64(os,\ nSize);}
+\DoxyCodeLine{00319\ \ \ \ \ \}}
+\DoxyCodeLine{00320\ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00321\ \}}
+\DoxyCodeLine{00322\ }
+\DoxyCodeLine{00329\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00330\ uint64\_t\ ReadCompactSize(Stream\&\ is,\ \textcolor{keywordtype}{bool}\ range\_check\ =\ \textcolor{keyword}{true})}
+\DoxyCodeLine{00331\ \{}
+\DoxyCodeLine{00332\ \ \ \ \ uint8\_t\ chSize\ =\ ser\_readdata8(is);}
+\DoxyCodeLine{00333\ \ \ \ \ uint64\_t\ nSizeRet\ =\ 0;}
+\DoxyCodeLine{00334\ \ \ \ \ \textcolor{keywordflow}{if}\ (chSize\ <\ 253)}
+\DoxyCodeLine{00335\ \ \ \ \ \{}
+\DoxyCodeLine{00336\ \ \ \ \ \ \ \ \ nSizeRet\ =\ chSize;}
+\DoxyCodeLine{00337\ \ \ \ \ \}}
+\DoxyCodeLine{00338\ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (chSize\ ==\ 253)}
+\DoxyCodeLine{00339\ \ \ \ \ \{}
+\DoxyCodeLine{00340\ \ \ \ \ \ \ \ \ nSizeRet\ =\ ser\_readdata16(is);}
+\DoxyCodeLine{00341\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nSizeRet\ <\ 253)}
+\DoxyCodeLine{00342\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}non-\/canonical\ ReadCompactSize()"{}});}
+\DoxyCodeLine{00343\ \ \ \ \ \}}
+\DoxyCodeLine{00344\ \ \ \ \ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ (chSize\ ==\ 254)}
+\DoxyCodeLine{00345\ \ \ \ \ \{}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ nSizeRet\ =\ ser\_readdata32(is);}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nSizeRet\ <\ 0x10000u)}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}non-\/canonical\ ReadCompactSize()"{}});}
+\DoxyCodeLine{00349\ \ \ \ \ \}}
+\DoxyCodeLine{00350\ \ \ \ \ \textcolor{keywordflow}{else}}
+\DoxyCodeLine{00351\ \ \ \ \ \{}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ nSizeRet\ =\ ser\_readdata64(is);}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (nSizeRet\ <\ 0x100000000ULL)}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}non-\/canonical\ ReadCompactSize()"{}});}
+\DoxyCodeLine{00355\ \ \ \ \ \}}
+\DoxyCodeLine{00356\ \ \ \ \ \textcolor{keywordflow}{if}\ (range\_check\ \&\&\ nSizeRet\ >\ MAX\_SIZE)\ \{}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}ReadCompactSize():\ size\ too\ large"{}});}
+\DoxyCodeLine{00358\ \ \ \ \ \}}
+\DoxyCodeLine{00359\ \ \ \ \ \textcolor{keywordflow}{return}\ nSizeRet;}
+\DoxyCodeLine{00360\ \}}
+\DoxyCodeLine{00361\ }
+\DoxyCodeLine{00385\ }
+\DoxyCodeLine{00396\ \textcolor{keyword}{enum\ class}\ VarIntMode\ \{\ DEFAULT,\ NONNEGATIVE\_SIGNED\ \};}
+\DoxyCodeLine{00397\ }
+\DoxyCodeLine{00398\ \textcolor{keyword}{template}\ <VarIntMode\ Mode,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00399\ \textcolor{keyword}{struct\ }CheckVarIntMode\ \{}
+\DoxyCodeLine{00400\ \ \ \ \ \textcolor{keyword}{constexpr}\ CheckVarIntMode()}
+\DoxyCodeLine{00401\ \ \ \ \ \{}
+\DoxyCodeLine{00402\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(Mode\ !=\ VarIntMode::DEFAULT\ ||\ std::is\_unsigned\_v<I>,\ \textcolor{stringliteral}{"{}Unsigned\ type\ required\ with\ mode\ DEFAULT."{}});}
+\DoxyCodeLine{00403\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(Mode\ !=\ VarIntMode::NONNEGATIVE\_SIGNED\ ||\ std::is\_signed\_v<I>,\ \textcolor{stringliteral}{"{}Signed\ type\ required\ with\ mode\ NONNEGATIVE\_SIGNED."{}});}
+\DoxyCodeLine{00404\ \ \ \ \ \}}
+\DoxyCodeLine{00405\ \};}
+\DoxyCodeLine{00406\ }
+\DoxyCodeLine{00407\ \textcolor{keyword}{template}<VarIntMode\ Mode,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00408\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ GetSizeOfVarInt(I\ n)}
+\DoxyCodeLine{00409\ \{}
+\DoxyCodeLine{00410\ \ \ \ \ CheckVarIntMode<Mode,\ I>();}
+\DoxyCodeLine{00411\ \ \ \ \ \textcolor{keywordtype}{int}\ nRet\ =\ 0;}
+\DoxyCodeLine{00412\ \ \ \ \ \textcolor{keywordflow}{while}(\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ nRet++;}
+\DoxyCodeLine{00414\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ <=\ 0x7F)}
+\DoxyCodeLine{00415\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00416\ \ \ \ \ \ \ \ \ n\ =\ (n\ >>\ 7)\ -\/\ 1;}
+\DoxyCodeLine{00417\ \ \ \ \ \}}
+\DoxyCodeLine{00418\ \ \ \ \ \textcolor{keywordflow}{return}\ nRet;}
+\DoxyCodeLine{00419\ \}}
+\DoxyCodeLine{00420\ }
+\DoxyCodeLine{00421\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00422\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ WriteVarInt(SizeComputer\&\ os,\ I\ n);}
+\DoxyCodeLine{00423\ }
+\DoxyCodeLine{00424\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ VarIntMode\ Mode,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00425\ \textcolor{keywordtype}{void}\ WriteVarInt(Stream\&\ os,\ I\ n)}
+\DoxyCodeLine{00426\ \{}
+\DoxyCodeLine{00427\ \ \ \ \ CheckVarIntMode<Mode,\ I>();}
+\DoxyCodeLine{00428\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tmp[(\textcolor{keyword}{sizeof}(n)*8+6)/7];}
+\DoxyCodeLine{00429\ \ \ \ \ \textcolor{keywordtype}{int}\ len=0;}
+\DoxyCodeLine{00430\ \ \ \ \ \textcolor{keywordflow}{while}(\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00431\ \ \ \ \ \ \ \ \ tmp[len]\ =\ (n\ \&\ 0x7F)\ |\ (len\ ?\ 0x80\ :\ 0x00);}
+\DoxyCodeLine{00432\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ <=\ 0x7F)}
+\DoxyCodeLine{00433\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00434\ \ \ \ \ \ \ \ \ n\ =\ (n\ >>\ 7)\ -\/\ 1;}
+\DoxyCodeLine{00435\ \ \ \ \ \ \ \ \ len++;}
+\DoxyCodeLine{00436\ \ \ \ \ \}}
+\DoxyCodeLine{00437\ \ \ \ \ \textcolor{keywordflow}{do}\ \{}
+\DoxyCodeLine{00438\ \ \ \ \ \ \ \ \ ser\_writedata8(os,\ tmp[len]);}
+\DoxyCodeLine{00439\ \ \ \ \ \}\ \textcolor{keywordflow}{while}(len-\/-\/);}
+\DoxyCodeLine{00440\ \}}
+\DoxyCodeLine{00441\ }
+\DoxyCodeLine{00442\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ VarIntMode\ Mode,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00443\ I\ ReadVarInt(Stream\&\ is)}
+\DoxyCodeLine{00444\ \{}
+\DoxyCodeLine{00445\ \ \ \ \ CheckVarIntMode<Mode,\ I>();}
+\DoxyCodeLine{00446\ \ \ \ \ I\ n\ =\ 0;}
+\DoxyCodeLine{00447\ \ \ \ \ \textcolor{keywordflow}{while}(\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00448\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ chData\ =\ ser\_readdata8(is);}
+\DoxyCodeLine{00449\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ >\ (std::numeric\_limits<I>::max()\ >>\ 7))\ \{}
+\DoxyCodeLine{00450\ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}ReadVarInt():\ size\ too\ large"{}});}
+\DoxyCodeLine{00451\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00452\ \ \ \ \ \ \ \ \ n\ =\ (n\ <<\ 7)\ |\ (chData\ \&\ 0x7F);}
+\DoxyCodeLine{00453\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (chData\ \&\ 0x80)\ \{}
+\DoxyCodeLine{00454\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ ==\ std::numeric\_limits<I>::max())\ \{}
+\DoxyCodeLine{00455\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}ReadVarInt():\ size\ too\ large"{}});}
+\DoxyCodeLine{00456\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00457\ \ \ \ \ \ \ \ \ \ \ \ \ n++;}
+\DoxyCodeLine{00458\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00459\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ n;}
+\DoxyCodeLine{00460\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00461\ \ \ \ \ \}}
+\DoxyCodeLine{00462\ \}}
+\DoxyCodeLine{00463\ }
+\DoxyCodeLine{00465\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Formatter,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00466\ \textcolor{keyword}{class\ }Wrapper}
+\DoxyCodeLine{00467\ \{}
+\DoxyCodeLine{00468\ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_lvalue\_reference\_v<T>,\ \textcolor{stringliteral}{"{}Wrapper\ needs\ an\ lvalue\ reference\ type\ T"{}});}
+\DoxyCodeLine{00469\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00470\ \ \ \ \ T\ m\_object;}
+\DoxyCodeLine{00471\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00472\ \ \ \ \ \textcolor{keyword}{explicit}\ Wrapper(T\ obj)\ :\ m\_object(obj)\ \{\}}
+\DoxyCodeLine{00473\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Serialize(Stream\ \&s)\textcolor{keyword}{\ const\ }\{\ Formatter().Ser(s,\ m\_object);\ \}}
+\DoxyCodeLine{00474\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\ \&s)\ \{\ Formatter().Unser(s,\ m\_object);\ \}}
+\DoxyCodeLine{00475\ \};}
+\DoxyCodeLine{00476\ }
+\DoxyCodeLine{00487\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Formatter,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00488\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ Wrapper<Formatter,\ T\&>\ Using(T\&\&\ t)\ \{\ \textcolor{keywordflow}{return}\ Wrapper<Formatter,\ T\&>(t);\ \}}
+\DoxyCodeLine{00489\ }
+\DoxyCodeLine{00490\ \textcolor{preprocessor}{\#define\ VARINT\_MODE(obj,\ mode)\ Using<VarIntFormatter<mode>>(obj)}}
+\DoxyCodeLine{00491\ \textcolor{preprocessor}{\#define\ VARINT(obj)\ Using<VarIntFormatter<VarIntMode::DEFAULT>>(obj)}}
+\DoxyCodeLine{00492\ \textcolor{preprocessor}{\#define\ COMPACTSIZE(obj)\ Using<CompactSizeFormatter<true>>(obj)}}
+\DoxyCodeLine{00493\ \textcolor{preprocessor}{\#define\ LIMITED\_STRING(obj,n)\ Using<LimitedStringFormatter<n>>(obj)}}
+\DoxyCodeLine{00494\ }
+\DoxyCodeLine{00496\ \textcolor{keyword}{template}<VarIntMode\ Mode>}
+\DoxyCodeLine{00497\ \textcolor{keyword}{struct\ }VarIntFormatter}
+\DoxyCodeLine{00498\ \{}
+\DoxyCodeLine{00499\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ I>\ \textcolor{keywordtype}{void}\ Ser(Stream\ \&s,\ I\ v)}
+\DoxyCodeLine{00500\ \ \ \ \ \{}
+\DoxyCodeLine{00501\ \ \ \ \ \ \ \ \ WriteVarInt<Stream,Mode,\ std::remove\_cv\_t<I>>(s,\ v);}
+\DoxyCodeLine{00502\ \ \ \ \ \}}
+\DoxyCodeLine{00503\ }
+\DoxyCodeLine{00504\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ I>\ \textcolor{keywordtype}{void}\ Unser(Stream\&\ s,\ I\&\ v)}
+\DoxyCodeLine{00505\ \ \ \ \ \{}
+\DoxyCodeLine{00506\ \ \ \ \ \ \ \ \ v\ =\ ReadVarInt<Stream,Mode,\ std::remove\_cv\_t<I>>(s);}
+\DoxyCodeLine{00507\ \ \ \ \ \}}
+\DoxyCodeLine{00508\ \};}
+\DoxyCodeLine{00509\ }
+\DoxyCodeLine{00519\ \textcolor{keyword}{template}<\textcolor{keywordtype}{int}\ Bytes,\ \textcolor{keywordtype}{bool}\ BigEndian\ =\ false>}
+\DoxyCodeLine{00520\ \textcolor{keyword}{struct\ }CustomUintFormatter}
+\DoxyCodeLine{00521\ \{}
+\DoxyCodeLine{00522\ \ \ \ \ \textcolor{keyword}{static\_assert}(Bytes\ >\ 0\ \&\&\ Bytes\ <=\ 8,\ \textcolor{stringliteral}{"{}CustomUintFormatter\ Bytes\ out\ of\ range"{}});}
+\DoxyCodeLine{00523\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ uint64\_t\ MAX\ =\ 0xffffffffffffffff\ >>\ (8\ *\ (8\ -\/\ Bytes));}
+\DoxyCodeLine{00524\ }
+\DoxyCodeLine{00525\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ I>\ \textcolor{keywordtype}{void}\ Ser(Stream\&\ s,\ I\ v)}
+\DoxyCodeLine{00526\ \ \ \ \ \{}
+\DoxyCodeLine{00527\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (v\ <\ 0\ ||\ v\ >\ MAX)\ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}CustomUintFormatter\ value\ out\ of\ range"{}});}
+\DoxyCodeLine{00528\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (BigEndian)\ \{}
+\DoxyCodeLine{00529\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ raw\ =\ htobe64\_internal(v);}
+\DoxyCodeLine{00530\ \ \ \ \ \ \ \ \ \ \ \ \ s.write(std::as\_bytes(std::span\{\&raw,\ 1\}).last(Bytes));}
+\DoxyCodeLine{00531\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00532\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ raw\ =\ htole64\_internal(v);}
+\DoxyCodeLine{00533\ \ \ \ \ \ \ \ \ \ \ \ \ s.write(std::as\_bytes(std::span\{\&raw,\ 1\}).first(Bytes));}
+\DoxyCodeLine{00534\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00535\ \ \ \ \ \}}
+\DoxyCodeLine{00536\ }
+\DoxyCodeLine{00537\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ I>\ \textcolor{keywordtype}{void}\ Unser(Stream\&\ s,\ I\&\ v)}
+\DoxyCodeLine{00538\ \ \ \ \ \{}
+\DoxyCodeLine{00539\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }U\ =\ \textcolor{keyword}{typename}\ std::conditional\_t<std::is\_enum\_v<I>,\ std::underlying\_type<I>,\ std::common\_type<I>>::type;}
+\DoxyCodeLine{00540\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(std::numeric\_limits<U>::max()\ >=\ MAX\ \&\&\ std::numeric\_limits<U>::min()\ <=\ 0,\ \textcolor{stringliteral}{"{}Assigned\ type\ too\ small"{}});}
+\DoxyCodeLine{00541\ \ \ \ \ \ \ \ \ uint64\_t\ raw\ =\ 0;}
+\DoxyCodeLine{00542\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (BigEndian)\ \{}
+\DoxyCodeLine{00543\ \ \ \ \ \ \ \ \ \ \ \ \ s.read(std::as\_writable\_bytes(std::span\{\&raw,\ 1\}).last(Bytes));}
+\DoxyCodeLine{00544\ \ \ \ \ \ \ \ \ \ \ \ \ v\ =\ \textcolor{keyword}{static\_cast<}I\textcolor{keyword}{>}(be64toh\_internal(raw));}
+\DoxyCodeLine{00545\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00546\ \ \ \ \ \ \ \ \ \ \ \ \ s.read(std::as\_writable\_bytes(std::span\{\&raw,\ 1\}).first(Bytes));}
+\DoxyCodeLine{00547\ \ \ \ \ \ \ \ \ \ \ \ \ v\ =\ \textcolor{keyword}{static\_cast<}I\textcolor{keyword}{>}(le64toh\_internal(raw));}
+\DoxyCodeLine{00548\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00549\ \ \ \ \ \}}
+\DoxyCodeLine{00550\ \};}
+\DoxyCodeLine{00551\ }
+\DoxyCodeLine{00552\ \textcolor{keyword}{template}<\textcolor{keywordtype}{int}\ Bytes>\ \textcolor{keyword}{using\ }BigEndianFormatter\ =\ CustomUintFormatter<Bytes,\ true>;}
+\DoxyCodeLine{00553\ }
+\DoxyCodeLine{00555\ \textcolor{keyword}{template}<\textcolor{keywordtype}{bool}\ RangeCheck>}
+\DoxyCodeLine{00556\ \textcolor{keyword}{struct\ }CompactSizeFormatter}
+\DoxyCodeLine{00557\ \{}
+\DoxyCodeLine{00558\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00559\ \ \ \ \ \textcolor{keywordtype}{void}\ Unser(Stream\&\ s,\ I\&\ v)}
+\DoxyCodeLine{00560\ \ \ \ \ \{}
+\DoxyCodeLine{00561\ \ \ \ \ \ \ \ \ uint64\_t\ n\ =\ ReadCompactSize<Stream>(s,\ RangeCheck);}
+\DoxyCodeLine{00562\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (n\ <\ std::numeric\_limits<I>::min()\ ||\ n\ >\ std::numeric\_limits<I>::max())\ \{}
+\DoxyCodeLine{00563\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}CompactSize\ exceeds\ limit\ of\ type"{}});}
+\DoxyCodeLine{00564\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00565\ \ \ \ \ \ \ \ \ v\ =\ n;}
+\DoxyCodeLine{00566\ \ \ \ \ \}}
+\DoxyCodeLine{00567\ }
+\DoxyCodeLine{00568\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{00569\ \ \ \ \ \textcolor{keywordtype}{void}\ Ser(Stream\&\ s,\ I\ v)}
+\DoxyCodeLine{00570\ \ \ \ \ \{}
+\DoxyCodeLine{00571\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(std::is\_unsigned\_v<I>,\ \textcolor{stringliteral}{"{}CompactSize\ only\ supported\ for\ unsigned\ integers"{}});}
+\DoxyCodeLine{00572\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(std::numeric\_limits<I>::max()\ <=\ std::numeric\_limits<uint64\_t>::max(),\ \textcolor{stringliteral}{"{}CompactSize\ only\ supports\ 64-\/bit\ integers\ and\ below"{}});}
+\DoxyCodeLine{00573\ }
+\DoxyCodeLine{00574\ \ \ \ \ \ \ \ \ WriteCompactSize<Stream>(s,\ v);}
+\DoxyCodeLine{00575\ \ \ \ \ \}}
+\DoxyCodeLine{00576\ \};}
+\DoxyCodeLine{00577\ }
+\DoxyCodeLine{00578\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ U,\ \textcolor{keywordtype}{bool}\ LOSSY\ =\ false>}
+\DoxyCodeLine{00579\ \textcolor{keyword}{struct\ }ChronoFormatter\ \{}
+\DoxyCodeLine{00580\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ Tp>}
+\DoxyCodeLine{00581\ \ \ \ \ \textcolor{keywordtype}{void}\ Unser(Stream\&\ s,\ Tp\&\ tp)}
+\DoxyCodeLine{00582\ \ \ \ \ \{}
+\DoxyCodeLine{00583\ \ \ \ \ \ \ \ \ U\ u;}
+\DoxyCodeLine{00584\ \ \ \ \ \ \ \ \ s\ >>\ u;}
+\DoxyCodeLine{00585\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Lossy\ deserialization\ does\ not\ make\ sense,\ so\ force\ Wnarrowing}}
+\DoxyCodeLine{00586\ \ \ \ \ \ \ \ \ tp\ =\ Tp\{\textcolor{keyword}{typename}\ Tp::duration\{\textcolor{keyword}{typename}\ Tp::duration::rep\{u\}\}\};}
+\DoxyCodeLine{00587\ \ \ \ \ \}}
+\DoxyCodeLine{00588\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ Tp>}
+\DoxyCodeLine{00589\ \ \ \ \ \textcolor{keywordtype}{void}\ Ser(Stream\&\ s,\ Tp\ tp)}
+\DoxyCodeLine{00590\ \ \ \ \ \{}
+\DoxyCodeLine{00591\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (LOSSY)\ \{}
+\DoxyCodeLine{00592\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ U(tp.time\_since\_epoch().count());}
+\DoxyCodeLine{00593\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00594\ \ \ \ \ \ \ \ \ \ \ \ \ s\ <<\ U\{tp.time\_since\_epoch().count()\};}
+\DoxyCodeLine{00595\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00596\ \ \ \ \ \}}
+\DoxyCodeLine{00597\ \};}
+\DoxyCodeLine{00598\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ U>}
+\DoxyCodeLine{00599\ \textcolor{keyword}{using\ }LossyChronoFormatter\ =\ ChronoFormatter<U,\ true>;}
+\DoxyCodeLine{00600\ }
+\DoxyCodeLine{00601\ \textcolor{keyword}{class\ }CompactSizeWriter}
+\DoxyCodeLine{00602\ \{}
+\DoxyCodeLine{00603\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00604\ \ \ \ \ uint64\_t\ n;}
+\DoxyCodeLine{00605\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00606\ \ \ \ \ \textcolor{keyword}{explicit}\ CompactSizeWriter(uint64\_t\ n\_in)\ :\ n(n\_in)\ \{\ \}}
+\DoxyCodeLine{00607\ }
+\DoxyCodeLine{00608\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00609\ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(Stream\ \&s)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00610\ \ \ \ \ \ \ \ \ WriteCompactSize<Stream>(s,\ n);}
+\DoxyCodeLine{00611\ \ \ \ \ \}}
+\DoxyCodeLine{00612\ \};}
+\DoxyCodeLine{00613\ }
+\DoxyCodeLine{00614\ \textcolor{keyword}{template}<\textcolor{keywordtype}{size\_t}\ Limit>}
+\DoxyCodeLine{00615\ \textcolor{keyword}{struct\ }LimitedStringFormatter}
+\DoxyCodeLine{00616\ \{}
+\DoxyCodeLine{00617\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00618\ \ \ \ \ \textcolor{keywordtype}{void}\ Unser(Stream\&\ s,\ std::string\&\ v)}
+\DoxyCodeLine{00619\ \ \ \ \ \{}
+\DoxyCodeLine{00620\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size\ =\ ReadCompactSize(s);}
+\DoxyCodeLine{00621\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (size\ >\ Limit)\ \{}
+\DoxyCodeLine{00622\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::ios\_base::failure(\textcolor{stringliteral}{"{}String\ length\ limit\ exceeded"{}});}
+\DoxyCodeLine{00623\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00624\ \ \ \ \ \ \ \ \ v.resize(size);}
+\DoxyCodeLine{00625\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (size\ !=\ 0)\ s.read(MakeWritableByteSpan(v));}
+\DoxyCodeLine{00626\ \ \ \ \ \}}
+\DoxyCodeLine{00627\ }
+\DoxyCodeLine{00628\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00629\ \ \ \ \ \textcolor{keywordtype}{void}\ Ser(Stream\&\ s,\ \textcolor{keyword}{const}\ std::string\&\ v)}
+\DoxyCodeLine{00630\ \ \ \ \ \{}
+\DoxyCodeLine{00631\ \ \ \ \ \ \ \ \ s\ <<\ v;}
+\DoxyCodeLine{00632\ \ \ \ \ \}}
+\DoxyCodeLine{00633\ \};}
+\DoxyCodeLine{00634\ }
+\DoxyCodeLine{00648\ \textcolor{keyword}{template}<\textcolor{keyword}{class}\ Formatter>}
+\DoxyCodeLine{00649\ \textcolor{keyword}{struct\ }VectorFormatter}
+\DoxyCodeLine{00650\ \{}
+\DoxyCodeLine{00651\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ V>}
+\DoxyCodeLine{00652\ \ \ \ \ \textcolor{keywordtype}{void}\ Ser(Stream\&\ s,\ \textcolor{keyword}{const}\ V\&\ v)}
+\DoxyCodeLine{00653\ \ \ \ \ \{}
+\DoxyCodeLine{00654\ \ \ \ \ \ \ \ \ Formatter\ formatter;}
+\DoxyCodeLine{00655\ \ \ \ \ \ \ \ \ WriteCompactSize(s,\ v.size());}
+\DoxyCodeLine{00656\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{typename}\ V::value\_type\&\ elem\ :\ v)\ \{}
+\DoxyCodeLine{00657\ \ \ \ \ \ \ \ \ \ \ \ \ formatter.Ser(s,\ elem);}
+\DoxyCodeLine{00658\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00659\ \ \ \ \ \}}
+\DoxyCodeLine{00660\ }
+\DoxyCodeLine{00661\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ V>}
+\DoxyCodeLine{00662\ \ \ \ \ \textcolor{keywordtype}{void}\ Unser(Stream\&\ s,\ V\&\ v)}
+\DoxyCodeLine{00663\ \ \ \ \ \{}
+\DoxyCodeLine{00664\ \ \ \ \ \ \ \ \ Formatter\ formatter;}
+\DoxyCodeLine{00665\ \ \ \ \ \ \ \ \ v.clear();}
+\DoxyCodeLine{00666\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size\ =\ ReadCompactSize(s);}
+\DoxyCodeLine{00667\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ allocated\ =\ 0;}
+\DoxyCodeLine{00668\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (allocated\ <\ size)\ \{}
+\DoxyCodeLine{00669\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ For\ DoS\ prevention,\ do\ not\ blindly\ allocate\ as\ much\ as\ the\ stream\ claims\ to\ contain.}}
+\DoxyCodeLine{00670\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Instead,\ allocate\ in\ 5MiB\ batches,\ so\ that\ an\ attacker\ actually\ needs\ to\ provide}}
+\DoxyCodeLine{00671\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ X\ MiB\ of\ data\ to\ make\ us\ allocate\ X+5\ Mib.}}
+\DoxyCodeLine{00672\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{static\_assert}(\textcolor{keyword}{sizeof}(\textcolor{keyword}{typename}\ V::value\_type)\ <=\ MAX\_VECTOR\_ALLOCATE,\ \textcolor{stringliteral}{"{}Vector\ element\ size\ too\ large"{}});}
+\DoxyCodeLine{00673\ \ \ \ \ \ \ \ \ \ \ \ \ allocated\ =\ std::min(size,\ allocated\ +\ MAX\_VECTOR\_ALLOCATE\ /\ \textcolor{keyword}{sizeof}(\textcolor{keyword}{typename}\ V::value\_type));}
+\DoxyCodeLine{00674\ \ \ \ \ \ \ \ \ \ \ \ \ v.reserve(allocated);}
+\DoxyCodeLine{00675\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (v.size()\ <\ allocated)\ \{}
+\DoxyCodeLine{00676\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ v.emplace\_back();}
+\DoxyCodeLine{00677\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ formatter.Unser(s,\ v.back());}
+\DoxyCodeLine{00678\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00679\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00680\ \ \ \ \ \};}
+\DoxyCodeLine{00681\ \};}
+\DoxyCodeLine{00682\ }
+\DoxyCodeLine{00686\ }
+\DoxyCodeLine{00690\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ C>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::basic\_string<C>\&\ str);}
+\DoxyCodeLine{00691\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ C>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::basic\_string<C>\&\ str);}
+\DoxyCodeLine{00692\ }
+\DoxyCodeLine{00696\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ T>\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ prevector<N,\ T>\&\ v);}
+\DoxyCodeLine{00697\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ T>\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ prevector<N,\ T>\&\ v);}
+\DoxyCodeLine{00698\ }
+\DoxyCodeLine{00702\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ A>\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::vector<T,\ A>\&\ v);}
+\DoxyCodeLine{00703\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ A>\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::vector<T,\ A>\&\ v);}
+\DoxyCodeLine{00704\ }
+\DoxyCodeLine{00708\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ T>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::pair<K,\ T>\&\ item);}
+\DoxyCodeLine{00709\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ T>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::pair<K,\ T>\&\ item);}
+\DoxyCodeLine{00710\ }
+\DoxyCodeLine{00714\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ Pred,\ \textcolor{keyword}{typename}\ A>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::map<K,\ T,\ Pred,\ A>\&\ m);}
+\DoxyCodeLine{00715\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ Pred,\ \textcolor{keyword}{typename}\ A>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::map<K,\ T,\ Pred,\ A>\&\ m);}
+\DoxyCodeLine{00716\ }
+\DoxyCodeLine{00720\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ Pred,\ \textcolor{keyword}{typename}\ A>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::set<K,\ Pred,\ A>\&\ m);}
+\DoxyCodeLine{00721\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ Pred,\ \textcolor{keyword}{typename}\ A>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::set<K,\ Pred,\ A>\&\ m);}
+\DoxyCodeLine{00722\ }
+\DoxyCodeLine{00726\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::shared\_ptr<const\ T>\&\ p);}
+\DoxyCodeLine{00727\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ os,\ std::shared\_ptr<const\ T>\&\ p);}
+\DoxyCodeLine{00728\ }
+\DoxyCodeLine{00732\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::unique\_ptr<const\ T>\&\ p);}
+\DoxyCodeLine{00733\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ os,\ std::unique\_ptr<const\ T>\&\ p);}
+\DoxyCodeLine{00734\ }
+\DoxyCodeLine{00735\ }
+\DoxyCodeLine{00739\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T,\ \textcolor{keyword}{class}\ Stream>}
+\DoxyCodeLine{00740\ \textcolor{keyword}{concept\ }Serializable\ =\ \textcolor{keyword}{requires}(T\ a,\ Stream\ s)\ \{\ a.Serialize(s);\ \};}
+\DoxyCodeLine{00741\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00742\ \ \ \ \ \textcolor{keyword}{requires}\ Serializable<T,\ Stream>}
+\DoxyCodeLine{00743\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ T\&\ a)}
+\DoxyCodeLine{00744\ \{}
+\DoxyCodeLine{00745\ \ \ \ \ a.Serialize(os);}
+\DoxyCodeLine{00746\ \}}
+\DoxyCodeLine{00747\ }
+\DoxyCodeLine{00748\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ T,\ \textcolor{keyword}{class}\ Stream>}
+\DoxyCodeLine{00749\ \textcolor{keyword}{concept\ }Unserializable\ =\ \textcolor{keyword}{requires}(T\ a,\ Stream\ s)\ \{\ a.Unserialize(s);\ \};}
+\DoxyCodeLine{00750\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00751\ \ \ \ \ \textcolor{keyword}{requires}\ Unserializable<T,\ Stream>}
+\DoxyCodeLine{00752\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ T\&\&\ a)}
+\DoxyCodeLine{00753\ \{}
+\DoxyCodeLine{00754\ \ \ \ \ a.Unserialize(is);}
+\DoxyCodeLine{00755\ \}}
+\DoxyCodeLine{00756\ }
+\DoxyCodeLine{00762\ \textcolor{keyword}{struct\ }DefaultFormatter}
+\DoxyCodeLine{00763\ \{}
+\DoxyCodeLine{00764\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00765\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ Ser(Stream\&\ s,\ \textcolor{keyword}{const}\ T\&\ t)\ \{\ Serialize(s,\ t);\ \}}
+\DoxyCodeLine{00766\ }
+\DoxyCodeLine{00767\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00768\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ Unser(Stream\&\ s,\ T\&\ t)\ \{\ Unserialize(s,\ t);\ \}}
+\DoxyCodeLine{00769\ \};}
+\DoxyCodeLine{00770\ }
+\DoxyCodeLine{00771\ }
+\DoxyCodeLine{00772\ }
+\DoxyCodeLine{00773\ }
+\DoxyCodeLine{00774\ }
+\DoxyCodeLine{00778\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ C>}
+\DoxyCodeLine{00779\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::basic\_string<C>\&\ str)}
+\DoxyCodeLine{00780\ \{}
+\DoxyCodeLine{00781\ \ \ \ \ WriteCompactSize(os,\ str.size());}
+\DoxyCodeLine{00782\ \ \ \ \ \textcolor{keywordflow}{if}\ (!str.empty())}
+\DoxyCodeLine{00783\ \ \ \ \ \ \ \ \ os.write(MakeByteSpan(str));}
+\DoxyCodeLine{00784\ \}}
+\DoxyCodeLine{00785\ }
+\DoxyCodeLine{00786\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ C>}
+\DoxyCodeLine{00787\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::basic\_string<C>\&\ str)}
+\DoxyCodeLine{00788\ \{}
+\DoxyCodeLine{00789\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nSize\ =\ ReadCompactSize(is);}
+\DoxyCodeLine{00790\ \ \ \ \ str.resize(nSize);}
+\DoxyCodeLine{00791\ \ \ \ \ \textcolor{keywordflow}{if}\ (nSize\ !=\ 0)}
+\DoxyCodeLine{00792\ \ \ \ \ \ \ \ \ is.read(MakeWritableByteSpan(str));}
+\DoxyCodeLine{00793\ \}}
+\DoxyCodeLine{00794\ }
+\DoxyCodeLine{00795\ }
+\DoxyCodeLine{00796\ }
+\DoxyCodeLine{00800\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00801\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ prevector<N,\ T>\&\ v)}
+\DoxyCodeLine{00802\ \{}
+\DoxyCodeLine{00803\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (BasicByte<T>)\ \{\ \textcolor{comment}{//\ Use\ optimized\ version\ for\ unformatted\ basic\ bytes}}
+\DoxyCodeLine{00804\ \ \ \ \ \ \ \ \ WriteCompactSize(os,\ v.size());}
+\DoxyCodeLine{00805\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!v.empty())\ os.write(MakeByteSpan(v));}
+\DoxyCodeLine{00806\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00807\ \ \ \ \ \ \ \ \ Serialize(os,\ Using<VectorFormatter<DefaultFormatter>>(v));}
+\DoxyCodeLine{00808\ \ \ \ \ \}}
+\DoxyCodeLine{00809\ \}}
+\DoxyCodeLine{00810\ }
+\DoxyCodeLine{00811\ }
+\DoxyCodeLine{00812\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ N,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00813\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ prevector<N,\ T>\&\ v)}
+\DoxyCodeLine{00814\ \{}
+\DoxyCodeLine{00815\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (BasicByte<T>)\ \{\ \textcolor{comment}{//\ Use\ optimized\ version\ for\ unformatted\ basic\ bytes}}
+\DoxyCodeLine{00816\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Limit\ size\ per\ read\ so\ bogus\ size\ value\ won't\ cause\ out\ of\ memory}}
+\DoxyCodeLine{00817\ \ \ \ \ \ \ \ \ v.clear();}
+\DoxyCodeLine{00818\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nSize\ =\ ReadCompactSize(is);}
+\DoxyCodeLine{00819\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ i\ =\ 0;}
+\DoxyCodeLine{00820\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (i\ <\ nSize)\ \{}
+\DoxyCodeLine{00821\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ blk\ =\ std::min(nSize\ -\/\ i,\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int})(1\ +\ 4999999\ /\ \textcolor{keyword}{sizeof}(T)));}
+\DoxyCodeLine{00822\ \ \ \ \ \ \ \ \ \ \ \ \ v.resize\_uninitialized(i\ +\ blk);}
+\DoxyCodeLine{00823\ \ \ \ \ \ \ \ \ \ \ \ \ is.read(std::as\_writable\_bytes(std::span\{\&v[i],\ blk\}));}
+\DoxyCodeLine{00824\ \ \ \ \ \ \ \ \ \ \ \ \ i\ +=\ blk;}
+\DoxyCodeLine{00825\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00826\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00827\ \ \ \ \ \ \ \ \ Unserialize(is,\ Using<VectorFormatter<DefaultFormatter>>(v));}
+\DoxyCodeLine{00828\ \ \ \ \ \}}
+\DoxyCodeLine{00829\ \}}
+\DoxyCodeLine{00830\ }
+\DoxyCodeLine{00831\ }
+\DoxyCodeLine{00835\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ A>}
+\DoxyCodeLine{00836\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::vector<T,\ A>\&\ v)}
+\DoxyCodeLine{00837\ \{}
+\DoxyCodeLine{00838\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (BasicByte<T>)\ \{\ \textcolor{comment}{//\ Use\ optimized\ version\ for\ unformatted\ basic\ bytes}}
+\DoxyCodeLine{00839\ \ \ \ \ \ \ \ \ WriteCompactSize(os,\ v.size());}
+\DoxyCodeLine{00840\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!v.empty())\ os.write(MakeByteSpan(v));}
+\DoxyCodeLine{00841\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_same\_v<T,\ bool>)\ \{}
+\DoxyCodeLine{00842\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ A\ special\ case\ for\ std::vector<bool>,\ as\ dereferencing}}
+\DoxyCodeLine{00843\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ std::vector<bool>::const\_iterator\ does\ not\ result\ in\ a\ const\ bool\&}}
+\DoxyCodeLine{00844\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ due\ to\ std::vector's\ special\ casing\ for\ bool\ arguments.}}
+\DoxyCodeLine{00845\ \ \ \ \ \ \ \ \ WriteCompactSize(os,\ v.size());}
+\DoxyCodeLine{00846\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{bool}\ elem\ :\ v)\ \{}
+\DoxyCodeLine{00847\ \ \ \ \ \ \ \ \ \ \ \ \ ::Serialize(os,\ elem);}
+\DoxyCodeLine{00848\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00849\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00850\ \ \ \ \ \ \ \ \ Serialize(os,\ Using<VectorFormatter<DefaultFormatter>>(v));}
+\DoxyCodeLine{00851\ \ \ \ \ \}}
+\DoxyCodeLine{00852\ \}}
+\DoxyCodeLine{00853\ }
+\DoxyCodeLine{00854\ }
+\DoxyCodeLine{00855\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ A>}
+\DoxyCodeLine{00856\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::vector<T,\ A>\&\ v)}
+\DoxyCodeLine{00857\ \{}
+\DoxyCodeLine{00858\ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (BasicByte<T>)\ \{\ \textcolor{comment}{//\ Use\ optimized\ version\ for\ unformatted\ basic\ bytes}}
+\DoxyCodeLine{00859\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Limit\ size\ per\ read\ so\ bogus\ size\ value\ won't\ cause\ out\ of\ memory}}
+\DoxyCodeLine{00860\ \ \ \ \ \ \ \ \ v.clear();}
+\DoxyCodeLine{00861\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nSize\ =\ ReadCompactSize(is);}
+\DoxyCodeLine{00862\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ i\ =\ 0;}
+\DoxyCodeLine{00863\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{while}\ (i\ <\ nSize)\ \{}
+\DoxyCodeLine{00864\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ blk\ =\ std::min(nSize\ -\/\ i,\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int})(1\ +\ 4999999\ /\ \textcolor{keyword}{sizeof}(T)));}
+\DoxyCodeLine{00865\ \ \ \ \ \ \ \ \ \ \ \ \ v.resize(i\ +\ blk);}
+\DoxyCodeLine{00866\ \ \ \ \ \ \ \ \ \ \ \ \ is.read(std::as\_writable\_bytes(std::span\{\&v[i],\ blk\}));}
+\DoxyCodeLine{00867\ \ \ \ \ \ \ \ \ \ \ \ \ i\ +=\ blk;}
+\DoxyCodeLine{00868\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00869\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00870\ \ \ \ \ \ \ \ \ Unserialize(is,\ Using<VectorFormatter<DefaultFormatter>>(v));}
+\DoxyCodeLine{00871\ \ \ \ \ \}}
+\DoxyCodeLine{00872\ \}}
+\DoxyCodeLine{00873\ }
+\DoxyCodeLine{00874\ }
+\DoxyCodeLine{00878\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00879\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::pair<K,\ T>\&\ item)}
+\DoxyCodeLine{00880\ \{}
+\DoxyCodeLine{00881\ \ \ \ \ Serialize(os,\ item.first);}
+\DoxyCodeLine{00882\ \ \ \ \ Serialize(os,\ item.second);}
+\DoxyCodeLine{00883\ \}}
+\DoxyCodeLine{00884\ }
+\DoxyCodeLine{00885\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00886\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::pair<K,\ T>\&\ item)}
+\DoxyCodeLine{00887\ \{}
+\DoxyCodeLine{00888\ \ \ \ \ Unserialize(is,\ item.first);}
+\DoxyCodeLine{00889\ \ \ \ \ Unserialize(is,\ item.second);}
+\DoxyCodeLine{00890\ \}}
+\DoxyCodeLine{00891\ }
+\DoxyCodeLine{00892\ }
+\DoxyCodeLine{00893\ }
+\DoxyCodeLine{00897\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ Pred,\ \textcolor{keyword}{typename}\ A>}
+\DoxyCodeLine{00898\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::map<K,\ T,\ Pred,\ A>\&\ m)}
+\DoxyCodeLine{00899\ \{}
+\DoxyCodeLine{00900\ \ \ \ \ WriteCompactSize(os,\ m.size());}
+\DoxyCodeLine{00901\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ entry\ :\ m)}
+\DoxyCodeLine{00902\ \ \ \ \ \ \ \ \ Serialize(os,\ entry);}
+\DoxyCodeLine{00903\ \}}
+\DoxyCodeLine{00904\ }
+\DoxyCodeLine{00905\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ T,\ \textcolor{keyword}{typename}\ Pred,\ \textcolor{keyword}{typename}\ A>}
+\DoxyCodeLine{00906\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::map<K,\ T,\ Pred,\ A>\&\ m)}
+\DoxyCodeLine{00907\ \{}
+\DoxyCodeLine{00908\ \ \ \ \ m.clear();}
+\DoxyCodeLine{00909\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nSize\ =\ ReadCompactSize(is);}
+\DoxyCodeLine{00910\ \ \ \ \ \textcolor{keyword}{typename}\ std::map<K,\ T,\ Pred,\ A>::iterator\ mi\ =\ m.begin();}
+\DoxyCodeLine{00911\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ nSize;\ i++)}
+\DoxyCodeLine{00912\ \ \ \ \ \{}
+\DoxyCodeLine{00913\ \ \ \ \ \ \ \ \ std::pair<K,\ T>\ item;}
+\DoxyCodeLine{00914\ \ \ \ \ \ \ \ \ Unserialize(is,\ item);}
+\DoxyCodeLine{00915\ \ \ \ \ \ \ \ \ mi\ =\ m.insert(mi,\ item);}
+\DoxyCodeLine{00916\ \ \ \ \ \}}
+\DoxyCodeLine{00917\ \}}
+\DoxyCodeLine{00918\ }
+\DoxyCodeLine{00919\ }
+\DoxyCodeLine{00920\ }
+\DoxyCodeLine{00924\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ Pred,\ \textcolor{keyword}{typename}\ A>}
+\DoxyCodeLine{00925\ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::set<K,\ Pred,\ A>\&\ m)}
+\DoxyCodeLine{00926\ \{}
+\DoxyCodeLine{00927\ \ \ \ \ WriteCompactSize(os,\ m.size());}
+\DoxyCodeLine{00928\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keyword}{typename}\ std::set<K,\ Pred,\ A>::const\_iterator\ it\ =\ m.begin();\ it\ !=\ m.end();\ ++it)}
+\DoxyCodeLine{00929\ \ \ \ \ \ \ \ \ Serialize(os,\ (*it));}
+\DoxyCodeLine{00930\ \}}
+\DoxyCodeLine{00931\ }
+\DoxyCodeLine{00932\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ K,\ \textcolor{keyword}{typename}\ Pred,\ \textcolor{keyword}{typename}\ A>}
+\DoxyCodeLine{00933\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::set<K,\ Pred,\ A>\&\ m)}
+\DoxyCodeLine{00934\ \{}
+\DoxyCodeLine{00935\ \ \ \ \ m.clear();}
+\DoxyCodeLine{00936\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ nSize\ =\ ReadCompactSize(is);}
+\DoxyCodeLine{00937\ \ \ \ \ \textcolor{keyword}{typename}\ std::set<K,\ Pred,\ A>::iterator\ it\ =\ m.begin();}
+\DoxyCodeLine{00938\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ nSize;\ i++)}
+\DoxyCodeLine{00939\ \ \ \ \ \{}
+\DoxyCodeLine{00940\ \ \ \ \ \ \ \ \ K\ key;}
+\DoxyCodeLine{00941\ \ \ \ \ \ \ \ \ Unserialize(is,\ key);}
+\DoxyCodeLine{00942\ \ \ \ \ \ \ \ \ it\ =\ m.insert(it,\ key);}
+\DoxyCodeLine{00943\ \ \ \ \ \}}
+\DoxyCodeLine{00944\ \}}
+\DoxyCodeLine{00945\ }
+\DoxyCodeLine{00946\ }
+\DoxyCodeLine{00947\ }
+\DoxyCodeLine{00951\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>\ \textcolor{keywordtype}{void}}
+\DoxyCodeLine{00952\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::unique\_ptr<const\ T>\&\ p)}
+\DoxyCodeLine{00953\ \{}
+\DoxyCodeLine{00954\ \ \ \ \ Serialize(os,\ *p);}
+\DoxyCodeLine{00955\ \}}
+\DoxyCodeLine{00956\ }
+\DoxyCodeLine{00957\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00958\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::unique\_ptr<const\ T>\&\ p)}
+\DoxyCodeLine{00959\ \{}
+\DoxyCodeLine{00960\ \ \ \ \ p.reset(\textcolor{keyword}{new}\ T(deserialize,\ is));}
+\DoxyCodeLine{00961\ \}}
+\DoxyCodeLine{00962\ }
+\DoxyCodeLine{00963\ }
+\DoxyCodeLine{00964\ }
+\DoxyCodeLine{00968\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>\ \textcolor{keywordtype}{void}}
+\DoxyCodeLine{00969\ Serialize(Stream\&\ os,\ \textcolor{keyword}{const}\ std::shared\_ptr<const\ T>\&\ p)}
+\DoxyCodeLine{00970\ \{}
+\DoxyCodeLine{00971\ \ \ \ \ Serialize(os,\ *p);}
+\DoxyCodeLine{00972\ \}}
+\DoxyCodeLine{00973\ }
+\DoxyCodeLine{00974\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00975\ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ is,\ std::shared\_ptr<const\ T>\&\ p)}
+\DoxyCodeLine{00976\ \{}
+\DoxyCodeLine{00977\ \ \ \ \ p\ =\ std::make\_shared<const\ T>(deserialize,\ is);}
+\DoxyCodeLine{00978\ \}}
+\DoxyCodeLine{00979\ }
+\DoxyCodeLine{00983\ }
+\DoxyCodeLine{00984\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00985\ \textcolor{keywordtype}{void}\ SerializeMany(Stream\&\ s,\ \textcolor{keyword}{const}\ Args\&...\ args)}
+\DoxyCodeLine{00986\ \{}
+\DoxyCodeLine{00987\ \ \ \ \ (::Serialize(s,\ args),\ ...);}
+\DoxyCodeLine{00988\ \}}
+\DoxyCodeLine{00989\ }
+\DoxyCodeLine{00990\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00991\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ UnserializeMany(Stream\&\ s,\ Args\&\&...\ args)}
+\DoxyCodeLine{00992\ \{}
+\DoxyCodeLine{00993\ \ \ \ \ (::Unserialize(s,\ args),\ ...);}
+\DoxyCodeLine{00994\ \}}
+\DoxyCodeLine{00995\ }
+\DoxyCodeLine{00999\ \textcolor{keyword}{struct\ }ActionSerialize\ \{}
+\DoxyCodeLine{01000\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ ForRead()\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};\ \}}
+\DoxyCodeLine{01001\ }
+\DoxyCodeLine{01002\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{01003\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ SerReadWriteMany(Stream\&\ s,\ \textcolor{keyword}{const}\ Args\&...\ args)}
+\DoxyCodeLine{01004\ \ \ \ \ \{}
+\DoxyCodeLine{01005\ \ \ \ \ \ \ \ \ ::SerializeMany(s,\ args...);}
+\DoxyCodeLine{01006\ \ \ \ \ \}}
+\DoxyCodeLine{01007\ }
+\DoxyCodeLine{01008\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ Type,\ \textcolor{keyword}{typename}\ Fn>}
+\DoxyCodeLine{01009\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ SerRead(Stream\&\ s,\ Type\&\&,\ Fn\&\&)}
+\DoxyCodeLine{01010\ \ \ \ \ \{}
+\DoxyCodeLine{01011\ \ \ \ \ \}}
+\DoxyCodeLine{01012\ }
+\DoxyCodeLine{01013\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ Type,\ \textcolor{keyword}{typename}\ Fn>}
+\DoxyCodeLine{01014\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ SerWrite(Stream\&\ s,\ Type\&\&\ obj,\ Fn\&\&\ fn)}
+\DoxyCodeLine{01015\ \ \ \ \ \{}
+\DoxyCodeLine{01016\ \ \ \ \ \ \ \ \ fn(s,\ std::forward<Type>(obj));}
+\DoxyCodeLine{01017\ \ \ \ \ \}}
+\DoxyCodeLine{01018\ \};}
+\DoxyCodeLine{01019\ \textcolor{keyword}{struct\ }ActionUnserialize\ \{}
+\DoxyCodeLine{01020\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ ForRead()\ \{\ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};\ \}}
+\DoxyCodeLine{01021\ }
+\DoxyCodeLine{01022\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{01023\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ SerReadWriteMany(Stream\&\ s,\ Args\&\&...\ args)}
+\DoxyCodeLine{01024\ \ \ \ \ \{}
+\DoxyCodeLine{01025\ \ \ \ \ \ \ \ \ ::UnserializeMany(s,\ args...);}
+\DoxyCodeLine{01026\ \ \ \ \ \}}
+\DoxyCodeLine{01027\ }
+\DoxyCodeLine{01028\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ Type,\ \textcolor{keyword}{typename}\ Fn>}
+\DoxyCodeLine{01029\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ SerRead(Stream\&\ s,\ Type\&\&\ obj,\ Fn\&\&\ fn)}
+\DoxyCodeLine{01030\ \ \ \ \ \{}
+\DoxyCodeLine{01031\ \ \ \ \ \ \ \ \ fn(s,\ std::forward<Type>(obj));}
+\DoxyCodeLine{01032\ \ \ \ \ \}}
+\DoxyCodeLine{01033\ }
+\DoxyCodeLine{01034\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream,\ \textcolor{keyword}{typename}\ Type,\ \textcolor{keyword}{typename}\ Fn>}
+\DoxyCodeLine{01035\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ SerWrite(Stream\&\ s,\ Type\&\&,\ Fn\&\&)}
+\DoxyCodeLine{01036\ \ \ \ \ \{}
+\DoxyCodeLine{01037\ \ \ \ \ \}}
+\DoxyCodeLine{01038\ \};}
+\DoxyCodeLine{01039\ }
+\DoxyCodeLine{01040\ \textcolor{comment}{/*\ ::GetSerializeSize\ implementations}}
+\DoxyCodeLine{01041\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{01042\ \textcolor{comment}{\ *\ Computing\ the\ serialized\ size\ of\ objects\ is\ done\ through\ a\ special\ stream}}
+\DoxyCodeLine{01043\ \textcolor{comment}{\ *\ object\ of\ type\ SizeComputer,\ which\ only\ records\ the\ number\ of\ bytes\ written}}
+\DoxyCodeLine{01044\ \textcolor{comment}{\ *\ to\ it.}}
+\DoxyCodeLine{01045\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{01046\ \textcolor{comment}{\ *\ If\ your\ Serialize\ or\ SerializationOp\ method\ has\ non-\/trivial\ overhead\ for}}
+\DoxyCodeLine{01047\ \textcolor{comment}{\ *\ serialization,\ it\ may\ be\ worthwhile\ to\ implement\ a\ specialized\ version\ for}}
+\DoxyCodeLine{01048\ \textcolor{comment}{\ *\ SizeComputer,\ which\ uses\ the\ s.seek()\ method\ to\ record\ bytes\ that\ would}}
+\DoxyCodeLine{01049\ \textcolor{comment}{\ *\ be\ written\ instead.}}
+\DoxyCodeLine{01050\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{01051\ \textcolor{keyword}{class\ }SizeComputer}
+\DoxyCodeLine{01052\ \{}
+\DoxyCodeLine{01053\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{01054\ \ \ \ \ uint64\_t\ m\_size\{0\};}
+\DoxyCodeLine{01055\ }
+\DoxyCodeLine{01056\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{01057\ \ \ \ \ SizeComputer()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{01058\ }
+\DoxyCodeLine{01059\ \ \ \ \ \textcolor{keywordtype}{void}\ write(std::span<const\ std::byte>\ src)}
+\DoxyCodeLine{01060\ \ \ \ \ \{}
+\DoxyCodeLine{01061\ \ \ \ \ \ \ \ \ m\_size\ +=\ src.size();}
+\DoxyCodeLine{01062\ \ \ \ \ \}}
+\DoxyCodeLine{01063\ }
+\DoxyCodeLine{01065\ \ \ \ \ \textcolor{keywordtype}{void}\ seek(uint64\_t\ num)}
+\DoxyCodeLine{01066\ \ \ \ \ \{}
+\DoxyCodeLine{01067\ \ \ \ \ \ \ \ \ m\_size\ +=\ num;}
+\DoxyCodeLine{01068\ \ \ \ \ \}}
+\DoxyCodeLine{01069\ }
+\DoxyCodeLine{01070\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{01071\ \ \ \ \ SizeComputer\&\ operator<<(\textcolor{keyword}{const}\ T\&\ obj)}
+\DoxyCodeLine{01072\ \ \ \ \ \{}
+\DoxyCodeLine{01073\ \ \ \ \ \ \ \ \ ::Serialize(*\textcolor{keyword}{this},\ obj);}
+\DoxyCodeLine{01074\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};}
+\DoxyCodeLine{01075\ \ \ \ \ \}}
+\DoxyCodeLine{01076\ }
+\DoxyCodeLine{01077\ \ \ \ \ uint64\_t\ size()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{01078\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{01079\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_size;}
+\DoxyCodeLine{01080\ \ \ \ \ \}}
+\DoxyCodeLine{01081\ \};}
+\DoxyCodeLine{01082\ }
+\DoxyCodeLine{01083\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ I>}
+\DoxyCodeLine{01084\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ WriteVarInt(SizeComputer\ \&s,\ I\ n)}
+\DoxyCodeLine{01085\ \{}
+\DoxyCodeLine{01086\ \ \ \ \ s.seek(GetSizeOfVarInt<I>(n));}
+\DoxyCodeLine{01087\ \}}
+\DoxyCodeLine{01088\ }
+\DoxyCodeLine{01089\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ WriteCompactSize(SizeComputer\ \&s,\ uint64\_t\ nSize)}
+\DoxyCodeLine{01090\ \{}
+\DoxyCodeLine{01091\ \ \ \ \ s.seek(GetSizeOfCompactSize(nSize));}
+\DoxyCodeLine{01092\ \}}
+\DoxyCodeLine{01093\ }
+\DoxyCodeLine{01094\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{01095\ uint64\_t\ GetSerializeSize(\textcolor{keyword}{const}\ T\&\ t)}
+\DoxyCodeLine{01096\ \{}
+\DoxyCodeLine{01097\ \ \ \ \ \textcolor{keywordflow}{return}\ (SizeComputer()\ <<\ t).size();}
+\DoxyCodeLine{01098\ \}}
+\DoxyCodeLine{01099\ }
+\DoxyCodeLine{01101\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{01102\ \textcolor{keyword}{concept\ }ContainsStream\ =\ \textcolor{keyword}{requires}(T\ t)\ \{\ t.GetStream();\ \};}
+\DoxyCodeLine{01103\ }
+\DoxyCodeLine{01105\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ SubStream,\ \textcolor{keyword}{typename}\ Params>}
+\DoxyCodeLine{01106\ \textcolor{keyword}{class\ }ParamsStream}
+\DoxyCodeLine{01107\ \{}
+\DoxyCodeLine{01108\ \ \ \ \ \textcolor{keyword}{const}\ Params\&\ m\_params;}
+\DoxyCodeLine{01109\ \ \ \ \ \textcolor{comment}{//\ If\ ParamsStream\ constructor\ is\ passed\ an\ lvalue\ argument,\ Substream\ will}}
+\DoxyCodeLine{01110\ \ \ \ \ \textcolor{comment}{//\ be\ a\ reference\ type,\ and\ m\_substream\ will\ reference\ that\ argument.}}
+\DoxyCodeLine{01111\ \ \ \ \ \textcolor{comment}{//\ Otherwise\ m\_substream\ will\ be\ a\ substream\ instance\ and\ move\ from\ the}}
+\DoxyCodeLine{01112\ \ \ \ \ \textcolor{comment}{//\ argument.\ Letting\ ParamsStream\ contain\ a\ substream\ instance\ instead\ of}}
+\DoxyCodeLine{01113\ \ \ \ \ \textcolor{comment}{//\ just\ a\ reference\ is\ useful\ to\ make\ the\ ParamsStream\ object\ self\ contained}}
+\DoxyCodeLine{01114\ \ \ \ \ \textcolor{comment}{//\ and\ let\ it\ do\ cleanup\ when\ destroyed,\ for\ example\ by\ closing\ files\ if}}
+\DoxyCodeLine{01115\ \ \ \ \ \textcolor{comment}{//\ SubStream\ is\ a\ file\ stream.}}
+\DoxyCodeLine{01116\ \ \ \ \ SubStream\ m\_substream;}
+\DoxyCodeLine{01117\ }
+\DoxyCodeLine{01118\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{01119\ \ \ \ \ ParamsStream(SubStream\&\&\ substream,\ \textcolor{keyword}{const}\ Params\&\ params\ LIFETIMEBOUND)\ :\ m\_params\{params\},\ m\_substream\{std::forward<SubStream>(substream)\}\ \{\}}
+\DoxyCodeLine{01120\ }
+\DoxyCodeLine{01121\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ NestedSubstream,\ \textcolor{keyword}{typename}\ Params1,\ \textcolor{keyword}{typename}\ Params2,\ \textcolor{keyword}{typename}...\ NestedParams>}
+\DoxyCodeLine{01122\ \ \ \ \ ParamsStream(NestedSubstream\&\&\ s,\ \textcolor{keyword}{const}\ Params1\&\ params1\ LIFETIMEBOUND,\ \textcolor{keyword}{const}\ Params2\&\ params2\ LIFETIMEBOUND,\ \textcolor{keyword}{const}\ NestedParams\&...\ params\ LIFETIMEBOUND)}
+\DoxyCodeLine{01123\ \ \ \ \ \ \ \ \ :\ ParamsStream\{::ParamsStream\{std::forward<NestedSubstream>(s),\ params2,\ params...\},\ params1\}\ \{\}}
+\DoxyCodeLine{01124\ }
+\DoxyCodeLine{01125\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ U>\ ParamsStream\&\ operator<<(\textcolor{keyword}{const}\ U\&\ obj)\ \{\ ::Serialize(*\textcolor{keyword}{this},\ obj);\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{01126\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ U>\ ParamsStream\&\ operator>>(U\&\&\ obj)\ \{\ ::Unserialize(*\textcolor{keyword}{this},\ obj);\ \textcolor{keywordflow}{return}\ *\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{01127\ \ \ \ \ \textcolor{keywordtype}{void}\ write(std::span<const\ std::byte>\ src)\ \{\ GetStream().write(src);\ \}}
+\DoxyCodeLine{01128\ \ \ \ \ \textcolor{keywordtype}{void}\ read(std::span<std::byte>\ dst)\ \{\ GetStream().read(dst);\ \}}
+\DoxyCodeLine{01129\ \ \ \ \ \textcolor{keywordtype}{void}\ ignore(\textcolor{keywordtype}{size\_t}\ num)\ \{\ GetStream().ignore(num);\ \}}
+\DoxyCodeLine{01130\ \ \ \ \ \textcolor{keywordtype}{bool}\ eof()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ GetStream().eof();\ \}}
+\DoxyCodeLine{01131\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ size()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ GetStream().size();\ \}}
+\DoxyCodeLine{01132\ }
+\DoxyCodeLine{01134\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ P>}
+\DoxyCodeLine{01135\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ GetParams()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{01136\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{01137\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (std::is\_convertible\_v<Params,\ P>)\ \{}
+\DoxyCodeLine{01138\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_params;}
+\DoxyCodeLine{01139\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{01140\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_substream.template\ GetParams<P>();}
+\DoxyCodeLine{01141\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01142\ \ \ \ \ \}}
+\DoxyCodeLine{01143\ }
+\DoxyCodeLine{01145\ \ \ \ \ \textcolor{keyword}{auto}\&\ GetStream()}
+\DoxyCodeLine{01146\ \ \ \ \ \{}
+\DoxyCodeLine{01147\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (ContainsStream<SubStream>)\ \{}
+\DoxyCodeLine{01148\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_substream.GetStream();}
+\DoxyCodeLine{01149\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{01150\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_substream;}
+\DoxyCodeLine{01151\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01152\ \ \ \ \ \}}
+\DoxyCodeLine{01153\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\&\ GetStream()\textcolor{keyword}{\ const}}
+\DoxyCodeLine{01154\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{01155\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ \textcolor{keyword}{constexpr}\ (ContainsStream<SubStream>)\ \{}
+\DoxyCodeLine{01156\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_substream.GetStream();}
+\DoxyCodeLine{01157\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{01158\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_substream;}
+\DoxyCodeLine{01159\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01160\ \ \ \ \ \}}
+\DoxyCodeLine{01161\ \};}
+\DoxyCodeLine{01162\ }
+\DoxyCodeLine{01168\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Substream,\ \textcolor{keyword}{typename}\ Params>}
+\DoxyCodeLine{01169\ ParamsStream(Substream\&\&,\ \textcolor{keyword}{const}\ Params\&)\ -\/>\ ParamsStream<Substream,\ Params>;}
+\DoxyCodeLine{01170\ }
+\DoxyCodeLine{01175\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Substream,\ \textcolor{keyword}{typename}\ Params1,\ \textcolor{keyword}{typename}\ Params2,\ \textcolor{keyword}{typename}...\ Params>}
+\DoxyCodeLine{01176\ ParamsStream(Substream\&\&\ s,\ \textcolor{keyword}{const}\ Params1\&\ params1,\ \textcolor{keyword}{const}\ Params2\&\ params2,\ \textcolor{keyword}{const}\ Params\&...\ params)\ -\/>}
+\DoxyCodeLine{01177\ \ \ \ \ ParamsStream<\textcolor{keyword}{decltype}(ParamsStream\{std::forward<Substream>(s),\ params2,\ params...\}),\ Params1>;}
+\DoxyCodeLine{01178\ }
+\DoxyCodeLine{01180\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Params,\ \textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{01181\ \textcolor{keyword}{class\ }ParamsWrapper}
+\DoxyCodeLine{01182\ \{}
+\DoxyCodeLine{01183\ \ \ \ \ \textcolor{keyword}{const}\ Params\&\ m\_params;}
+\DoxyCodeLine{01184\ \ \ \ \ T\&\ m\_object;}
+\DoxyCodeLine{01185\ }
+\DoxyCodeLine{01186\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{01187\ \ \ \ \ \textcolor{keyword}{explicit}\ ParamsWrapper(\textcolor{keyword}{const}\ Params\&\ params,\ T\&\ obj)\ :\ m\_params\{params\},\ m\_object\{obj\}\ \{\}}
+\DoxyCodeLine{01188\ }
+\DoxyCodeLine{01189\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{01190\ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(Stream\&\ s)\textcolor{keyword}{\ const}}
+\DoxyCodeLine{01191\ \textcolor{keyword}{\ \ \ \ }\{}
+\DoxyCodeLine{01192\ \ \ \ \ \ \ \ \ ParamsStream\ ss\{s,\ m\_params\};}
+\DoxyCodeLine{01193\ \ \ \ \ \ \ \ \ ::Serialize(ss,\ m\_object);}
+\DoxyCodeLine{01194\ \ \ \ \ \}}
+\DoxyCodeLine{01195\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{01196\ \ \ \ \ \textcolor{keywordtype}{void}\ Unserialize(Stream\&\ s)}
+\DoxyCodeLine{01197\ \ \ \ \ \{}
+\DoxyCodeLine{01198\ \ \ \ \ \ \ \ \ ParamsStream\ ss\{s,\ m\_params\};}
+\DoxyCodeLine{01199\ \ \ \ \ \ \ \ \ ::Unserialize(ss,\ m\_object);}
+\DoxyCodeLine{01200\ \ \ \ \ \}}
+\DoxyCodeLine{01201\ \};}
+\DoxyCodeLine{01202\ }
+\DoxyCodeLine{01212\ \textcolor{preprocessor}{\#define\ SER\_PARAMS\_OPFUNC\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{01213\ \textcolor{preprocessor}{}\textcolor{preprocessor}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{01218\ \textcolor{preprocessor}{\ \ \ \ template\ <typename\ T>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{01219\ \textcolor{preprocessor}{\ \ \ \ auto\ operator()(T\&\&\ t)\ const\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{01220\ \textcolor{preprocessor}{\ \ \ \ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{01221\ \textcolor{preprocessor}{\ \ \ \ \ \ \ \ return\ ParamsWrapper\{*this,\ t\};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{01222\ \textcolor{preprocessor}{\ \ \ \ \}}}
+\DoxyCodeLine{01223\ }
+\DoxyCodeLine{01224\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_SERIALIZE\_H}}
+
+\end{DoxyCode}

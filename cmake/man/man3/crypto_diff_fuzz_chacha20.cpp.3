@@ -1,0 +1,213 @@
+.TH "src/test/fuzz/crypto_diff_fuzz_chacha20.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/test/fuzz/crypto_diff_fuzz_chacha20.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <crypto/chacha20\&.h>\fP
+.br
+\fR#include <test/fuzz/FuzzedDataProvider\&.h>\fP
+.br
+\fR#include <test/fuzz/fuzz\&.h>\fP
+.br
+\fR#include <test/fuzz/util\&.h>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include <vector>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBECRYPT_ctx\fP"
+.br
+.in -1c
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBU8C\fP(v)"
+.br
+.ti -1c
+.RI "#define \fBU32C\fP(v)"
+.br
+.ti -1c
+.RI "#define \fBU8V\fP(v)"
+.br
+.ti -1c
+.RI "#define \fBU32V\fP(v)"
+.br
+.ti -1c
+.RI "#define \fBROTL32\fP(v,  n)"
+.br
+.ti -1c
+.RI "#define \fBU8TO32_LITTLE\fP(p)"
+.br
+.ti -1c
+.RI "#define \fBU32TO8_LITTLE\fP(p,  v)"
+.br
+.ti -1c
+.RI "#define \fBROTATE\fP(v,  c)"
+.br
+.ti -1c
+.RI "#define \fBXOR\fP(v,  w)"
+.br
+.ti -1c
+.RI "#define \fBPLUS\fP(v,  w)"
+.br
+.ti -1c
+.RI "#define \fBPLUSONE\fP(v)"
+.br
+.ti -1c
+.RI "#define \fBQUARTERROUND\fP(a,  b,  c,  d)"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "typedef unsigned int \fBu32\fP"
+.br
+.ti -1c
+.RI "typedef unsigned char \fBu8\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "void \fBECRYPT_keysetup\fP (\fBECRYPT_ctx\fP *ctx, const \fBu8\fP *key, \fBu32\fP keysize, \fBu32\fP ivsize)"
+.br
+.ti -1c
+.RI "void \fBECRYPT_ivsetup\fP (\fBECRYPT_ctx\fP *ctx, const \fBu8\fP *iv)"
+.br
+.ti -1c
+.RI "void \fBECRYPT_encrypt_bytes\fP (\fBECRYPT_ctx\fP *ctx, const \fBu8\fP *plaintext, \fBu8\fP *ciphertext, \fBu32\fP msglen)"
+.br
+.ti -1c
+.RI "void \fBECRYPT_keystream_bytes\fP (\fBECRYPT_ctx\fP *ctx, \fBu8\fP *keystream, \fBu32\fP length)"
+.br
+.ti -1c
+.RI "\fBFUZZ_TARGET\fP (crypto_diff_fuzz_chacha20)"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define PLUS( v,  w)"
+\fBValue:\fP
+.nf
+(U32V((v) + (w)))
+.PP
+.fi
+
+.SS "#define PLUSONE( v)"
+\fBValue:\fP
+.nf
+(PLUS((v), 1))
+.PP
+.fi
+
+.SS "#define QUARTERROUND( a,  b,  c,  d)"
+\fBValue:\fP
+.nf
+    a = PLUS(a, b); d = ROTATE(XOR(d, a), 16);   \\
+    c = PLUS(c, d); b = ROTATE(XOR(b, c), 12);   \\
+    a = PLUS(a, b); d = ROTATE(XOR(d, a), 8);    \\
+    c = PLUS(c, d); b = ROTATE(XOR(b, c), 7);
+.PP
+.fi
+
+.SS "#define ROTATE( v,  c)"
+\fBValue:\fP
+.nf
+(ROTL32(v, c))
+.PP
+.fi
+
+.SS "#define ROTL32( v,  n)"
+\fBValue:\fP
+.nf
+(U32V((v) << (n)) | ((v) >> (32 \- (n))))
+.PP
+.fi
+
+.SS "#define U32C( v)"
+\fBValue:\fP
+.nf
+(v##U)
+.PP
+.fi
+
+.SS "#define U32TO8_LITTLE( p,  v)"
+\fBValue:\fP
+.nf
+    do {                         \\
+        (p)[0] = U8V((v));       \\
+        (p)[1] = U8V((v) >> 8);  \\
+        (p)[2] = U8V((v) >> 16); \\
+        (p)[3] = U8V((v) >> 24); \\
+    } while (0)
+.PP
+.fi
+
+.SS "#define U32V( v)"
+\fBValue:\fP
+.nf
+((u32)(v)&U32C(0xFFFFFFFF))
+.PP
+.fi
+
+.SS "#define U8C( v)"
+\fBValue:\fP
+.nf
+(v##U)
+.PP
+.fi
+
+.SS "#define U8TO32_LITTLE( p)"
+\fBValue:\fP
+.nf
+    (((u32)((p)[0])) | ((u32)((p)[1]) << 8) | ((u32)((p)[2]) << 16) | \\
+     ((u32)((p)[3]) << 24))
+.PP
+.fi
+
+.SS "#define U8V( v)"
+\fBValue:\fP
+.nf
+((u8)(v)&U8C(0xFF))
+.PP
+.fi
+
+.SS "#define XOR( v,  w)"
+\fBValue:\fP
+.nf
+((v) ^ (w))
+.PP
+.fi
+
+.SH "Typedef Documentation"
+.PP 
+.SS "typedef unsigned int \fBu32\fP"
+
+.SS "typedef unsigned char \fBu8\fP"
+
+.SH "Function Documentation"
+.PP 
+.SS "void ECRYPT_encrypt_bytes (\fBECRYPT_ctx\fP * ctx, const \fBu8\fP * plaintext, \fBu8\fP * ciphertext, \fBu32\fP msglen)"
+
+.SS "void ECRYPT_ivsetup (\fBECRYPT_ctx\fP * ctx, const \fBu8\fP * iv)"
+
+.SS "void ECRYPT_keysetup (\fBECRYPT_ctx\fP * ctx, const \fBu8\fP * key, \fBu32\fP keysize, \fBu32\fP ivsize)"
+
+.SS "void ECRYPT_keystream_bytes (\fBECRYPT_ctx\fP * ctx, \fBu8\fP * keystream, \fBu32\fP length)"
+
+.SS "FUZZ_TARGET (crypto_diff_fuzz_chacha20 )"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

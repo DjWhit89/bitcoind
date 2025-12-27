@@ -1,0 +1,135 @@
+.TH "bit_packed_atomic_flags" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+bit_packed_atomic_flags
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <cuckoocache\&.h>\fP
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBbit_packed_atomic_flags\fP ()=delete"
+.br
+.ti -1c
+.RI "\fBbit_packed_atomic_flags\fP (uint32_t size)"
+.br
+.ti -1c
+.RI "void \fBsetup\fP (uint32_t b)"
+.br
+.ti -1c
+.RI "void \fBbit_set\fP (uint32_t s)"
+.br
+.ti -1c
+.RI "void \fBbit_unset\fP (uint32_t s)"
+.br
+.ti -1c
+.RI "bool \fBbit_is_set\fP (uint32_t s) const"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+\fBbit_packed_atomic_flags\fP implements a container for garbage collection flags that is only thread unsafe on calls to setup\&. This class bit-packs collection flags for memory efficiency\&.
+
+.PP
+All operations are \fRstd::memory_order_relaxed\fP so external mechanisms must ensure that writes and reads are properly synchronized\&.
+
+.PP
+On setup(n), all bits up to \fRn\fP are marked as collected\&.
+
+.PP
+Under the hood, because it is an 8-bit type, it makes sense to use a multiple of 8 for setup, but it will be safe if that is not the case as well\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "bit_packed_atomic_flags ()\fR [delete]\fP"
+No default constructor, as there must be some size\&. 
+.SS "bit_packed_atomic_flags (uint32_t size)\fR [inline]\fP, \fR [explicit]\fP"
+\fBbit_packed_atomic_flags\fP constructor creates memory to sufficiently keep track of garbage collection information for \fRsize\fP entries\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIsize\fP the number of elements to allocate space for
+.RE
+.PP
+\fBPostcondition\fP
+.RS 4
+bit_set, bit_unset, and bit_is_set function properly forall x\&. x < size 
+
+.PP
+All calls to bit_is_set (without subsequent bit_unset) will return true\&. 
+.RE
+.PP
+
+.SH "Member Function Documentation"
+.PP 
+.SS "bool bit_is_set (uint32_t s) const\fR [inline]\fP"
+bit_is_set queries the table for discardability at \fRs\fP\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIs\fP the index of the entry to read 
+.RE
+.PP
+\fBReturns\fP
+.RS 4
+true if the bit at index \fRs\fP was set, false otherwise 
+.RE
+.PP
+
+.SS "void bit_set (uint32_t s)\fR [inline]\fP"
+bit_set sets an entry as discardable\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIs\fP the index of the entry to bit_set 
+.RE
+.PP
+\fBPostcondition\fP
+.RS 4
+immediately subsequent call (assuming proper external memory ordering) to bit_is_set(s) == true\&. 
+.RE
+.PP
+
+.SS "void bit_unset (uint32_t s)\fR [inline]\fP"
+bit_unset marks an entry as something that should not be overwritten\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIs\fP the index of the entry to bit_unset 
+.RE
+.PP
+\fBPostcondition\fP
+.RS 4
+immediately subsequent call (assuming proper external memory ordering) to bit_is_set(s) == false\&. 
+.RE
+.PP
+
+.SS "void setup (uint32_t b)\fR [inline]\fP"
+setup marks all entries and ensures that \fBbit_packed_atomic_flags\fP can store at least \fRb\fP entries\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIb\fP the number of elements to allocate space for 
+.RE
+.PP
+\fBPostcondition\fP
+.RS 4
+bit_set, bit_unset, and bit_is_set function properly forall x\&. x < b 
+
+.PP
+All calls to bit_is_set (without subsequent bit_unset) will return true\&. 
+.RE
+.PP
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

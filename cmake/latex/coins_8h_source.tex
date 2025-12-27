@@ -1,0 +1,337 @@
+\doxysection{coins.\+h}
+\label{coins_8h_source}\index{src/coins.h@{src/coins.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/2010\ Satoshi\ Nakamoto}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00004\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_COINS\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ BITCOIN\_COINS\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <compressor.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <core\_memusage.h>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <memusage.h>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <primitives/transaction.h>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <serialize.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <support/allocators/pool.h>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <uint256.h>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <util/check.h>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <util/hasher.h>}}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <cstdint>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ <unordered\_map>}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00032\ \textcolor{keyword}{class\ }Coin}
+\DoxyCodeLine{00033\ \{}
+\DoxyCodeLine{00034\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00036\ \ \ \ \ CTxOut\ out;}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ fCoinBase\ :\ 1;}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00042\ \ \ \ \ uint32\_t\ nHeight\ :\ 31;}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00045\ \ \ \ \ Coin(CTxOut\&\&\ outIn,\ \textcolor{keywordtype}{int}\ nHeightIn,\ \textcolor{keywordtype}{bool}\ fCoinBaseIn)\ :\ out(std::move(outIn)),\ fCoinBase(fCoinBaseIn),\ nHeight(nHeightIn)\ \{\}}
+\DoxyCodeLine{00046\ \ \ \ \ Coin(\textcolor{keyword}{const}\ CTxOut\&\ outIn,\ \textcolor{keywordtype}{int}\ nHeightIn,\ \textcolor{keywordtype}{bool}\ fCoinBaseIn)\ :\ out(outIn),\ fCoinBase(fCoinBaseIn),nHeight(nHeightIn)\ \{\}}
+\DoxyCodeLine{00047\ }
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{keywordtype}{void}\ Clear()\ \{}
+\DoxyCodeLine{00049\ \ \ \ \ \ \ \ \ out.SetNull();}
+\DoxyCodeLine{00050\ \ \ \ \ \ \ \ \ fCoinBase\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00051\ \ \ \ \ \ \ \ \ nHeight\ =\ 0;}
+\DoxyCodeLine{00052\ \ \ \ \ \}}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00055\ \ \ \ \ Coin()\ :\ fCoinBase(false),\ nHeight(0)\ \{\ \}}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsCoinBase()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ fCoinBase;}
+\DoxyCodeLine{00059\ \ \ \ \ \}}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keywordtype}{void}\ Serialize(Stream\ \&s)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ assert(!IsSpent());}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ uint32\_t\ code\ =\ nHeight\ *\ uint32\_t\{2\}\ +\ fCoinBase;}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ ::Serialize(s,\ VARINT(code));}
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ ::Serialize(s,\ Using<TxOutCompression>(out));}
+\DoxyCodeLine{00067\ \ \ \ \ \}}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ Stream>}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keywordtype}{void}\ Unserialize(Stream\ \&s)\ \{}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ uint32\_t\ code\ =\ 0;}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ ::Unserialize(s,\ VARINT(code));}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ nHeight\ =\ code\ >>\ 1;}
+\DoxyCodeLine{00074\ \ \ \ \ \ \ \ \ fCoinBase\ =\ code\ \&\ 1;}
+\DoxyCodeLine{00075\ \ \ \ \ \ \ \ \ ::Unserialize(s,\ Using<TxOutCompression>(out));}
+\DoxyCodeLine{00076\ \ \ \ \ \}}
+\DoxyCodeLine{00077\ }
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsSpent()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ out.IsNull();}
+\DoxyCodeLine{00083\ \ \ \ \ \}}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ DynamicMemoryUsage()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00086\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ memusage::DynamicUsage(out.scriptPubKey);}
+\DoxyCodeLine{00087\ \ \ \ \ \}}
+\DoxyCodeLine{00088\ \};}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00090\ \textcolor{keyword}{struct\ }CCoinsCacheEntry;}
+\DoxyCodeLine{00091\ \textcolor{keyword}{using\ }CoinsCachePair\ =\ std::pair<const\ COutPoint,\ CCoinsCacheEntry>;}
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00108\ \textcolor{keyword}{struct\ }CCoinsCacheEntry}
+\DoxyCodeLine{00109\ \{}
+\DoxyCodeLine{00110\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00127\ \ \ \ \ CoinsCachePair*\ m\_prev\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00128\ \ \ \ \ CoinsCachePair*\ m\_next\{\textcolor{keyword}{nullptr}\};}
+\DoxyCodeLine{00129\ \ \ \ \ uint8\_t\ m\_flags\{0\};}
+\DoxyCodeLine{00130\ }
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ AddFlags(uint8\_t\ flags,\ CoinsCachePair\&\ pair,\ CoinsCachePair\&\ sentinel)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00133\ \ \ \ \ \{}
+\DoxyCodeLine{00134\ \ \ \ \ \ \ \ \ Assume(flags\ \&\ (DIRTY\ |\ FRESH));}
+\DoxyCodeLine{00135\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!pair.second.m\_flags)\ \{}
+\DoxyCodeLine{00136\ \ \ \ \ \ \ \ \ \ \ \ \ Assume(!pair.second.m\_prev\ \&\&\ !pair.second.m\_next);}
+\DoxyCodeLine{00137\ \ \ \ \ \ \ \ \ \ \ \ \ pair.second.m\_prev\ =\ sentinel.second.m\_prev;}
+\DoxyCodeLine{00138\ \ \ \ \ \ \ \ \ \ \ \ \ pair.second.m\_next\ =\ \&sentinel;}
+\DoxyCodeLine{00139\ \ \ \ \ \ \ \ \ \ \ \ \ sentinel.second.m\_prev\ =\ \&pair;}
+\DoxyCodeLine{00140\ \ \ \ \ \ \ \ \ \ \ \ \ pair.second.m\_prev-\/>second.m\_next\ =\ \&pair;}
+\DoxyCodeLine{00141\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00142\ \ \ \ \ \ \ \ \ Assume(pair.second.m\_prev\ \&\&\ pair.second.m\_next);}
+\DoxyCodeLine{00143\ \ \ \ \ \ \ \ \ pair.second.m\_flags\ |=\ flags;}
+\DoxyCodeLine{00144\ \ \ \ \ \}}
+\DoxyCodeLine{00145\ }
+\DoxyCodeLine{00146\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00147\ \ \ \ \ Coin\ coin;\ \textcolor{comment}{//\ The\ actual\ cached\ data.}}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{keyword}{enum}\ Flags\ \{}
+\DoxyCodeLine{00157\ \ \ \ \ \ \ \ \ DIRTY\ =\ (1\ <<\ 0),}
+\DoxyCodeLine{00167\ \ \ \ \ \ \ \ \ FRESH\ =\ (1\ <<\ 1),}
+\DoxyCodeLine{00168\ \ \ \ \ \};}
+\DoxyCodeLine{00169\ }
+\DoxyCodeLine{00170\ \ \ \ \ CCoinsCacheEntry()\ noexcept\ =\ default;}
+\DoxyCodeLine{00171\ \ \ \ \ explicit\ CCoinsCacheEntry(Coin\&\&\ coin\_)\ noexcept\ :\ coin(std::move(coin\_))\ \{\}}
+\DoxyCodeLine{00172\ \ \ \ \ \string~CCoinsCacheEntry()}
+\DoxyCodeLine{00173\ \ \ \ \ \{}
+\DoxyCodeLine{00174\ \ \ \ \ \ \ \ \ SetClean();}
+\DoxyCodeLine{00175\ \ \ \ \ \}}
+\DoxyCodeLine{00176\ }
+\DoxyCodeLine{00177\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ SetDirty(CoinsCachePair\&\ pair,\ CoinsCachePair\&\ sentinel)\ \textcolor{keyword}{noexcept}\ \{\ AddFlags(DIRTY,\ pair,\ sentinel);\ \}}
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ SetFresh(CoinsCachePair\&\ pair,\ CoinsCachePair\&\ sentinel)\ \textcolor{keyword}{noexcept}\ \{\ AddFlags(FRESH,\ pair,\ sentinel);\ \}}
+\DoxyCodeLine{00179\ }
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keywordtype}{void}\ SetClean()\ noexcept}
+\DoxyCodeLine{00181\ \ \ \ \ \{}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_flags)\ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ m\_next-\/>second.m\_prev\ =\ m\_prev;}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ m\_prev-\/>second.m\_next\ =\ m\_next;}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ m\_flags\ =\ 0;}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ m\_prev\ =\ m\_next\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00187\ \ \ \ \ \}}
+\DoxyCodeLine{00188\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsDirty()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_flags\ \&\ DIRTY;\ \}}
+\DoxyCodeLine{00189\ \ \ \ \ \textcolor{keywordtype}{bool}\ IsFresh()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_flags\ \&\ FRESH;\ \}}
+\DoxyCodeLine{00190\ }
+\DoxyCodeLine{00192\ \ \ \ \ CoinsCachePair*\ Next()\ const\ noexcept}
+\DoxyCodeLine{00193\ \ \ \ \ \{}
+\DoxyCodeLine{00194\ \ \ \ \ \ \ \ \ Assume(m\_flags);}
+\DoxyCodeLine{00195\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_next;}
+\DoxyCodeLine{00196\ \ \ \ \ \}}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00199\ \ \ \ \ CoinsCachePair*\ Prev()\ const\ noexcept}
+\DoxyCodeLine{00200\ \ \ \ \ \{}
+\DoxyCodeLine{00201\ \ \ \ \ \ \ \ \ Assume(m\_flags);}
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ m\_prev;}
+\DoxyCodeLine{00203\ \ \ \ \ \}}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{keywordtype}{void}\ SelfRef(CoinsCachePair\&\ pair)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00207\ \ \ \ \ \{}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ Assume(\&pair.second\ ==\ \textcolor{keyword}{this});}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ m\_prev\ =\ \&pair;}
+\DoxyCodeLine{00210\ \ \ \ \ \ \ \ \ m\_next\ =\ \&pair;}
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Set\ sentinel\ to\ DIRTY\ so\ we\ can\ call\ Next\ on\ it}}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ m\_flags\ =\ DIRTY;}
+\DoxyCodeLine{00213\ \ \ \ \ \}}
+\DoxyCodeLine{00214\ \};}
+\DoxyCodeLine{00215\ }
+\DoxyCodeLine{00224\ \textcolor{keyword}{using\ }CCoinsMap\ =\ std::unordered\_map<COutPoint,}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CCoinsCacheEntry,}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ SaltedOutpointHasher,}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ std::equal\_to<COutPoint>,}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ PoolAllocator<CoinsCachePair,}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{sizeof}(CoinsCachePair)\ +\ \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{void}*)\ *\ 4>>;}
+\DoxyCodeLine{00230\ }
+\DoxyCodeLine{00231\ \textcolor{keyword}{using\ }CCoinsMapMemoryResource\ =\ CCoinsMap::allocator\_type::ResourceType;}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00234\ \textcolor{keyword}{class\ }CCoinsViewCursor}
+\DoxyCodeLine{00235\ \{}
+\DoxyCodeLine{00236\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00237\ \ \ \ \ CCoinsViewCursor(\textcolor{keyword}{const}\ uint256\ \&hashBlockIn):\ hashBlock(hashBlockIn)\ \{\}}
+\DoxyCodeLine{00238\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~CCoinsViewCursor()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00239\ }
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetKey(COutPoint\ \&key)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00241\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ GetValue(Coin\ \&coin)\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ Valid()\ \textcolor{keyword}{const}\ =\ 0;}
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{void}\ Next()\ =\ 0;}
+\DoxyCodeLine{00245\ }
+\DoxyCodeLine{00247\ \ \ \ \ \textcolor{keyword}{const}\ uint256\ \&GetBestBlock()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ hashBlock;\ \}}
+\DoxyCodeLine{00248\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00249\ \ \ \ \ uint256\ hashBlock;}
+\DoxyCodeLine{00250\ \};}
+\DoxyCodeLine{00251\ }
+\DoxyCodeLine{00265\ \textcolor{keyword}{struct\ }CoinsViewCacheCursor}
+\DoxyCodeLine{00266\ \{}
+\DoxyCodeLine{00274\ \ \ \ \ CoinsViewCacheCursor(CoinsCachePair\&\ sentinel\ LIFETIMEBOUND,}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ CCoinsMap\&\ map\ LIFETIMEBOUND,}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{bool}\ will\_erase)\ noexcept}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ :\ m\_sentinel(sentinel),\ m\_map(map),\ m\_will\_erase(will\_erase)\ \{\}}
+\DoxyCodeLine{00278\ }
+\DoxyCodeLine{00279\ \ \ \ \ \textcolor{keyword}{inline}\ CoinsCachePair*\ Begin()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ m\_sentinel.second.Next();\ \}}
+\DoxyCodeLine{00280\ \ \ \ \ \textcolor{keyword}{inline}\ CoinsCachePair*\ End()\ const\ noexcept\ \{\ \textcolor{keywordflow}{return}\ \&m\_sentinel;\ \}}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00283\ \ \ \ \ \textcolor{keyword}{inline}\ CoinsCachePair*\ NextAndMaybeErase(CoinsCachePair\&\ current)\ \textcolor{keyword}{noexcept}}
+\DoxyCodeLine{00284\ \ \ \ \ \{}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{auto}\ next\_entry\{current.second.Next()\};}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ If\ we\ are\ not\ going\ to\ erase\ the\ cache,\ we\ must\ still\ erase\ spent\ entries.}}
+\DoxyCodeLine{00287\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Otherwise,\ clear\ the\ state\ of\ the\ entry.}}
+\DoxyCodeLine{00288\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!m\_will\_erase)\ \{}
+\DoxyCodeLine{00289\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (current.second.coin.IsSpent())\ \{}
+\DoxyCodeLine{00290\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assert(current.second.coin.DynamicMemoryUsage()\ ==\ 0);\ \textcolor{comment}{//\ scriptPubKey\ was\ already\ cleared\ in\ SpendCoin}}
+\DoxyCodeLine{00291\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ m\_map.erase(current.first);}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ current.second.SetClean();}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ next\_entry;}
+\DoxyCodeLine{00297\ \ \ \ \ \}}
+\DoxyCodeLine{00298\ }
+\DoxyCodeLine{00299\ \ \ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ WillErase(CoinsCachePair\&\ current)\ \textcolor{keyword}{const}\ \textcolor{keyword}{noexcept}\ \{\ \textcolor{keywordflow}{return}\ m\_will\_erase\ ||\ current.second.coin.IsSpent();\ \}}
+\DoxyCodeLine{00300\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00301\ \ \ \ \ CoinsCachePair\&\ m\_sentinel;}
+\DoxyCodeLine{00302\ \ \ \ \ CCoinsMap\&\ m\_map;}
+\DoxyCodeLine{00303\ \ \ \ \ \textcolor{keywordtype}{bool}\ m\_will\_erase;}
+\DoxyCodeLine{00304\ \};}
+\DoxyCodeLine{00305\ }
+\DoxyCodeLine{00307\ \textcolor{keyword}{class\ }CCoinsView}
+\DoxyCodeLine{00308\ \{}
+\DoxyCodeLine{00309\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00311\ \ \ \ \ \textcolor{keyword}{virtual}\ std::optional<Coin>\ GetCoin(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00312\ }
+\DoxyCodeLine{00314\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ HaveCoin(\textcolor{keyword}{const}\ COutPoint\ \&outpoint)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00315\ }
+\DoxyCodeLine{00317\ \ \ \ \ \textcolor{keyword}{virtual}\ uint256\ GetBestBlock()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00318\ }
+\DoxyCodeLine{00323\ \ \ \ \ \textcolor{keyword}{virtual}\ std::vector<uint256>\ GetHeadBlocks()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00324\ }
+\DoxyCodeLine{00327\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{bool}\ BatchWrite(CoinsViewCacheCursor\&\ cursor,\ \textcolor{keyword}{const}\ uint256\&\ hashBlock);}
+\DoxyCodeLine{00328\ }
+\DoxyCodeLine{00330\ \ \ \ \ \textcolor{keyword}{virtual}\ std::unique\_ptr<CCoinsViewCursor>\ Cursor()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00331\ }
+\DoxyCodeLine{00333\ \ \ \ \ \textcolor{keyword}{virtual}\ \string~CCoinsView()\ =\ \textcolor{keywordflow}{default};}
+\DoxyCodeLine{00334\ }
+\DoxyCodeLine{00336\ \ \ \ \ \textcolor{keyword}{virtual}\ \textcolor{keywordtype}{size\_t}\ EstimateSize()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ 0;\ \}}
+\DoxyCodeLine{00337\ \};}
+\DoxyCodeLine{00338\ }
+\DoxyCodeLine{00339\ }
+\DoxyCodeLine{00341\ \textcolor{keyword}{class\ }CCoinsViewBacked\ :\ \textcolor{keyword}{public}\ CCoinsView}
+\DoxyCodeLine{00342\ \{}
+\DoxyCodeLine{00343\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00344\ \ \ \ \ CCoinsView\ *base;}
+\DoxyCodeLine{00345\ }
+\DoxyCodeLine{00346\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00347\ \ \ \ \ CCoinsViewBacked(CCoinsView\ *viewIn);}
+\DoxyCodeLine{00348\ \ \ \ \ std::optional<Coin>\ GetCoin(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00349\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveCoin(\textcolor{keyword}{const}\ COutPoint\ \&outpoint)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00350\ \ \ \ \ uint256\ GetBestBlock()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00351\ \ \ \ \ std::vector<uint256>\ GetHeadBlocks()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{keywordtype}{void}\ SetBackend(CCoinsView\ \&viewIn);}
+\DoxyCodeLine{00353\ \ \ \ \ \textcolor{keywordtype}{bool}\ BatchWrite(CoinsViewCacheCursor\&\ cursor,\ \textcolor{keyword}{const}\ uint256\ \&hashBlock)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00354\ \ \ \ \ std::unique\_ptr<CCoinsViewCursor>\ Cursor()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00355\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ EstimateSize()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00356\ \};}
+\DoxyCodeLine{00357\ }
+\DoxyCodeLine{00358\ }
+\DoxyCodeLine{00360\ \textcolor{keyword}{class\ }CCoinsViewCache\ :\ \textcolor{keyword}{public}\ CCoinsViewBacked}
+\DoxyCodeLine{00361\ \{}
+\DoxyCodeLine{00362\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00363\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{bool}\ m\_deterministic;}
+\DoxyCodeLine{00364\ }
+\DoxyCodeLine{00365\ \textcolor{keyword}{protected}:}
+\DoxyCodeLine{00370\ \ \ \ \ \textcolor{keyword}{mutable}\ uint256\ hashBlock;}
+\DoxyCodeLine{00371\ \ \ \ \ \textcolor{keyword}{mutable}\ CCoinsMapMemoryResource\ m\_cache\_coins\_memory\_resource\{\};}
+\DoxyCodeLine{00372\ \ \ \ \ \textcolor{comment}{/*\ The\ starting\ sentinel\ of\ the\ flagged\ entry\ circular\ doubly\ linked\ list.\ */}}
+\DoxyCodeLine{00373\ \ \ \ \ \textcolor{keyword}{mutable}\ CoinsCachePair\ m\_sentinel;}
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keyword}{mutable}\ CCoinsMap\ cacheCoins;}
+\DoxyCodeLine{00375\ }
+\DoxyCodeLine{00376\ \ \ \ \ \textcolor{comment}{/*\ Cached\ dynamic\ memory\ usage\ for\ the\ inner\ Coin\ objects.\ */}}
+\DoxyCodeLine{00377\ \ \ \ \ \textcolor{keyword}{mutable}\ \textcolor{keywordtype}{size\_t}\ cachedCoinsUsage\{0\};}
+\DoxyCodeLine{00378\ }
+\DoxyCodeLine{00379\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00380\ \ \ \ \ CCoinsViewCache(CCoinsView\ *baseIn,\ \textcolor{keywordtype}{bool}\ deterministic\ =\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00381\ }
+\DoxyCodeLine{00385\ \ \ \ \ CCoinsViewCache(\textcolor{keyword}{const}\ CCoinsViewCache\ \&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00386\ }
+\DoxyCodeLine{00387\ \ \ \ \ \textcolor{comment}{//\ Standard\ CCoinsView\ methods}}
+\DoxyCodeLine{00388\ \ \ \ \ std::optional<Coin>\ GetCoin(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00389\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveCoin(\textcolor{keyword}{const}\ COutPoint\ \&outpoint)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00390\ \ \ \ \ uint256\ GetBestBlock()\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00391\ \ \ \ \ \textcolor{keywordtype}{void}\ SetBestBlock(\textcolor{keyword}{const}\ uint256\ \&hashBlock);}
+\DoxyCodeLine{00392\ \ \ \ \ \textcolor{keywordtype}{bool}\ BatchWrite(CoinsViewCacheCursor\&\ cursor,\ \textcolor{keyword}{const}\ uint256\ \&hashBlock)\ \textcolor{keyword}{override};}
+\DoxyCodeLine{00393\ \ \ \ \ std::unique\_ptr<CCoinsViewCursor>\ Cursor()\textcolor{keyword}{\ const\ override\ }\{}
+\DoxyCodeLine{00394\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{throw}\ std::logic\_error(\textcolor{stringliteral}{"{}CCoinsViewCache\ cursor\ iteration\ not\ supported."{}});}
+\DoxyCodeLine{00395\ \ \ \ \ \}}
+\DoxyCodeLine{00396\ }
+\DoxyCodeLine{00402\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveCoinInCache(\textcolor{keyword}{const}\ COutPoint\ \&outpoint)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00403\ }
+\DoxyCodeLine{00414\ \ \ \ \ \textcolor{keyword}{const}\ Coin\&\ AccessCoin(\textcolor{keyword}{const}\ COutPoint\ \&output)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00415\ }
+\DoxyCodeLine{00420\ \ \ \ \ \textcolor{keywordtype}{void}\ AddCoin(\textcolor{keyword}{const}\ COutPoint\&\ outpoint,\ Coin\&\&\ coin,\ \textcolor{keywordtype}{bool}\ possible\_overwrite);}
+\DoxyCodeLine{00421\ }
+\DoxyCodeLine{00429\ \ \ \ \ \textcolor{keywordtype}{void}\ EmplaceCoinInternalDANGER(COutPoint\&\&\ outpoint,\ Coin\&\&\ coin);}
+\DoxyCodeLine{00430\ }
+\DoxyCodeLine{00436\ \ \ \ \ \textcolor{keywordtype}{bool}\ SpendCoin(\textcolor{keyword}{const}\ COutPoint\ \&outpoint,\ Coin*\ moveto\ =\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00437\ }
+\DoxyCodeLine{00446\ \ \ \ \ \textcolor{keywordtype}{bool}\ Flush(\textcolor{keywordtype}{bool}\ will\_reuse\_cache\ =\ \textcolor{keyword}{true});}
+\DoxyCodeLine{00447\ }
+\DoxyCodeLine{00455\ \ \ \ \ \textcolor{keywordtype}{bool}\ Sync();}
+\DoxyCodeLine{00456\ }
+\DoxyCodeLine{00461\ \ \ \ \ \textcolor{keywordtype}{void}\ Uncache(\textcolor{keyword}{const}\ COutPoint\ \&outpoint);}
+\DoxyCodeLine{00462\ }
+\DoxyCodeLine{00464\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ GetCacheSize()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00465\ }
+\DoxyCodeLine{00467\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ DynamicMemoryUsage()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00468\ }
+\DoxyCodeLine{00470\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveInputs(\textcolor{keyword}{const}\ CTransaction\&\ tx)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00471\ }
+\DoxyCodeLine{00477\ \ \ \ \ \textcolor{keywordtype}{void}\ ReallocateCache();}
+\DoxyCodeLine{00478\ }
+\DoxyCodeLine{00480\ \ \ \ \ \textcolor{keywordtype}{void}\ SanityCheck()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00481\ }
+\DoxyCodeLine{00482\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00487\ \ \ \ \ CCoinsMap::iterator\ FetchCoin(\textcolor{keyword}{const}\ COutPoint\ \&outpoint)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00488\ \};}
+\DoxyCodeLine{00489\ }
+\DoxyCodeLine{00494\ \textcolor{comment}{//\ TODO:\ pass\ in\ a\ boolean\ to\ limit\ these\ possible\ overwrites\ to\ known}}
+\DoxyCodeLine{00495\ \textcolor{comment}{//\ (pre-\/BIP34)\ cases.}}
+\DoxyCodeLine{00496\ \textcolor{keywordtype}{void}\ AddCoins(CCoinsViewCache\&\ cache,\ \textcolor{keyword}{const}\ CTransaction\&\ tx,\ \textcolor{keywordtype}{int}\ nHeight,\ \textcolor{keywordtype}{bool}\ check\ =\ \textcolor{keyword}{false});}
+\DoxyCodeLine{00497\ }
+\DoxyCodeLine{00502\ \textcolor{keyword}{const}\ Coin\&\ AccessByTxid(\textcolor{keyword}{const}\ CCoinsViewCache\&\ cache,\ \textcolor{keyword}{const}\ Txid\&\ txid);}
+\DoxyCodeLine{00503\ }
+\DoxyCodeLine{00511\ \textcolor{keyword}{class\ }CCoinsViewErrorCatcher\ final\ :\ \textcolor{keyword}{public}\ CCoinsViewBacked}
+\DoxyCodeLine{00512\ \{}
+\DoxyCodeLine{00513\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00514\ \ \ \ \ \textcolor{keyword}{explicit}\ CCoinsViewErrorCatcher(CCoinsView*\ view)\ :\ CCoinsViewBacked(view)\ \{\}}
+\DoxyCodeLine{00515\ }
+\DoxyCodeLine{00516\ \ \ \ \ \textcolor{keywordtype}{void}\ AddReadErrCallback(std::function<\textcolor{keywordtype}{void}()>\ f)\ \{}
+\DoxyCodeLine{00517\ \ \ \ \ \ \ \ \ m\_err\_callbacks.emplace\_back(std::move(f));}
+\DoxyCodeLine{00518\ \ \ \ \ \}}
+\DoxyCodeLine{00519\ }
+\DoxyCodeLine{00520\ \ \ \ \ std::optional<Coin>\ GetCoin(\textcolor{keyword}{const}\ COutPoint\&\ outpoint)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00521\ \ \ \ \ \textcolor{keywordtype}{bool}\ HaveCoin(\textcolor{keyword}{const}\ COutPoint\ \&outpoint)\ \textcolor{keyword}{const\ override};}
+\DoxyCodeLine{00522\ }
+\DoxyCodeLine{00523\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00525\ \ \ \ \ std::vector<std::function<void()>>\ m\_err\_callbacks;}
+\DoxyCodeLine{00526\ }
+\DoxyCodeLine{00527\ \};}
+\DoxyCodeLine{00528\ }
+\DoxyCodeLine{00529\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_COINS\_H}}
+
+\end{DoxyCode}

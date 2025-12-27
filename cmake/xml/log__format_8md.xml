@@ -1,0 +1,88 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.15.0" xml:lang="en-US">
+  <compounddef id="log__format_8md" kind="file" language="Markdown">
+    <compoundname>log_format.md</compoundname>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline><highlight class="normal">leveldb<sp/>Log<sp/>format</highlight></codeline>
+<codeline><highlight class="normal">==================</highlight></codeline>
+<codeline><highlight class="normal">The<sp/>log<sp/>file<sp/>contents<sp/>are<sp/>a<sp/>sequence<sp/>of<sp/>32KB<sp/>blocks.<sp/><sp/>The<sp/>only<sp/>exception<sp/>is<sp/>that</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>tail<sp/>of<sp/>the<sp/>file<sp/>may<sp/>contain<sp/>a<sp/>partial<sp/>block.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Each<sp/>block<sp/>consists<sp/>of<sp/>a<sp/>sequence<sp/>of<sp/>records:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>block<sp/>:=<sp/>record*<sp/>trailer?</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>record<sp/>:=</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>checksum:<sp/>uint32<sp/><sp/><sp/><sp/><sp/>//<sp/>crc32c<sp/>of<sp/>type<sp/>and<sp/>data[]<sp/>;<sp/>little-endian</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>length:<sp/>uint16<sp/><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/>little-endian</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>type:<sp/>uint8<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>//<sp/>One<sp/>of<sp/>FULL,<sp/>FIRST,<sp/>MIDDLE,<sp/>LAST</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/>data:<sp/>uint8[length]</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">A<sp/>record<sp/>never<sp/>starts<sp/>within<sp/>the<sp/>last<sp/>six<sp/>bytes<sp/>of<sp/>a<sp/>block<sp/>(since<sp/>it<sp/>won&apos;t<sp/>fit).</highlight></codeline>
+<codeline><highlight class="normal">Any<sp/>leftover<sp/>bytes<sp/>here<sp/>form<sp/>the<sp/>trailer,<sp/>which<sp/>must<sp/>consist<sp/>entirely<sp/>of<sp/>zero</highlight></codeline>
+<codeline><highlight class="normal">bytes<sp/>and<sp/>must<sp/>be<sp/>skipped<sp/>by<sp/>readers.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Aside:<sp/>if<sp/>exactly<sp/>seven<sp/>bytes<sp/>are<sp/>left<sp/>in<sp/>the<sp/>current<sp/>block,<sp/>and<sp/>a<sp/>new<sp/>non-zero</highlight></codeline>
+<codeline><highlight class="normal">length<sp/>record<sp/>is<sp/>added,<sp/>the<sp/>writer<sp/>must<sp/>emit<sp/>a<sp/>FIRST<sp/>record<sp/>(which<sp/>contains<sp/>zero</highlight></codeline>
+<codeline><highlight class="normal">bytes<sp/>of<sp/>user<sp/>data)<sp/>to<sp/>fill<sp/>up<sp/>the<sp/>trailing<sp/>seven<sp/>bytes<sp/>of<sp/>the<sp/>block<sp/>and<sp/>then</highlight></codeline>
+<codeline><highlight class="normal">emit<sp/>all<sp/>of<sp/>the<sp/>user<sp/>data<sp/>in<sp/>subsequent<sp/>blocks.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">More<sp/>types<sp/>may<sp/>be<sp/>added<sp/>in<sp/>the<sp/>future.<sp/><sp/>Some<sp/>Readers<sp/>may<sp/>skip<sp/>record<sp/>types<sp/>they</highlight></codeline>
+<codeline><highlight class="normal">do<sp/>not<sp/>understand,<sp/>others<sp/>may<sp/>report<sp/>that<sp/>some<sp/>data<sp/>was<sp/>skipped.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>FULL<sp/>==<sp/>1</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>FIRST<sp/>==<sp/>2</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>MIDDLE<sp/>==<sp/>3</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>LAST<sp/>==<sp/>4</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">The<sp/>FULL<sp/>record<sp/>contains<sp/>the<sp/>contents<sp/>of<sp/>an<sp/>entire<sp/>user<sp/>record.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">FIRST,<sp/>MIDDLE,<sp/>LAST<sp/>are<sp/>types<sp/>used<sp/>for<sp/>user<sp/>records<sp/>that<sp/>have<sp/>been<sp/>split<sp/>into</highlight></codeline>
+<codeline><highlight class="normal">multiple<sp/>fragments<sp/>(typically<sp/>because<sp/>of<sp/>block<sp/>boundaries).<sp/><sp/>FIRST<sp/>is<sp/>the<sp/>type</highlight></codeline>
+<codeline><highlight class="normal">of<sp/>the<sp/>first<sp/>fragment<sp/>of<sp/>a<sp/>user<sp/>record,<sp/>LAST<sp/>is<sp/>the<sp/>type<sp/>of<sp/>the<sp/>last<sp/>fragment<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">a<sp/>user<sp/>record,<sp/>and<sp/>MIDDLE<sp/>is<sp/>the<sp/>type<sp/>of<sp/>all<sp/>interior<sp/>fragments<sp/>of<sp/>a<sp/>user</highlight></codeline>
+<codeline><highlight class="normal">record.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">Example:<sp/>consider<sp/>a<sp/>sequence<sp/>of<sp/>user<sp/>records:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>A:<sp/>length<sp/>1000</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>B:<sp/>length<sp/>97270</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/><sp/>C:<sp/>length<sp/>8000</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**A**<sp/>will<sp/>be<sp/>stored<sp/>as<sp/>a<sp/>FULL<sp/>record<sp/>in<sp/>the<sp/>first<sp/>block.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**B**<sp/>will<sp/>be<sp/>split<sp/>into<sp/>three<sp/>fragments:<sp/>first<sp/>fragment<sp/>occupies<sp/>the<sp/>rest<sp/>of</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>first<sp/>block,<sp/>second<sp/>fragment<sp/>occupies<sp/>the<sp/>entirety<sp/>of<sp/>the<sp/>second<sp/>block,<sp/>and</highlight></codeline>
+<codeline><highlight class="normal">the<sp/>third<sp/>fragment<sp/>occupies<sp/>a<sp/>prefix<sp/>of<sp/>the<sp/>third<sp/>block.<sp/><sp/>This<sp/>will<sp/>leave<sp/>six</highlight></codeline>
+<codeline><highlight class="normal">bytes<sp/>free<sp/>in<sp/>the<sp/>third<sp/>block,<sp/>which<sp/>will<sp/>be<sp/>left<sp/>empty<sp/>as<sp/>the<sp/>trailer.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">**C**<sp/>will<sp/>be<sp/>stored<sp/>as<sp/>a<sp/>FULL<sp/>record<sp/>in<sp/>the<sp/>fourth<sp/>block.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">----</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Some<sp/>benefits<sp/>over<sp/>the<sp/>recordio<sp/>format:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">1.<sp/>We<sp/>do<sp/>not<sp/>need<sp/>any<sp/>heuristics<sp/>for<sp/>resyncing<sp/>-<sp/>just<sp/>go<sp/>to<sp/>next<sp/>block<sp/>boundary</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>and<sp/>scan.<sp/><sp/>If<sp/>there<sp/>is<sp/>a<sp/>corruption,<sp/>skip<sp/>to<sp/>the<sp/>next<sp/>block.<sp/><sp/>As<sp/>a</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>side-benefit,<sp/>we<sp/>do<sp/>not<sp/>get<sp/>confused<sp/>when<sp/>part<sp/>of<sp/>the<sp/>contents<sp/>of<sp/>one<sp/>log</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>file<sp/>are<sp/>embedded<sp/>as<sp/>a<sp/>record<sp/>inside<sp/>another<sp/>log<sp/>file.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">2.<sp/>Splitting<sp/>at<sp/>approximate<sp/>boundaries<sp/>(e.g.,<sp/>for<sp/>mapreduce)<sp/>is<sp/>simple:<sp/>find<sp/>the</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>next<sp/>block<sp/>boundary<sp/>and<sp/>skip<sp/>records<sp/>until<sp/>we<sp/>hit<sp/>a<sp/>FULL<sp/>or<sp/>FIRST<sp/>record.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">3.<sp/>We<sp/>do<sp/>not<sp/>need<sp/>extra<sp/>buffering<sp/>for<sp/>large<sp/>records.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">##<sp/>Some<sp/>downsides<sp/>compared<sp/>to<sp/>recordio<sp/>format:</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">1.<sp/>No<sp/>packing<sp/>of<sp/>tiny<sp/>records.<sp/><sp/>This<sp/>could<sp/>be<sp/>fixed<sp/>by<sp/>adding<sp/>a<sp/>new<sp/>record<sp/>type,</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>so<sp/>it<sp/>is<sp/>a<sp/>shortcoming<sp/>of<sp/>the<sp/>current<sp/>implementation,<sp/>not<sp/>necessarily<sp/>the</highlight></codeline>
+<codeline><highlight class="normal"><sp/><sp/><sp/>format.</highlight></codeline>
+<codeline></codeline>
+<codeline><highlight class="normal">2.<sp/>No<sp/>compression.<sp/><sp/>Again,<sp/>this<sp/>could<sp/>be<sp/>fixed<sp/>by<sp/>adding<sp/>new<sp/>record<sp/>types.</highlight></codeline>
+    </programlisting>
+    <location file="src/leveldb/doc/log_format.md"/>
+  </compounddef>
+</doxygen>

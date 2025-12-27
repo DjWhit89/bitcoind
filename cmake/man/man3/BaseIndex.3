@@ -1,0 +1,246 @@
+.TH "BaseIndex" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+BaseIndex
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <base\&.h>\fP
+.PP
+Inherits \fBCValidationInterface\fP\&.
+.PP
+Inherited by \fBBlockFilterIndex\fP, \fBCoinStatsIndex\fP, \fBIndexReorgCrash\fP, and \fBTxIndex\fP\&.
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "class \fBDB\fP"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBBaseIndex\fP (std::unique_ptr< \fBinterfaces::Chain\fP > chain, std::string \fBname\fP)"
+.br
+.ti -1c
+.RI "virtual \fB~BaseIndex\fP ()"
+.br
+.RI "Destructor interrupts sync thread if running and blocks until it exits\&. "
+.ti -1c
+.RI "const std::string & \fBGetName\fP () const \fBLIFETIMEBOUND\fP"
+.br
+.RI "Get the name of the index for display in logs\&. "
+.ti -1c
+.RI "bool BlockUntilSyncedToCurrentChain() const \fBLOCKS_EXCLUDED\fP(void \fBInterrupt\fP ()"
+.br
+.ti -1c
+.RI "bool \fBInit\fP ()"
+.br
+.ti -1c
+.RI "bool \fBStartBackgroundSync\fP ()"
+.br
+.RI "Starts the initial sync process on a background thread\&. "
+.ti -1c
+.RI "void \fBSync\fP ()"
+.br
+.ti -1c
+.RI "void \fBStop\fP ()"
+.br
+.RI "Stops the instance from staying in sync with blockchain updates\&. "
+.ti -1c
+.RI "\fBIndexSummary\fP \fBGetSummary\fP () const"
+.br
+.RI "Get a summary of the index and its state\&. "
+.in -1c
+.SS "Protected Member Functions"
+
+.in +1c
+.ti -1c
+.RI "void \fBBlockConnected\fP (const \fBkernel::ChainstateRole\fP &role, const std::shared_ptr< const \fBCBlock\fP > &block, const \fBCBlockIndex\fP *pindex) override"
+.br
+.ti -1c
+.RI "void \fBChainStateFlushed\fP (const \fBkernel::ChainstateRole\fP &role, const \fBCBlockLocator\fP &locator) override"
+.br
+.ti -1c
+.RI "virtual \fBinterfaces::Chain::NotifyOptions\fP \fBCustomOptions\fP ()"
+.br
+.RI "Return custom notification options for index\&. "
+.ti -1c
+.RI "virtual bool \fBCustomInit\fP (const std::optional< \fBinterfaces::BlockRef\fP > &block)"
+.br
+.RI "Initialize internal state from the database and block index\&. "
+.ti -1c
+.RI "virtual bool \fBCustomAppend\fP (const \fBinterfaces::BlockInfo\fP &block)"
+.br
+.RI "Write update index entries for a newly connected block\&. "
+.ti -1c
+.RI "virtual bool \fBCustomCommit\fP (\fBCDBBatch\fP &batch)"
+.br
+.ti -1c
+.RI "virtual bool \fBCustomRemove\fP (const \fBinterfaces::BlockInfo\fP &block)"
+.br
+.RI "Rewind index by one block during a chain reorg\&. "
+.ti -1c
+.RI "virtual \fBDB\fP & \fBGetDB\fP () const =0"
+.br
+.ti -1c
+.RI "void \fBSetBestBlockIndex\fP (const \fBCBlockIndex\fP *block)"
+.br
+.RI "Update the internal best block index as well as the prune lock\&. "
+.in -1c
+
+Protected Member Functions inherited from \fBCValidationInterface\fP
+.in +1c
+.ti -1c
+.RI "\fB~CValidationInterface\fP ()=default"
+.br
+.ti -1c
+.RI "virtual void \fBUpdatedBlockTip\fP (const \fBCBlockIndex\fP *pindexNew, const \fBCBlockIndex\fP *pindexFork, bool fInitialDownload)"
+.br
+.ti -1c
+.RI "virtual void \fBActiveTipChange\fP (const \fBCBlockIndex\fP &new_tip, bool is_ibd)"
+.br
+.ti -1c
+.RI "virtual void \fBTransactionAddedToMempool\fP (const \fBNewMempoolTransactionInfo\fP &tx, uint64_t mempool_sequence)"
+.br
+.ti -1c
+.RI "virtual void \fBTransactionRemovedFromMempool\fP (const \fBCTransactionRef\fP &tx, \fBMemPoolRemovalReason\fP reason, uint64_t mempool_sequence)"
+.br
+.ti -1c
+.RI "virtual void \fBMempoolTransactionsRemovedForBlock\fP (const std::vector< \fBRemovedMempoolTransactionInfo\fP > &txs_removed_for_block, unsigned int nBlockHeight)"
+.br
+.ti -1c
+.RI "virtual void \fBBlockDisconnected\fP (const std::shared_ptr< const \fBCBlock\fP > &block, const \fBCBlockIndex\fP *pindex)"
+.br
+.ti -1c
+.RI "virtual void \fBBlockChecked\fP (const std::shared_ptr< const \fBCBlock\fP > &, const \fBBlockValidationState\fP &)"
+.br
+.ti -1c
+.RI "virtual void \fBNewPoWValidBlock\fP (const \fBCBlockIndex\fP *pindex, const std::shared_ptr< const \fBCBlock\fP > &block)"
+.br
+.in -1c
+.SS "Protected Attributes"
+
+.in +1c
+.ti -1c
+.RI "std::unique_ptr< \fBinterfaces::Chain\fP > \fBm_chain\fP"
+.br
+.ti -1c
+.RI "\fBChainstate\fP * \fBm_chainstate\fP {nullptr}"
+.br
+.ti -1c
+.RI "const std::string \fBm_name\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+\fBBase\fP class for indices of blockchain data\&. This implements \fBCValidationInterface\fP and ensures blocks are indexed sequentially according to their position in the active chain\&.
+
+.PP
+In the presence of multiple chainstates (i\&.e\&. if a UTXO snapshot is loaded), only the background "IBD" chainstate will be indexed to avoid building the index out of order\&. When the background chainstate completes validation, the index will be reinitialized and indexing will continue\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBBaseIndex\fP (std::unique_ptr< \fBinterfaces::Chain\fP > chain, std::string name)"
+
+.SS "~\fBBaseIndex\fP ()\fR [virtual]\fP"
+
+.PP
+Destructor interrupts sync thread if running and blocks until it exits\&. 
+.SH "Member Function Documentation"
+.PP 
+.SS "void BlockConnected (const \fBkernel::ChainstateRole\fP & role, const std::shared_ptr< const \fBCBlock\fP > & block, const \fBCBlockIndex\fP * pindex)\fR [override]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+Notifies listeners of a block being connected\&.
+
+.PP
+Called on a background thread\&. 
+.PP
+Reimplemented from \fBCValidationInterface\fP\&.
+.SS "void ChainStateFlushed (const \fBkernel::ChainstateRole\fP & role, const \fBCBlockLocator\fP & locator)\fR [override]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+Notifies listeners of the new active block chain on-disk\&.
+
+.PP
+Prior to this callback, any updates are not guaranteed to persist on disk (ie clients need to handle shutdown/restart safety by being able to understand when some updates were lost due to unclean shutdown)\&.
+
+.PP
+When this callback is invoked, the validation changes done by any prior callback are guaranteed to exist on disk and survive a restart, including an unclean shutdown\&.
+
+.PP
+Provides a locator describing the best chain, which is likely useful for storing current state on disk in client DBs\&.
+
+.PP
+Called on a background thread\&. 
+.PP
+Reimplemented from \fBCValidationInterface\fP\&.
+.SS "virtual bool CustomAppend (const \fBinterfaces::BlockInfo\fP & block)\fR [inline]\fP, \fR [nodiscard]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+
+.PP
+Write update index entries for a newly connected block\&. 
+.PP
+Reimplemented in \fBBlockFilterIndex\fP, \fBCoinStatsIndex\fP, \fBIndexReorgCrash\fP, and \fBTxIndex\fP\&.
+.SS "virtual bool CustomCommit (\fBCDBBatch\fP & batch)\fR [inline]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+Virtual method called internally by Commit that can be overridden to atomically commit more index state\&. 
+.PP
+Reimplemented in \fBBlockFilterIndex\fP, and \fBCoinStatsIndex\fP\&.
+.SS "virtual bool CustomInit (const std::optional< \fBinterfaces::BlockRef\fP > & block)\fR [inline]\fP, \fR [nodiscard]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+
+.PP
+Initialize internal state from the database and block index\&. 
+.PP
+Reimplemented in \fBBlockFilterIndex\fP, and \fBCoinStatsIndex\fP\&.
+.SS "virtual \fBinterfaces::Chain::NotifyOptions\fP CustomOptions ()\fR [inline]\fP, \fR [nodiscard]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+
+.PP
+Return custom notification options for index\&. 
+.PP
+Reimplemented in \fBBlockFilterIndex\fP, and \fBCoinStatsIndex\fP\&.
+.SS "virtual bool CustomRemove (const \fBinterfaces::BlockInfo\fP & block)\fR [inline]\fP, \fR [nodiscard]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+
+.PP
+Rewind index by one block during a chain reorg\&. 
+.PP
+Reimplemented in \fBBlockFilterIndex\fP, and \fBCoinStatsIndex\fP\&.
+.SS "virtual \fBDB\fP & GetDB () const\fR [protected]\fP, \fR [pure virtual]\fP"
+
+.PP
+Implemented in \fBBlockFilterIndex\fP, \fBCoinStatsIndex\fP, \fBIndexReorgCrash\fP, and \fBTxIndex\fP\&.
+.SS "const std::string & GetName () const\fR [inline]\fP"
+
+.PP
+Get the name of the index for display in logs\&. 
+.SS "\fBIndexSummary\fP GetSummary () const"
+
+.PP
+Get a summary of the index and its state\&. 
+.SS "bool \fBInit\fP ()\fR [nodiscard]\fP"
+Initializes the sync state and registers the instance to the validation interface so that it stays in sync with blockchain updates\&. 
+.SS "void Interrupt ()"
+Blocks the current thread until the index is caught up to the current state of the block chain\&. This only blocks if the index has gotten in sync once and only needs to process blocks in the ValidationInterface queue\&. If the index is catching up from far behind, this method does not block and immediately returns false\&. 
+.SS "void SetBestBlockIndex (const \fBCBlockIndex\fP * block)\fR [protected]\fP"
+
+.PP
+Update the internal best block index as well as the prune lock\&. 
+.SS "bool StartBackgroundSync ()\fR [nodiscard]\fP"
+
+.PP
+Starts the initial sync process on a background thread\&. 
+.SS "void Stop ()"
+
+.PP
+Stops the instance from staying in sync with blockchain updates\&. 
+.SS "void Sync ()"
+Sync the index with the block index starting from the current best block\&. Intended to be run in its own thread, m_thread_sync, and can be interrupted with m_interrupt\&. Once the index gets in sync, the m_synced flag is set and the BlockConnected ValidationInterface callback takes over and the sync thread exits\&. 
+.SH "Field Documentation"
+.PP 
+.SS "std::unique_ptr<\fBinterfaces::Chain\fP> m_chain\fR [protected]\fP"
+
+.SS "\fBChainstate\fP* m_chainstate {nullptr}\fR [protected]\fP"
+
+.SS "const std::string m_name\fR [protected]\fP"
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

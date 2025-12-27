@@ -1,0 +1,149 @@
+.TH "CCoinsCacheEntry" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+CCoinsCacheEntry
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <coins\&.h>\fP
+.SS "Public Types"
+
+.in +1c
+.ti -1c
+.RI "enum \fBFlags\fP { \fBDIRTY\fP = (1 << 0), \fBFRESH\fP = (1 << 1) }"
+.br
+.in -1c
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fBCCoinsCacheEntry\fP () noexcept=default"
+.br
+.ti -1c
+.RI "\fBCCoinsCacheEntry\fP (\fBCoin\fP &&coin_) noexcept"
+.br
+.ti -1c
+.RI "\fB~CCoinsCacheEntry\fP ()"
+.br
+.ti -1c
+.RI "void \fBSetClean\fP () noexcept"
+.br
+.ti -1c
+.RI "bool \fBIsDirty\fP () const noexcept"
+.br
+.ti -1c
+.RI "bool \fBIsFresh\fP () const noexcept"
+.br
+.ti -1c
+.RI "\fBCoinsCachePair\fP * \fBNext\fP () const noexcept"
+.br
+.RI "Only call Next when this entry is DIRTY, FRESH, or both\&. "
+.ti -1c
+.RI "\fBCoinsCachePair\fP * \fBPrev\fP () const noexcept"
+.br
+.RI "Only call Prev when this entry is DIRTY, FRESH, or both\&. "
+.ti -1c
+.RI "void \fBSelfRef\fP (\fBCoinsCachePair\fP &pair) noexcept"
+.br
+.RI "Only use this for initializing the linked list sentinel\&. "
+.in -1c
+.SS "Static Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "static void \fBSetDirty\fP (\fBCoinsCachePair\fP &pair, \fBCoinsCachePair\fP &sentinel) noexcept"
+.br
+.ti -1c
+.RI "static void \fBSetFresh\fP (\fBCoinsCachePair\fP &pair, \fBCoinsCachePair\fP &sentinel) noexcept"
+.br
+.in -1c
+.SS "Data Fields"
+
+.in +1c
+.ti -1c
+.RI "\fBCoin\fP \fBcoin\fP"
+.br
+.in -1c
+.SH "Detailed Description"
+.PP 
+A \fBCoin\fP in one level of the coins database caching hierarchy\&.
+
+.PP
+A coin can either be:
+.IP "\(bu" 2
+unspent or spent (in which case the \fBCoin\fP object will be nulled out - see \fBCoin\&.Clear()\fP)
+.IP "\(bu" 2
+DIRTY or not DIRTY
+.IP "\(bu" 2
+FRESH or not FRESH
+.PP
+
+.PP
+Out of these 2^3 = 8 states, only some combinations are valid:
+.IP "\(bu" 2
+unspent, FRESH, DIRTY (e\&.g\&. a new coin created in the cache)
+.IP "\(bu" 2
+unspent, not FRESH, DIRTY (e\&.g\&. a coin changed in the cache during a reorg)
+.IP "\(bu" 2
+unspent, not FRESH, not DIRTY (e\&.g\&. an unspent coin fetched from the parent cache)
+.IP "\(bu" 2
+spent, FRESH, not DIRTY (e\&.g\&. a spent coin fetched from the parent cache)
+.IP "\(bu" 2
+spent, not FRESH, DIRTY (e\&.g\&. a coin is spent and spentness needs to be flushed to the parent) 
+.PP
+
+.SH "Member Enumeration Documentation"
+.PP 
+.SS "enum \fBFlags\fP"
+
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BIDIRTY \fP
+DIRTY means the \fBCCoinsCacheEntry\fP is potentially different from the version in the parent cache\&. Failure to mark a coin as DIRTY when it is potentially different from the parent cache will cause a consensus failure, since the coin's state won't get written to the parent when the cache is flushed\&. 
+.TP
+\f(BIFRESH \fP
+FRESH means the parent cache does not have this coin or that it is a spent coin in the parent cache\&. If a FRESH coin in the cache is later spent, it can be deleted entirely and doesn't ever need to be flushed to the parent\&. This is a performance optimization\&. Marking a coin as FRESH when it exists unspent in the parent cache will cause a consensus failure, since it might not be deleted from the parent when this cache is flushed\&. 
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "\fBCCoinsCacheEntry\fP ()\fR [default]\fP, \fR [noexcept]\fP"
+
+.SS "\fBCCoinsCacheEntry\fP (\fBCoin\fP && coin_)\fR [inline]\fP, \fR [explicit]\fP, \fR [noexcept]\fP"
+
+.SS "~\fBCCoinsCacheEntry\fP ()\fR [inline]\fP"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "bool IsDirty () const\fR [inline]\fP, \fR [noexcept]\fP"
+
+.SS "bool IsFresh () const\fR [inline]\fP, \fR [noexcept]\fP"
+
+.SS "\fBCoinsCachePair\fP * Next () const\fR [inline]\fP, \fR [noexcept]\fP"
+
+.PP
+Only call Next when this entry is DIRTY, FRESH, or both\&. 
+.SS "\fBCoinsCachePair\fP * Prev () const\fR [inline]\fP, \fR [noexcept]\fP"
+
+.PP
+Only call Prev when this entry is DIRTY, FRESH, or both\&. 
+.SS "void SelfRef (\fBCoinsCachePair\fP & pair)\fR [inline]\fP, \fR [noexcept]\fP"
+
+.PP
+Only use this for initializing the linked list sentinel\&. 
+.SS "void SetClean ()\fR [inline]\fP, \fR [noexcept]\fP"
+
+.SS "void SetDirty (\fBCoinsCachePair\fP & pair, \fBCoinsCachePair\fP & sentinel)\fR [inline]\fP, \fR [static]\fP, \fR [noexcept]\fP"
+
+.SS "void SetFresh (\fBCoinsCachePair\fP & pair, \fBCoinsCachePair\fP & sentinel)\fR [inline]\fP, \fR [static]\fP, \fR [noexcept]\fP"
+
+.SH "Field Documentation"
+.PP 
+.SS "\fBCoin\fP coin"
+
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

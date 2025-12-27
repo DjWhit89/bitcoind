@@ -1,0 +1,181 @@
+.TH "src/script/interpreter.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/script/interpreter.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <script/interpreter\&.h>\fP
+.br
+\fR#include <crypto/ripemd160\&.h>\fP
+.br
+\fR#include <crypto/sha1\&.h>\fP
+.br
+\fR#include <crypto/sha256\&.h>\fP
+.br
+\fR#include <pubkey\&.h>\fP
+.br
+\fR#include <script/script\&.h>\fP
+.br
+\fR#include <tinyformat\&.h>\fP
+.br
+\fR#include <uint256\&.h>\fP
+.br
+
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBstacktop\fP(i)"
+.br
+.ti -1c
+.RI "#define \fBaltstacktop\fP(i)"
+.br
+.ti -1c
+.RI "#define \fBFLAG_NAME\fP(flag)"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "typedef std::vector< unsigned char > \fBvaltype\fP"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "bool \fBCastToBool\fP (const \fBvaltype\fP &vch)"
+.br
+.ti -1c
+.RI "bool \fBCheckSignatureEncoding\fP (const std::vector< unsigned char > &vchSig, \fBscript_verify_flags\fP \fBflags\fP, \fBScriptError\fP *serror)"
+.br
+.ti -1c
+.RI "int \fBFindAndDelete\fP (\fBCScript\fP &\fBscript\fP, const \fBCScript\fP &b)"
+.br
+.ti -1c
+.RI "bool \fBEvalScript\fP (std::vector< std::vector< unsigned char > > &stack, const \fBCScript\fP &\fBscript\fP, \fBscript_verify_flags\fP \fBflags\fP, const \fBBaseSignatureChecker\fP &checker, \fBSigVersion\fP sigversion, \fBScriptExecutionData\fP &execdata, \fBScriptError\fP *serror)"
+.br
+.ti -1c
+.RI "bool \fBEvalScript\fP (std::vector< std::vector< unsigned char > > &stack, const \fBCScript\fP &\fBscript\fP, \fBscript_verify_flags\fP \fBflags\fP, const \fBBaseSignatureChecker\fP &checker, \fBSigVersion\fP sigversion, \fBScriptError\fP *serror)"
+.br
+.ti -1c
+.RI "template<typename \fBT\fP> bool \fBSignatureHashSchnorr\fP (\fBuint256\fP &hash_out, \fBScriptExecutionData\fP &execdata, const \fBT\fP &tx_to, uint32_t in_pos, uint8_t hash_type, \fBSigVersion\fP sigversion, const \fBPrecomputedTransactionData\fP &cache, \fBMissingDataBehavior\fP mdb)"
+.br
+.ti -1c
+.RI "template<class \fBT\fP> \fBuint256\fP \fBSignatureHash\fP (const \fBCScript\fP &scriptCode, const \fBT\fP &txTo, unsigned int nIn, int32_t nHashType, const \fBCAmount\fP &amount, \fBSigVersion\fP sigversion, const \fBPrecomputedTransactionData\fP *cache, \fBSigHashCache\fP *sighash_cache)"
+.br
+.ti -1c
+.RI "\fBuint256\fP \fBComputeTapleafHash\fP (uint8_t leaf_version, std::span< const unsigned char > \fBscript\fP)"
+.br
+.ti -1c
+.RI "\fBuint256\fP \fBComputeTapbranchHash\fP (std::span< const unsigned char > a, std::span< const unsigned char > b)"
+.br
+.ti -1c
+.RI "\fBuint256\fP \fBComputeTaprootMerkleRoot\fP (std::span< const unsigned char > control, const \fBuint256\fP &tapleaf_hash)"
+.br
+.ti -1c
+.RI "bool \fBVerifyScript\fP (const \fBCScript\fP &scriptSig, const \fBCScript\fP &scriptPubKey, const \fBCScriptWitness\fP *witness, \fBscript_verify_flags\fP \fBflags\fP, const \fBBaseSignatureChecker\fP &checker, \fBScriptError\fP *serror)"
+.br
+.ti -1c
+.RI "size_t \fBCountWitnessSigOps\fP (const \fBCScript\fP &scriptSig, const \fBCScript\fP &scriptPubKey, const \fBCScriptWitness\fP &witness, \fBscript_verify_flags\fP \fBflags\fP)"
+.br
+.ti -1c
+.RI "const std::map< std::string, \fBscript_verify_flag_name\fP > & \fBScriptFlagNamesToEnum\fP ()"
+.br
+.ti -1c
+.RI "std::vector< std::string > \fBGetScriptFlagNames\fP (\fBscript_verify_flags\fP \fBflags\fP)"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "const \fBHashWriter\fP \fBHASHER_TAPSIGHASH\fP {\fBTaggedHash\fP('TapSighash')}"
+.br
+.RI "Hasher with tag "TapSighash" pre-fed to it\&. "
+.ti -1c
+.RI "const \fBHashWriter\fP \fBHASHER_TAPLEAF\fP {\fBTaggedHash\fP('TapLeaf')}"
+.br
+.RI "Hasher with tag "TapLeaf" pre-fed to it\&. "
+.ti -1c
+.RI "const \fBHashWriter\fP \fBHASHER_TAPBRANCH\fP {\fBTaggedHash\fP('TapBranch')}"
+.br
+.RI "Hasher with tag "TapBranch" pre-fed to it\&. "
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define altstacktop( i)"
+\fBValue:\fP
+.nf
+(altstack\&.at(size_t(int64_t(altstack\&.size()) + int64_t{i})))
+.PP
+.fi
+
+.SS "#define FLAG_NAME( flag)"
+\fBValue:\fP
+.nf
+{std::string(#flag), SCRIPT_VERIFY_##flag}
+.PP
+.fi
+
+.SS "#define stacktop( i)"
+\fBValue:\fP
+.nf
+(stack\&.at(size_t(int64_t(stack\&.size()) + int64_t{i})))
+.PP
+.fi
+Script is a stack machine (like Forth) that evaluates a predicate returning a bool indicating valid or not\&. There are no loops\&. 
+.SH "Typedef Documentation"
+.PP 
+.SS "typedef std::vector<unsigned char> \fBvaltype\fP"
+
+.SH "Function Documentation"
+.PP 
+.SS "bool CastToBool (const \fBvaltype\fP & vch)"
+
+.SS "bool CheckSignatureEncoding (const std::vector< unsigned char > & vchSig, \fBscript_verify_flags\fP flags, \fBScriptError\fP * serror)"
+
+.SS "\fBuint256\fP ComputeTapbranchHash (std::span< const unsigned char > a, std::span< const unsigned char > b)"
+Compute the BIP341 tapbranch hash from two branches\&. Spans must be 32 bytes each\&. 
+.SS "\fBuint256\fP ComputeTapleafHash (uint8_t leaf_version, std::span< const unsigned char > script)"
+Compute the BIP341 tapleaf hash from leaf version & script\&. 
+.SS "\fBuint256\fP ComputeTaprootMerkleRoot (std::span< const unsigned char > control, const \fBuint256\fP & tapleaf_hash)"
+Compute the BIP341 taproot script tree Merkle root from control block and leaf hash\&. Requires control block to have valid length (33 + k*32, with k in {0,1,\&.\&.,128})\&. 
+.SS "size_t CountWitnessSigOps (const \fBCScript\fP & scriptSig, const \fBCScript\fP & scriptPubKey, const \fBCScriptWitness\fP & witness, \fBscript_verify_flags\fP flags)"
+
+.SS "bool EvalScript (std::vector< std::vector< unsigned char > > & stack, const \fBCScript\fP & script, \fBscript_verify_flags\fP flags, const \fBBaseSignatureChecker\fP & checker, \fBSigVersion\fP sigversion, \fBScriptError\fP * serror)"
+
+.SS "bool EvalScript (std::vector< std::vector< unsigned char > > & stack, const \fBCScript\fP & script, \fBscript_verify_flags\fP flags, const \fBBaseSignatureChecker\fP & checker, \fBSigVersion\fP sigversion, \fBScriptExecutionData\fP & execdata, \fBScriptError\fP * serror)"
+
+.SS "int FindAndDelete (\fBCScript\fP & script, const \fBCScript\fP & b)"
+
+.SS "std::vector< std::string > GetScriptFlagNames (\fBscript_verify_flags\fP flags)"
+
+.SS "const std::map< std::string, \fBscript_verify_flag_name\fP > & ScriptFlagNamesToEnum ()"
+
+.SS "template<class \fBT\fP> \fBuint256\fP SignatureHash (const \fBCScript\fP & scriptCode, const \fBT\fP & txTo, unsigned int nIn, int32_t nHashType, const \fBCAmount\fP & amount, \fBSigVersion\fP sigversion, const \fBPrecomputedTransactionData\fP * cache, \fBSigHashCache\fP * sighash_cache)"
+
+.SS "template<typename \fBT\fP> bool SignatureHashSchnorr (\fBuint256\fP & hash_out, \fBScriptExecutionData\fP & execdata, const \fBT\fP & tx_to, uint32_t in_pos, uint8_t hash_type, \fBSigVersion\fP sigversion, const \fBPrecomputedTransactionData\fP & cache, \fBMissingDataBehavior\fP mdb)"
+
+.SS "bool VerifyScript (const \fBCScript\fP & scriptSig, const \fBCScript\fP & scriptPubKey, const \fBCScriptWitness\fP * witness, \fBscript_verify_flags\fP flags, const \fBBaseSignatureChecker\fP & checker, \fBScriptError\fP * serror)"
+
+.SH "Variable Documentation"
+.PP 
+.SS "const \fBHashWriter\fP HASHER_TAPBRANCH {\fBTaggedHash\fP('TapBranch')}"
+
+.PP
+Hasher with tag "TapBranch" pre-fed to it\&. 
+.SS "const \fBHashWriter\fP HASHER_TAPLEAF {\fBTaggedHash\fP('TapLeaf')}"
+
+.PP
+Hasher with tag "TapLeaf" pre-fed to it\&. 
+.SS "const \fBHashWriter\fP HASHER_TAPSIGHASH {\fBTaggedHash\fP('TapSighash')}"
+
+.PP
+Hasher with tag "TapSighash" pre-fed to it\&. 
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

@@ -1,0 +1,459 @@
+.TH "src/test/util_tests.cpp" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/test/util_tests.cpp
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <clientversion\&.h>\fP
+.br
+\fR#include <common/signmessage\&.h>\fP
+.br
+\fR#include <hash\&.h>\fP
+.br
+\fR#include <key\&.h>\fP
+.br
+\fR#include <script/parsing\&.h>\fP
+.br
+\fR#include <span\&.h>\fP
+.br
+\fR#include <sync\&.h>\fP
+.br
+\fR#include <test/util/random\&.h>\fP
+.br
+\fR#include <test/util/setup_common\&.h>\fP
+.br
+\fR#include <uint256\&.h>\fP
+.br
+\fR#include <util/bitdeque\&.h>\fP
+.br
+\fR#include <util/byte_units\&.h>\fP
+.br
+\fR#include <util/fs\&.h>\fP
+.br
+\fR#include <util/fs_helpers\&.h>\fP
+.br
+\fR#include <util/moneystr\&.h>\fP
+.br
+\fR#include <util/overflow\&.h>\fP
+.br
+\fR#include <util/readwritefile\&.h>\fP
+.br
+\fR#include <util/strencodings\&.h>\fP
+.br
+\fR#include <util/string\&.h>\fP
+.br
+\fR#include <util/time\&.h>\fP
+.br
+\fR#include <util/vector\&.h>\fP
+.br
+\fR#include <array>\fP
+.br
+\fR#include <cmath>\fP
+.br
+\fR#include <cstdint>\fP
+.br
+\fR#include <cstring>\fP
+.br
+\fR#include <fstream>\fP
+.br
+\fR#include <limits>\fP
+.br
+\fR#include <map>\fP
+.br
+\fR#include <optional>\fP
+.br
+\fR#include <string>\fP
+.br
+\fR#include <thread>\fP
+.br
+\fR#include <univalue\&.h>\fP
+.br
+\fR#include <utility>\fP
+.br
+\fR#include <vector>\fP
+.br
+\fR#include <sys/types\&.h>\fP
+.br
+\fR#include <sys/wait\&.h>\fP
+.br
+\fR#include <boost/test/unit_test\&.hpp>\fP
+.br
+
+.SS "Namespaces"
+
+.in +1c
+.ti -1c
+.RI "namespace \fBBCLog\fP"
+.br
+.in -1c
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBB\fP   'check_prefix'"
+.br
+.ti -1c
+.RI "#define \fBE\fP   'check_postfix'"
+.br
+.in -1c
+.SS "Enumerations"
+
+.in +1c
+.ti -1c
+.RI "enum : char { \fBResSuccess\fP = 2, \fBResErrorWrite\fP, \fBResErrorLock\fP, \fBResUnlockSuccess\fP }"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "std::string \fBLogEscapeMessage\fP (std::string_view str)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_check)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_criticalsection)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (parse_hex)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (consteval_hex_digit)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_HexStr)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (span_write_bytes)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_Join)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_ReplaceAll)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_TrimString)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_ParseISO8601DateTime)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_FormatISO8601DateTime)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_FormatISO8601Date)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_FormatMoney)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_ParseMoney)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_IsHex)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_seed_insecure_rand)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_TimingResistantEqual)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (strprintf_numbers)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_mocktime)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_IsDigit)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_overflow)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_ToIntegral)"
+.br
+.ti -1c
+.RI "int64_t \fBatoi64_legacy\fP (const std::string &str)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_LocaleIndependentAtoi)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_FormatParagraph)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_FormatSubVersion)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_ParseFixedPoint)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_LockDirectory)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_ToLower)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_ToUpper)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_Capitalize)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_script_parsing)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_SplitString)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_LogEscapeMessage)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (test_tracked_vector)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (message_sign)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (message_verify)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (message_hash)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (remove_prefix)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_ParseByteUnits)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_ReadBinaryFile)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (util_WriteBinaryFile)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (clearshrink_test)"
+.br
+.ti -1c
+.RI "template<typename \fBT\fP> void \fBTestCheckedLeftShift\fP ()"
+.br
+.ti -1c
+.RI "template<typename \fBT\fP> void \fBTestSaturatingLeftShift\fP ()"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (checked_left_shift_test)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (saturating_left_shift_test)"
+.br
+.ti -1c
+.RI "\fBBOOST_AUTO_TEST_CASE\fP (mib_string_literal_test)"
+.br
+.ti -1c
+.RI "consteval uint8_t \fBConstevalHexDigit\fP (const char c)"
+.br
+.ti -1c
+.RI "template<typename C, typename \fBS\fP, typename UnaryOp> auto \fBJoin\fP (const C &container, const \fBS\fP &separator, UnaryOp unary_op)"
+.br
+.ti -1c
+.RI "std::string \fBRemovePrefix\fP (std::string_view str, std::string_view \fBprefix\fP)"
+.br
+.ti -1c
+.RI "std::string_view \fBRemovePrefixView\fP (std::string_view str, std::string_view \fBprefix\fP)"
+.br
+.ti -1c
+.RI "void \fBReplaceAll\fP (std::string &in_out, const std::string &search, const std::string &substitute)"
+.br
+.ti -1c
+.RI "std::vector< std::string > \fBSplitString\fP (std::string_view str, char sep)"
+.br
+.ti -1c
+.RI "std::string \fBTrimString\fP (std::string_view str, std::string_view pattern=' \\f\\n\\r\\t\\v')"
+.br
+.ti -1c
+.RI "std::string_view \fBTrimStringView\fP (std::string_view str, std::string_view pattern=' \\f\\n\\r\\t\\v')"
+.br
+.in -1c
+.SS "Variables"
+
+.in +1c
+.ti -1c
+.RI "constexpr char \fBHEX_PARSE_INPUT\fP [] = '04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f'"
+.br
+.ti -1c
+.RI "constexpr uint8_t \fBHEX_PARSE_OUTPUT\fP []"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define B   'check_prefix'"
+
+.SS "#define E   'check_postfix'"
+
+.SH "Enumeration Type Documentation"
+.PP 
+.SS "anonymous enum : char"
+
+.PP
+\fBEnumerator\fP
+.in +1c
+.TP
+\f(BIResSuccess \fP
+.TP
+\f(BIResErrorWrite \fP
+.TP
+\f(BIResErrorLock \fP
+.TP
+\f(BIResUnlockSuccess \fP
+.SH "Function Documentation"
+.PP 
+.SS "int64_t atoi64_legacy (const std::string & str)"
+
+.SS "BOOST_AUTO_TEST_CASE (checked_left_shift_test )"
+
+.SS "BOOST_AUTO_TEST_CASE (clearshrink_test )"
+
+.SS "BOOST_AUTO_TEST_CASE (consteval_hex_digit )"
+
+.SS "BOOST_AUTO_TEST_CASE (message_hash )"
+
+.SS "BOOST_AUTO_TEST_CASE (message_sign )"
+
+.SS "BOOST_AUTO_TEST_CASE (message_verify )"
+
+.SS "BOOST_AUTO_TEST_CASE (mib_string_literal_test )"
+
+.SS "BOOST_AUTO_TEST_CASE (parse_hex )"
+
+.SS "BOOST_AUTO_TEST_CASE (remove_prefix )"
+
+.SS "BOOST_AUTO_TEST_CASE (saturating_left_shift_test )"
+
+.SS "BOOST_AUTO_TEST_CASE (span_write_bytes )"
+
+.SS "BOOST_AUTO_TEST_CASE (strprintf_numbers )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_Capitalize )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_FormatParagraph )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_FormatSubVersion )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_IsDigit )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_LocaleIndependentAtoi )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_LockDirectory )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_LogEscapeMessage )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_ParseFixedPoint )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_script_parsing )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_SplitString )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_ToIntegral )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_ToLower )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_ToUpper )"
+
+.SS "BOOST_AUTO_TEST_CASE (test_tracked_vector )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_check )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_criticalsection )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_FormatISO8601Date )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_FormatISO8601DateTime )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_FormatMoney )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_HexStr )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_IsHex )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_Join )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_mocktime )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_overflow )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_ParseByteUnits )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_ParseISO8601DateTime )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_ParseMoney )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_ReadBinaryFile )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_ReplaceAll )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_seed_insecure_rand )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_TimingResistantEqual )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_TrimString )"
+
+.SS "BOOST_AUTO_TEST_CASE (util_WriteBinaryFile )"
+
+.SS "uint8_t ConstevalHexDigit (const char c)\fR [consteval]\fP"
+consteval version of \fBHexDigit()\fP without the lookup table\&. 
+.SS "template<typename C, typename \fBS\fP, typename UnaryOp> auto Join (const C & container, const \fBS\fP & separator, UnaryOp unary_op)"
+Join all container items\&. Typically used to concatenate strings but accepts containers with elements of any type\&.
+
+.PP
+\fBParameters\fP
+.RS 4
+\fIcontainer\fP The items to join 
+.br
+\fIseparator\fP The separator 
+.br
+\fIunary_op\fP Apply this operator to each item 
+.RE
+.PP
+
+.SS "std::string RemovePrefix (std::string_view str, std::string_view prefix)\fR [inline]\fP, \fR [nodiscard]\fP"
+
+.SS "std::string_view RemovePrefixView (std::string_view str, std::string_view prefix)\fR [inline]\fP, \fR [nodiscard]\fP"
+
+.SS "void ReplaceAll (std::string & in_out, const std::string & search, const std::string & substitute)"
+
+.SS "std::vector< std::string > SplitString (std::string_view str, char sep)\fR [inline]\fP, \fR [nodiscard]\fP"
+
+.SS "template<typename \fBT\fP> void TestCheckedLeftShift ()"
+
+.SS "template<typename \fBT\fP> void TestSaturatingLeftShift ()"
+
+.SS "std::string TrimString (std::string_view str, std::string_view pattern = \fR' \\f\\n\\r\\t\\v'\fP)\fR [inline]\fP, \fR [nodiscard]\fP"
+
+.SS "std::string_view TrimStringView (std::string_view str, std::string_view pattern = \fR' \\f\\n\\r\\t\\v'\fP)\fR [inline]\fP, \fR [nodiscard]\fP"
+
+.SH "Variable Documentation"
+.PP 
+.SS "char HEX_PARSE_INPUT[] = '04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5f'\fR [constexpr]\fP"
+
+.SS "uint8_t HEX_PARSE_OUTPUT[]\fR [constexpr]\fP"
+\fBInitial value:\fP
+.nf
+= {
+    0x04, 0x67, 0x8a, 0xfd, 0xb0, 0xfe, 0x55, 0x48, 0x27, 0x19, 0x67, 0xf1, 0xa6, 0x71, 0x30, 0xb7,
+    0x10, 0x5c, 0xd6, 0xa8, 0x28, 0xe0, 0x39, 0x09, 0xa6, 0x79, 0x62, 0xe0, 0xea, 0x1f, 0x61, 0xde,
+    0xb6, 0x49, 0xf6, 0xbc, 0x3f, 0x4c, 0xef, 0x38, 0xc4, 0xf3, 0x55, 0x04, 0xe5, 0x1e, 0xc1, 0x12,
+    0xde, 0x5c, 0x38, 0x4d, 0xf7, 0xba, 0x0b, 0x8d, 0x57, 0x8a, 0x4c, 0x70, 0x2b, 0x6b, 0xf1, 0x1d,
+    0x5f
+}
+.PP
+.fi
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

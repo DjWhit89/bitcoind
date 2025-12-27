@@ -1,0 +1,1132 @@
+\doxysection{tests\+\_\+impl.\+h}
+\label{musig_2tests__impl_8h_source}\index{src/secp256k1/src/modules/musig/tests\_impl.h@{src/secp256k1/src/modules/musig/tests\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_MODULE\_MUSIG\_TESTS\_IMPL\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ SECP256K1\_MODULE\_MUSIG\_TESTS\_IMPL\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <stdlib.h>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <string.h>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1.h"{}}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1\_extrakeys.h"{}}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1\_musig.h"{}}}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ "{}session.h"{}}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ "{}keyagg.h"{}}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ "{}../../scalar.h"{}}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ "{}../../field.h"{}}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ "{}../../group.h"{}}}
+\DoxyCodeLine{00021\ \textcolor{preprocessor}{\#include\ "{}../../hash.h"{}}}
+\DoxyCodeLine{00022\ \textcolor{preprocessor}{\#include\ "{}../../util.h"{}}}
+\DoxyCodeLine{00023\ \textcolor{preprocessor}{\#include\ "{}../../unit\_test.h"{}}}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{preprocessor}{\#include\ "{}vectors.h"{}}}
+\DoxyCodeLine{00026\ }
+\DoxyCodeLine{00027\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ create\_keypair\_and\_pk(secp256k1\_keypair\ *keypair,\ secp256k1\_pubkey\ *pk,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sk)\ \{}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{keywordtype}{int}\ ret;}
+\DoxyCodeLine{00029\ \ \ \ \ secp256k1\_keypair\ keypair\_tmp;}
+\DoxyCodeLine{00030\ \ \ \ \ ret\ =\ secp256k1\_keypair\_create(CTX,\ \&keypair\_tmp,\ sk);}
+\DoxyCodeLine{00031\ \ \ \ \ ret\ \&=\ secp256k1\_keypair\_pub(CTX,\ pk,\ \&keypair\_tmp);}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{keywordflow}{if}\ (keypair\ !=\ NULL)\ \{}
+\DoxyCodeLine{00033\ \ \ \ \ \ \ \ \ *keypair\ =\ keypair\_tmp;}
+\DoxyCodeLine{00034\ \ \ \ \ \}}
+\DoxyCodeLine{00035\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00036\ \}}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{comment}{/*\ Just\ a\ simple\ (non-\/tweaked)\ 2-\/of-\/2\ MuSig\ aggregate,\ sign,\ verify}}
+\DoxyCodeLine{00039\ \textcolor{comment}{\ *\ test.\ */}}
+\DoxyCodeLine{00040\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_simple\_test\_internal(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[2][32];}
+\DoxyCodeLine{00042\ \ \ \ \ secp256k1\_keypair\ keypair[2];}
+\DoxyCodeLine{00043\ \ \ \ \ secp256k1\_musig\_pubnonce\ pubnonce[2];}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_pubnonce\ *pubnonce\_ptr[2];}
+\DoxyCodeLine{00045\ \ \ \ \ secp256k1\_musig\_aggnonce\ aggnonce;}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32];}
+\DoxyCodeLine{00047\ \ \ \ \ secp256k1\_xonly\_pubkey\ agg\_pk;}
+\DoxyCodeLine{00048\ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ session\_secrand[2][32];}
+\DoxyCodeLine{00050\ \ \ \ \ secp256k1\_musig\_secnonce\ secnonce[2];}
+\DoxyCodeLine{00051\ \ \ \ \ secp256k1\_pubkey\ pk[2];}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_pubkey\ *pk\_ptr[2];}
+\DoxyCodeLine{00053\ \ \ \ \ secp256k1\_musig\_partial\_sig\ partial\_sig[2];}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_partial\_sig\ *partial\_sig\_ptr[2];}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ final\_sig[64];}
+\DoxyCodeLine{00056\ \ \ \ \ secp256k1\_musig\_session\ session;}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \ \ testrand256(msg);}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 2;\ i++)\ \{}
+\DoxyCodeLine{00061\ \ \ \ \ \ \ \ \ testrand256(sk[i]);}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ pk\_ptr[i]\ =\ \&pk[i];}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ pubnonce\_ptr[i]\ =\ \&pubnonce[i];}
+\DoxyCodeLine{00064\ \ \ \ \ \ \ \ \ partial\_sig\_ptr[i]\ =\ \&partial\_sig[i];}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00066\ \ \ \ \ \ \ \ \ CHECK(create\_keypair\_and\_pk(\&keypair[i],\ \&pk[i],\ sk[i]));}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ ==\ 0)\ \{}
+\DoxyCodeLine{00068\ \ \ \ \ \ \ \ \ \ \ \ \ testrand256(session\_secrand[i]);}
+\DoxyCodeLine{00069\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[i],\ \&pubnonce[i],\ session\_secrand[i],\ sk[i],\ \&pk[i],\ NULL,\ NULL,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00071\ \ \ \ \ \ \ \ \ \ \ \ \ uint64\_t\ nonrepeating\_cnt\ =\ 0;}
+\DoxyCodeLine{00072\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce[i],\ \&pubnonce[i],\ nonrepeating\_cnt,\ \&keypair[i],\ NULL,\ NULL,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00073\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00074\ \ \ \ \ \}}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \ \ \ \ CHECK(secp256k1\_musig\_pubkey\_agg(CTX,\ \&agg\_pk,\ \&keyagg\_cache,\ pk\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00077\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_agg(CTX,\ \&aggnonce,\ pubnonce\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00078\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ msg,\ \&keyagg\_cache)\ ==\ 1);}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 2;\ i++)\ \{}
+\DoxyCodeLine{00081\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[i],\ \&secnonce[i],\ \&keypair[i],\ \&keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00082\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[i],\ \&pubnonce[i],\ \&pk[i],\ \&keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00083\ \ \ \ \ \}}
+\DoxyCodeLine{00084\ }
+\DoxyCodeLine{00085\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_agg(CTX,\ final\_sig,\ \&session,\ partial\_sig\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00086\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ final\_sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ \&agg\_pk)\ ==\ 1);}
+\DoxyCodeLine{00087\ \}}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \textcolor{comment}{/*\ Generate\ two\ pubnonces\ such\ that\ both\ group\ elements\ of\ their\ sum\ (calculated}}
+\DoxyCodeLine{00090\ \textcolor{comment}{\ *\ with\ secp256k1\_musig\_sum\_pubnonces)\ are\ infinity.\ */}}
+\DoxyCodeLine{00091\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ pubnonce\_summing\_to\_inf(secp256k1\_musig\_pubnonce\ *pubnonce)\ \{}
+\DoxyCodeLine{00092\ \ \ \ \ secp256k1\_ge\ ge[2];}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00094\ \ \ \ \ secp256k1\_gej\ summed\_pubnonces[2];}
+\DoxyCodeLine{00095\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_pubnonce\ *pubnonce\_ptr[2];}
+\DoxyCodeLine{00096\ }
+\DoxyCodeLine{00097\ \ \ \ \ testutil\_random\_ge\_test(\&ge[0]);}
+\DoxyCodeLine{00098\ \ \ \ \ testutil\_random\_ge\_test(\&ge[1]);}
+\DoxyCodeLine{00099\ }
+\DoxyCodeLine{00100\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 2;\ i++)\ \{}
+\DoxyCodeLine{00101\ \ \ \ \ \ \ \ \ secp256k1\_musig\_pubnonce\_save(\&pubnonce[i],\ ge);}
+\DoxyCodeLine{00102\ \ \ \ \ \ \ \ \ pubnonce\_ptr[i]\ =\ \&pubnonce[i];}
+\DoxyCodeLine{00103\ \ \ \ \ \ \ \ \ secp256k1\_ge\_neg(\&ge[0],\ \&ge[0]);}
+\DoxyCodeLine{00104\ \ \ \ \ \ \ \ \ secp256k1\_ge\_neg(\&ge[1],\ \&ge[1]);}
+\DoxyCodeLine{00105\ \ \ \ \ \}}
+\DoxyCodeLine{00106\ }
+\DoxyCodeLine{00107\ \ \ \ \ secp256k1\_musig\_sum\_pubnonces(CTX,\ summed\_pubnonces,\ pubnonce\_ptr,\ 2);}
+\DoxyCodeLine{00108\ \ \ \ \ CHECK(secp256k1\_gej\_is\_infinity(\&summed\_pubnonces[0]));}
+\DoxyCodeLine{00109\ \ \ \ \ CHECK(secp256k1\_gej\_is\_infinity(\&summed\_pubnonces[1]));}
+\DoxyCodeLine{00110\ \}}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \textcolor{keywordtype}{int}\ memcmp\_and\_randomize(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *value,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *expected,\ \textcolor{keywordtype}{size\_t}\ len)\ \{}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{keywordtype}{int}\ ret;}
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i;}
+\DoxyCodeLine{00115\ \ \ \ \ ret\ =\ secp256k1\_memcmp\_var(value,\ expected,\ len);}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ len;\ i++)\ \{}
+\DoxyCodeLine{00117\ \ \ \ \ \ \ \ \ value[i]\ =\ testrand\_bits(8);}
+\DoxyCodeLine{00118\ \ \ \ \ \}}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00120\ \}}
+\DoxyCodeLine{00121\ }
+\DoxyCodeLine{00122\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_api\_tests(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00123\ \ \ \ \ secp256k1\_musig\_partial\_sig\ partial\_sig[2];}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_partial\_sig\ *partial\_sig\_ptr[2];}
+\DoxyCodeLine{00125\ \ \ \ \ secp256k1\_musig\_partial\_sig\ invalid\_partial\_sig;}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_partial\_sig\ *invalid\_partial\_sig\_ptr[2];}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pre\_sig[64];}
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ buf[32];}
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[2][32];}
+\DoxyCodeLine{00130\ \ \ \ \ secp256k1\_keypair\ keypair[2];}
+\DoxyCodeLine{00131\ \ \ \ \ secp256k1\_keypair\ invalid\_keypair;}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ max64[64];}
+\DoxyCodeLine{00133\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ zeros132[132]\ =\ \{\ 0\ \};}
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ session\_secrand[2][32];}
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ nonrepeating\_cnt\ =\ 0;}
+\DoxyCodeLine{00136\ \ \ \ \ secp256k1\_musig\_secnonce\ secnonce[2];}
+\DoxyCodeLine{00137\ \ \ \ \ secp256k1\_musig\_secnonce\ secnonce\_tmp;}
+\DoxyCodeLine{00138\ \ \ \ \ secp256k1\_musig\_secnonce\ invalid\_secnonce;}
+\DoxyCodeLine{00139\ \ \ \ \ secp256k1\_musig\_pubnonce\ pubnonce[2];}
+\DoxyCodeLine{00140\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_pubnonce\ *pubnonce\_ptr[2];}
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pubnonce\_ser[66];}
+\DoxyCodeLine{00142\ \ \ \ \ secp256k1\_musig\_pubnonce\ inf\_pubnonce[2];}
+\DoxyCodeLine{00143\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_pubnonce\ *inf\_pubnonce\_ptr[2];}
+\DoxyCodeLine{00144\ \ \ \ \ secp256k1\_musig\_pubnonce\ invalid\_pubnonce;}
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_pubnonce\ *invalid\_pubnonce\_ptr[1];}
+\DoxyCodeLine{00146\ \ \ \ \ secp256k1\_musig\_aggnonce\ aggnonce;}
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aggnonce\_ser[66];}
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32];}
+\DoxyCodeLine{00149\ \ \ \ \ secp256k1\_xonly\_pubkey\ agg\_pk;}
+\DoxyCodeLine{00150\ \ \ \ \ secp256k1\_pubkey\ full\_agg\_pk;}
+\DoxyCodeLine{00151\ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{00152\ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ invalid\_keyagg\_cache;}
+\DoxyCodeLine{00153\ \ \ \ \ secp256k1\_musig\_session\ session;}
+\DoxyCodeLine{00154\ \ \ \ \ secp256k1\_musig\_session\ invalid\_session;}
+\DoxyCodeLine{00155\ \ \ \ \ secp256k1\_pubkey\ pk[2];}
+\DoxyCodeLine{00156\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_pubkey\ *pk\_ptr[2];}
+\DoxyCodeLine{00157\ \ \ \ \ secp256k1\_pubkey\ invalid\_pk;}
+\DoxyCodeLine{00158\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_pubkey\ *invalid\_pk\_ptr2[2];}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_pubkey\ *invalid\_pk\_ptr3[3];}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tweak[32];}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00162\ }
+\DoxyCodeLine{00164\ \ \ \ \ memset(max64,\ 0xff,\ \textcolor{keyword}{sizeof}(max64));}
+\DoxyCodeLine{00165\ \ \ \ \ memset(\&invalid\_keypair,\ 0,\ \textcolor{keyword}{sizeof}(invalid\_keypair));}
+\DoxyCodeLine{00166\ \ \ \ \ memset(\&invalid\_pk,\ 0,\ \textcolor{keyword}{sizeof}(invalid\_pk));}
+\DoxyCodeLine{00167\ \ \ \ \ memset(\&invalid\_secnonce,\ 0,\ \textcolor{keyword}{sizeof}(invalid\_secnonce));}
+\DoxyCodeLine{00168\ \ \ \ \ memset(\&invalid\_partial\_sig,\ 0,\ \textcolor{keyword}{sizeof}(invalid\_partial\_sig));}
+\DoxyCodeLine{00169\ \ \ \ \ pubnonce\_summing\_to\_inf(inf\_pubnonce);}
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{comment}{/*\ Simulate\ structs\ being\ uninitialized\ by\ setting\ it\ to\ 0s.\ We\ don't\ want}}
+\DoxyCodeLine{00171\ \textcolor{comment}{\ \ \ \ \ *\ to\ produce\ undefined\ behavior\ by\ actually\ providing\ uninitialized}}
+\DoxyCodeLine{00172\ \textcolor{comment}{\ \ \ \ \ *\ structs.\ */}}
+\DoxyCodeLine{00173\ \ \ \ \ memset(\&invalid\_keyagg\_cache,\ 0,\ \textcolor{keyword}{sizeof}(invalid\_keyagg\_cache));}
+\DoxyCodeLine{00174\ \ \ \ \ memset(\&invalid\_pk,\ 0,\ \textcolor{keyword}{sizeof}(invalid\_pk));}
+\DoxyCodeLine{00175\ \ \ \ \ memset(\&invalid\_pubnonce,\ 0,\ \textcolor{keyword}{sizeof}(invalid\_pubnonce));}
+\DoxyCodeLine{00176\ \ \ \ \ memset(\&invalid\_session,\ 0,\ \textcolor{keyword}{sizeof}(invalid\_session));}
+\DoxyCodeLine{00177\ }
+\DoxyCodeLine{00178\ \ \ \ \ testrand256(msg);}
+\DoxyCodeLine{00179\ \ \ \ \ testrand256(tweak);}
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 2;\ i++)\ \{}
+\DoxyCodeLine{00181\ \ \ \ \ \ \ \ \ pk\_ptr[i]\ =\ \&pk[i];}
+\DoxyCodeLine{00182\ \ \ \ \ \ \ \ \ invalid\_pk\_ptr2[i]\ =\ \&invalid\_pk;}
+\DoxyCodeLine{00183\ \ \ \ \ \ \ \ \ invalid\_pk\_ptr3[i]\ =\ \&pk[i];}
+\DoxyCodeLine{00184\ \ \ \ \ \ \ \ \ pubnonce\_ptr[i]\ =\ \&pubnonce[i];}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \ \ inf\_pubnonce\_ptr[i]\ =\ \&inf\_pubnonce[i];}
+\DoxyCodeLine{00186\ \ \ \ \ \ \ \ \ partial\_sig\_ptr[i]\ =\ \&partial\_sig[i];}
+\DoxyCodeLine{00187\ \ \ \ \ \ \ \ \ invalid\_partial\_sig\_ptr[i]\ =\ \&partial\_sig[i];}
+\DoxyCodeLine{00188\ \ \ \ \ \ \ \ \ testrand256(session\_secrand[i]);}
+\DoxyCodeLine{00189\ \ \ \ \ \ \ \ \ testrand256(sk[i]);}
+\DoxyCodeLine{00190\ \ \ \ \ \ \ \ \ CHECK(create\_keypair\_and\_pk(\&keypair[i],\ \&pk[i],\ sk[i]));}
+\DoxyCodeLine{00191\ \ \ \ \ \}}
+\DoxyCodeLine{00192\ \ \ \ \ invalid\_pubnonce\_ptr[0]\ =\ \&invalid\_pubnonce;}
+\DoxyCodeLine{00193\ \ \ \ \ invalid\_partial\_sig\_ptr[0]\ =\ \&invalid\_partial\_sig;}
+\DoxyCodeLine{00194\ \ \ \ \ \textcolor{comment}{/*\ invalid\_pk\_ptr3\ has\ two\ valid,\ one\ invalid\ pk,\ which\ is\ important\ to\ test}}
+\DoxyCodeLine{00195\ \textcolor{comment}{\ \ \ \ \ *\ musig\_pubkey\_agg\ */}}
+\DoxyCodeLine{00196\ \ \ \ \ invalid\_pk\_ptr3[2]\ =\ \&invalid\_pk;}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00201\ \ \ \ \ CHECK(secp256k1\_musig\_pubkey\_agg(CTX,\ \&agg\_pk,\ \&keyagg\_cache,\ pk\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00202\ \ \ \ \ CHECK(secp256k1\_musig\_pubkey\_agg(CTX,\ NULL,\ \&keyagg\_cache,\ pk\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00203\ \ \ \ \ CHECK(secp256k1\_musig\_pubkey\_agg(CTX,\ \&agg\_pk,\ NULL,\ pk\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00204\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubkey\_agg(CTX,\ \&agg\_pk,\ \&keyagg\_cache,\ NULL,\ 2));}
+\DoxyCodeLine{00205\ \ \ \ \ CHECK(memcmp\_and\_randomize(agg\_pk.data,\ zeros132,\ \textcolor{keyword}{sizeof}(agg\_pk.data))\ ==\ 0);}
+\DoxyCodeLine{00206\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubkey\_agg(CTX,\ \&agg\_pk,\ \&keyagg\_cache,\ invalid\_pk\_ptr2,\ 2));}
+\DoxyCodeLine{00207\ \ \ \ \ CHECK(memcmp\_and\_randomize(agg\_pk.data,\ zeros132,\ \textcolor{keyword}{sizeof}(agg\_pk.data))\ ==\ 0);}
+\DoxyCodeLine{00208\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubkey\_agg(CTX,\ \&agg\_pk,\ \&keyagg\_cache,\ invalid\_pk\_ptr3,\ 3));}
+\DoxyCodeLine{00209\ \ \ \ \ CHECK(memcmp\_and\_randomize(agg\_pk.data,\ zeros132,\ \textcolor{keyword}{sizeof}(agg\_pk.data))\ ==\ 0);}
+\DoxyCodeLine{00210\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubkey\_agg(CTX,\ \&agg\_pk,\ \&keyagg\_cache,\ pk\_ptr,\ 0));}
+\DoxyCodeLine{00211\ \ \ \ \ CHECK(memcmp\_and\_randomize(agg\_pk.data,\ zeros132,\ \textcolor{keyword}{sizeof}(agg\_pk.data))\ ==\ 0);}
+\DoxyCodeLine{00212\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubkey\_agg(CTX,\ \&agg\_pk,\ \&keyagg\_cache,\ NULL,\ 0));}
+\DoxyCodeLine{00213\ \ \ \ \ CHECK(memcmp\_and\_randomize(agg\_pk.data,\ zeros132,\ \textcolor{keyword}{sizeof}(agg\_pk.data))\ ==\ 0);}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00215\ \ \ \ \ CHECK(secp256k1\_musig\_pubkey\_agg(CTX,\ \&agg\_pk,\ \&keyagg\_cache,\ pk\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00217\ \ \ \ \ \textcolor{comment}{/*\ pubkey\_get\ */}}
+\DoxyCodeLine{00218\ \ \ \ \ CHECK(secp256k1\_musig\_pubkey\_get(CTX,\ \&full\_agg\_pk,\ \&keyagg\_cache)\ ==\ 1);}
+\DoxyCodeLine{00219\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubkey\_get(CTX,\ NULL,\ \&keyagg\_cache));}
+\DoxyCodeLine{00220\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubkey\_get(CTX,\ \&full\_agg\_pk,\ NULL));}
+\DoxyCodeLine{00221\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&full\_agg\_pk,\ zeros132,\ \textcolor{keyword}{sizeof}(full\_agg\_pk))\ ==\ 0);}
+\DoxyCodeLine{00222\ }
+\DoxyCodeLine{00224\ \ \ \ \ \{}
+\DoxyCodeLine{00225\ \ \ \ \ \ \ \ \ int\ (*tweak\_func[2])\ (\textcolor{keyword}{const}\ secp256k1\_context*\ ctx,\ secp256k1\_pubkey\ *output\_pubkey,\ secp256k1\_musig\_keyagg\_cache\ *keyagg\_cache,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *tweak32);}
+\DoxyCodeLine{00226\ \ \ \ \ \ \ \ \ tweak\_func[0]\ =\ secp256k1\_musig\_pubkey\_ec\_tweak\_add;}
+\DoxyCodeLine{00227\ \ \ \ \ \ \ \ \ tweak\_func[1]\ =\ secp256k1\_musig\_pubkey\_xonly\_tweak\_add;}
+\DoxyCodeLine{00228\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 2;\ i++)\ \{}
+\DoxyCodeLine{00229\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_pubkey\ tmp\_output\_pk;}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ tmp\_keyagg\_cache\ =\ keyagg\_cache;}
+\DoxyCodeLine{00231\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK((*tweak\_func[i])(CTX,\ \&tmp\_output\_pk,\ \&tmp\_keyagg\_cache,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Reset\ keyagg\_cache\ */}}
+\DoxyCodeLine{00233\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\_keyagg\_cache\ =\ keyagg\_cache;}
+\DoxyCodeLine{00234\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK((*tweak\_func[i])(CTX,\ NULL,\ \&tmp\_keyagg\_cache,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\_keyagg\_cache\ =\ keyagg\_cache;}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK\_ILLEGAL(CTX,\ (*tweak\_func[i])(CTX,\ \&tmp\_output\_pk,\ NULL,\ tweak));}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(memcmp\_and\_randomize(tmp\_output\_pk.data,\ zeros132,\ \textcolor{keyword}{sizeof}(tmp\_output\_pk.data))\ ==\ 0);}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\_keyagg\_cache\ =\ keyagg\_cache;}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK\_ILLEGAL(CTX,\ (*tweak\_func[i])(CTX,\ \&tmp\_output\_pk,\ \&tmp\_keyagg\_cache,\ NULL));}
+\DoxyCodeLine{00240\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(memcmp\_and\_randomize(tmp\_output\_pk.data,\ zeros132,\ \textcolor{keyword}{sizeof}(tmp\_output\_pk.data))\ ==\ 0);}
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\_keyagg\_cache\ =\ keyagg\_cache;}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK((*tweak\_func[i])(CTX,\ \&tmp\_output\_pk,\ \&tmp\_keyagg\_cache,\ max64)\ ==\ 0);}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(memcmp\_and\_randomize(tmp\_output\_pk.data,\ zeros132,\ \textcolor{keyword}{sizeof}(tmp\_output\_pk.data))\ ==\ 0);}
+\DoxyCodeLine{00244\ \ \ \ \ \ \ \ \ \ \ \ \ tmp\_keyagg\_cache\ =\ keyagg\_cache;}
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Uninitialized\ keyagg\_cache\ */}}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK\_ILLEGAL(CTX,\ (*tweak\_func[i])(CTX,\ \&tmp\_output\_pk,\ \&invalid\_keyagg\_cache,\ tweak));}
+\DoxyCodeLine{00247\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(memcmp\_and\_randomize(tmp\_output\_pk.data,\ zeros132,\ \textcolor{keyword}{sizeof}(tmp\_output\_pk.data))\ ==\ 0);}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00249\ \ \ \ \ \}}
+\DoxyCodeLine{00250\ }
+\DoxyCodeLine{00252\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ sk[0],\ \&pk[0],\ msg,\ \&keyagg\_cache,\ max64)\ ==\ 1);}
+\DoxyCodeLine{00253\ \ \ \ \ \textcolor{comment}{/*\ nonce\_gen,\ if\ successful,\ sets\ session\_secrand\ to\ the\ zero\ array,\ which}}
+\DoxyCodeLine{00254\ \textcolor{comment}{\ \ \ \ \ *\ makes\ subsequent\ nonce\_gen\ calls\ with\ the\ same\ session\_secrand\ fail.\ So}}
+\DoxyCodeLine{00255\ \textcolor{comment}{\ \ \ \ \ *\ check\ that\ session\_secrand\ is\ indeed\ the\ zero\ array\ and\ fill\ it\ with}}
+\DoxyCodeLine{00256\ \textcolor{comment}{\ \ \ \ \ *\ random\ values\ again.\ */}}
+\DoxyCodeLine{00257\ \ \ \ \ CHECK(memcmp\_and\_randomize(session\_secrand[0],\ zeros132,\ \textcolor{keyword}{sizeof}(session\_secrand[0]))\ ==\ 0);}
+\DoxyCodeLine{00258\ }
+\DoxyCodeLine{00259\ \ \ \ \ CHECK\_ILLEGAL(STATIC\_CTX,\ secp256k1\_musig\_nonce\_gen(STATIC\_CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ sk[0],\ \&pk[0],\ msg,\ \&keyagg\_cache,\ max64));}
+\DoxyCodeLine{00260\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00261\ }
+\DoxyCodeLine{00262\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_gen(CTX,\ NULL,\ \&pubnonce[0],\ session\_secrand[0],\ sk[0],\ \&pk[0],\ msg,\ \&keyagg\_cache,\ max64));}
+\DoxyCodeLine{00263\ }
+\DoxyCodeLine{00264\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ NULL,\ session\_secrand[0],\ sk[0],\ \&pk[0],\ msg,\ \&keyagg\_cache,\ max64));}
+\DoxyCodeLine{00265\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00266\ }
+\DoxyCodeLine{00267\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ NULL,\ sk[0],\ \&pk[0],\ msg,\ \&keyagg\_cache,\ max64));}
+\DoxyCodeLine{00268\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00269\ }
+\DoxyCodeLine{00270\ \ \ \ \ \textcolor{comment}{/*\ session\_secrand\ =\ 0\ is\ disallowed\ because\ it\ indicates\ a\ faulty\ RNG\ */}}
+\DoxyCodeLine{00271\ \ \ \ \ memcpy(\&session\_secrand[0],\ zeros132,\ \textcolor{keyword}{sizeof}(session\_secrand[0]));}
+\DoxyCodeLine{00272\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ zeros132,\ sk[0],\ \&pk[0],\ msg,\ \&keyagg\_cache,\ max64)\ ==\ 0);}
+\DoxyCodeLine{00273\ \ \ \ \ CHECK(memcmp\_and\_randomize(session\_secrand[0],\ zeros132,\ \textcolor{keyword}{sizeof}(session\_secrand[0]))\ ==\ 0);}
+\DoxyCodeLine{00274\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00276\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ NULL,\ \&pk[0],\ msg,\ \&keyagg\_cache,\ max64)\ ==\ 1);}
+\DoxyCodeLine{00277\ \ \ \ \ CHECK(memcmp\_and\_randomize(session\_secrand[0],\ zeros132,\ \textcolor{keyword}{sizeof}(session\_secrand[0]))\ ==\ 0);}
+\DoxyCodeLine{00278\ }
+\DoxyCodeLine{00279\ \ \ \ \ \textcolor{comment}{/*\ invalid\ seckey\ */}}
+\DoxyCodeLine{00280\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ max64,\ \&pk[0],\ msg,\ \&keyagg\_cache,\ max64)\ ==\ 0);}
+\DoxyCodeLine{00281\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00282\ }
+\DoxyCodeLine{00283\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ sk[0],\ NULL,\ msg,\ \&keyagg\_cache,\ max64));}
+\DoxyCodeLine{00284\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00285\ }
+\DoxyCodeLine{00286\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ sk[0],\ \&invalid\_pk,\ msg,\ \&keyagg\_cache,\ max64));}
+\DoxyCodeLine{00287\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00288\ }
+\DoxyCodeLine{00289\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ sk[0],\ \&pk[0],\ NULL,\ \&keyagg\_cache,\ max64)\ ==\ 1);}
+\DoxyCodeLine{00290\ \ \ \ \ CHECK(memcmp\_and\_randomize(session\_secrand[0],\ zeros132,\ \textcolor{keyword}{sizeof}(session\_secrand[0]))\ ==\ 0);}
+\DoxyCodeLine{00291\ }
+\DoxyCodeLine{00292\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ sk[0],\ \&pk[0],\ msg,\ NULL,\ max64)\ ==\ 1);}
+\DoxyCodeLine{00293\ \ \ \ \ CHECK(memcmp\_and\_randomize(session\_secrand[0],\ zeros132,\ \textcolor{keyword}{sizeof}(session\_secrand[0]))\ ==\ 0);}
+\DoxyCodeLine{00294\ }
+\DoxyCodeLine{00295\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ sk[0],\ \&pk[0],\ msg,\ \&invalid\_keyagg\_cache,\ max64));}
+\DoxyCodeLine{00296\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00297\ }
+\DoxyCodeLine{00298\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ sk[0],\ \&pk[0],\ msg,\ \&keyagg\_cache,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00299\ \ \ \ \ CHECK(memcmp\_and\_randomize(session\_secrand[0],\ zeros132,\ \textcolor{keyword}{sizeof}(session\_secrand[0]))\ ==\ 0);}
+\DoxyCodeLine{00300\ }
+\DoxyCodeLine{00301\ \ \ \ \ \textcolor{comment}{/*\ Every\ in-\/argument\ except\ session\_secrand\ and\ pubkey\ can\ be\ NULL\ */}}
+\DoxyCodeLine{00302\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ NULL,\ \&pk[0],\ NULL,\ NULL,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00303\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[1],\ \&pubnonce[1],\ session\_secrand[1],\ sk[1],\ \&pk[1],\ NULL,\ NULL,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00304\ }
+\DoxyCodeLine{00306\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ nonrepeating\_cnt,\ \&keypair[0],\ msg,\ \&keyagg\_cache,\ max64)\ ==\ 1);}
+\DoxyCodeLine{00307\ \ \ \ \ CHECK\_ILLEGAL(STATIC\_CTX,\ secp256k1\_musig\_nonce\_gen\_counter(STATIC\_CTX,\ \&secnonce[0],\ \&pubnonce[0],\ nonrepeating\_cnt,\ \&keypair[0],\ msg,\ \&keyagg\_cache,\ max64));}
+\DoxyCodeLine{00308\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00309\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_gen\_counter(CTX,\ NULL,\ \&pubnonce[0],\ nonrepeating\_cnt,\ \&keypair[0],\ msg,\ \&keyagg\_cache,\ max64));}
+\DoxyCodeLine{00310\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce[0],\ NULL,\ nonrepeating\_cnt,\ \&keypair[0],\ msg,\ \&keyagg\_cache,\ max64));}
+\DoxyCodeLine{00311\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00312\ \ \ \ \ \textcolor{comment}{/*\ using\ nonce\_gen\_counter\ requires\ keypair\ */}}
+\DoxyCodeLine{00313\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ nonrepeating\_cnt,\ NULL,\ msg,\ \&keyagg\_cache,\ max64));}
+\DoxyCodeLine{00314\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00315\ \ \ \ \ \textcolor{comment}{/*\ invalid\ keypair\ */}}
+\DoxyCodeLine{00316\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ nonrepeating\_cnt,\ \&invalid\_keypair,\ msg,\ \&keyagg\_cache,\ max64));}
+\DoxyCodeLine{00317\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00318\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ nonrepeating\_cnt,\ \&keypair[0],\ NULL,\ \&keyagg\_cache,\ max64)\ ==\ 1);}
+\DoxyCodeLine{00319\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ nonrepeating\_cnt,\ \&keypair[0],\ msg,\ NULL,\ max64)\ ==\ 1);}
+\DoxyCodeLine{00320\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ nonrepeating\_cnt,\ \&keypair[0],\ msg,\ \&invalid\_keyagg\_cache,\ max64));}
+\DoxyCodeLine{00321\ \ \ \ \ CHECK(memcmp\_and\_randomize(secnonce[0].data,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce[0].data))\ ==\ 0);}
+\DoxyCodeLine{00322\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ nonrepeating\_cnt,\&keypair[0],\ msg,\ \&keyagg\_cache,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00324\ \ \ \ \ \textcolor{comment}{/*\ Every\ in-\/argument\ except\ nonrepeating\_cnt\ and\ keypair\ can\ be\ NULL\ */}}
+\DoxyCodeLine{00325\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ nonrepeating\_cnt,\ \&keypair[0],\ NULL,\ NULL,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00326\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce[1],\ \&pubnonce[1],\ nonrepeating\_cnt,\ \&keypair[1],\ NULL,\ NULL,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00327\ }
+\DoxyCodeLine{00328\ }
+\DoxyCodeLine{00330\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubnonce\_serialize(CTX,\ NULL,\ \&pubnonce[0]));}
+\DoxyCodeLine{00331\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubnonce\_serialize(CTX,\ pubnonce\_ser,\ NULL));}
+\DoxyCodeLine{00332\ \ \ \ \ CHECK(memcmp\_and\_randomize(pubnonce\_ser,\ zeros132,\ \textcolor{keyword}{sizeof}(pubnonce\_ser))\ ==\ 0);}
+\DoxyCodeLine{00333\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubnonce\_serialize(CTX,\ pubnonce\_ser,\ \&invalid\_pubnonce));}
+\DoxyCodeLine{00334\ \ \ \ \ CHECK(memcmp\_and\_randomize(pubnonce\_ser,\ zeros132,\ \textcolor{keyword}{sizeof}(pubnonce\_ser))\ ==\ 0);}
+\DoxyCodeLine{00335\ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_serialize(CTX,\ pubnonce\_ser,\ \&pubnonce[0])\ ==\ 1);}
+\DoxyCodeLine{00336\ }
+\DoxyCodeLine{00337\ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_parse(CTX,\ \&pubnonce[0],\ pubnonce\_ser)\ ==\ 1);}
+\DoxyCodeLine{00338\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubnonce\_parse(CTX,\ NULL,\ pubnonce\_ser));}
+\DoxyCodeLine{00339\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_pubnonce\_parse(CTX,\ \&pubnonce[0],\ NULL));}
+\DoxyCodeLine{00340\ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_parse(CTX,\ \&pubnonce[0],\ zeros132)\ ==\ 0);}
+\DoxyCodeLine{00341\ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_parse(CTX,\ \&pubnonce[0],\ pubnonce\_ser)\ ==\ 1);}
+\DoxyCodeLine{00342\ }
+\DoxyCodeLine{00343\ \ \ \ \ \{}
+\DoxyCodeLine{00344\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ serialize\ and\ parse\ results\ in\ the\ same\ value\ */}}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ secp256k1\_musig\_pubnonce\ tmp;}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_serialize(CTX,\ pubnonce\_ser,\ \&pubnonce[0])\ ==\ 1);}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_parse(CTX,\ \&tmp,\ pubnonce\_ser)\ ==\ 1);}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&tmp,\ \&pubnonce[0],\ \textcolor{keyword}{sizeof}(tmp))\ ==\ 0);}
+\DoxyCodeLine{00349\ \ \ \ \ \}}
+\DoxyCodeLine{00350\ }
+\DoxyCodeLine{00352\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_agg(CTX,\ \&aggnonce,\ pubnonce\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00353\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_agg(CTX,\ NULL,\ pubnonce\_ptr,\ 2));}
+\DoxyCodeLine{00354\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_agg(CTX,\ \&aggnonce,\ NULL,\ 2));}
+\DoxyCodeLine{00355\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_agg(CTX,\ \&aggnonce,\ pubnonce\_ptr,\ 0));}
+\DoxyCodeLine{00356\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_agg(CTX,\ \&aggnonce,\ invalid\_pubnonce\_ptr,\ 1));}
+\DoxyCodeLine{00357\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_agg(CTX,\ \&aggnonce,\ inf\_pubnonce\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00358\ \ \ \ \ \{}
+\DoxyCodeLine{00359\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ the\ aggnonce\ encodes\ two\ points\ at\ infinity\ */}}
+\DoxyCodeLine{00360\ \ \ \ \ \ \ \ \ secp256k1\_ge\ aggnonce\_pt[2];}
+\DoxyCodeLine{00361\ \ \ \ \ \ \ \ \ secp256k1\_musig\_aggnonce\_load(CTX,\ aggnonce\_pt,\ \&aggnonce);}
+\DoxyCodeLine{00362\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 2;\ i++)\ \{}
+\DoxyCodeLine{00363\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ge\_is\_infinity(\&aggnonce\_pt[i]);}
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00365\ \ \ \ \ \}}
+\DoxyCodeLine{00366\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_agg(CTX,\ \&aggnonce,\ pubnonce\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00367\ }
+\DoxyCodeLine{00369\ \ \ \ \ CHECK(secp256k1\_musig\_aggnonce\_serialize(CTX,\ aggnonce\_ser,\ \&aggnonce)\ ==\ 1);}
+\DoxyCodeLine{00370\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_aggnonce\_serialize(CTX,\ NULL,\ \&aggnonce));}
+\DoxyCodeLine{00371\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_aggnonce\_serialize(CTX,\ aggnonce\_ser,\ NULL));}
+\DoxyCodeLine{00372\ \ \ \ \ CHECK(memcmp\_and\_randomize(aggnonce\_ser,\ zeros132,\ \textcolor{keyword}{sizeof}(aggnonce\_ser))\ ==\ 0);}
+\DoxyCodeLine{00373\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_aggnonce\_serialize(CTX,\ aggnonce\_ser,\ (secp256k1\_musig\_aggnonce*)\ \&invalid\_pubnonce));}
+\DoxyCodeLine{00374\ \ \ \ \ CHECK(memcmp\_and\_randomize(aggnonce\_ser,\ zeros132,\ \textcolor{keyword}{sizeof}(aggnonce\_ser))\ ==\ 0);}
+\DoxyCodeLine{00375\ \ \ \ \ CHECK(secp256k1\_musig\_aggnonce\_serialize(CTX,\ aggnonce\_ser,\ \&aggnonce)\ ==\ 1);}
+\DoxyCodeLine{00376\ }
+\DoxyCodeLine{00377\ \ \ \ \ CHECK(secp256k1\_musig\_aggnonce\_parse(CTX,\ \&aggnonce,\ aggnonce\_ser)\ ==\ 1);}
+\DoxyCodeLine{00378\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_aggnonce\_parse(CTX,\ NULL,\ aggnonce\_ser));}
+\DoxyCodeLine{00379\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_aggnonce\_parse(CTX,\ \&aggnonce,\ NULL));}
+\DoxyCodeLine{00380\ \ \ \ \ CHECK(secp256k1\_musig\_aggnonce\_parse(CTX,\ \&aggnonce,\ zeros132)\ ==\ 1);}
+\DoxyCodeLine{00381\ \ \ \ \ CHECK(secp256k1\_musig\_aggnonce\_parse(CTX,\ \&aggnonce,\ aggnonce\_ser)\ ==\ 1);}
+\DoxyCodeLine{00382\ }
+\DoxyCodeLine{00383\ \ \ \ \ \{}
+\DoxyCodeLine{00384\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ serialize\ and\ parse\ results\ in\ the\ same\ value\ */}}
+\DoxyCodeLine{00385\ \ \ \ \ \ \ \ \ secp256k1\_musig\_aggnonce\ tmp;}
+\DoxyCodeLine{00386\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_aggnonce\_serialize(CTX,\ aggnonce\_ser,\ \&aggnonce)\ ==\ 1);}
+\DoxyCodeLine{00387\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_aggnonce\_parse(CTX,\ \&tmp,\ aggnonce\_ser)\ ==\ 1);}
+\DoxyCodeLine{00388\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&tmp,\ \&aggnonce,\ \textcolor{keyword}{sizeof}(tmp))\ ==\ 0);}
+\DoxyCodeLine{00389\ \ \ \ \ \}}
+\DoxyCodeLine{00390\ }
+\DoxyCodeLine{00392\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ msg,\ \&keyagg\_cache)\ ==\ 1);}
+\DoxyCodeLine{00393\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_process(CTX,\ NULL,\ \&aggnonce,\ msg,\ \&keyagg\_cache));}
+\DoxyCodeLine{00394\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ NULL,\ msg,\ \&keyagg\_cache));}
+\DoxyCodeLine{00395\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ (secp256k1\_musig\_aggnonce*)\ \&invalid\_pubnonce,\ msg,\ \&keyagg\_cache));}
+\DoxyCodeLine{00396\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ NULL,\ \&keyagg\_cache));}
+\DoxyCodeLine{00397\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ msg,\ NULL));}
+\DoxyCodeLine{00398\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ msg,\ \&invalid\_keyagg\_cache));}
+\DoxyCodeLine{00399\ }
+\DoxyCodeLine{00400\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ msg,\ \&keyagg\_cache)\ ==\ 1);}
+\DoxyCodeLine{00401\ }
+\DoxyCodeLine{00402\ \ \ \ \ memcpy(\&secnonce\_tmp,\ \&secnonce[0],\ \textcolor{keyword}{sizeof}(secnonce\_tmp));}
+\DoxyCodeLine{00403\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&secnonce\_tmp,\ \&keypair[0],\ \&keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00404\ \ \ \ \ \textcolor{comment}{/*\ The\ secnonce\ is\ set\ to\ 0\ and\ subsequent\ signing\ attempts\ fail\ */}}
+\DoxyCodeLine{00405\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&secnonce\_tmp,\ zeros132,\ \textcolor{keyword}{sizeof}(secnonce\_tmp))\ ==\ 0);}
+\DoxyCodeLine{00406\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&secnonce\_tmp,\ \&keypair[0],\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00407\ \ \ \ \ memcpy(\&secnonce\_tmp,\ \&secnonce[0],\ \textcolor{keyword}{sizeof}(secnonce\_tmp));}
+\DoxyCodeLine{00408\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ NULL,\ \&secnonce\_tmp,\ \&keypair[0],\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00409\ \ \ \ \ memcpy(\&secnonce\_tmp,\ \&secnonce[0],\ \textcolor{keyword}{sizeof}(secnonce\_tmp));}
+\DoxyCodeLine{00410\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ NULL,\ \&keypair[0],\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00411\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&invalid\_secnonce,\ \&keypair[0],\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00412\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&secnonce\_tmp,\ NULL,\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00413\ \ \ \ \ memcpy(\&secnonce\_tmp,\ \&secnonce[0],\ \textcolor{keyword}{sizeof}(secnonce\_tmp));}
+\DoxyCodeLine{00414\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&secnonce\_tmp,\ \&invalid\_keypair,\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00415\ \ \ \ \ memcpy(\&secnonce\_tmp,\ \&secnonce[0],\ \textcolor{keyword}{sizeof}(secnonce\_tmp));}
+\DoxyCodeLine{00416\ \ \ \ \ \{}
+\DoxyCodeLine{00417\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk\_tmp[32];}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ secp256k1\_keypair\ keypair\_tmp;}
+\DoxyCodeLine{00419\ \ \ \ \ \ \ \ \ testrand256(sk\_tmp);}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair\_tmp,\ sk\_tmp));}
+\DoxyCodeLine{00421\ \ \ \ \ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&secnonce\_tmp,\ \&keypair\_tmp,\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00422\ \ \ \ \ \ \ \ \ memcpy(\&secnonce\_tmp,\ \&secnonce[0],\ \textcolor{keyword}{sizeof}(secnonce\_tmp));}
+\DoxyCodeLine{00423\ \ \ \ \ \}}
+\DoxyCodeLine{00424\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&secnonce\_tmp,\ \&keypair[0],\ NULL,\ \&session));}
+\DoxyCodeLine{00425\ \ \ \ \ memcpy(\&secnonce\_tmp,\ \&secnonce[0],\ \textcolor{keyword}{sizeof}(secnonce\_tmp));}
+\DoxyCodeLine{00426\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&secnonce\_tmp,\ \&keypair[0],\ \&invalid\_keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00427\ \ \ \ \ memcpy(\&secnonce\_tmp,\ \&secnonce[0],\ \textcolor{keyword}{sizeof}(secnonce\_tmp));}
+\DoxyCodeLine{00428\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&secnonce\_tmp,\ \&keypair[0],\ \&keyagg\_cache,\ NULL));}
+\DoxyCodeLine{00429\ \ \ \ \ memcpy(\&secnonce\_tmp,\ \&secnonce[0],\ \textcolor{keyword}{sizeof}(secnonce\_tmp));}
+\DoxyCodeLine{00430\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&secnonce\_tmp,\ \&keypair[0],\ \&keyagg\_cache,\ \&invalid\_session));}
+\DoxyCodeLine{00431\ \ \ \ \ memcpy(\&secnonce\_tmp,\ \&secnonce[0],\ \textcolor{keyword}{sizeof}(secnonce\_tmp));}
+\DoxyCodeLine{00432\ }
+\DoxyCodeLine{00433\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&secnonce[0],\ \&keypair[0],\ \&keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00434\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[1],\ \&secnonce[1],\ \&keypair[1],\ \&keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00435\ }
+\DoxyCodeLine{00436\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_serialize(CTX,\ buf,\ \&partial\_sig[0])\ ==\ 1);}
+\DoxyCodeLine{00437\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_serialize(CTX,\ NULL,\ \&partial\_sig[0]));}
+\DoxyCodeLine{00438\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_serialize(CTX,\ buf,\ NULL));}
+\DoxyCodeLine{00439\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_serialize(CTX,\ buf,\ \&invalid\_partial\_sig));}
+\DoxyCodeLine{00440\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_parse(CTX,\ \&partial\_sig[0],\ buf)\ ==\ 1);}
+\DoxyCodeLine{00441\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_parse(CTX,\ NULL,\ buf));}
+\DoxyCodeLine{00442\ \ \ \ \ \{}
+\DoxyCodeLine{00443\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ parsing\ failure\ results\ in\ an\ invalid\ sig\ */}}
+\DoxyCodeLine{00444\ \ \ \ \ \ \ \ \ secp256k1\_musig\_partial\_sig\ tmp;}
+\DoxyCodeLine{00445\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_parse(CTX,\ \&tmp,\ max64)\ ==\ 0);}
+\DoxyCodeLine{00446\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&tmp,\ zeros132,\ \textcolor{keyword}{sizeof}(partial\_sig[0]))\ ==\ 0);}
+\DoxyCodeLine{00447\ \ \ \ \ \}}
+\DoxyCodeLine{00448\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_parse(CTX,\ \&partial\_sig[0],\ NULL));}
+\DoxyCodeLine{00449\ }
+\DoxyCodeLine{00450\ \ \ \ \ \{}
+\DoxyCodeLine{00451\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ serialize\ and\ parse\ results\ in\ the\ same\ value\ */}}
+\DoxyCodeLine{00452\ \ \ \ \ \ \ \ \ secp256k1\_musig\_partial\_sig\ tmp;}
+\DoxyCodeLine{00453\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_serialize(CTX,\ buf,\ \&partial\_sig[0])\ ==\ 1);}
+\DoxyCodeLine{00454\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_parse(CTX,\ \&tmp,\ buf)\ ==\ 1);}
+\DoxyCodeLine{00455\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&tmp,\ \&partial\_sig[0],\ \textcolor{keyword}{sizeof}(tmp))\ ==\ 0);}
+\DoxyCodeLine{00456\ \ \ \ \ \}}
+\DoxyCodeLine{00457\ }
+\DoxyCodeLine{00459\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[0],\ \&pubnonce[0],\ \&pk[0],\ \&keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00460\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[1],\ \&pubnonce[0],\ \&pk[0],\ \&keyagg\_cache,\ \&session)\ ==\ 0);}
+\DoxyCodeLine{00461\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_verify(CTX,\ NULL,\ \&pubnonce[0],\ \&pk[0],\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00462\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&invalid\_partial\_sig,\ \&pubnonce[0],\ \&pk[0],\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00463\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[0],\ NULL,\ \&pk[0],\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00464\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[0],\ \&invalid\_pubnonce,\ \&pk[0],\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00465\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[0],\ \&pubnonce[0],\ NULL,\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00466\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[0],\ \&pubnonce[0],\ \&invalid\_pk,\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00467\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[0],\ \&pubnonce[0],\ \&pk[0],\ NULL,\ \&session));}
+\DoxyCodeLine{00468\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[0],\ \&pubnonce[0],\ \&pk[0],\ \&invalid\_keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00469\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[0],\ \&pubnonce[0],\ \&pk[0],\ \&keyagg\_cache,\ NULL));}
+\DoxyCodeLine{00470\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[0],\ \&pubnonce[0],\ \&pk[0],\ \&keyagg\_cache,\ \&invalid\_session));}
+\DoxyCodeLine{00471\ }
+\DoxyCodeLine{00472\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[0],\ \&pubnonce[0],\ \&pk[0],\ \&keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00473\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[1],\ \&pubnonce[1],\ \&pk[1],\ \&keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00474\ }
+\DoxyCodeLine{00476\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_agg(CTX,\ pre\_sig,\ \&session,\ partial\_sig\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00477\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_agg(CTX,\ NULL,\ \&session,\ partial\_sig\_ptr,\ 2));}
+\DoxyCodeLine{00478\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_agg(CTX,\ pre\_sig,\ NULL,\ partial\_sig\_ptr,\ 2));}
+\DoxyCodeLine{00479\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_agg(CTX,\ pre\_sig,\ \&invalid\_session,\ partial\_sig\_ptr,\ 2));}
+\DoxyCodeLine{00480\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_agg(CTX,\ pre\_sig,\ \&session,\ NULL,\ 2));}
+\DoxyCodeLine{00481\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_agg(CTX,\ pre\_sig,\ \&session,\ invalid\_partial\_sig\_ptr,\ 2));}
+\DoxyCodeLine{00482\ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sig\_agg(CTX,\ pre\_sig,\ \&session,\ partial\_sig\_ptr,\ 0));}
+\DoxyCodeLine{00483\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_agg(CTX,\ pre\_sig,\ \&session,\ partial\_sig\_ptr,\ 1)\ ==\ 1);}
+\DoxyCodeLine{00484\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_agg(CTX,\ pre\_sig,\ \&session,\ partial\_sig\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00485\ \}}
+\DoxyCodeLine{00486\ }
+\DoxyCodeLine{00487\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_nonce\_bitflip(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ **args,\ \textcolor{keywordtype}{size\_t}\ n\_flip,\ \textcolor{keywordtype}{size\_t}\ n\_bytes)\ \{}
+\DoxyCodeLine{00488\ \ \ \ \ secp256k1\_scalar\ k1[2],\ k2[2];}
+\DoxyCodeLine{00489\ }
+\DoxyCodeLine{00490\ \ \ \ \ secp256k1\_nonce\_function\_musig(k1,\ args[0],\ args[1],\ args[2],\ args[3],\ args[4],\ args[5]);}
+\DoxyCodeLine{00491\ \ \ \ \ testrand\_flip(args[n\_flip],\ n\_bytes);}
+\DoxyCodeLine{00492\ \ \ \ \ secp256k1\_nonce\_function\_musig(k2,\ args[0],\ args[1],\ args[2],\ args[3],\ args[4],\ args[5]);}
+\DoxyCodeLine{00493\ \ \ \ \ CHECK(secp256k1\_scalar\_eq(\&k1[0],\ \&k2[0])\ ==\ 0);}
+\DoxyCodeLine{00494\ \ \ \ \ CHECK(secp256k1\_scalar\_eq(\&k1[1],\ \&k2[1])\ ==\ 0);}
+\DoxyCodeLine{00495\ \}}
+\DoxyCodeLine{00496\ }
+\DoxyCodeLine{00497\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_nonce\_test(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00498\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *args[6];}
+\DoxyCodeLine{00499\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ session\_secrand[32];}
+\DoxyCodeLine{00500\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32];}
+\DoxyCodeLine{00501\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pk[33];}
+\DoxyCodeLine{00502\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32];}
+\DoxyCodeLine{00503\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ agg\_pk[32];}
+\DoxyCodeLine{00504\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ extra\_input[32];}
+\DoxyCodeLine{00505\ \ \ \ \ \textcolor{keywordtype}{int}\ i,\ j;}
+\DoxyCodeLine{00506\ \ \ \ \ secp256k1\_scalar\ k[6][2];}
+\DoxyCodeLine{00507\ }
+\DoxyCodeLine{00508\ \ \ \ \ testrand\_bytes\_test(session\_secrand,\ \textcolor{keyword}{sizeof}(session\_secrand));}
+\DoxyCodeLine{00509\ \ \ \ \ testrand\_bytes\_test(sk,\ \textcolor{keyword}{sizeof}(sk));}
+\DoxyCodeLine{00510\ \ \ \ \ testrand\_bytes\_test(pk,\ \textcolor{keyword}{sizeof}(pk));}
+\DoxyCodeLine{00511\ \ \ \ \ testrand\_bytes\_test(msg,\ \textcolor{keyword}{sizeof}(msg));}
+\DoxyCodeLine{00512\ \ \ \ \ testrand\_bytes\_test(agg\_pk,\ \textcolor{keyword}{sizeof}(agg\_pk));}
+\DoxyCodeLine{00513\ \ \ \ \ testrand\_bytes\_test(extra\_input,\ \textcolor{keyword}{sizeof}(extra\_input));}
+\DoxyCodeLine{00514\ }
+\DoxyCodeLine{00515\ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ a\ bitflip\ in\ an\ argument\ results\ in\ different\ nonces.\ */}}
+\DoxyCodeLine{00516\ \ \ \ \ args[0]\ =\ session\_secrand;}
+\DoxyCodeLine{00517\ \ \ \ \ args[1]\ =\ msg;}
+\DoxyCodeLine{00518\ \ \ \ \ args[2]\ =\ sk;}
+\DoxyCodeLine{00519\ \ \ \ \ args[3]\ =\ pk;}
+\DoxyCodeLine{00520\ \ \ \ \ args[4]\ =\ agg\_pk;}
+\DoxyCodeLine{00521\ \ \ \ \ args[5]\ =\ extra\_input;}
+\DoxyCodeLine{00522\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ COUNT;\ i++)\ \{}
+\DoxyCodeLine{00523\ \ \ \ \ \ \ \ \ musig\_nonce\_bitflip(args,\ 0,\ \textcolor{keyword}{sizeof}(session\_secrand));}
+\DoxyCodeLine{00524\ \ \ \ \ \ \ \ \ musig\_nonce\_bitflip(args,\ 1,\ \textcolor{keyword}{sizeof}(msg));}
+\DoxyCodeLine{00525\ \ \ \ \ \ \ \ \ musig\_nonce\_bitflip(args,\ 2,\ \textcolor{keyword}{sizeof}(sk));}
+\DoxyCodeLine{00526\ \ \ \ \ \ \ \ \ musig\_nonce\_bitflip(args,\ 3,\ \textcolor{keyword}{sizeof}(pk));}
+\DoxyCodeLine{00527\ \ \ \ \ \ \ \ \ musig\_nonce\_bitflip(args,\ 4,\ \textcolor{keyword}{sizeof}(agg\_pk));}
+\DoxyCodeLine{00528\ \ \ \ \ \ \ \ \ musig\_nonce\_bitflip(args,\ 5,\ \textcolor{keyword}{sizeof}(extra\_input));}
+\DoxyCodeLine{00529\ \ \ \ \ \}}
+\DoxyCodeLine{00530\ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ if\ any\ argument\ is\ NULL,\ a\ different\ nonce\ is\ produced\ than\ if}}
+\DoxyCodeLine{00531\ \textcolor{comment}{\ \ \ \ \ *\ any\ other\ argument\ is\ NULL.\ */}}
+\DoxyCodeLine{00532\ \ \ \ \ memcpy(msg,\ session\_secrand,\ \textcolor{keyword}{sizeof}(msg));}
+\DoxyCodeLine{00533\ \ \ \ \ memcpy(sk,\ session\_secrand,\ \textcolor{keyword}{sizeof}(sk));}
+\DoxyCodeLine{00534\ \ \ \ \ memcpy(pk,\ session\_secrand,\ \textcolor{keyword}{sizeof}(session\_secrand));}
+\DoxyCodeLine{00535\ \ \ \ \ memcpy(agg\_pk,\ session\_secrand,\ \textcolor{keyword}{sizeof}(agg\_pk));}
+\DoxyCodeLine{00536\ \ \ \ \ memcpy(extra\_input,\ session\_secrand,\ \textcolor{keyword}{sizeof}(extra\_input));}
+\DoxyCodeLine{00537\ \ \ \ \ secp256k1\_nonce\_function\_musig(k[0],\ args[0],\ args[1],\ args[2],\ args[3],\ args[4],\ args[5]);}
+\DoxyCodeLine{00538\ \ \ \ \ secp256k1\_nonce\_function\_musig(k[1],\ args[0],\ NULL,\ args[2],\ args[3],\ args[4],\ args[5]);}
+\DoxyCodeLine{00539\ \ \ \ \ secp256k1\_nonce\_function\_musig(k[2],\ args[0],\ args[1],\ NULL,\ args[3],\ args[4],\ args[5]);}
+\DoxyCodeLine{00540\ \ \ \ \ secp256k1\_nonce\_function\_musig(k[3],\ args[0],\ args[1],\ args[2],\ NULL,\ args[4],\ args[5]);}
+\DoxyCodeLine{00541\ \ \ \ \ secp256k1\_nonce\_function\_musig(k[4],\ args[0],\ args[1],\ args[2],\ args[3],\ NULL,\ args[5]);}
+\DoxyCodeLine{00542\ \ \ \ \ secp256k1\_nonce\_function\_musig(k[5],\ args[0],\ args[1],\ args[2],\ args[3],\ args[4],\ NULL);}
+\DoxyCodeLine{00543\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 6;\ i++)\ \{}
+\DoxyCodeLine{00544\ \ \ \ \ \ \ \ \ CHECK(!secp256k1\_scalar\_eq(\&k[i][0],\ \&k[i][1]));}
+\DoxyCodeLine{00545\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (j\ =\ i+1;\ j\ <\ 6;\ j++)\ \{}
+\DoxyCodeLine{00546\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(!secp256k1\_scalar\_eq(\&k[i][0],\ \&k[j][0]));}
+\DoxyCodeLine{00547\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(!secp256k1\_scalar\_eq(\&k[i][1],\ \&k[j][1]));}
+\DoxyCodeLine{00548\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00549\ \ \ \ \ \}}
+\DoxyCodeLine{00550\ \}}
+\DoxyCodeLine{00551\ }
+\DoxyCodeLine{00552\ \textcolor{comment}{/*\ Checks\ that\ the\ initialized\ tagged\ hashes\ have\ the\ expected}}
+\DoxyCodeLine{00553\ \textcolor{comment}{\ *\ state.\ */}}
+\DoxyCodeLine{00554\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ sha256\_tag\_test(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00555\ \ \ \ \ secp256k1\_sha256\ sha;}
+\DoxyCodeLine{00556\ \ \ \ \ \{}
+\DoxyCodeLine{00557\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ "{}KeyAgg\ list"{}\ */}}
+\DoxyCodeLine{00558\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tag[]\ =\ \{\textcolor{charliteral}{'K'},\ \textcolor{charliteral}{'e'},\ \textcolor{charliteral}{'y'},\ \textcolor{charliteral}{'A'},\ \textcolor{charliteral}{'g'},\ \textcolor{charliteral}{'g'},\ \textcolor{charliteral}{'\ '},\ \textcolor{charliteral}{'l'},\ \textcolor{charliteral}{'i'},\ \textcolor{charliteral}{'s'},\ \textcolor{charliteral}{'t'}\};}
+\DoxyCodeLine{00559\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagglist\_sha256(\&sha);}
+\DoxyCodeLine{00560\ \ \ \ \ \ \ \ \ test\_sha256\_tag\_midstate(\&sha,\ tag,\ \textcolor{keyword}{sizeof}(tag));}
+\DoxyCodeLine{00561\ \ \ \ \ \}}
+\DoxyCodeLine{00562\ \ \ \ \ \{}
+\DoxyCodeLine{00563\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ "{}KeyAgg\ coefficient"{}\ */}}
+\DoxyCodeLine{00564\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tag[]\ =\ \{\textcolor{charliteral}{'K'},\ \textcolor{charliteral}{'e'},\ \textcolor{charliteral}{'y'},\ \textcolor{charliteral}{'A'},\ \textcolor{charliteral}{'g'},\ \textcolor{charliteral}{'g'},\ \textcolor{charliteral}{'\ '},\ \textcolor{charliteral}{'c'},\ \textcolor{charliteral}{'o'},\ \textcolor{charliteral}{'e'},\ \textcolor{charliteral}{'f'},\ \textcolor{charliteral}{'f'},\ \textcolor{charliteral}{'i'},\ \textcolor{charliteral}{'c'},\ \textcolor{charliteral}{'i'},\ \textcolor{charliteral}{'e'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'t'}\};}
+\DoxyCodeLine{00565\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyaggcoef\_sha256(\&sha);}
+\DoxyCodeLine{00566\ \ \ \ \ \ \ \ \ test\_sha256\_tag\_midstate(\&sha,\ tag,\ \textcolor{keyword}{sizeof}(tag));}
+\DoxyCodeLine{00567\ \ \ \ \ \}}
+\DoxyCodeLine{00568\ \ \ \ \ \{}
+\DoxyCodeLine{00569\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ "{}MuSig/aux"{}\ */}}
+\DoxyCodeLine{00570\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tag[]\ =\ \{\ \textcolor{charliteral}{'M'},\ \textcolor{charliteral}{'u'},\ \textcolor{charliteral}{'S'},\ \textcolor{charliteral}{'i'},\ \textcolor{charliteral}{'g'},\ \textcolor{charliteral}{'/'},\ \textcolor{charliteral}{'a'},\ \textcolor{charliteral}{'u'},\ \textcolor{charliteral}{'x'}\ \};}
+\DoxyCodeLine{00571\ \ \ \ \ \ \ \ \ secp256k1\_nonce\_function\_musig\_sha256\_tagged\_aux(\&sha);}
+\DoxyCodeLine{00572\ \ \ \ \ \ \ \ \ test\_sha256\_tag\_midstate(\&sha,\ tag,\ \textcolor{keyword}{sizeof}(tag));}
+\DoxyCodeLine{00573\ \ \ \ \ \}}
+\DoxyCodeLine{00574\ \ \ \ \ \{}
+\DoxyCodeLine{00575\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ "{}MuSig/nonce"{}\ */}}
+\DoxyCodeLine{00576\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tag[]\ =\ \{\ \textcolor{charliteral}{'M'},\ \textcolor{charliteral}{'u'},\ \textcolor{charliteral}{'S'},\ \textcolor{charliteral}{'i'},\ \textcolor{charliteral}{'g'},\ \textcolor{charliteral}{'/'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'o'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'c'},\ \textcolor{charliteral}{'e'}\ \};}
+\DoxyCodeLine{00577\ \ \ \ \ \ \ \ \ secp256k1\_nonce\_function\_musig\_sha256\_tagged(\&sha);}
+\DoxyCodeLine{00578\ \ \ \ \ \ \ \ \ test\_sha256\_tag\_midstate(\&sha,\ tag,\ \textcolor{keyword}{sizeof}(tag));}
+\DoxyCodeLine{00579\ \ \ \ \ \}}
+\DoxyCodeLine{00580\ \ \ \ \ \{}
+\DoxyCodeLine{00581\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ "{}MuSig/noncecoef"{}\ */}}
+\DoxyCodeLine{00582\ \ \ \ \ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tag[]\ =\ \{\ \textcolor{charliteral}{'M'},\ \textcolor{charliteral}{'u'},\ \textcolor{charliteral}{'S'},\ \textcolor{charliteral}{'i'},\ \textcolor{charliteral}{'g'},\ \textcolor{charliteral}{'/'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'o'},\ \textcolor{charliteral}{'n'},\ \textcolor{charliteral}{'c'},\ \textcolor{charliteral}{'e'},\ \textcolor{charliteral}{'c'},\ \textcolor{charliteral}{'o'},\ \textcolor{charliteral}{'e'},\ \textcolor{charliteral}{'f'}\ \};}
+\DoxyCodeLine{00583\ \ \ \ \ \ \ \ \ secp256k1\_musig\_compute\_noncehash\_sha256\_tagged(\&sha);}
+\DoxyCodeLine{00584\ \ \ \ \ \ \ \ \ test\_sha256\_tag\_midstate(\&sha,\ tag,\ \textcolor{keyword}{sizeof}(tag));}
+\DoxyCodeLine{00585\ \ \ \ \ \}}
+\DoxyCodeLine{00586\ \}}
+\DoxyCodeLine{00587\ }
+\DoxyCodeLine{00588\ \textcolor{comment}{/*\ Attempts\ to\ create\ a\ signature\ for\ the\ aggregate\ public\ key\ using\ given\ secret}}
+\DoxyCodeLine{00589\ \textcolor{comment}{\ *\ keys\ and\ keyagg\_cache.\ */}}
+\DoxyCodeLine{00590\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_tweak\_test\_helper(\textcolor{keyword}{const}\ secp256k1\_xonly\_pubkey*\ agg\_pk,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sk0,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sk1,\ secp256k1\_musig\_keyagg\_cache\ *keyagg\_cache)\ \{}
+\DoxyCodeLine{00591\ \ \ \ \ secp256k1\_pubkey\ pk[2];}
+\DoxyCodeLine{00592\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ session\_secrand[2][32];}
+\DoxyCodeLine{00593\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ msg[32];}
+\DoxyCodeLine{00594\ \ \ \ \ secp256k1\_musig\_secnonce\ secnonce[2];}
+\DoxyCodeLine{00595\ \ \ \ \ secp256k1\_musig\_pubnonce\ pubnonce[2];}
+\DoxyCodeLine{00596\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_pubnonce\ *pubnonce\_ptr[2];}
+\DoxyCodeLine{00597\ \ \ \ \ secp256k1\_musig\_aggnonce\ aggnonce;}
+\DoxyCodeLine{00598\ \ \ \ \ secp256k1\_keypair\ keypair[2];}
+\DoxyCodeLine{00599\ \ \ \ \ secp256k1\_musig\_session\ session;}
+\DoxyCodeLine{00600\ \ \ \ \ secp256k1\_musig\_partial\_sig\ partial\_sig[2];}
+\DoxyCodeLine{00601\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_partial\_sig\ *partial\_sig\_ptr[2];}
+\DoxyCodeLine{00602\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ final\_sig[64];}
+\DoxyCodeLine{00603\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00604\ }
+\DoxyCodeLine{00605\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 2;\ i++)\ \{}
+\DoxyCodeLine{00606\ \ \ \ \ \ \ \ \ pubnonce\_ptr[i]\ =\ \&pubnonce[i];}
+\DoxyCodeLine{00607\ \ \ \ \ \ \ \ \ partial\_sig\_ptr[i]\ =\ \&partial\_sig[i];}
+\DoxyCodeLine{00608\ }
+\DoxyCodeLine{00609\ \ \ \ \ \ \ \ \ testrand256(session\_secrand[i]);}
+\DoxyCodeLine{00610\ \ \ \ \ \}}
+\DoxyCodeLine{00611\ \ \ \ \ CHECK(create\_keypair\_and\_pk(\&keypair[0],\ \&pk[0],\ sk0)\ ==\ 1);}
+\DoxyCodeLine{00612\ \ \ \ \ CHECK(create\_keypair\_and\_pk(\&keypair[1],\ \&pk[1],\ sk1)\ ==\ 1);}
+\DoxyCodeLine{00613\ \ \ \ \ testrand256(msg);}
+\DoxyCodeLine{00614\ }
+\DoxyCodeLine{00615\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[0],\ \&pubnonce[0],\ session\_secrand[0],\ sk0,\ \&pk[0],\ NULL,\ NULL,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00616\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce[1],\ \&pubnonce[1],\ session\_secrand[1],\ sk1,\ \&pk[1],\ NULL,\ NULL,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{00617\ }
+\DoxyCodeLine{00618\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_agg(CTX,\ \&aggnonce,\ pubnonce\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00619\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ msg,\ keyagg\_cache)\ ==\ 1);}
+\DoxyCodeLine{00620\ }
+\DoxyCodeLine{00621\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[0],\ \&secnonce[0],\ \&keypair[0],\ keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00622\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig[1],\ \&secnonce[1],\ \&keypair[1],\ keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00623\ }
+\DoxyCodeLine{00624\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[0],\ \&pubnonce[0],\ \&pk[0],\ keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00625\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig[1],\ \&pubnonce[1],\ \&pk[1],\ keyagg\_cache,\ \&session)\ ==\ 1);}
+\DoxyCodeLine{00626\ }
+\DoxyCodeLine{00627\ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_agg(CTX,\ final\_sig,\ \&session,\ partial\_sig\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00628\ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ final\_sig,\ msg,\ \textcolor{keyword}{sizeof}(msg),\ agg\_pk)\ ==\ 1);}
+\DoxyCodeLine{00629\ \}}
+\DoxyCodeLine{00630\ }
+\DoxyCodeLine{00631\ \textcolor{comment}{/*\ Create\ aggregate\ public\ key\ P[0],\ tweak\ multiple\ times\ (using\ xonly\ and}}
+\DoxyCodeLine{00632\ \textcolor{comment}{\ *\ plain\ tweaking)\ and\ test\ signing.\ */}}
+\DoxyCodeLine{00633\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_tweak\_test\_internal(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00634\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[2][32];}
+\DoxyCodeLine{00635\ \ \ \ \ secp256k1\_pubkey\ pk[2];}
+\DoxyCodeLine{00636\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_pubkey\ *pk\_ptr[2];}
+\DoxyCodeLine{00637\ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{00638\ \ \ \ \ \textcolor{keyword}{enum}\ \{\ N\_TWEAKS\ =\ 8\ \};}
+\DoxyCodeLine{00639\ \ \ \ \ secp256k1\_pubkey\ P[N\_TWEAKS\ +\ 1];}
+\DoxyCodeLine{00640\ \ \ \ \ secp256k1\_xonly\_pubkey\ P\_xonly[N\_TWEAKS\ +\ 1];}
+\DoxyCodeLine{00641\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00642\ }
+\DoxyCodeLine{00643\ \ \ \ \ \textcolor{comment}{/*\ Key\ Setup\ */}}
+\DoxyCodeLine{00644\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ 2;\ i++)\ \{}
+\DoxyCodeLine{00645\ \ \ \ \ \ \ \ \ pk\_ptr[i]\ =\ \&pk[i];}
+\DoxyCodeLine{00646\ \ \ \ \ \ \ \ \ testrand256(sk[i]);}
+\DoxyCodeLine{00647\ \ \ \ \ \ \ \ \ CHECK(create\_keypair\_and\_pk(NULL,\ \&pk[i],\ sk[i])\ ==\ 1);}
+\DoxyCodeLine{00648\ \ \ \ \ \}}
+\DoxyCodeLine{00649\ \ \ \ \ \textcolor{comment}{/*\ Compute\ P0\ =\ keyagg(pk0,\ pk1)\ and\ test\ signing\ for\ it\ */}}
+\DoxyCodeLine{00650\ \ \ \ \ CHECK(secp256k1\_musig\_pubkey\_agg(CTX,\ \&P\_xonly[0],\ \&keyagg\_cache,\ pk\_ptr,\ 2)\ ==\ 1);}
+\DoxyCodeLine{00651\ \ \ \ \ musig\_tweak\_test\_helper(\&P\_xonly[0],\ sk[0],\ sk[1],\ \&keyagg\_cache);}
+\DoxyCodeLine{00652\ \ \ \ \ CHECK(secp256k1\_musig\_pubkey\_get(CTX,\ \&P[0],\ \&keyagg\_cache));}
+\DoxyCodeLine{00653\ }
+\DoxyCodeLine{00654\ \ \ \ \ \textcolor{comment}{/*\ Compute\ Pi\ =\ f(Pj)\ +\ tweaki*G\ where\ where\ j\ =\ i-\/1\ and\ try\ signing\ for}}
+\DoxyCodeLine{00655\ \textcolor{comment}{\ \ \ \ \ *\ that\ key.\ If\ xonly\ is\ set\ to\ true,\ the\ function\ f\ normalizes\ the\ input}}
+\DoxyCodeLine{00656\ \textcolor{comment}{\ \ \ \ \ *\ point\ to\ have\ an\ even\ X-\/coordinate\ ("{}xonly-\/tweaking"{}).}}
+\DoxyCodeLine{00657\ \textcolor{comment}{\ \ \ \ \ *\ Otherwise,\ the\ function\ f\ is\ the\ identity\ function.\ */}}
+\DoxyCodeLine{00658\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 1;\ i\ <=\ N\_TWEAKS;\ i++)\ \{}
+\DoxyCodeLine{00659\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tweak[32];}
+\DoxyCodeLine{00660\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ P\_parity;}
+\DoxyCodeLine{00661\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ xonly\ =\ testrand\_bits(1);}
+\DoxyCodeLine{00662\ }
+\DoxyCodeLine{00663\ \ \ \ \ \ \ \ \ testrand256(tweak);}
+\DoxyCodeLine{00664\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (xonly)\ \{}
+\DoxyCodeLine{00665\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_pubkey\_xonly\_tweak\_add(CTX,\ \&P[i],\ \&keyagg\_cache,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00666\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00667\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_pubkey\_ec\_tweak\_add(CTX,\ \&P[i],\ \&keyagg\_cache,\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00668\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00669\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&P\_xonly[i],\ \&P\_parity,\ \&P[i]));}
+\DoxyCodeLine{00670\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Check\ that\ musig\_pubkey\_tweak\_add\ produces\ same\ result\ as}}
+\DoxyCodeLine{00671\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ xonly\_pubkey\_tweak\_add\ or\ ec\_pubkey\_tweak\_add.\ */}}
+\DoxyCodeLine{00672\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (xonly)\ \{}
+\DoxyCodeLine{00673\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ P\_serialized[32];}
+\DoxyCodeLine{00674\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_serialize(CTX,\ P\_serialized,\ \&P\_xonly[i]));}
+\DoxyCodeLine{00675\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_tweak\_add\_check(CTX,\ P\_serialized,\ P\_parity,\ \&P\_xonly[i-\/1],\ tweak)\ ==\ 1);}
+\DoxyCodeLine{00676\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00677\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_pubkey\ tmp\_key\ =\ P[i-\/1];}
+\DoxyCodeLine{00678\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_tweak\_add(CTX,\ \&tmp\_key,\ tweak));}
+\DoxyCodeLine{00679\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&tmp\_key,\ \&P[i],\ \textcolor{keyword}{sizeof}(tmp\_key))\ ==\ 0);}
+\DoxyCodeLine{00680\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00681\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ signing\ for\ P[i]\ */}}
+\DoxyCodeLine{00682\ \ \ \ \ \ \ \ \ musig\_tweak\_test\_helper(\&P\_xonly[i],\ sk[0],\ sk[1],\ \&keyagg\_cache);}
+\DoxyCodeLine{00683\ \ \ \ \ \}}
+\DoxyCodeLine{00684\ \}}
+\DoxyCodeLine{00685\ }
+\DoxyCodeLine{00686\ \textcolor{keywordtype}{int}\ musig\_vectors\_keyagg\_and\_tweak(\textcolor{keyword}{enum}\ MUSIG\_ERROR\ *error,}
+\DoxyCodeLine{00687\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ *keyagg\_cache,}
+\DoxyCodeLine{00688\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *agg\_pk\_ser,}
+\DoxyCodeLine{00689\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pubkeys33[][33],}
+\DoxyCodeLine{00690\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ tweaks32[][32],}
+\DoxyCodeLine{00691\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ key\_indices\_len,}
+\DoxyCodeLine{00692\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ *key\_indices,}
+\DoxyCodeLine{00693\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ tweak\_indices\_len,}
+\DoxyCodeLine{00694\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{size\_t}\ *tweak\_indices,}
+\DoxyCodeLine{00695\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{int}\ *is\_xonly)\ \{}
+\DoxyCodeLine{00696\ \ \ \ \ secp256k1\_pubkey\ pubkeys[MUSIG\_VECTORS\_MAX\_PUBKEYS];}
+\DoxyCodeLine{00697\ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_pubkey\ *pk\_ptr[MUSIG\_VECTORS\_MAX\_PUBKEYS];}
+\DoxyCodeLine{00698\ \ \ \ \ \textcolor{keywordtype}{int}\ i;}
+\DoxyCodeLine{00699\ \ \ \ \ secp256k1\_pubkey\ agg\_pk;}
+\DoxyCodeLine{00700\ \ \ \ \ secp256k1\_xonly\_pubkey\ agg\_pk\_xonly;}
+\DoxyCodeLine{00701\ }
+\DoxyCodeLine{00702\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ (int)key\_indices\_len;\ i++)\ \{}
+\DoxyCodeLine{00703\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_ec\_pubkey\_parse(CTX,\ \&pubkeys[i],\ pubkeys33[key\_indices[i]],\ 33))\ \{}
+\DoxyCodeLine{00704\ \ \ \ \ \ \ \ \ \ \ \ \ *error\ =\ MUSIG\_PUBKEY;}
+\DoxyCodeLine{00705\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00706\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00707\ \ \ \ \ \ \ \ \ pk\_ptr[i]\ =\ \&pubkeys[i];}
+\DoxyCodeLine{00708\ \ \ \ \ \}}
+\DoxyCodeLine{00709\ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_musig\_pubkey\_agg(CTX,\ NULL,\ keyagg\_cache,\ pk\_ptr,\ key\_indices\_len))\ \{}
+\DoxyCodeLine{00710\ \ \ \ \ \ \ \ \ *error\ =\ MUSIG\_OTHER;}
+\DoxyCodeLine{00711\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00712\ \ \ \ \ \}}
+\DoxyCodeLine{00713\ }
+\DoxyCodeLine{00714\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ (int)tweak\_indices\_len;\ i++)\ \{}
+\DoxyCodeLine{00715\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (is\_xonly[i])\ \{}
+\DoxyCodeLine{00716\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_musig\_pubkey\_xonly\_tweak\_add(CTX,\ NULL,\ keyagg\_cache,\ tweaks32[tweak\_indices[i]]))\ \{}
+\DoxyCodeLine{00717\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *error\ =\ MUSIG\_TWEAK;}
+\DoxyCodeLine{00718\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00719\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00720\ \ \ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00721\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_musig\_pubkey\_ec\_tweak\_add(CTX,\ NULL,\ keyagg\_cache,\ tweaks32[tweak\_indices[i]]))\ \{}
+\DoxyCodeLine{00722\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ *error\ =\ MUSIG\_TWEAK;}
+\DoxyCodeLine{00723\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00724\ \ \ \ \ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00725\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00726\ \ \ \ \ \}}
+\DoxyCodeLine{00727\ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_musig\_pubkey\_get(CTX,\ \&agg\_pk,\ keyagg\_cache))\ \{}
+\DoxyCodeLine{00728\ \ \ \ \ \ \ \ \ *error\ =\ MUSIG\_OTHER;}
+\DoxyCodeLine{00729\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00730\ \ \ \ \ \}}
+\DoxyCodeLine{00731\ }
+\DoxyCodeLine{00732\ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_xonly\_pubkey\_from\_pubkey(CTX,\ \&agg\_pk\_xonly,\ NULL,\ \&agg\_pk))\ \{}
+\DoxyCodeLine{00733\ \ \ \ \ \ \ \ \ *error\ =\ MUSIG\_OTHER;}
+\DoxyCodeLine{00734\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00735\ \ \ \ \ \}}
+\DoxyCodeLine{00736\ }
+\DoxyCodeLine{00737\ \ \ \ \ \textcolor{keywordflow}{if}\ (agg\_pk\_ser\ !=\ NULL)\ \{}
+\DoxyCodeLine{00738\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_xonly\_pubkey\_serialize(CTX,\ agg\_pk\_ser,\ \&agg\_pk\_xonly))\ \{}
+\DoxyCodeLine{00739\ \ \ \ \ \ \ \ \ \ \ \ \ *error\ =\ MUSIG\_OTHER;}
+\DoxyCodeLine{00740\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00741\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00742\ \ \ \ \ \}}
+\DoxyCodeLine{00743\ }
+\DoxyCodeLine{00744\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00745\ \}}
+\DoxyCodeLine{00746\ }
+\DoxyCodeLine{00747\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_test\_vectors\_keyagg(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00748\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i;}
+\DoxyCodeLine{00749\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_key\_agg\_vector\ *vector\ =\ \&musig\_key\_agg\_vector;}
+\DoxyCodeLine{00750\ }
+\DoxyCodeLine{00751\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>valid\_case)/\textcolor{keyword}{sizeof}(vector-\/>valid\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{00752\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_key\_agg\_valid\_test\_case\ *c\ =\ \&vector-\/>valid\_case[i];}
+\DoxyCodeLine{00753\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum}\ MUSIG\_ERROR\ error;}
+\DoxyCodeLine{00754\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{00755\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ agg\_pk[32];}
+\DoxyCodeLine{00756\ }
+\DoxyCodeLine{00757\ \ \ \ \ \ \ \ \ CHECK(musig\_vectors\_keyagg\_and\_tweak(\&error,\ \&keyagg\_cache,\ agg\_pk,\ vector-\/>pubkeys,\ vector-\/>tweaks,\ c-\/>key\_indices\_len,\ c-\/>key\_indices,\ 0,\ NULL,\ NULL));}
+\DoxyCodeLine{00758\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(agg\_pk,\ c-\/>expected,\ \textcolor{keyword}{sizeof}(agg\_pk))\ ==\ 0);}
+\DoxyCodeLine{00759\ \ \ \ \ \}}
+\DoxyCodeLine{00760\ }
+\DoxyCodeLine{00761\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>error\_case)/\textcolor{keyword}{sizeof}(vector-\/>error\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{00762\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_key\_agg\_error\_test\_case\ *c\ =\ \&vector-\/>error\_case[i];}
+\DoxyCodeLine{00763\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum}\ MUSIG\_ERROR\ error;}
+\DoxyCodeLine{00764\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{00765\ }
+\DoxyCodeLine{00766\ \ \ \ \ \ \ \ \ CHECK(!musig\_vectors\_keyagg\_and\_tweak(\&error,\ \&keyagg\_cache,\ NULL,\ vector-\/>pubkeys,\ vector-\/>tweaks,\ c-\/>key\_indices\_len,\ c-\/>key\_indices,\ c-\/>tweak\_indices\_len,\ c-\/>tweak\_indices,\ c-\/>is\_xonly));}
+\DoxyCodeLine{00767\ \ \ \ \ \ \ \ \ CHECK(c-\/>error\ ==\ error);}
+\DoxyCodeLine{00768\ \ \ \ \ \}}
+\DoxyCodeLine{00769\ \}}
+\DoxyCodeLine{00770\ }
+\DoxyCodeLine{00771\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_test\_vectors\_noncegen(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00772\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i;}
+\DoxyCodeLine{00773\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_nonce\_gen\_vector\ *vector\ =\ \&musig\_nonce\_gen\_vector;}
+\DoxyCodeLine{00774\ }
+\DoxyCodeLine{00775\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>test\_case)/\textcolor{keyword}{sizeof}(vector-\/>test\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{00776\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_nonce\_gen\_test\_case\ *c\ =\ \&vector-\/>test\_case[i];}
+\DoxyCodeLine{00777\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{00778\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ *keyagg\_cache\_ptr\ =\ NULL;}
+\DoxyCodeLine{00779\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ session\_secrand32[32];}
+\DoxyCodeLine{00780\ \ \ \ \ \ \ \ \ secp256k1\_musig\_secnonce\ secnonce;}
+\DoxyCodeLine{00781\ \ \ \ \ \ \ \ \ secp256k1\_musig\_pubnonce\ pubnonce;}
+\DoxyCodeLine{00782\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *sk\ =\ NULL;}
+\DoxyCodeLine{00783\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *msg\ =\ NULL;}
+\DoxyCodeLine{00784\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *extra\_in\ =\ NULL;}
+\DoxyCodeLine{00785\ \ \ \ \ \ \ \ \ secp256k1\_pubkey\ pk;}
+\DoxyCodeLine{00786\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pubnonce66[66];}
+\DoxyCodeLine{00787\ }
+\DoxyCodeLine{00788\ \ \ \ \ \ \ \ \ memcpy(session\_secrand32,\ c-\/>rand\_,\ 32);}
+\DoxyCodeLine{00789\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (c-\/>has\_sk)\ \{}
+\DoxyCodeLine{00790\ \ \ \ \ \ \ \ \ \ \ \ \ sk\ =\ c-\/>sk;}
+\DoxyCodeLine{00791\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00792\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (c-\/>has\_aggpk)\ \{}
+\DoxyCodeLine{00793\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Create\ keyagg\_cache\ from\ aggpk\ */}}
+\DoxyCodeLine{00794\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_keyagg\_cache\_internal\ cache\_i;}
+\DoxyCodeLine{00795\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_xonly\_pubkey\ aggpk;}
+\DoxyCodeLine{00796\ \ \ \ \ \ \ \ \ \ \ \ \ memset(\&cache\_i,\ 0,\ \textcolor{keyword}{sizeof}(cache\_i));}
+\DoxyCodeLine{00797\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&aggpk,\ c-\/>aggpk));}
+\DoxyCodeLine{00798\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_load(CTX,\ \&cache\_i.pk,\ \&aggpk));}
+\DoxyCodeLine{00799\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_keyagg\_cache\_save(\&keyagg\_cache,\ \&cache\_i);}
+\DoxyCodeLine{00800\ \ \ \ \ \ \ \ \ \ \ \ \ keyagg\_cache\_ptr\ =\ \&keyagg\_cache;}
+\DoxyCodeLine{00801\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00802\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (c-\/>has\_msg)\ \{}
+\DoxyCodeLine{00803\ \ \ \ \ \ \ \ \ \ \ \ \ msg\ =\ c-\/>msg;}
+\DoxyCodeLine{00804\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00805\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (c-\/>has\_extra\_in)\ \{}
+\DoxyCodeLine{00806\ \ \ \ \ \ \ \ \ \ \ \ \ extra\_in\ =\ c-\/>extra\_in;}
+\DoxyCodeLine{00807\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00808\ }
+\DoxyCodeLine{00809\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_parse(CTX,\ \&pk,\ c-\/>pk,\ \textcolor{keyword}{sizeof}(c-\/>pk)));}
+\DoxyCodeLine{00810\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen(CTX,\ \&secnonce,\ \&pubnonce,\ session\_secrand32,\ sk,\ \&pk,\ msg,\ keyagg\_cache\_ptr,\ extra\_in)\ ==\ 1);}
+\DoxyCodeLine{00811\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&secnonce.data[4],\ c-\/>expected\_secnonce,\ 2*32)\ ==\ 0);}
+\DoxyCodeLine{00812\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ The\ last\ element\ of\ the\ secnonce\ is\ the\ public\ key\ (uncompressed\ in}}
+\DoxyCodeLine{00813\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ secp256k1\_musig\_secnonce,\ compressed\ in\ the\ test\ vector\ secnonce).\ */}}
+\DoxyCodeLine{00814\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&secnonce.data[4+2*32],\ \&pk,\ \textcolor{keyword}{sizeof}(pk))\ ==\ 0);}
+\DoxyCodeLine{00815\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&c-\/>expected\_secnonce[2*32],\ c-\/>pk,\ \textcolor{keyword}{sizeof}(c-\/>pk))\ ==\ 0);}
+\DoxyCodeLine{00816\ }
+\DoxyCodeLine{00817\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_serialize(CTX,\ pubnonce66,\ \&pubnonce)\ ==\ 1);}
+\DoxyCodeLine{00818\ \ \ \ \ \ \ \ \ CHECK(\textcolor{keyword}{sizeof}(c-\/>expected\_pubnonce)\ ==\ \textcolor{keyword}{sizeof}(pubnonce66));}
+\DoxyCodeLine{00819\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(pubnonce66,\ c-\/>expected\_pubnonce,\ \textcolor{keyword}{sizeof}(pubnonce66))\ ==\ 0);}
+\DoxyCodeLine{00820\ \ \ \ \ \}}
+\DoxyCodeLine{00821\ \}}
+\DoxyCodeLine{00822\ }
+\DoxyCodeLine{00823\ }
+\DoxyCodeLine{00824\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_test\_vectors\_nonceagg(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00825\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i;}
+\DoxyCodeLine{00826\ \ \ \ \ \textcolor{keywordtype}{int}\ j;}
+\DoxyCodeLine{00827\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_nonce\_agg\_vector\ *vector\ =\ \&musig\_nonce\_agg\_vector;}
+\DoxyCodeLine{00828\ }
+\DoxyCodeLine{00829\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>valid\_case)/\textcolor{keyword}{sizeof}(vector-\/>valid\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{00830\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_nonce\_agg\_test\_case\ *c\ =\ \&vector-\/>valid\_case[i];}
+\DoxyCodeLine{00831\ \ \ \ \ \ \ \ \ secp256k1\_musig\_pubnonce\ pubnonce[2];}
+\DoxyCodeLine{00832\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_pubnonce\ *pubnonce\_ptr[2];}
+\DoxyCodeLine{00833\ \ \ \ \ \ \ \ \ secp256k1\_musig\_aggnonce\ aggnonce;}
+\DoxyCodeLine{00834\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ aggnonce66[66];}
+\DoxyCodeLine{00835\ }
+\DoxyCodeLine{00836\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (j\ =\ 0;\ j\ <\ 2;\ j++)\ \{}
+\DoxyCodeLine{00837\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_parse(CTX,\ \&pubnonce[j],\ vector-\/>pnonces[c-\/>pnonce\_indices[j]])\ ==\ 1);}
+\DoxyCodeLine{00838\ \ \ \ \ \ \ \ \ \ \ \ \ pubnonce\_ptr[j]\ =\ \&pubnonce[j];}
+\DoxyCodeLine{00839\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00840\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_agg(CTX,\ \&aggnonce,\ pubnonce\_ptr,\ 2));}
+\DoxyCodeLine{00841\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_aggnonce\_serialize(CTX,\ aggnonce66,\ \&aggnonce));}
+\DoxyCodeLine{00842\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(aggnonce66,\ c-\/>expected,\ 33)\ ==\ 0);}
+\DoxyCodeLine{00843\ \ \ \ \ \}}
+\DoxyCodeLine{00844\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>error\_case)/\textcolor{keyword}{sizeof}(vector-\/>error\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{00845\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_nonce\_agg\_test\_case\ *c\ =\ \&vector-\/>error\_case[i];}
+\DoxyCodeLine{00846\ \ \ \ \ \ \ \ \ secp256k1\_musig\_pubnonce\ pubnonce[2];}
+\DoxyCodeLine{00847\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (j\ =\ 0;\ j\ <\ 2;\ j++)\ \{}
+\DoxyCodeLine{00848\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ expected\ =\ c-\/>invalid\_nonce\_idx\ !=\ j;}
+\DoxyCodeLine{00849\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(expected\ ==\ secp256k1\_musig\_pubnonce\_parse(CTX,\ \&pubnonce[j],\ vector-\/>pnonces[c-\/>pnonce\_indices[j]]));}
+\DoxyCodeLine{00850\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00851\ \ \ \ \ \}}
+\DoxyCodeLine{00852\ \}}
+\DoxyCodeLine{00853\ }
+\DoxyCodeLine{00854\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_test\_set\_secnonce(secp256k1\_musig\_secnonce\ *secnonce,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *secnonce64,\ \textcolor{keyword}{const}\ secp256k1\_pubkey\ *pubkey)\ \{}
+\DoxyCodeLine{00855\ \ \ \ \ secp256k1\_ge\ pk;}
+\DoxyCodeLine{00856\ \ \ \ \ secp256k1\_scalar\ k[2];}
+\DoxyCodeLine{00857\ }
+\DoxyCodeLine{00858\ \ \ \ \ secp256k1\_scalar\_set\_b32(\&k[0],\ \&secnonce64[0],\ NULL);}
+\DoxyCodeLine{00859\ \ \ \ \ secp256k1\_scalar\_set\_b32(\&k[1],\ \&secnonce64[32],\ NULL);}
+\DoxyCodeLine{00860\ \ \ \ \ CHECK(secp256k1\_pubkey\_load(CTX,\ \&pk,\ pubkey));}
+\DoxyCodeLine{00861\ \ \ \ \ secp256k1\_musig\_secnonce\_save(secnonce,\ k,\ \&pk);}
+\DoxyCodeLine{00862\ \}}
+\DoxyCodeLine{00863\ }
+\DoxyCodeLine{00864\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_test\_vectors\_signverify(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00865\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i;}
+\DoxyCodeLine{00866\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_sign\_verify\_vector\ *vector\ =\ \&musig\_sign\_verify\_vector;}
+\DoxyCodeLine{00867\ }
+\DoxyCodeLine{00868\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>valid\_case)/\textcolor{keyword}{sizeof}(vector-\/>valid\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{00869\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_valid\_case\ *c\ =\ \&vector-\/>valid\_case[i];}
+\DoxyCodeLine{00870\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum}\ MUSIG\_ERROR\ error;}
+\DoxyCodeLine{00871\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{00872\ \ \ \ \ \ \ \ \ secp256k1\_pubkey\ pubkey;}
+\DoxyCodeLine{00873\ \ \ \ \ \ \ \ \ secp256k1\_musig\_pubnonce\ pubnonce;}
+\DoxyCodeLine{00874\ \ \ \ \ \ \ \ \ secp256k1\_musig\_aggnonce\ aggnonce;}
+\DoxyCodeLine{00875\ \ \ \ \ \ \ \ \ secp256k1\_musig\_session\ session;}
+\DoxyCodeLine{00876\ \ \ \ \ \ \ \ \ secp256k1\_musig\_partial\_sig\ partial\_sig;}
+\DoxyCodeLine{00877\ \ \ \ \ \ \ \ \ secp256k1\_musig\_secnonce\ secnonce;}
+\DoxyCodeLine{00878\ \ \ \ \ \ \ \ \ secp256k1\_keypair\ keypair;}
+\DoxyCodeLine{00879\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ partial\_sig32[32];}
+\DoxyCodeLine{00880\ }
+\DoxyCodeLine{00881\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ vector-\/>sk));}
+\DoxyCodeLine{00882\ \ \ \ \ \ \ \ \ CHECK(musig\_vectors\_keyagg\_and\_tweak(\&error,\ \&keyagg\_cache,\ NULL,\ vector-\/>pubkeys,\ NULL,\ c-\/>key\_indices\_len,\ c-\/>key\_indices,\ 0,\ NULL,\ NULL));}
+\DoxyCodeLine{00883\ }
+\DoxyCodeLine{00884\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_aggnonce\_parse(CTX,\ \&aggnonce,\ vector-\/>aggnonces[c-\/>aggnonce\_index]));}
+\DoxyCodeLine{00885\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ vector-\/>msgs[c-\/>msg\_index],\ \&keyagg\_cache));}
+\DoxyCodeLine{00886\ }
+\DoxyCodeLine{00887\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_parse(CTX,\ \&pubkey,\ vector-\/>pubkeys[0],\ \textcolor{keyword}{sizeof}(vector-\/>pubkeys[0])));}
+\DoxyCodeLine{00888\ \ \ \ \ \ \ \ \ musig\_test\_set\_secnonce(\&secnonce,\ vector-\/>secnonces[0],\ \&pubkey);}
+\DoxyCodeLine{00889\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig,\ \&secnonce,\ \&keypair,\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00890\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_serialize(CTX,\ partial\_sig32,\ \&partial\_sig));}
+\DoxyCodeLine{00891\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(partial\_sig32,\ c-\/>expected,\ \textcolor{keyword}{sizeof}(partial\_sig32))\ ==\ 0);}
+\DoxyCodeLine{00892\ }
+\DoxyCodeLine{00893\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_parse(CTX,\ \&pubnonce,\ vector-\/>pubnonces[0]));}
+\DoxyCodeLine{00894\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig,\ \&pubnonce,\ \&pubkey,\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00895\ \ \ \ \ \}}
+\DoxyCodeLine{00896\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>sign\_error\_case)/\textcolor{keyword}{sizeof}(vector-\/>sign\_error\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{00897\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_sign\_error\_case\ *c\ =\ \&vector-\/>sign\_error\_case[i];}
+\DoxyCodeLine{00898\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum}\ MUSIG\_ERROR\ error;}
+\DoxyCodeLine{00899\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{00900\ \ \ \ \ \ \ \ \ secp256k1\_pubkey\ pubkey;}
+\DoxyCodeLine{00901\ \ \ \ \ \ \ \ \ secp256k1\_musig\_aggnonce\ aggnonce;}
+\DoxyCodeLine{00902\ \ \ \ \ \ \ \ \ secp256k1\_musig\_session\ session;}
+\DoxyCodeLine{00903\ \ \ \ \ \ \ \ \ secp256k1\_musig\_partial\_sig\ partial\_sig;}
+\DoxyCodeLine{00904\ \ \ \ \ \ \ \ \ secp256k1\_musig\_secnonce\ secnonce;}
+\DoxyCodeLine{00905\ \ \ \ \ \ \ \ \ secp256k1\_keypair\ keypair;}
+\DoxyCodeLine{00906\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ expected;}
+\DoxyCodeLine{00907\ }
+\DoxyCodeLine{00908\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (i\ ==\ 0)\ \{}
+\DoxyCodeLine{00909\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Skip\ this\ vector\ since\ the\ implementation\ does\ not\ error\ out\ when}}
+\DoxyCodeLine{00910\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ *\ the\ signing\ key\ does\ not\ belong\ to\ any\ pubkey.\ */}}
+\DoxyCodeLine{00911\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00912\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00913\ }
+\DoxyCodeLine{00914\ \ \ \ \ \ \ \ \ expected\ =\ c-\/>error\ !=\ MUSIG\_PUBKEY;}
+\DoxyCodeLine{00915\ \ \ \ \ \ \ \ \ CHECK(expected\ ==\ musig\_vectors\_keyagg\_and\_tweak(\&error,\ \&keyagg\_cache,\ NULL,\ vector-\/>pubkeys,\ NULL,\ c-\/>key\_indices\_len,\ c-\/>key\_indices,\ 0,\ NULL,\ NULL));}
+\DoxyCodeLine{00916\ \ \ \ \ \ \ \ \ CHECK(expected\ ||\ c-\/>error\ ==\ error);}
+\DoxyCodeLine{00917\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!expected)\ \{}
+\DoxyCodeLine{00918\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00919\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00920\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_parse(CTX,\ \&pubkey,\ vector-\/>pubkeys[0],\ \textcolor{keyword}{sizeof}(vector-\/>pubkeys[0])));}
+\DoxyCodeLine{00921\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ vector-\/>sk));}
+\DoxyCodeLine{00922\ }
+\DoxyCodeLine{00923\ \ \ \ \ \ \ \ \ expected\ =\ c-\/>error\ !=\ MUSIG\_AGGNONCE;}
+\DoxyCodeLine{00924\ \ \ \ \ \ \ \ \ CHECK(expected\ ==\ secp256k1\_musig\_aggnonce\_parse(CTX,\ \&aggnonce,\ vector-\/>aggnonces[c-\/>aggnonce\_index]));}
+\DoxyCodeLine{00925\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!expected)\ \{}
+\DoxyCodeLine{00926\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00927\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00928\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ vector-\/>msgs[c-\/>msg\_index],\ \&keyagg\_cache));}
+\DoxyCodeLine{00929\ }
+\DoxyCodeLine{00930\ \ \ \ \ \ \ \ \ expected\ =\ c-\/>error\ !=\ MUSIG\_SECNONCE;}
+\DoxyCodeLine{00931\ \ \ \ \ \ \ \ \ CHECK(!expected);}
+\DoxyCodeLine{00932\ \ \ \ \ \ \ \ \ musig\_test\_set\_secnonce(\&secnonce,\ vector-\/>secnonces[c-\/>secnonce\_index],\ \&pubkey);}
+\DoxyCodeLine{00933\ \ \ \ \ \ \ \ \ CHECK\_ILLEGAL(CTX,\ secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig,\ \&secnonce,\ \&keypair,\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00934\ \ \ \ \ \}}
+\DoxyCodeLine{00935\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>verify\_fail\_case)/\textcolor{keyword}{sizeof}(vector-\/>verify\_fail\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{00936\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_verify\_fail\_error\_case\ *c\ =\ \&vector-\/>verify\_fail\_case[i];}
+\DoxyCodeLine{00937\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum}\ MUSIG\_ERROR\ error;}
+\DoxyCodeLine{00938\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{00939\ \ \ \ \ \ \ \ \ secp256k1\_musig\_aggnonce\ aggnonce;}
+\DoxyCodeLine{00940\ \ \ \ \ \ \ \ \ secp256k1\_musig\_session\ session;}
+\DoxyCodeLine{00941\ \ \ \ \ \ \ \ \ secp256k1\_musig\_partial\_sig\ partial\_sig;}
+\DoxyCodeLine{00942\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum}\ \{\ NUM\_PUBNONCES\ =\ 3\ \};}
+\DoxyCodeLine{00943\ \ \ \ \ \ \ \ \ secp256k1\_musig\_pubnonce\ pubnonce[NUM\_PUBNONCES];}
+\DoxyCodeLine{00944\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_pubnonce\ *pubnonce\_ptr[NUM\_PUBNONCES];}
+\DoxyCodeLine{00945\ \ \ \ \ \ \ \ \ secp256k1\_pubkey\ pubkey;}
+\DoxyCodeLine{00946\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ expected;}
+\DoxyCodeLine{00947\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ j;}
+\DoxyCodeLine{00948\ }
+\DoxyCodeLine{00949\ \ \ \ \ \ \ \ \ CHECK(NUM\_PUBNONCES\ <=\ c-\/>nonce\_indices\_len);}
+\DoxyCodeLine{00950\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (j\ =\ 0;\ j\ <\ c-\/>nonce\_indices\_len;\ j++)\ \{}
+\DoxyCodeLine{00951\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_parse(CTX,\ \&pubnonce[j],\ vector-\/>pubnonces[c-\/>nonce\_indices[j]]));}
+\DoxyCodeLine{00952\ \ \ \ \ \ \ \ \ \ \ \ \ pubnonce\_ptr[j]\ =\ \&pubnonce[j];}
+\DoxyCodeLine{00953\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00954\ }
+\DoxyCodeLine{00955\ \ \ \ \ \ \ \ \ CHECK(musig\_vectors\_keyagg\_and\_tweak(\&error,\ \&keyagg\_cache,\ NULL,\ vector-\/>pubkeys,\ NULL,\ c-\/>key\_indices\_len,\ c-\/>key\_indices,\ 0,\ NULL,\ NULL));}
+\DoxyCodeLine{00956\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_agg(CTX,\ \&aggnonce,\ pubnonce\_ptr,\ c-\/>nonce\_indices\_len)\ ==\ 1);}
+\DoxyCodeLine{00957\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ vector-\/>msgs[c-\/>msg\_index],\ \&keyagg\_cache));}
+\DoxyCodeLine{00958\ }
+\DoxyCodeLine{00959\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_parse(CTX,\ \&pubkey,\ vector-\/>pubkeys[c-\/>signer\_index],\ \textcolor{keyword}{sizeof}(vector-\/>pubkeys[0])));}
+\DoxyCodeLine{00960\ }
+\DoxyCodeLine{00961\ \ \ \ \ \ \ \ \ expected\ =\ c-\/>error\ !=\ MUSIG\_SIG;}
+\DoxyCodeLine{00962\ \ \ \ \ \ \ \ \ CHECK(expected\ ==\ secp256k1\_musig\_partial\_sig\_parse(CTX,\ \&partial\_sig,\ c-\/>sig));}
+\DoxyCodeLine{00963\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!expected)\ \{}
+\DoxyCodeLine{00964\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00965\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00966\ \ \ \ \ \ \ \ \ expected\ =\ c-\/>error\ !=\ MUSIG\_SIG\_VERIFY;}
+\DoxyCodeLine{00967\ \ \ \ \ \ \ \ \ CHECK(expected\ ==\ secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig,\ pubnonce,\ \&pubkey,\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{00968\ \ \ \ \ \}}
+\DoxyCodeLine{00969\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>verify\_error\_case)/\textcolor{keyword}{sizeof}(vector-\/>verify\_error\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{00970\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_verify\_fail\_error\_case\ *c\ =\ \&vector-\/>verify\_error\_case[i];}
+\DoxyCodeLine{00971\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum}\ MUSIG\_ERROR\ error;}
+\DoxyCodeLine{00972\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{00973\ \ \ \ \ \ \ \ \ secp256k1\_musig\_pubnonce\ pubnonce;}
+\DoxyCodeLine{00974\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ expected;}
+\DoxyCodeLine{00975\ }
+\DoxyCodeLine{00976\ \ \ \ \ \ \ \ \ expected\ =\ c-\/>error\ !=\ MUSIG\_PUBKEY;}
+\DoxyCodeLine{00977\ \ \ \ \ \ \ \ \ CHECK(expected\ ==\ musig\_vectors\_keyagg\_and\_tweak(\&error,\ \&keyagg\_cache,\ NULL,\ vector-\/>pubkeys,\ NULL,\ c-\/>key\_indices\_len,\ c-\/>key\_indices,\ 0,\ NULL,\ NULL));}
+\DoxyCodeLine{00978\ \ \ \ \ \ \ \ \ CHECK(expected\ ||\ c-\/>error\ ==\ error);}
+\DoxyCodeLine{00979\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!expected)\ \{}
+\DoxyCodeLine{00980\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{continue};}
+\DoxyCodeLine{00981\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00982\ \ \ \ \ \ \ \ \ expected\ =\ c-\/>error\ !=\ MUSIG\_PUBNONCE;}
+\DoxyCodeLine{00983\ \ \ \ \ \ \ \ \ CHECK(expected\ ==\ secp256k1\_musig\_pubnonce\_parse(CTX,\ \&pubnonce,\ vector-\/>pubnonces[c-\/>nonce\_indices[c-\/>signer\_index]]));}
+\DoxyCodeLine{00984\ \ \ \ \ \}}
+\DoxyCodeLine{00985\ \}}
+\DoxyCodeLine{00986\ }
+\DoxyCodeLine{00987\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_test\_vectors\_tweak(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{00988\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i;}
+\DoxyCodeLine{00989\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_tweak\_vector\ *vector\ =\ \&musig\_tweak\_vector;}
+\DoxyCodeLine{00990\ \ \ \ \ secp256k1\_pubkey\ pubkey;}
+\DoxyCodeLine{00991\ \ \ \ \ secp256k1\_musig\_aggnonce\ aggnonce;}
+\DoxyCodeLine{00992\ \ \ \ \ secp256k1\_musig\_secnonce\ secnonce;}
+\DoxyCodeLine{00993\ }
+\DoxyCodeLine{00994\ \ \ \ \ CHECK(secp256k1\_musig\_aggnonce\_parse(CTX,\ \&aggnonce,\ vector-\/>aggnonce));}
+\DoxyCodeLine{00995\ \ \ \ \ CHECK(secp256k1\_ec\_pubkey\_parse(CTX,\ \&pubkey,\ vector-\/>pubkeys[0],\ \textcolor{keyword}{sizeof}(vector-\/>pubkeys[0])));}
+\DoxyCodeLine{00996\ }
+\DoxyCodeLine{00997\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>valid\_case)/\textcolor{keyword}{sizeof}(vector-\/>valid\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{00998\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_tweak\_case\ *c\ =\ \&vector-\/>valid\_case[i];}
+\DoxyCodeLine{00999\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum}\ MUSIG\_ERROR\ error;}
+\DoxyCodeLine{01000\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{01001\ \ \ \ \ \ \ \ \ secp256k1\_musig\_pubnonce\ pubnonce;}
+\DoxyCodeLine{01002\ \ \ \ \ \ \ \ \ secp256k1\_musig\_session\ session;}
+\DoxyCodeLine{01003\ \ \ \ \ \ \ \ \ secp256k1\_musig\_partial\_sig\ partial\_sig;}
+\DoxyCodeLine{01004\ \ \ \ \ \ \ \ \ secp256k1\_keypair\ keypair;}
+\DoxyCodeLine{01005\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ partial\_sig32[32];}
+\DoxyCodeLine{01006\ }
+\DoxyCodeLine{01007\ \ \ \ \ \ \ \ \ musig\_test\_set\_secnonce(\&secnonce,\ vector-\/>secnonce,\ \&pubkey);}
+\DoxyCodeLine{01008\ }
+\DoxyCodeLine{01009\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ vector-\/>sk));}
+\DoxyCodeLine{01010\ \ \ \ \ \ \ \ \ CHECK(musig\_vectors\_keyagg\_and\_tweak(\&error,\ \&keyagg\_cache,\ NULL,\ vector-\/>pubkeys,\ vector-\/>tweaks,\ c-\/>key\_indices\_len,\ c-\/>key\_indices,\ c-\/>tweak\_indices\_len,\ c-\/>tweak\_indices,\ c-\/>is\_xonly));}
+\DoxyCodeLine{01011\ }
+\DoxyCodeLine{01012\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ vector-\/>msg,\ \&keyagg\_cache));}
+\DoxyCodeLine{01013\ }
+\DoxyCodeLine{01014\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sign(CTX,\ \&partial\_sig,\ \&secnonce,\ \&keypair,\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{01015\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_serialize(CTX,\ partial\_sig32,\ \&partial\_sig));}
+\DoxyCodeLine{01016\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(partial\_sig32,\ c-\/>expected,\ \textcolor{keyword}{sizeof}(partial\_sig32))\ ==\ 0);}
+\DoxyCodeLine{01017\ }
+\DoxyCodeLine{01018\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_parse(CTX,\ \&pubnonce,\ vector-\/>pubnonces[c-\/>nonce\_indices[c-\/>signer\_index]]));}
+\DoxyCodeLine{01019\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_verify(CTX,\ \&partial\_sig,\ \&pubnonce,\ \&pubkey,\ \&keyagg\_cache,\ \&session));}
+\DoxyCodeLine{01020\ \ \ \ \ \}}
+\DoxyCodeLine{01021\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>error\_case)/\textcolor{keyword}{sizeof}(vector-\/>error\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{01022\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_tweak\_case\ *c\ =\ \&vector-\/>error\_case[i];}
+\DoxyCodeLine{01023\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum}\ MUSIG\_ERROR\ error;}
+\DoxyCodeLine{01024\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{01025\ \ \ \ \ \ \ \ \ CHECK(!musig\_vectors\_keyagg\_and\_tweak(\&error,\ \&keyagg\_cache,\ NULL,\ vector-\/>pubkeys,\ vector-\/>tweaks,\ c-\/>key\_indices\_len,\ c-\/>key\_indices,\ c-\/>tweak\_indices\_len,\ c-\/>tweak\_indices,\ c-\/>is\_xonly));}
+\DoxyCodeLine{01026\ \ \ \ \ \ \ \ \ CHECK(error\ ==\ MUSIG\_TWEAK);}
+\DoxyCodeLine{01027\ \ \ \ \ \}}
+\DoxyCodeLine{01028\ \}}
+\DoxyCodeLine{01029\ }
+\DoxyCodeLine{01030\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_test\_vectors\_sigagg(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{01031\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ i,\ j;}
+\DoxyCodeLine{01032\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_sig\_agg\_vector\ *vector\ =\ \&musig\_sig\_agg\_vector;}
+\DoxyCodeLine{01033\ }
+\DoxyCodeLine{01034\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>valid\_case)/\textcolor{keyword}{sizeof}(vector-\/>valid\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{01035\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_sig\_agg\_case\ *c\ =\ \&vector-\/>valid\_case[i];}
+\DoxyCodeLine{01036\ \ \ \ \ \ \ \ \ \textcolor{keyword}{enum}\ MUSIG\_ERROR\ error;}
+\DoxyCodeLine{01037\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ final\_sig[64];}
+\DoxyCodeLine{01038\ \ \ \ \ \ \ \ \ secp256k1\_musig\_keyagg\_cache\ keyagg\_cache;}
+\DoxyCodeLine{01039\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ agg\_pk32[32];}
+\DoxyCodeLine{01040\ \ \ \ \ \ \ \ \ secp256k1\_xonly\_pubkey\ agg\_pk;}
+\DoxyCodeLine{01041\ \ \ \ \ \ \ \ \ secp256k1\_musig\_aggnonce\ aggnonce;}
+\DoxyCodeLine{01042\ \ \ \ \ \ \ \ \ secp256k1\_musig\_session\ session;}
+\DoxyCodeLine{01043\ \ \ \ \ \ \ \ \ secp256k1\_musig\_partial\_sig\ partial\_sig[(\textcolor{keyword}{sizeof}(vector-\/>psigs)/\textcolor{keyword}{sizeof}(vector-\/>psigs[0]))];}
+\DoxyCodeLine{01044\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ secp256k1\_musig\_partial\_sig\ *partial\_sig\_ptr[(\textcolor{keyword}{sizeof}(vector-\/>psigs)/\textcolor{keyword}{sizeof}(vector-\/>psigs[0]))];}
+\DoxyCodeLine{01045\ }
+\DoxyCodeLine{01046\ \ \ \ \ \ \ \ \ CHECK(musig\_vectors\_keyagg\_and\_tweak(\&error,\ \&keyagg\_cache,\ agg\_pk32,\ vector-\/>pubkeys,\ vector-\/>tweaks,\ c-\/>key\_indices\_len,\ c-\/>key\_indices,\ c-\/>tweak\_indices\_len,\ c-\/>tweak\_indices,\ c-\/>is\_xonly));}
+\DoxyCodeLine{01047\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_aggnonce\_parse(CTX,\ \&aggnonce,\ c-\/>aggnonce));}
+\DoxyCodeLine{01048\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_process(CTX,\ \&session,\ \&aggnonce,\ vector-\/>msg,\ \&keyagg\_cache));}
+\DoxyCodeLine{01049\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (j\ =\ 0;\ j\ <\ c-\/>psig\_indices\_len;\ j++)\ \{}
+\DoxyCodeLine{01050\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_parse(CTX,\ \&partial\_sig[j],\ vector-\/>psigs[c-\/>psig\_indices[j]]));}
+\DoxyCodeLine{01051\ \ \ \ \ \ \ \ \ \ \ \ \ partial\_sig\_ptr[j]\ =\ \&partial\_sig[j];}
+\DoxyCodeLine{01052\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01053\ }
+\DoxyCodeLine{01054\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_musig\_partial\_sig\_agg(CTX,\ final\_sig,\ \&session,\ partial\_sig\_ptr,\ c-\/>psig\_indices\_len)\ ==\ 1);}
+\DoxyCodeLine{01055\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_memcmp\_var(final\_sig,\ c-\/>expected,\ \textcolor{keyword}{sizeof}(final\_sig))\ ==\ 0);}
+\DoxyCodeLine{01056\ }
+\DoxyCodeLine{01057\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_xonly\_pubkey\_parse(CTX,\ \&agg\_pk,\ agg\_pk32));}
+\DoxyCodeLine{01058\ \ \ \ \ \ \ \ \ CHECK(secp256k1\_schnorrsig\_verify(CTX,\ final\_sig,\ vector-\/>msg,\ \textcolor{keyword}{sizeof}(vector-\/>msg),\ \&agg\_pk)\ ==\ 1);}
+\DoxyCodeLine{01059\ \ \ \ \ \}}
+\DoxyCodeLine{01060\ \ \ \ \ \textcolor{keywordflow}{for}\ (i\ =\ 0;\ i\ <\ \textcolor{keyword}{sizeof}(vector-\/>error\_case)/\textcolor{keyword}{sizeof}(vector-\/>error\_case[0]);\ i++)\ \{}
+\DoxyCodeLine{01061\ \ \ \ \ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }musig\_sig\_agg\_case\ *c\ =\ \&vector-\/>error\_case[i];}
+\DoxyCodeLine{01062\ \ \ \ \ \ \ \ \ secp256k1\_musig\_partial\_sig\ partial\_sig[(\textcolor{keyword}{sizeof}(vector-\/>psigs)/\textcolor{keyword}{sizeof}(vector-\/>psigs[0]))];}
+\DoxyCodeLine{01063\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{for}\ (j\ =\ 0;\ j\ <\ c-\/>psig\_indices\_len;\ j++)\ \{}
+\DoxyCodeLine{01064\ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ expected\ =\ c-\/>invalid\_sig\_idx\ !=\ (int)j;}
+\DoxyCodeLine{01065\ \ \ \ \ \ \ \ \ \ \ \ \ CHECK(expected\ ==\ secp256k1\_musig\_partial\_sig\_parse(CTX,\ \&partial\_sig[j],\ vector-\/>psigs[c-\/>psig\_indices[j]]));}
+\DoxyCodeLine{01066\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{01067\ \ \ \ \ \}}
+\DoxyCodeLine{01068\ \}}
+\DoxyCodeLine{01069\ }
+\DoxyCodeLine{01070\ \textcolor{comment}{/*\ Since\ the\ BIP\ doesn't\ provide\ static\ test\ vectors\ for\ nonce\_gen\_counter,\ we}}
+\DoxyCodeLine{01071\ \textcolor{comment}{\ *\ define\ a\ static\ test\ here\ */}}
+\DoxyCodeLine{01072\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ musig\_test\_static\_nonce\_gen\_counter(\textcolor{keywordtype}{void})\ \{}
+\DoxyCodeLine{01073\ \ \ \ \ secp256k1\_musig\_secnonce\ secnonce;}
+\DoxyCodeLine{01074\ \ \ \ \ secp256k1\_musig\_pubnonce\ pubnonce;}
+\DoxyCodeLine{01075\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ pubnonce66[66];}
+\DoxyCodeLine{01076\ \ \ \ \ secp256k1\_pubkey\ pk;}
+\DoxyCodeLine{01077\ \ \ \ \ secp256k1\_keypair\ keypair;}
+\DoxyCodeLine{01078\ \ \ \ \ uint64\_t\ nonrepeating\_cnt\ =\ 0;}
+\DoxyCodeLine{01079\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sk[32]\ =\ \{}
+\DoxyCodeLine{01080\ \ \ \ \ \ \ \ \ 0xEE,\ 0xC1,\ 0xCB,\ 0x7D,\ 0x1B,\ 0x72,\ 0x54,\ 0xC5,}
+\DoxyCodeLine{01081\ \ \ \ \ \ \ \ \ 0xCA,\ 0xB0,\ 0xD9,\ 0xC6,\ 0x1A,\ 0xB0,\ 0x2E,\ 0x64,}
+\DoxyCodeLine{01082\ \ \ \ \ \ \ \ \ 0x3D,\ 0x46,\ 0x4A,\ 0x59,\ 0xFE,\ 0x6C,\ 0x96,\ 0xA7,}
+\DoxyCodeLine{01083\ \ \ \ \ \ \ \ \ 0xEF,\ 0xE8,\ 0x71,\ 0xF0,\ 0x7C,\ 0x5A,\ 0xEF,\ 0x54,}
+\DoxyCodeLine{01084\ \ \ \ \ \};}
+\DoxyCodeLine{01085\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ expected\_secnonce[64]\ =\ \{}
+\DoxyCodeLine{01086\ \ \ \ \ \ \ \ \ 0x84,\ 0x2F,\ 0x13,\ 0x80,\ 0xCD,\ 0x17,\ 0xA1,\ 0x98,}
+\DoxyCodeLine{01087\ \ \ \ \ \ \ \ \ 0xFC,\ 0x3D,\ 0xAD,\ 0x3B,\ 0x7D,\ 0xA7,\ 0x49,\ 0x29,}
+\DoxyCodeLine{01088\ \ \ \ \ \ \ \ \ 0x41,\ 0xF4,\ 0x69,\ 0x76,\ 0xF2,\ 0x70,\ 0x2F,\ 0xF7,}
+\DoxyCodeLine{01089\ \ \ \ \ \ \ \ \ 0xC6,\ 0x6F,\ 0x24,\ 0xF4,\ 0x72,\ 0x03,\ 0x6A,\ 0xF1,}
+\DoxyCodeLine{01090\ \ \ \ \ \ \ \ \ 0xDA,\ 0x3F,\ 0x95,\ 0x2D,\ 0xDE,\ 0x4A,\ 0x2D,\ 0xA6,}
+\DoxyCodeLine{01091\ \ \ \ \ \ \ \ \ 0xB6,\ 0x32,\ 0x57,\ 0x07,\ 0xCE,\ 0x87,\ 0xA4,\ 0xE3,}
+\DoxyCodeLine{01092\ \ \ \ \ \ \ \ \ 0x61,\ 0x6D,\ 0x06,\ 0xFC,\ 0x5F,\ 0x81,\ 0xA9,\ 0xC9,}
+\DoxyCodeLine{01093\ \ \ \ \ \ \ \ \ 0x93,\ 0x86,\ 0xD2,\ 0x0A,\ 0x99,\ 0xCE,\ 0xCF,\ 0x99,}
+\DoxyCodeLine{01094\ \ \ \ \ \};}
+\DoxyCodeLine{01095\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ expected\_pubnonce[66]\ =\ \{}
+\DoxyCodeLine{01096\ \ \ \ \ \ \ \ \ 0x03,\ 0xA5,\ 0xB9,\ 0xB6,\ 0x90,\ 0x79,\ 0x42,\ 0xEA,}
+\DoxyCodeLine{01097\ \ \ \ \ \ \ \ \ 0xCD,\ 0xDA,\ 0x49,\ 0xA3,\ 0x66,\ 0x01,\ 0x6E,\ 0xC2,}
+\DoxyCodeLine{01098\ \ \ \ \ \ \ \ \ 0xE6,\ 0x24,\ 0x04,\ 0xA1,\ 0xBF,\ 0x4A,\ 0xB6,\ 0xD4,}
+\DoxyCodeLine{01099\ \ \ \ \ \ \ \ \ 0xDB,\ 0x82,\ 0x06,\ 0x7B,\ 0xC3,\ 0xAD,\ 0xF0,\ 0x86,}
+\DoxyCodeLine{01100\ \ \ \ \ \ \ \ \ 0xD7,\ 0x03,\ 0x32,\ 0x05,\ 0xDB,\ 0x9E,\ 0xB3,\ 0x4D,}
+\DoxyCodeLine{01101\ \ \ \ \ \ \ \ \ 0x5C,\ 0x7C,\ 0xE0,\ 0x28,\ 0x48,\ 0xCA,\ 0xC6,\ 0x8A,}
+\DoxyCodeLine{01102\ \ \ \ \ \ \ \ \ 0x83,\ 0xED,\ 0x73,\ 0xE3,\ 0x88,\ 0x34,\ 0x77,\ 0xF5,}
+\DoxyCodeLine{01103\ \ \ \ \ \ \ \ \ 0x63,\ 0xF2,\ 0x3C,\ 0xE9,\ 0xA1,\ 0x1A,\ 0x77,\ 0x21,}
+\DoxyCodeLine{01104\ \ \ \ \ \ \ \ \ 0xEC,\ 0x64,}
+\DoxyCodeLine{01105\ \ \ \ \ \};}
+\DoxyCodeLine{01106\ }
+\DoxyCodeLine{01107\ \ \ \ \ CHECK(secp256k1\_keypair\_create(CTX,\ \&keypair,\ sk));}
+\DoxyCodeLine{01108\ \ \ \ \ CHECK(secp256k1\_keypair\_pub(CTX,\ \&pk,\ \&keypair));}
+\DoxyCodeLine{01109\ \ \ \ \ CHECK(secp256k1\_musig\_nonce\_gen\_counter(CTX,\ \&secnonce,\ \&pubnonce,\ nonrepeating\_cnt,\ \&keypair,\ NULL,\ NULL,\ NULL)\ ==\ 1);}
+\DoxyCodeLine{01110\ }
+\DoxyCodeLine{01111\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&secnonce.data[4],\ expected\_secnonce,\ 2*32)\ ==\ 0);}
+\DoxyCodeLine{01112\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(\&secnonce.data[4+2*32],\ \&pk,\ \textcolor{keyword}{sizeof}(pk))\ ==\ 0);}
+\DoxyCodeLine{01113\ }
+\DoxyCodeLine{01114\ \ \ \ \ CHECK(secp256k1\_musig\_pubnonce\_serialize(CTX,\ pubnonce66,\ \&pubnonce)\ ==\ 1);}
+\DoxyCodeLine{01115\ \ \ \ \ CHECK(secp256k1\_memcmp\_var(pubnonce66,\ expected\_pubnonce,\ \textcolor{keyword}{sizeof}(pubnonce66))\ ==\ 0);}
+\DoxyCodeLine{01116\ \}}
+\DoxyCodeLine{01117\ }
+\DoxyCodeLine{01118\ \textcolor{comment}{/*\ -\/-\/-\/\ Test\ registry\ -\/-\/-\/\ */}}
+\DoxyCodeLine{01119\ REPEAT\_TEST(musig\_simple\_test)}
+\DoxyCodeLine{01120\ \textcolor{comment}{/*\ Run\ multiple\ times\ to\ ensure\ that\ pk\ and\ nonce\ have\ different\ y\ parities\ */}}
+\DoxyCodeLine{01121\ REPEAT\_TEST(musig\_tweak\_test)}
+\DoxyCodeLine{01122\ }
+\DoxyCodeLine{01123\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keyword}{struct\ }tf\_test\_entry\ tests\_musig[]\ =\ \{}
+\DoxyCodeLine{01124\ \ \ \ \ CASE1(musig\_simple\_test),}
+\DoxyCodeLine{01125\ \ \ \ \ CASE1(musig\_api\_tests),}
+\DoxyCodeLine{01126\ \ \ \ \ CASE1(musig\_nonce\_test),}
+\DoxyCodeLine{01127\ \ \ \ \ CASE1(musig\_tweak\_test),}
+\DoxyCodeLine{01128\ \ \ \ \ CASE1(sha256\_tag\_test),}
+\DoxyCodeLine{01129\ \ \ \ \ CASE1(musig\_test\_vectors\_keyagg),}
+\DoxyCodeLine{01130\ \ \ \ \ CASE1(musig\_test\_vectors\_noncegen),}
+\DoxyCodeLine{01131\ \ \ \ \ CASE1(musig\_test\_vectors\_nonceagg),}
+\DoxyCodeLine{01132\ \ \ \ \ CASE1(musig\_test\_vectors\_signverify),}
+\DoxyCodeLine{01133\ \ \ \ \ CASE1(musig\_test\_vectors\_tweak),}
+\DoxyCodeLine{01134\ \ \ \ \ CASE1(musig\_test\_vectors\_sigagg),}
+\DoxyCodeLine{01135\ \ \ \ \ CASE1(musig\_test\_static\_nonce\_gen\_counter),}
+\DoxyCodeLine{01136\ \};}
+\DoxyCodeLine{01137\ }
+\DoxyCodeLine{01138\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

@@ -1,0 +1,200 @@
+\doxysection{util.\+h}
+\label{ipc_2libmultiprocess_2include_2mp_2util_8h_source}\index{src/ipc/libmultiprocess/include/mp/util.h@{src/ipc/libmultiprocess/include/mp/util.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ MP\_UTIL\_H}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ MP\_UTIL\_H}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <capnp/schema.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <cstddef>}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ <cstring>}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ <functional>}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#include\ <kj/string-\/tree.h>}}
+\DoxyCodeLine{00014\ \textcolor{preprocessor}{\#include\ <mutex>}}
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <tuple>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <utility>}}
+\DoxyCodeLine{00019\ \textcolor{preprocessor}{\#include\ <variant>}}
+\DoxyCodeLine{00020\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keyword}{namespace\ }mp\ \{}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00030\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Types>}
+\DoxyCodeLine{00031\ \textcolor{keyword}{struct\ }TypeList}
+\DoxyCodeLine{00032\ \{}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{size\_t}\ size\ =\ \textcolor{keyword}{sizeof}...(Types);}
+\DoxyCodeLine{00034\ \};}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00044\ \textcolor{keyword}{template}\ <\textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...>\ \textcolor{keyword}{class\ }Class,\ \textcolor{keyword}{typename}...\ Types,\ \textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00045\ Class<Types...,\ std::remove\_reference\_t<Args>...>\ Make(Args\&\&...\ args)}
+\DoxyCodeLine{00046\ \{}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{keywordflow}{return}\ Class<Types...,\ std::remove\_reference\_t<Args>...>\{std::forward<Args>(args)...\};}
+\DoxyCodeLine{00048\ \}}
+\DoxyCodeLine{00049\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{template}\ <std::\textcolor{keywordtype}{size\_t}\ index,\ \textcolor{keyword}{typename}\ List,\ \textcolor{keyword}{typename}\ \_First\ =\ TypeList<>,\ \textcolor{keywordtype}{bool}\ done\ =\ index\ ==\ 0>}
+\DoxyCodeLine{00056\ \textcolor{keyword}{struct\ }Split;}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00059\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ \_Second,\ \textcolor{keyword}{typename}\ \_First>}
+\DoxyCodeLine{00060\ \textcolor{keyword}{struct\ }Split<0,\ \_Second,\ \_First,\ true>}
+\DoxyCodeLine{00061\ \{}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{keyword}{using\ }First\ =\ \_First;}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{keyword}{using\ }Second\ =\ \_Second;}
+\DoxyCodeLine{00064\ \};}
+\DoxyCodeLine{00065\ }
+\DoxyCodeLine{00067\ \textcolor{keyword}{template}\ <std::size\_t\ index,\ \textcolor{keyword}{typename}\ Type,\ \textcolor{keyword}{typename}...\ \_Second,\ \textcolor{keyword}{typename}...\ \_First>}
+\DoxyCodeLine{00068\ \textcolor{keyword}{struct\ }Split<index,\ TypeList<Type,\ \_Second...>,\ TypeList<\_First...>,\ false>}
+\DoxyCodeLine{00069\ \{}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keyword}{using\ }\_Next\ =\ Split<index\ -\/\ 1,\ TypeList<\_Second...>,\ TypeList<\_First...,\ Type>>;}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{keyword}{using\ }First\ =\ \textcolor{keyword}{typename}\ \_Next::First;}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{keyword}{using\ }Second\ =\ \textcolor{keyword}{typename}\ \_Next::Second;}
+\DoxyCodeLine{00073\ \};}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00076\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Callable>}
+\DoxyCodeLine{00077\ \textcolor{keyword}{using\ }ResultOf\ =\ \textcolor{keyword}{decltype}(std::declval<Callable>()());}
+\DoxyCodeLine{00078\ }
+\DoxyCodeLine{00080\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00081\ \textcolor{keyword}{using\ }RemoveCvRef\ =\ std::remove\_cv\_t<std::remove\_reference\_t<T>>;}
+\DoxyCodeLine{00082\ }
+\DoxyCodeLine{00084\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00085\ \textcolor{keyword}{using\ }Decay\ =\ std::decay\_t<T>;}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00088\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ SfinaeExpr,\ \textcolor{keyword}{typename}\ Result\_>}
+\DoxyCodeLine{00089\ \textcolor{keyword}{struct\ }\_Require}
+\DoxyCodeLine{00090\ \{}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{keyword}{using\ }Result\ =\ Result\_;}
+\DoxyCodeLine{00092\ \};}
+\DoxyCodeLine{00093\ }
+\DoxyCodeLine{00095\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ SfinaeExpr,\ \textcolor{keyword}{typename}\ Result\ =\ \textcolor{keywordtype}{void}>}
+\DoxyCodeLine{00096\ \textcolor{keyword}{using\ }Require\ =\ \textcolor{keyword}{typename}\ \_Require<SfinaeExpr,\ Result>::Result;}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00106\ \textcolor{keyword}{template}\ <\textcolor{keywordtype}{int}\ priority>}
+\DoxyCodeLine{00107\ \textcolor{keyword}{struct\ }Priority\ :\ Priority<priority\ -\/\ 1>}
+\DoxyCodeLine{00108\ \{}
+\DoxyCodeLine{00109\ \};}
+\DoxyCodeLine{00110\ }
+\DoxyCodeLine{00112\ \textcolor{keyword}{template}\ <>}
+\DoxyCodeLine{00113\ \textcolor{keyword}{struct\ }Priority<0>}
+\DoxyCodeLine{00114\ \{}
+\DoxyCodeLine{00115\ \};}
+\DoxyCodeLine{00116\ }
+\DoxyCodeLine{00118\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00119\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ TypeName()}
+\DoxyCodeLine{00120\ \{}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{comment}{//\ DisplayName\ string\ looks\ like}}
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{comment}{//\ "{}interfaces/capnp/common.capnp:ChainNotifications.resendWalletTransactions\$Results"{}}}
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{comment}{//\ This\ discards\ the\ part\ of\ the\ string\ before\ the\ first\ ':'\ character.}}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{comment}{//\ Another\ alternative\ would\ be\ to\ use\ the\ displayNamePrefixLength\ field,}}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{comment}{//\ but\ this\ discards\ everything\ before\ the\ last\ '.'\ character,\ throwing\ away}}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{comment}{//\ the\ object\ name,\ which\ is\ useful.}}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ display\_name\ =\ ::capnp::Schema::from<T>().getProto().getDisplayName().cStr();}
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ short\_name\ =\ strchr(display\_name,\ \textcolor{charliteral}{':'});}
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{keywordflow}{return}\ short\_name\ ?\ short\_name\ +\ 1\ :\ display\_name;}
+\DoxyCodeLine{00130\ \}}
+\DoxyCodeLine{00131\ }
+\DoxyCodeLine{00133\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00134\ \textcolor{keyword}{struct\ }PtrOrValue\ \{}
+\DoxyCodeLine{00135\ \ \ \ \ std::variant<T*,\ T>\ data;}
+\DoxyCodeLine{00136\ }
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}...\ Args>}
+\DoxyCodeLine{00138\ \ \ \ \ PtrOrValue(T*\ ptr,\ Args\&\&...\ args)\ :\ data(ptr\ ?\ ptr\ :\ std::variant<T*,\ T>\{std::in\_place\_type<T>,\ std::forward<Args>(args)...\})\ \{\}}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00140\ \ \ \ \ T\&\ operator*()\ \{\ \textcolor{keywordflow}{return}\ data.index()\ ?\ std::get<T>(data)\ :\ *std::get<T*>(data);\ \}}
+\DoxyCodeLine{00141\ \ \ \ \ T*\ operator-\/>()\ \{\ \textcolor{keywordflow}{return}\ \&**\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00142\ \ \ \ \ T\&\ operator*()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ data.index()\ ?\ std::get<T>(data)\ :\ *std::get<T*>(data);\ \}}
+\DoxyCodeLine{00143\ \ \ \ \ T*\ operator-\/>()\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ \&**\textcolor{keyword}{this};\ \}}
+\DoxyCodeLine{00144\ \};}
+\DoxyCodeLine{00145\ }
+\DoxyCodeLine{00146\ \textcolor{comment}{//\ Annotated\ mutex\ and\ lock\ class\ (https://clang.llvm.org/docs/ThreadSafetyAnalysis.html)}}
+\DoxyCodeLine{00147\ \textcolor{preprocessor}{\#if\ defined(\_\_clang\_\_)\ \&\&\ (!defined(SWIG))}}
+\DoxyCodeLine{00148\ \textcolor{preprocessor}{\#define\ MP\_TSA(x)\ \ \ \_\_attribute\_\_((x))}}
+\DoxyCodeLine{00149\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00150\ \textcolor{preprocessor}{\#define\ MP\_TSA(x)\ \ \ }\textcolor{comment}{//\ no-\/op}}
+\DoxyCodeLine{00151\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00152\ }
+\DoxyCodeLine{00153\ \textcolor{preprocessor}{\#define\ MP\_CAPABILITY(x)\ \ \ \ \ \ \ \ MP\_TSA(capability(x))}}
+\DoxyCodeLine{00154\ \textcolor{preprocessor}{\#define\ MP\_SCOPED\_CAPABILITY\ \ \ \ MP\_TSA(scoped\_lockable)}}
+\DoxyCodeLine{00155\ \textcolor{preprocessor}{\#define\ MP\_REQUIRES(x)\ \ \ \ \ \ \ \ \ \ MP\_TSA(requires\_capability(x))}}
+\DoxyCodeLine{00156\ \textcolor{preprocessor}{\#define\ MP\_ACQUIRE(...)\ \ \ \ \ \ \ \ \ MP\_TSA(acquire\_capability(\_\_VA\_ARGS\_\_))}}
+\DoxyCodeLine{00157\ \textcolor{preprocessor}{\#define\ MP\_RELEASE(...)\ \ \ \ \ \ \ \ \ MP\_TSA(release\_capability(\_\_VA\_ARGS\_\_))}}
+\DoxyCodeLine{00158\ \textcolor{preprocessor}{\#define\ MP\_ASSERT\_CAPABILITY(x)\ MP\_TSA(assert\_capability(x))}}
+\DoxyCodeLine{00159\ \textcolor{preprocessor}{\#define\ MP\_GUARDED\_BY(x)\ \ \ \ \ \ \ \ MP\_TSA(guarded\_by(x))}}
+\DoxyCodeLine{00160\ \textcolor{preprocessor}{\#define\ MP\_NO\_TSA\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ MP\_TSA(no\_thread\_safety\_analysis)}}
+\DoxyCodeLine{00161\ }
+\DoxyCodeLine{00162\ \textcolor{keyword}{class\ }MP\_CAPABILITY(\textcolor{stringliteral}{"{}mutex"{}})\ Mutex\ \{}
+\DoxyCodeLine{00163\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{keywordtype}{void}\ lock()\ MP\_ACQUIRE()\ \{\ m\_mutex.lock();\ \}}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{keywordtype}{void}\ unlock()\ MP\_RELEASE()\ \{\ m\_mutex.unlock();\ \}}
+\DoxyCodeLine{00166\ }
+\DoxyCodeLine{00167\ \ \ \ \ std::mutex\ m\_mutex;}
+\DoxyCodeLine{00168\ \};}
+\DoxyCodeLine{00169\ }
+\DoxyCodeLine{00170\ \textcolor{keyword}{class\ }MP\_SCOPED\_CAPABILITY\ Lock\ \{}
+\DoxyCodeLine{00171\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{keyword}{explicit}\ Lock(Mutex\&\ m)\ MP\_ACQUIRE(m)\ :\ m\_lock(m.m\_mutex)\ \{\}}
+\DoxyCodeLine{00173\ \ \ \ \ \string~Lock()\ MP\_RELEASE()\ =\ default;}
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{keywordtype}{void}\ unlock()\ MP\_RELEASE()\ \{\ m\_lock.unlock();\ \}}
+\DoxyCodeLine{00175\ \ \ \ \ \textcolor{keywordtype}{void}\ lock()\ MP\_ACQUIRE()\ \{\ m\_lock.lock();\ \}}
+\DoxyCodeLine{00176\ \ \ \ \ \textcolor{keywordtype}{void}\ assert\_locked(Mutex\&\ mutex)\ MP\_ASSERT\_CAPABILITY()\ MP\_ASSERT\_CAPABILITY(mutex)}
+\DoxyCodeLine{00177\ \ \ \ \ \{}
+\DoxyCodeLine{00178\ \ \ \ \ \ \ \ \ assert(m\_lock.mutex()\ ==\ \&mutex.m\_mutex);}
+\DoxyCodeLine{00179\ \ \ \ \ \ \ \ \ assert(m\_lock);}
+\DoxyCodeLine{00180\ \ \ \ \ \}}
+\DoxyCodeLine{00181\ }
+\DoxyCodeLine{00182\ \ \ \ \ std::unique\_lock<std::mutex>\ m\_lock;}
+\DoxyCodeLine{00183\ \};}
+\DoxyCodeLine{00184\ }
+\DoxyCodeLine{00185\ \textcolor{keyword}{template}<\textcolor{keyword}{typename}\ T>}
+\DoxyCodeLine{00186\ \textcolor{keyword}{struct\ }GuardedRef}
+\DoxyCodeLine{00187\ \{}
+\DoxyCodeLine{00188\ \ \ \ \ Mutex\&\ mutex;}
+\DoxyCodeLine{00189\ \ \ \ \ T\&\ ref\ MP\_GUARDED\_BY(mutex);}
+\DoxyCodeLine{00190\ \};}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00192\ \textcolor{comment}{//\ CTAD\ for\ Clang\ 16:\ GuardedRef\{mutex,\ x\}\ -\/>\ GuardedRef<decltype(x)>}}
+\DoxyCodeLine{00193\ \textcolor{keyword}{template}\ <\textcolor{keyword}{class}\ U>}
+\DoxyCodeLine{00194\ GuardedRef(Mutex\&,\ U\&)\ -\/>\ GuardedRef<U>;}
+\DoxyCodeLine{00195\ }
+\DoxyCodeLine{00197\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Lock>}
+\DoxyCodeLine{00198\ \textcolor{keyword}{struct\ }UnlockGuard}
+\DoxyCodeLine{00199\ \{}
+\DoxyCodeLine{00200\ \ \ \ \ UnlockGuard(Lock\&\ lock)\ :\ m\_lock(lock)\ \{\ m\_lock.unlock();\ \}}
+\DoxyCodeLine{00201\ \ \ \ \ \string~UnlockGuard()\ \{\ m\_lock.lock();\ \}}
+\DoxyCodeLine{00202\ \ \ \ \ Lock\&\ m\_lock;}
+\DoxyCodeLine{00203\ \};}
+\DoxyCodeLine{00204\ }
+\DoxyCodeLine{00205\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Lock,\ \textcolor{keyword}{typename}\ Callback>}
+\DoxyCodeLine{00206\ \textcolor{keywordtype}{void}\ Unlock(Lock\&\ lock,\ Callback\&\&\ callback)}
+\DoxyCodeLine{00207\ \{}
+\DoxyCodeLine{00208\ \ \ \ \ \textcolor{keyword}{const}\ UnlockGuard<Lock>\ unlock(lock);}
+\DoxyCodeLine{00209\ \ \ \ \ callback();}
+\DoxyCodeLine{00210\ \}}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00213\ std::string\ ThreadName(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ exe\_name);}
+\DoxyCodeLine{00214\ }
+\DoxyCodeLine{00217\ std::string\ LogEscape(\textcolor{keyword}{const}\ kj::StringTree\&\ \textcolor{keywordtype}{string},\ \textcolor{keywordtype}{size\_t}\ max\_size);}
+\DoxyCodeLine{00218\ }
+\DoxyCodeLine{00220\ \textcolor{keyword}{using\ }FdToArgsFn\ =\ std::function<std::vector<std::string>(\textcolor{keywordtype}{int}\ fd)>;}
+\DoxyCodeLine{00221\ }
+\DoxyCodeLine{00228\ \textcolor{keywordtype}{int}\ SpawnProcess(\textcolor{keywordtype}{int}\&\ pid,\ FdToArgsFn\&\&\ fd\_to\_args);}
+\DoxyCodeLine{00229\ }
+\DoxyCodeLine{00231\ \textcolor{keywordtype}{void}\ ExecProcess(\textcolor{keyword}{const}\ std::vector<std::string>\&\ args);}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00234\ \textcolor{keywordtype}{int}\ WaitProcess(\textcolor{keywordtype}{int}\ pid);}
+\DoxyCodeLine{00235\ }
+\DoxyCodeLine{00236\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{char}*\ CharCast(\textcolor{keywordtype}{char}*\ c)\ \{\ \textcolor{keywordflow}{return}\ c;\ \}}
+\DoxyCodeLine{00237\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{char}*\ CharCast(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ c)\ \{\ \textcolor{keywordflow}{return}\ (\textcolor{keywordtype}{char}*)c;\ \}}
+\DoxyCodeLine{00238\ \textcolor{keyword}{inline}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ CharCast(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ c)\ \{\ \textcolor{keywordflow}{return}\ c;\ \}}
+\DoxyCodeLine{00239\ \textcolor{keyword}{inline}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*\ CharCast(\textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ c)\ \{\ \textcolor{keywordflow}{return}\ (\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}*)c;\ \}}
+\DoxyCodeLine{00240\ }
+\DoxyCodeLine{00241\ \}\ \textcolor{comment}{//\ namespace\ mp}}
+\DoxyCodeLine{00242\ }
+\DoxyCodeLine{00243\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ MP\_UTIL\_H}}
+
+\end{DoxyCode}

@@ -1,0 +1,169 @@
+.TH "CZMQNotificationInterface" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+CZMQNotificationInterface
+.SH SYNOPSIS
+.br
+.PP
+.PP
+\fR#include <zmqnotificationinterface\&.h>\fP
+.PP
+Inherits \fBCValidationInterface\fP\&.
+.SS "Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "\fB~CZMQNotificationInterface\fP ()"
+.br
+.ti -1c
+.RI "std::list< const \fBCZMQAbstractNotifier\fP * > \fBGetActiveNotifiers\fP () const"
+.br
+.in -1c
+.SS "Static Public Member Functions"
+
+.in +1c
+.ti -1c
+.RI "static std::unique_ptr< \fBCZMQNotificationInterface\fP > \fBCreate\fP (std::function< bool(std::vector< std::byte > &, const \fBCBlockIndex\fP &)> get_block_by_index)"
+.br
+.in -1c
+.SS "Protected Member Functions"
+
+.in +1c
+.ti -1c
+.RI "bool \fBInitialize\fP ()"
+.br
+.ti -1c
+.RI "void \fBShutdown\fP ()"
+.br
+.ti -1c
+.RI "void \fBTransactionAddedToMempool\fP (const \fBNewMempoolTransactionInfo\fP &tx, uint64_t mempool_sequence) override"
+.br
+.ti -1c
+.RI "void \fBTransactionRemovedFromMempool\fP (const \fBCTransactionRef\fP &tx, \fBMemPoolRemovalReason\fP reason, uint64_t mempool_sequence) override"
+.br
+.ti -1c
+.RI "void \fBBlockConnected\fP (const \fBkernel::ChainstateRole\fP &role, const std::shared_ptr< const \fBCBlock\fP > &pblock, const \fBCBlockIndex\fP *pindexConnected) override"
+.br
+.ti -1c
+.RI "void \fBBlockDisconnected\fP (const std::shared_ptr< const \fBCBlock\fP > &pblock, const \fBCBlockIndex\fP *pindexDisconnected) override"
+.br
+.ti -1c
+.RI "void \fBUpdatedBlockTip\fP (const \fBCBlockIndex\fP *pindexNew, const \fBCBlockIndex\fP *pindexFork, bool fInitialDownload) override"
+.br
+.in -1c
+
+Protected Member Functions inherited from \fBCValidationInterface\fP
+.in +1c
+.ti -1c
+.RI "\fB~CValidationInterface\fP ()=default"
+.br
+.ti -1c
+.RI "virtual void \fBActiveTipChange\fP (const \fBCBlockIndex\fP &new_tip, bool is_ibd)"
+.br
+.ti -1c
+.RI "virtual void \fBMempoolTransactionsRemovedForBlock\fP (const std::vector< \fBRemovedMempoolTransactionInfo\fP > &txs_removed_for_block, unsigned int nBlockHeight)"
+.br
+.ti -1c
+.RI "virtual void \fBChainStateFlushed\fP (const \fBkernel::ChainstateRole\fP &role, const \fBCBlockLocator\fP &locator)"
+.br
+.ti -1c
+.RI "virtual void \fBBlockChecked\fP (const std::shared_ptr< const \fBCBlock\fP > &, const \fBBlockValidationState\fP &)"
+.br
+.ti -1c
+.RI "virtual void \fBNewPoWValidBlock\fP (const \fBCBlockIndex\fP *pindex, const std::shared_ptr< const \fBCBlock\fP > &block)"
+.br
+.in -1c
+.SH "Constructor & Destructor Documentation"
+.PP 
+.SS "~\fBCZMQNotificationInterface\fP ()"
+
+.SH "Member Function Documentation"
+.PP 
+.SS "void BlockConnected (const \fBkernel::ChainstateRole\fP & role, const std::shared_ptr< const \fBCBlock\fP > & block, const \fBCBlockIndex\fP * pindex)\fR [override]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+Notifies listeners of a block being connected\&.
+
+.PP
+Called on a background thread\&. 
+.PP
+Reimplemented from \fBCValidationInterface\fP\&.
+.SS "void BlockDisconnected (const std::shared_ptr< const \fBCBlock\fP > & block, const \fBCBlockIndex\fP * pindex)\fR [override]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+Notifies listeners of a block being disconnected Provides the block that was disconnected\&.
+
+.PP
+Called on a background thread\&. Only called for the active chainstate, since background chainstates should never disconnect blocks\&. 
+.PP
+Reimplemented from \fBCValidationInterface\fP\&.
+.SS "std::unique_ptr< \fBCZMQNotificationInterface\fP > Create (std::function< bool(std::vector< std::byte > &, const \fBCBlockIndex\fP &)> get_block_by_index)\fR [static]\fP"
+
+.SS "std::list< const \fBCZMQAbstractNotifier\fP * > GetActiveNotifiers () const"
+
+.SS "bool Initialize ()\fR [protected]\fP"
+
+.SS "void Shutdown ()\fR [protected]\fP"
+
+.SS "void TransactionAddedToMempool (const \fBNewMempoolTransactionInfo\fP & tx, uint64_t mempool_sequence)\fR [override]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+Notifies listeners of a transaction having been added to mempool\&.
+
+.PP
+Called on a background thread\&. 
+.PP
+Reimplemented from \fBCValidationInterface\fP\&.
+.SS "void TransactionRemovedFromMempool (const \fBCTransactionRef\fP & tx, \fBMemPoolRemovalReason\fP reason, uint64_t mempool_sequence)\fR [override]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+Notifies listeners of a transaction leaving mempool\&.
+
+.PP
+This notification fires for transactions that are removed from the mempool for the following reasons:
+
+.PP
+.IP "\(bu" 2
+EXPIRY (expired from mempool after -mempoolexpiry hours)
+.IP "\(bu" 2
+SIZELIMIT (removed in size limiting if the mempool exceeds -maxmempool megabytes)
+.IP "\(bu" 2
+REORG (removed during a reorg)
+.IP "\(bu" 2
+CONFLICT (removed because it conflicts with in-block transaction)
+.IP "\(bu" 2
+REPLACED (removed due to RBF replacement)
+.PP
+
+.PP
+This does not fire for transactions that are removed from the mempool because they have been included in a block\&. Any client that is interested in transactions removed from the mempool for inclusion in a block can learn about those transactions from the MempoolTransactionsRemovedForBlock notification\&.
+
+.PP
+Transactions that are removed from the mempool because they conflict with a transaction in the new block will have TransactionRemovedFromMempool events fired \fIbefore\fP the BlockConnected event is fired\&. If multiple blocks are connected in one step, then the ordering could be:
+
+.PP
+.IP "\(bu" 2
+TransactionRemovedFromMempool(tx1 from block A)
+.IP "\(bu" 2
+TransactionRemovedFromMempool(tx2 from block A)
+.IP "\(bu" 2
+TransactionRemovedFromMempool(tx1 from block B)
+.IP "\(bu" 2
+TransactionRemovedFromMempool(tx2 from block B)
+.IP "\(bu" 2
+BlockConnected(A)
+.IP "\(bu" 2
+BlockConnected(B)
+.PP
+
+.PP
+Called on a background thread\&. 
+.PP
+Reimplemented from \fBCValidationInterface\fP\&.
+.SS "void UpdatedBlockTip (const \fBCBlockIndex\fP * pindexNew, const \fBCBlockIndex\fP * pindexFork, bool fInitialDownload)\fR [override]\fP, \fR [protected]\fP, \fR [virtual]\fP"
+Notifies listeners when the block chain tip advances\&.
+
+.PP
+When multiple blocks are connected at once, UpdatedBlockTip will be called on the final tip but may not be called on every intermediate tip\&. If the latter behavior is desired, subscribe to \fBBlockConnected()\fP instead\&.
+
+.PP
+Called on a background thread\&. Only called for the active chainstate\&. 
+.PP
+Reimplemented from \fBCValidationInterface\fP\&.
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

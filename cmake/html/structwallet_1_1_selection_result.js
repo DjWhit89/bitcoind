@@ -1,0 +1,26 @@
+var structwallet_1_1_selection_result =
+[
+    [ "SelectionResult", "structwallet_1_1_selection_result.html#a2a880efa4dfba53e07749f5d06fae32c", null ],
+    [ "SelectionResult", "structwallet_1_1_selection_result.html#a992fa7b7fb010adca2f74a1ea6c39ab8", null ],
+    [ "AddInput", "structwallet_1_1_selection_result.html#a2c7cb2419fa4e2170d547cf0ec4fa5c4", null ],
+    [ "AddInputs", "structwallet_1_1_selection_result.html#ad48b5ed26e0c3809eddf28d662ad5e98", null ],
+    [ "Clear", "structwallet_1_1_selection_result.html#aa71d36872f416feaa853788a7a7a7ef8", null ],
+    [ "GetAlgo", "structwallet_1_1_selection_result.html#a085be5f78092e827141a24a71179c20e", null ],
+    [ "GetAlgoCompleted", "structwallet_1_1_selection_result.html#a7a9a5b1728febf31a31d7b1347649f47", null ],
+    [ "GetChange", "structwallet_1_1_selection_result.html#a6421e2ae16e5ccad164a79061ab2e486", null ],
+    [ "GetInputSet", "structwallet_1_1_selection_result.html#acec4c597f55a016119f07bb986ee5211", null ],
+    [ "GetSelectedEffectiveValue", "structwallet_1_1_selection_result.html#a8a27d70aff3a50cdc82bbc2a56c62c4b", null ],
+    [ "GetSelectedValue", "structwallet_1_1_selection_result.html#a5d8abc522e284e009dd3a35b6c79c5b3", null ],
+    [ "GetSelectionsEvaluated", "structwallet_1_1_selection_result.html#ab07ca98c5d218b233167a0b68deb87e6", null ],
+    [ "GetShuffledInputVector", "structwallet_1_1_selection_result.html#aab7f9c06502d339f37c8ffe4f6e1d277", null ],
+    [ "GetTarget", "structwallet_1_1_selection_result.html#a584f2d1f9e0c5207d2f8ed1fbd748f58", null ],
+    [ "GetTotalBumpFees", "structwallet_1_1_selection_result.html#a1ca3cf187cb9675e35d11d0bfafc7975", null ],
+    [ "GetWaste", "structwallet_1_1_selection_result.html#a099f0911cbc3755dfac5bf616891e392", null ],
+    [ "GetWeight", "structwallet_1_1_selection_result.html#af2f5602ff89e9ee513396faa4debfba9", null ],
+    [ "Merge", "structwallet_1_1_selection_result.html#a67ed75feb7bb5dbdfa11c433048fed46", null ],
+    [ "operator<", "structwallet_1_1_selection_result.html#aa14b4d9743ba63d401ffd65b9b23923e", null ],
+    [ "RecalculateWaste", "structwallet_1_1_selection_result.html#a25694f80fdbcf786c3a5f2dcedda6d09", null ],
+    [ "SetAlgoCompleted", "structwallet_1_1_selection_result.html#a7745b6e525f3ab3d9cd6cfb2f08caf20", null ],
+    [ "SetBumpFeeDiscount", "structwallet_1_1_selection_result.html#a62d7349f9221bc519521fa5d0a1ffdac", null ],
+    [ "SetSelectionsEvaluated", "structwallet_1_1_selection_result.html#a8ebd4e3f6fa2ebe8e7cdcd5761f48ff9", null ]
+];

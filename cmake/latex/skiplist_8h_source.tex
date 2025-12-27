@@ -1,0 +1,388 @@
+\doxysection{skiplist.\+h}
+\label{skiplist_8h_source}\index{src/leveldb/db/skiplist.h@{src/leveldb/db/skiplist.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2011\ The\ LevelDB\ Authors.\ All\ rights\ reserved.}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Use\ of\ this\ source\ code\ is\ governed\ by\ a\ BSD-\/style\ license\ that\ can\ be}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ found\ in\ the\ LICENSE\ file.\ See\ the\ AUTHORS\ file\ for\ names\ of\ contributors.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#ifndef\ STORAGE\_LEVELDB\_DB\_SKIPLIST\_H\_}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#define\ STORAGE\_LEVELDB\_DB\_SKIPLIST\_H\_}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{comment}{//\ Thread\ safety}}
+\DoxyCodeLine{00009\ \textcolor{comment}{//\ -\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/-\/}}
+\DoxyCodeLine{00010\ \textcolor{comment}{//}}
+\DoxyCodeLine{00011\ \textcolor{comment}{//\ Writes\ require\ external\ synchronization,\ most\ likely\ a\ mutex.}}
+\DoxyCodeLine{00012\ \textcolor{comment}{//\ Reads\ require\ a\ guarantee\ that\ the\ SkipList\ will\ not\ be\ destroyed}}
+\DoxyCodeLine{00013\ \textcolor{comment}{//\ while\ the\ read\ is\ in\ progress.\ \ Apart\ from\ that,\ reads\ progress}}
+\DoxyCodeLine{00014\ \textcolor{comment}{//\ without\ any\ internal\ locking\ or\ synchronization.}}
+\DoxyCodeLine{00015\ \textcolor{comment}{//}}
+\DoxyCodeLine{00016\ \textcolor{comment}{//\ Invariants:}}
+\DoxyCodeLine{00017\ \textcolor{comment}{//}}
+\DoxyCodeLine{00018\ \textcolor{comment}{//\ (1)\ Allocated\ nodes\ are\ never\ deleted\ until\ the\ SkipList\ is}}
+\DoxyCodeLine{00019\ \textcolor{comment}{//\ destroyed.\ \ This\ is\ trivially\ guaranteed\ by\ the\ code\ since\ we}}
+\DoxyCodeLine{00020\ \textcolor{comment}{//\ never\ delete\ any\ skip\ list\ nodes.}}
+\DoxyCodeLine{00021\ \textcolor{comment}{//}}
+\DoxyCodeLine{00022\ \textcolor{comment}{//\ (2)\ The\ contents\ of\ a\ Node\ except\ for\ the\ next/prev\ pointers\ are}}
+\DoxyCodeLine{00023\ \textcolor{comment}{//\ immutable\ after\ the\ Node\ has\ been\ linked\ into\ the\ SkipList.}}
+\DoxyCodeLine{00024\ \textcolor{comment}{//\ Only\ Insert()\ modifies\ the\ list,\ and\ it\ is\ careful\ to\ initialize}}
+\DoxyCodeLine{00025\ \textcolor{comment}{//\ a\ node\ and\ use\ release-\/stores\ to\ publish\ the\ nodes\ in\ one\ or}}
+\DoxyCodeLine{00026\ \textcolor{comment}{//\ more\ lists.}}
+\DoxyCodeLine{00027\ \textcolor{comment}{//}}
+\DoxyCodeLine{00028\ \textcolor{comment}{//\ ...\ prev\ vs.\ next\ pointer\ ordering\ ...}}
+\DoxyCodeLine{00029\ }
+\DoxyCodeLine{00030\ \textcolor{preprocessor}{\#include\ <atomic>}}
+\DoxyCodeLine{00031\ \textcolor{preprocessor}{\#include\ <cassert>}}
+\DoxyCodeLine{00032\ \textcolor{preprocessor}{\#include\ <cstdlib>}}
+\DoxyCodeLine{00033\ }
+\DoxyCodeLine{00034\ \textcolor{preprocessor}{\#include\ "{}util/arena.h"{}}}
+\DoxyCodeLine{00035\ \textcolor{preprocessor}{\#include\ "{}util/random.h"{}}}
+\DoxyCodeLine{00036\ }
+\DoxyCodeLine{00037\ \textcolor{keyword}{namespace\ }leveldb\ \{}
+\DoxyCodeLine{00038\ }
+\DoxyCodeLine{00039\ \textcolor{keyword}{class\ }Arena;}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00042\ \textcolor{keyword}{class\ }SkipList\ \{}
+\DoxyCodeLine{00043\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00044\ \ \ \textcolor{keyword}{struct\ }Node;}
+\DoxyCodeLine{00045\ }
+\DoxyCodeLine{00046\ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00047\ \ \ \textcolor{comment}{//\ Create\ a\ new\ SkipList\ object\ that\ will\ use\ "{}cmp"{}\ for\ comparing\ keys,}}
+\DoxyCodeLine{00048\ \ \ \textcolor{comment}{//\ and\ will\ allocate\ memory\ using\ "{}*arena"{}.\ \ Objects\ allocated\ in\ the\ arena}}
+\DoxyCodeLine{00049\ \ \ \textcolor{comment}{//\ must\ remain\ allocated\ for\ the\ lifetime\ of\ the\ skiplist\ object.}}
+\DoxyCodeLine{00050\ \ \ \textcolor{keyword}{explicit}\ SkipList(Comparator\ cmp,\ Arena*\ arena);}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ SkipList(\textcolor{keyword}{const}\ SkipList\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00053\ \ \ SkipList\&\ operator=(\textcolor{keyword}{const}\ SkipList\&)\ =\ \textcolor{keyword}{delete};}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \textcolor{comment}{//\ Insert\ key\ into\ the\ list.}}
+\DoxyCodeLine{00056\ \ \ \textcolor{comment}{//\ REQUIRES:\ nothing\ that\ compares\ equal\ to\ key\ is\ currently\ in\ the\ list.}}
+\DoxyCodeLine{00057\ \ \ \textcolor{keywordtype}{void}\ Insert(\textcolor{keyword}{const}\ Key\&\ key);}
+\DoxyCodeLine{00058\ }
+\DoxyCodeLine{00059\ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ an\ entry\ that\ compares\ equal\ to\ key\ is\ in\ the\ list.}}
+\DoxyCodeLine{00060\ \ \ \textcolor{keywordtype}{bool}\ Contains(\textcolor{keyword}{const}\ Key\&\ key)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00061\ }
+\DoxyCodeLine{00062\ \ \ \textcolor{comment}{//\ Iteration\ over\ the\ contents\ of\ a\ skip\ list}}
+\DoxyCodeLine{00063\ \ \ \textcolor{keyword}{class\ }Iterator\ \{}
+\DoxyCodeLine{00064\ \ \ \ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{comment}{//\ Initialize\ an\ iterator\ over\ the\ specified\ list.}}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{comment}{//\ The\ returned\ iterator\ is\ not\ valid.}}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{keyword}{explicit}\ Iterator(\textcolor{keyword}{const}\ SkipList*\ list);}
+\DoxyCodeLine{00068\ }
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{comment}{//\ Returns\ true\ iff\ the\ iterator\ is\ positioned\ at\ a\ valid\ node.}}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{keywordtype}{bool}\ Valid()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{comment}{//\ Returns\ the\ key\ at\ the\ current\ position.}}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{comment}{//\ REQUIRES:\ Valid()}}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keyword}{const}\ Key\&\ key()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{comment}{//\ Advances\ to\ the\ next\ position.}}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{comment}{//\ REQUIRES:\ Valid()}}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{keywordtype}{void}\ Next();}
+\DoxyCodeLine{00079\ }
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{comment}{//\ Advances\ to\ the\ previous\ position.}}
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{comment}{//\ REQUIRES:\ Valid()}}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{keywordtype}{void}\ Prev();}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \ \ \ \ \textcolor{comment}{//\ Advance\ to\ the\ first\ entry\ with\ a\ key\ >=\ target}}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keywordtype}{void}\ Seek(\textcolor{keyword}{const}\ Key\&\ target);}
+\DoxyCodeLine{00086\ }
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{comment}{//\ Position\ at\ the\ first\ entry\ in\ list.}}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{comment}{//\ Final\ state\ of\ iterator\ is\ Valid()\ iff\ list\ is\ not\ empty.}}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{keywordtype}{void}\ SeekToFirst();}
+\DoxyCodeLine{00090\ }
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{comment}{//\ Position\ at\ the\ last\ entry\ in\ list.}}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{comment}{//\ Final\ state\ of\ iterator\ is\ Valid()\ iff\ list\ is\ not\ empty.}}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{keywordtype}{void}\ SeekToLast();}
+\DoxyCodeLine{00094\ }
+\DoxyCodeLine{00095\ \ \ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keyword}{const}\ SkipList*\ list\_;}
+\DoxyCodeLine{00097\ \ \ \ \ Node*\ node\_;}
+\DoxyCodeLine{00098\ \ \ \ \ \textcolor{comment}{//\ Intentionally\ copyable}}
+\DoxyCodeLine{00099\ \ \ \};}
+\DoxyCodeLine{00100\ }
+\DoxyCodeLine{00101\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00102\ \ \ \textcolor{keyword}{enum}\ \{\ kMaxHeight\ =\ 12\ \};}
+\DoxyCodeLine{00103\ }
+\DoxyCodeLine{00104\ \ \ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{int}\ GetMaxHeight()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{keywordflow}{return}\ max\_height\_.load(std::memory\_order\_relaxed);}
+\DoxyCodeLine{00106\ \ \ \}}
+\DoxyCodeLine{00107\ }
+\DoxyCodeLine{00108\ \ \ Node*\ NewNode(\textcolor{keyword}{const}\ Key\&\ key,\ \textcolor{keywordtype}{int}\ height);}
+\DoxyCodeLine{00109\ \ \ \textcolor{keywordtype}{int}\ RandomHeight();}
+\DoxyCodeLine{00110\ \ \ \textcolor{keywordtype}{bool}\ Equal(\textcolor{keyword}{const}\ Key\&\ a,\ \textcolor{keyword}{const}\ Key\&\ b)\textcolor{keyword}{\ const\ }\{\ \textcolor{keywordflow}{return}\ (compare\_(a,\ b)\ ==\ 0);\ \}}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \ \ \textcolor{comment}{//\ Return\ true\ if\ key\ is\ greater\ than\ the\ data\ stored\ in\ "{}n"{}}}
+\DoxyCodeLine{00113\ \ \ \textcolor{keywordtype}{bool}\ KeyIsAfterNode(\textcolor{keyword}{const}\ Key\&\ key,\ Node*\ n)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00114\ }
+\DoxyCodeLine{00115\ \ \ \textcolor{comment}{//\ Return\ the\ earliest\ node\ that\ comes\ at\ or\ after\ key.}}
+\DoxyCodeLine{00116\ \ \ \textcolor{comment}{//\ Return\ nullptr\ if\ there\ is\ no\ such\ node.}}
+\DoxyCodeLine{00117\ \ \ \textcolor{comment}{//}}
+\DoxyCodeLine{00118\ \ \ \textcolor{comment}{//\ If\ prev\ is\ non-\/null,\ fills\ prev[level]\ with\ pointer\ to\ previous}}
+\DoxyCodeLine{00119\ \ \ \textcolor{comment}{//\ node\ at\ "{}level"{}\ for\ every\ level\ in\ [0..max\_height\_-\/1].}}
+\DoxyCodeLine{00120\ \ \ Node*\ FindGreaterOrEqual(\textcolor{keyword}{const}\ Key\&\ key,\ Node**\ prev)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00121\ }
+\DoxyCodeLine{00122\ \ \ \textcolor{comment}{//\ Return\ the\ latest\ node\ with\ a\ key\ <\ key.}}
+\DoxyCodeLine{00123\ \ \ \textcolor{comment}{//\ Return\ head\_\ if\ there\ is\ no\ such\ node.}}
+\DoxyCodeLine{00124\ \ \ Node*\ FindLessThan(\textcolor{keyword}{const}\ Key\&\ key)\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00125\ }
+\DoxyCodeLine{00126\ \ \ \textcolor{comment}{//\ Return\ the\ last\ node\ in\ the\ list.}}
+\DoxyCodeLine{00127\ \ \ \textcolor{comment}{//\ Return\ head\_\ if\ list\ is\ empty.}}
+\DoxyCodeLine{00128\ \ \ Node*\ FindLast()\ \textcolor{keyword}{const};}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \ \ \textcolor{comment}{//\ Immutable\ after\ construction}}
+\DoxyCodeLine{00131\ \ \ Comparator\ \textcolor{keyword}{const}\ compare\_;}
+\DoxyCodeLine{00132\ \ \ Arena*\ \textcolor{keyword}{const}\ arena\_;\ \ \textcolor{comment}{//\ Arena\ used\ for\ allocations\ of\ nodes}}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00134\ \ \ Node*\ \textcolor{keyword}{const}\ head\_;}
+\DoxyCodeLine{00135\ }
+\DoxyCodeLine{00136\ \ \ \textcolor{comment}{//\ Modified\ only\ by\ Insert().\ \ Read\ racily\ by\ readers,\ but\ stale}}
+\DoxyCodeLine{00137\ \ \ \textcolor{comment}{//\ values\ are\ ok.}}
+\DoxyCodeLine{00138\ \ \ std::atomic<int>\ max\_height\_;\ \ \textcolor{comment}{//\ Height\ of\ the\ entire\ list}}
+\DoxyCodeLine{00139\ }
+\DoxyCodeLine{00140\ \ \ \textcolor{comment}{//\ Read/written\ only\ by\ Insert().}}
+\DoxyCodeLine{00141\ \ \ Random\ rnd\_;}
+\DoxyCodeLine{00142\ \};}
+\DoxyCodeLine{00143\ }
+\DoxyCodeLine{00144\ \textcolor{comment}{//\ Implementation\ details\ follow}}
+\DoxyCodeLine{00145\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00146\ \textcolor{keyword}{struct\ }SkipList<Key,\ Comparator>::Node\ \{}
+\DoxyCodeLine{00147\ \ \ \textcolor{keyword}{explicit}\ Node(\textcolor{keyword}{const}\ Key\&\ k)\ :\ key(k)\ \{\}}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00149\ \ \ Key\ \textcolor{keyword}{const}\ key;}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00151\ \ \ \textcolor{comment}{//\ Accessors/mutators\ for\ links.\ \ Wrapped\ in\ methods\ so\ we\ can}}
+\DoxyCodeLine{00152\ \ \ \textcolor{comment}{//\ add\ the\ appropriate\ barriers\ as\ necessary.}}
+\DoxyCodeLine{00153\ \ \ Node*\ Next(\textcolor{keywordtype}{int}\ n)\ \{}
+\DoxyCodeLine{00154\ \ \ \ \ assert(n\ >=\ 0);}
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{comment}{//\ Use\ an\ 'acquire\ load'\ so\ that\ we\ observe\ a\ fully\ initialized}}
+\DoxyCodeLine{00156\ \ \ \ \ \textcolor{comment}{//\ version\ of\ the\ returned\ Node.}}
+\DoxyCodeLine{00157\ \ \ \ \ \textcolor{keywordflow}{return}\ next\_[n].load(std::memory\_order\_acquire);}
+\DoxyCodeLine{00158\ \ \ \}}
+\DoxyCodeLine{00159\ \ \ \textcolor{keywordtype}{void}\ SetNext(\textcolor{keywordtype}{int}\ n,\ Node*\ x)\ \{}
+\DoxyCodeLine{00160\ \ \ \ \ assert(n\ >=\ 0);}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{comment}{//\ Use\ a\ 'release\ store'\ so\ that\ anybody\ who\ reads\ through\ this}}
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{comment}{//\ pointer\ observes\ a\ fully\ initialized\ version\ of\ the\ inserted\ node.}}
+\DoxyCodeLine{00163\ \ \ \ \ next\_[n].store(x,\ std::memory\_order\_release);}
+\DoxyCodeLine{00164\ \ \ \}}
+\DoxyCodeLine{00165\ }
+\DoxyCodeLine{00166\ \ \ \textcolor{comment}{//\ No-\/barrier\ variants\ that\ can\ be\ safely\ used\ in\ a\ few\ locations.}}
+\DoxyCodeLine{00167\ \ \ Node*\ NoBarrier\_Next(\textcolor{keywordtype}{int}\ n)\ \{}
+\DoxyCodeLine{00168\ \ \ \ \ assert(n\ >=\ 0);}
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{keywordflow}{return}\ next\_[n].load(std::memory\_order\_relaxed);}
+\DoxyCodeLine{00170\ \ \ \}}
+\DoxyCodeLine{00171\ \ \ \textcolor{keywordtype}{void}\ NoBarrier\_SetNext(\textcolor{keywordtype}{int}\ n,\ Node*\ x)\ \{}
+\DoxyCodeLine{00172\ \ \ \ \ assert(n\ >=\ 0);}
+\DoxyCodeLine{00173\ \ \ \ \ next\_[n].store(x,\ std::memory\_order\_relaxed);}
+\DoxyCodeLine{00174\ \ \ \}}
+\DoxyCodeLine{00175\ }
+\DoxyCodeLine{00176\ \ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00177\ \ \ \textcolor{comment}{//\ Array\ of\ length\ equal\ to\ the\ node\ height.\ \ next\_[0]\ is\ lowest\ level\ link.}}
+\DoxyCodeLine{00178\ \ \ std::atomic<Node*>\ next\_[1];}
+\DoxyCodeLine{00179\ \};}
+\DoxyCodeLine{00180\ }
+\DoxyCodeLine{00181\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00182\ \textcolor{keyword}{typename}\ SkipList<Key,\ Comparator>::Node*\ SkipList<Key,\ Comparator>::NewNode(}
+\DoxyCodeLine{00183\ \ \ \ \ \textcolor{keyword}{const}\ Key\&\ key,\ \textcolor{keywordtype}{int}\ height)\ \{}
+\DoxyCodeLine{00184\ \ \ \textcolor{keywordtype}{char}*\ \textcolor{keyword}{const}\ node\_memory\ =\ arena\_-\/>AllocateAligned(}
+\DoxyCodeLine{00185\ \ \ \ \ \ \ \textcolor{keyword}{sizeof}(Node)\ +\ \textcolor{keyword}{sizeof}(std::atomic<Node*>)\ *\ (height\ -\/\ 1));}
+\DoxyCodeLine{00186\ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{new}\ (node\_memory)\ Node(key);}
+\DoxyCodeLine{00187\ \}}
+\DoxyCodeLine{00188\ }
+\DoxyCodeLine{00189\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00190\ \textcolor{keyword}{inline}\ SkipList<Key,\ Comparator>::Iterator::Iterator(\textcolor{keyword}{const}\ SkipList*\ list)\ \{}
+\DoxyCodeLine{00191\ \ \ list\_\ =\ list;}
+\DoxyCodeLine{00192\ \ \ node\_\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00193\ \}}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00195\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00196\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ SkipList<Key,\ Comparator>::Iterator::Valid()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00197\ \ \ \textcolor{keywordflow}{return}\ node\_\ !=\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00198\ \}}
+\DoxyCodeLine{00199\ }
+\DoxyCodeLine{00200\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00201\ \textcolor{keyword}{inline}\ \textcolor{keyword}{const}\ Key\&\ SkipList<Key,\ Comparator>::Iterator::key()\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00202\ \ \ assert(Valid());}
+\DoxyCodeLine{00203\ \ \ \textcolor{keywordflow}{return}\ node\_-\/>key;}
+\DoxyCodeLine{00204\ \}}
+\DoxyCodeLine{00205\ }
+\DoxyCodeLine{00206\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00207\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ SkipList<Key,\ Comparator>::Iterator::Next()\ \{}
+\DoxyCodeLine{00208\ \ \ assert(Valid());}
+\DoxyCodeLine{00209\ \ \ node\_\ =\ node\_-\/>Next(0);}
+\DoxyCodeLine{00210\ \}}
+\DoxyCodeLine{00211\ }
+\DoxyCodeLine{00212\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00213\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ SkipList<Key,\ Comparator>::Iterator::Prev()\ \{}
+\DoxyCodeLine{00214\ \ \ \textcolor{comment}{//\ Instead\ of\ using\ explicit\ "{}prev"{}\ links,\ we\ just\ search\ for\ the}}
+\DoxyCodeLine{00215\ \ \ \textcolor{comment}{//\ last\ node\ that\ falls\ before\ key.}}
+\DoxyCodeLine{00216\ \ \ assert(Valid());}
+\DoxyCodeLine{00217\ \ \ node\_\ =\ list\_-\/>FindLessThan(node\_-\/>key);}
+\DoxyCodeLine{00218\ \ \ \textcolor{keywordflow}{if}\ (node\_\ ==\ list\_-\/>head\_)\ \{}
+\DoxyCodeLine{00219\ \ \ \ \ node\_\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00220\ \ \ \}}
+\DoxyCodeLine{00221\ \}}
+\DoxyCodeLine{00222\ }
+\DoxyCodeLine{00223\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00224\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ SkipList<Key,\ Comparator>::Iterator::Seek(\textcolor{keyword}{const}\ Key\&\ target)\ \{}
+\DoxyCodeLine{00225\ \ \ node\_\ =\ list\_-\/>FindGreaterOrEqual(target,\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00226\ \}}
+\DoxyCodeLine{00227\ }
+\DoxyCodeLine{00228\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00229\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ SkipList<Key,\ Comparator>::Iterator::SeekToFirst()\ \{}
+\DoxyCodeLine{00230\ \ \ node\_\ =\ list\_-\/>head\_-\/>Next(0);}
+\DoxyCodeLine{00231\ \}}
+\DoxyCodeLine{00232\ }
+\DoxyCodeLine{00233\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00234\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ SkipList<Key,\ Comparator>::Iterator::SeekToLast()\ \{}
+\DoxyCodeLine{00235\ \ \ node\_\ =\ list\_-\/>FindLast();}
+\DoxyCodeLine{00236\ \ \ \textcolor{keywordflow}{if}\ (node\_\ ==\ list\_-\/>head\_)\ \{}
+\DoxyCodeLine{00237\ \ \ \ \ node\_\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00238\ \ \ \}}
+\DoxyCodeLine{00239\ \}}
+\DoxyCodeLine{00240\ }
+\DoxyCodeLine{00241\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00242\ \textcolor{keywordtype}{int}\ SkipList<Key,\ Comparator>::RandomHeight()\ \{}
+\DoxyCodeLine{00243\ \ \ \textcolor{comment}{//\ Increase\ height\ with\ probability\ 1\ in\ kBranching}}
+\DoxyCodeLine{00244\ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{int}\ kBranching\ =\ 4;}
+\DoxyCodeLine{00245\ \ \ \textcolor{keywordtype}{int}\ height\ =\ 1;}
+\DoxyCodeLine{00246\ \ \ \textcolor{keywordflow}{while}\ (height\ <\ kMaxHeight\ \&\&\ ((rnd\_.Next()\ \%\ kBranching)\ ==\ 0))\ \{}
+\DoxyCodeLine{00247\ \ \ \ \ height++;}
+\DoxyCodeLine{00248\ \ \ \}}
+\DoxyCodeLine{00249\ \ \ assert(height\ >\ 0);}
+\DoxyCodeLine{00250\ \ \ assert(height\ <=\ kMaxHeight);}
+\DoxyCodeLine{00251\ \ \ \textcolor{keywordflow}{return}\ height;}
+\DoxyCodeLine{00252\ \}}
+\DoxyCodeLine{00253\ }
+\DoxyCodeLine{00254\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00255\ \textcolor{keywordtype}{bool}\ SkipList<Key,\ Comparator>::KeyIsAfterNode(\textcolor{keyword}{const}\ Key\&\ key,\ Node*\ n)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00256\ \ \ \textcolor{comment}{//\ null\ n\ is\ considered\ infinite}}
+\DoxyCodeLine{00257\ \ \ \textcolor{keywordflow}{return}\ (n\ !=\ \textcolor{keyword}{nullptr})\ \&\&\ (compare\_(n-\/>key,\ key)\ <\ 0);}
+\DoxyCodeLine{00258\ \}}
+\DoxyCodeLine{00259\ }
+\DoxyCodeLine{00260\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00261\ \textcolor{keyword}{typename}\ SkipList<Key,\ Comparator>::Node*}
+\DoxyCodeLine{00262\ SkipList<Key,\ Comparator>::FindGreaterOrEqual(\textcolor{keyword}{const}\ Key\&\ key,}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Node**\ prev)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00264\ \ \ Node*\ x\ =\ head\_;}
+\DoxyCodeLine{00265\ \ \ \textcolor{keywordtype}{int}\ level\ =\ GetMaxHeight()\ -\/\ 1;}
+\DoxyCodeLine{00266\ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00267\ \ \ \ \ Node*\ next\ =\ x-\/>Next(level);}
+\DoxyCodeLine{00268\ \ \ \ \ \textcolor{keywordflow}{if}\ (KeyIsAfterNode(key,\ next))\ \{}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \textcolor{comment}{//\ Keep\ searching\ in\ this\ list}}
+\DoxyCodeLine{00270\ \ \ \ \ \ \ x\ =\ next;}
+\DoxyCodeLine{00271\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00272\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (prev\ !=\ \textcolor{keyword}{nullptr})\ prev[level]\ =\ x;}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (level\ ==\ 0)\ \{}
+\DoxyCodeLine{00274\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ next;}
+\DoxyCodeLine{00275\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Switch\ to\ next\ list}}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ level-\/-\/;}
+\DoxyCodeLine{00278\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00279\ \ \ \ \ \}}
+\DoxyCodeLine{00280\ \ \ \}}
+\DoxyCodeLine{00281\ \}}
+\DoxyCodeLine{00282\ }
+\DoxyCodeLine{00283\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00284\ \textcolor{keyword}{typename}\ SkipList<Key,\ Comparator>::Node*}
+\DoxyCodeLine{00285\ SkipList<Key,\ Comparator>::FindLessThan(\textcolor{keyword}{const}\ Key\&\ key)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00286\ \ \ Node*\ x\ =\ head\_;}
+\DoxyCodeLine{00287\ \ \ \textcolor{keywordtype}{int}\ level\ =\ GetMaxHeight()\ -\/\ 1;}
+\DoxyCodeLine{00288\ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00289\ \ \ \ \ assert(x\ ==\ head\_\ ||\ compare\_(x-\/>key,\ key)\ <\ 0);}
+\DoxyCodeLine{00290\ \ \ \ \ Node*\ next\ =\ x-\/>Next(level);}
+\DoxyCodeLine{00291\ \ \ \ \ \textcolor{keywordflow}{if}\ (next\ ==\ \textcolor{keyword}{nullptr}\ ||\ compare\_(next-\/>key,\ key)\ >=\ 0)\ \{}
+\DoxyCodeLine{00292\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (level\ ==\ 0)\ \{}
+\DoxyCodeLine{00293\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ x;}
+\DoxyCodeLine{00294\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Switch\ to\ next\ list}}
+\DoxyCodeLine{00296\ \ \ \ \ \ \ \ \ level-\/-\/;}
+\DoxyCodeLine{00297\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00298\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00299\ \ \ \ \ \ \ x\ =\ next;}
+\DoxyCodeLine{00300\ \ \ \ \ \}}
+\DoxyCodeLine{00301\ \ \ \}}
+\DoxyCodeLine{00302\ \}}
+\DoxyCodeLine{00303\ }
+\DoxyCodeLine{00304\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00305\ \textcolor{keyword}{typename}\ SkipList<Key,\ Comparator>::Node*\ SkipList<Key,\ Comparator>::FindLast()\textcolor{keyword}{}}
+\DoxyCodeLine{00306\ \textcolor{keyword}{\ \ \ \ const\ }\{}
+\DoxyCodeLine{00307\ \ \ Node*\ x\ =\ head\_;}
+\DoxyCodeLine{00308\ \ \ \textcolor{keywordtype}{int}\ level\ =\ GetMaxHeight()\ -\/\ 1;}
+\DoxyCodeLine{00309\ \ \ \textcolor{keywordflow}{while}\ (\textcolor{keyword}{true})\ \{}
+\DoxyCodeLine{00310\ \ \ \ \ Node*\ next\ =\ x-\/>Next(level);}
+\DoxyCodeLine{00311\ \ \ \ \ \textcolor{keywordflow}{if}\ (next\ ==\ \textcolor{keyword}{nullptr})\ \{}
+\DoxyCodeLine{00312\ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (level\ ==\ 0)\ \{}
+\DoxyCodeLine{00313\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ x;}
+\DoxyCodeLine{00314\ \ \ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00315\ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ Switch\ to\ next\ list}}
+\DoxyCodeLine{00316\ \ \ \ \ \ \ \ \ level-\/-\/;}
+\DoxyCodeLine{00317\ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00318\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00319\ \ \ \ \ \ \ x\ =\ next;}
+\DoxyCodeLine{00320\ \ \ \ \ \}}
+\DoxyCodeLine{00321\ \ \ \}}
+\DoxyCodeLine{00322\ \}}
+\DoxyCodeLine{00323\ }
+\DoxyCodeLine{00324\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00325\ SkipList<Key,\ Comparator>::SkipList(Comparator\ cmp,\ Arena*\ arena)}
+\DoxyCodeLine{00326\ \ \ \ \ :\ compare\_(cmp),}
+\DoxyCodeLine{00327\ \ \ \ \ \ \ arena\_(arena),}
+\DoxyCodeLine{00328\ \ \ \ \ \ \ head\_(NewNode(0\ \textcolor{comment}{/*\ any\ key\ will\ do\ */},\ kMaxHeight)),}
+\DoxyCodeLine{00329\ \ \ \ \ \ \ max\_height\_(1),}
+\DoxyCodeLine{00330\ \ \ \ \ \ \ rnd\_(0xdeadbeef)\ \{}
+\DoxyCodeLine{00331\ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ kMaxHeight;\ i++)\ \{}
+\DoxyCodeLine{00332\ \ \ \ \ head\_-\/>SetNext(i,\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00333\ \ \ \}}
+\DoxyCodeLine{00334\ \}}
+\DoxyCodeLine{00335\ }
+\DoxyCodeLine{00336\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00337\ \textcolor{keywordtype}{void}\ SkipList<Key,\ Comparator>::Insert(\textcolor{keyword}{const}\ Key\&\ key)\ \{}
+\DoxyCodeLine{00338\ \ \ \textcolor{comment}{//\ TODO(opt):\ We\ can\ use\ a\ barrier-\/free\ variant\ of\ FindGreaterOrEqual()}}
+\DoxyCodeLine{00339\ \ \ \textcolor{comment}{//\ here\ since\ Insert()\ is\ externally\ synchronized.}}
+\DoxyCodeLine{00340\ \ \ Node*\ prev[kMaxHeight];}
+\DoxyCodeLine{00341\ \ \ Node*\ x\ =\ FindGreaterOrEqual(key,\ prev);}
+\DoxyCodeLine{00342\ }
+\DoxyCodeLine{00343\ \ \ \textcolor{comment}{//\ Our\ data\ structure\ does\ not\ allow\ duplicate\ insertion}}
+\DoxyCodeLine{00344\ \ \ assert(x\ ==\ \textcolor{keyword}{nullptr}\ ||\ !Equal(key,\ x-\/>key));}
+\DoxyCodeLine{00345\ }
+\DoxyCodeLine{00346\ \ \ \textcolor{keywordtype}{int}\ height\ =\ RandomHeight();}
+\DoxyCodeLine{00347\ \ \ \textcolor{keywordflow}{if}\ (height\ >\ GetMaxHeight())\ \{}
+\DoxyCodeLine{00348\ \ \ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ GetMaxHeight();\ i\ <\ height;\ i++)\ \{}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ prev[i]\ =\ head\_;}
+\DoxyCodeLine{00350\ \ \ \ \ \}}
+\DoxyCodeLine{00351\ \ \ \ \ \textcolor{comment}{//\ It\ is\ ok\ to\ mutate\ max\_height\_\ without\ any\ synchronization}}
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{comment}{//\ with\ concurrent\ readers.\ \ A\ concurrent\ reader\ that\ observes}}
+\DoxyCodeLine{00353\ \ \ \ \ \textcolor{comment}{//\ the\ new\ value\ of\ max\_height\_\ will\ see\ either\ the\ old\ value\ of}}
+\DoxyCodeLine{00354\ \ \ \ \ \textcolor{comment}{//\ new\ level\ pointers\ from\ head\_\ (nullptr),\ or\ a\ new\ value\ set\ in}}
+\DoxyCodeLine{00355\ \ \ \ \ \textcolor{comment}{//\ the\ loop\ below.\ \ In\ the\ former\ case\ the\ reader\ will}}
+\DoxyCodeLine{00356\ \ \ \ \ \textcolor{comment}{//\ immediately\ drop\ to\ the\ next\ level\ since\ nullptr\ sorts\ after\ all}}
+\DoxyCodeLine{00357\ \ \ \ \ \textcolor{comment}{//\ keys.\ \ In\ the\ latter\ case\ the\ reader\ will\ use\ the\ new\ node.}}
+\DoxyCodeLine{00358\ \ \ \ \ max\_height\_.store(height,\ std::memory\_order\_relaxed);}
+\DoxyCodeLine{00359\ \ \ \}}
+\DoxyCodeLine{00360\ }
+\DoxyCodeLine{00361\ \ \ x\ =\ NewNode(key,\ height);}
+\DoxyCodeLine{00362\ \ \ \textcolor{keywordflow}{for}\ (\textcolor{keywordtype}{int}\ i\ =\ 0;\ i\ <\ height;\ i++)\ \{}
+\DoxyCodeLine{00363\ \ \ \ \ \textcolor{comment}{//\ NoBarrier\_SetNext()\ suffices\ since\ we\ will\ add\ a\ barrier\ when}}
+\DoxyCodeLine{00364\ \ \ \ \ \textcolor{comment}{//\ we\ publish\ a\ pointer\ to\ "{}x"{}\ in\ prev[i].}}
+\DoxyCodeLine{00365\ \ \ \ \ x-\/>NoBarrier\_SetNext(i,\ prev[i]-\/>NoBarrier\_Next(i));}
+\DoxyCodeLine{00366\ \ \ \ \ prev[i]-\/>SetNext(i,\ x);}
+\DoxyCodeLine{00367\ \ \ \}}
+\DoxyCodeLine{00368\ \}}
+\DoxyCodeLine{00369\ }
+\DoxyCodeLine{00370\ \textcolor{keyword}{template}\ <\textcolor{keyword}{typename}\ Key,\ \textcolor{keyword}{class}\ Comparator>}
+\DoxyCodeLine{00371\ \textcolor{keywordtype}{bool}\ SkipList<Key,\ Comparator>::Contains(\textcolor{keyword}{const}\ Key\&\ key)\textcolor{keyword}{\ const\ }\{}
+\DoxyCodeLine{00372\ \ \ Node*\ x\ =\ FindGreaterOrEqual(key,\ \textcolor{keyword}{nullptr});}
+\DoxyCodeLine{00373\ \ \ \textcolor{keywordflow}{if}\ (x\ !=\ \textcolor{keyword}{nullptr}\ \&\&\ Equal(key,\ x-\/>key))\ \{}
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00375\ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00376\ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00377\ \ \ \}}
+\DoxyCodeLine{00378\ \}}
+\DoxyCodeLine{00379\ }
+\DoxyCodeLine{00380\ \}\ \ \textcolor{comment}{//\ namespace\ leveldb}}
+\DoxyCodeLine{00381\ }
+\DoxyCodeLine{00382\ \textcolor{preprocessor}{\#endif\ \ }\textcolor{comment}{//\ STORAGE\_LEVELDB\_DB\_SKIPLIST\_H\_}}
+
+\end{DoxyCode}

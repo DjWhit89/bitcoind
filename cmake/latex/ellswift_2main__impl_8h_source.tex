@@ -1,0 +1,571 @@
+\doxysection{main\+\_\+impl.\+h}
+\label{ellswift_2main__impl_8h_source}\index{src/secp256k1/src/modules/ellswift/main\_impl.h@{src/secp256k1/src/modules/ellswift/main\_impl.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/***********************************************************************}}
+\DoxyCodeLine{00002\ \textcolor{comment}{\ *\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying\ \ \ \ *}}
+\DoxyCodeLine{00003\ \textcolor{comment}{\ *\ file\ COPYING\ or\ https://www.opensource.org/licenses/mit-\/license.php.*}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ ***********************************************************************/}}
+\DoxyCodeLine{00005\ }
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#ifndef\ SECP256K1\_MODULE\_ELLSWIFT\_MAIN\_H}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#define\ SECP256K1\_MODULE\_ELLSWIFT\_MAIN\_H}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1.h"{}}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ "{}../../../include/secp256k1\_ellswift.h"{}}}
+\DoxyCodeLine{00011\ \textcolor{preprocessor}{\#include\ "{}../../eckey.h"{}}}
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#include\ "{}../../hash.h"{}}}
+\DoxyCodeLine{00013\ }
+\DoxyCodeLine{00015\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_fe\ secp256k1\_ellswift\_c1\ =\ SECP256K1\_FE\_CONST(0x851695d4,\ 0x9a83f8ef,\ 0x919bb861,\ 0x53cbcb16,\ 0x630fb68a,\ 0xed0a766a,\ 0x3ec693d6,\ 0x8e6afa40);}
+\DoxyCodeLine{00017\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_fe\ secp256k1\_ellswift\_c2\ =\ SECP256K1\_FE\_CONST(0x7ae96a2b,\ 0x657c0710,\ 0x6e64479e,\ 0xac3434e9,\ 0x9cf04975,\ 0x12f58995,\ 0xc1396c28,\ 0x719501ee);}
+\DoxyCodeLine{00019\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_fe\ secp256k1\_ellswift\_c3\ =\ SECP256K1\_FE\_CONST(0x7ae96a2b,\ 0x657c0710,\ 0x6e64479e,\ 0xac3434e9,\ 0x9cf04975,\ 0x12f58995,\ 0xc1396c28,\ 0x719501ef);}
+\DoxyCodeLine{00021\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ secp256k1\_fe\ secp256k1\_ellswift\_c4\ =\ SECP256K1\_FE\_CONST(0x851695d4,\ 0x9a83f8ef,\ 0x919bb861,\ 0x53cbcb16,\ 0x630fb68a,\ 0xed0a766a,\ 0x3ec693d6,\ 0x8e6afa41);}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ellswift\_xswiftec\_frac\_var(secp256k1\_fe\ *xn,\ secp256k1\_fe\ *xd,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *u,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *t)\ \{}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{comment}{/*\ The\ implemented\ algorithm\ is\ the\ following\ (all\ operations\ in\ GF(p)):}}
+\DoxyCodeLine{00026\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00027\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ c0\ =\ sqrt(-\/3)\ =\ 0xa2d2ba93507f1df233770c2a797962cc61f6d15da14ecd47d8d27ae1cd5f852.}}
+\DoxyCodeLine{00028\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ u\ =\ 0,\ set\ u\ =\ 1.}}
+\DoxyCodeLine{00029\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ t\ =\ 0,\ set\ t\ =\ 1.}}
+\DoxyCodeLine{00030\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ u\string^3+7+t\string^2\ =\ 0,\ set\ t\ =\ 2*t.}}
+\DoxyCodeLine{00031\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ X\ =\ (u\string^3+7-\/t\string^2)/(2*t).}}
+\DoxyCodeLine{00032\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ Y\ =\ (X+t)/(c0*u).}}
+\DoxyCodeLine{00033\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ x3\ =\ u+4*Y\string^2\ is\ a\ valid\ x\ coordinate,\ return\ it.}}
+\DoxyCodeLine{00034\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ x2\ =\ (-\/X/Y-\/u)/2\ is\ a\ valid\ x\ coordinate,\ return\ it.}}
+\DoxyCodeLine{00035\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Return\ x1\ =\ (X/Y-\/u)/2\ (which\ is\ now\ guaranteed\ to\ be\ a\ valid\ x\ coordinate).}}
+\DoxyCodeLine{00036\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00037\ \textcolor{comment}{\ \ \ \ \ *\ Introducing\ s=t\string^2,\ g=u\string^3+7,\ and\ simplifying\ x1=-\/(x2+u)\ we\ get:}}
+\DoxyCodeLine{00038\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00039\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ c0\ =\ ...}}
+\DoxyCodeLine{00040\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ u\ =\ 0,\ set\ u\ =\ 1.}}
+\DoxyCodeLine{00041\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ t\ =\ 0,\ set\ t\ =\ 1.}}
+\DoxyCodeLine{00042\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ s\ =\ t\string^2}}
+\DoxyCodeLine{00043\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ g\ =\ u\string^3+7}}
+\DoxyCodeLine{00044\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ g+s\ =\ 0,\ set\ t\ =\ 2*t,\ s\ =\ 4*s}}
+\DoxyCodeLine{00045\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ X\ =\ (g-\/s)/(2*t).}}
+\DoxyCodeLine{00046\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ Y\ =\ (X+t)/(c0*u)\ =\ (g+s)/(2*c0*t*u).}}
+\DoxyCodeLine{00047\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ x3\ =\ u+4*Y\string^2\ is\ a\ valid\ x\ coordinate,\ return\ it.}}
+\DoxyCodeLine{00048\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ x2\ =\ (-\/X/Y-\/u)/2\ is\ a\ valid\ x\ coordinate,\ return\ it.}}
+\DoxyCodeLine{00049\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Return\ x1\ =\ -\/(x2+u).}}
+\DoxyCodeLine{00050\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00051\ \textcolor{comment}{\ \ \ \ \ *\ Now\ substitute\ Y\string^2\ =\ -\/(g+s)\string^2/(12*s*u\string^2)\ and\ X/Y\ =\ c0*u*(g-\/s)/(g+s).\ This}}
+\DoxyCodeLine{00052\ \textcolor{comment}{\ \ \ \ \ *\ means\ X\ and\ Y\ do\ not\ need\ to\ be\ evaluated\ explicitly\ anymore.}}
+\DoxyCodeLine{00053\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00054\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ ...}}
+\DoxyCodeLine{00055\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ g+s\ =\ 0,\ set\ s\ =\ 4*s.}}
+\DoxyCodeLine{00056\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ x3\ =\ u-\/(g+s)\string^2/(3*s*u\string^2)\ is\ a\ valid\ x\ coordinate,\ return\ it.}}
+\DoxyCodeLine{00057\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ x2\ =\ (-\/c0*u*(g-\/s)/(g+s)-\/u)/2\ is\ a\ valid\ x\ coordinate,\ return\ it.}}
+\DoxyCodeLine{00058\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Return\ x1\ =\ -\/(x2+u).}}
+\DoxyCodeLine{00059\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00060\ \textcolor{comment}{\ \ \ \ \ *\ Simplifying\ x2\ using\ 2\ additional\ constants:}}
+\DoxyCodeLine{00061\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00062\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ c1\ =\ (c0-\/1)/2\ =\ 0x851695d49a83f8ef919bb86153cbcb16630fb68aed0a766a3ec693d68e6afa40.}}
+\DoxyCodeLine{00063\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ c2\ =\ (-\/c0-\/1)/2\ =\ 0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee.}}
+\DoxyCodeLine{00064\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ ...}}
+\DoxyCodeLine{00065\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ x2\ =\ u*(c1*s+c2*g)/(g+s)\ is\ a\ valid\ x\ coordinate,\ return\ it.}}
+\DoxyCodeLine{00066\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ ...}}
+\DoxyCodeLine{00067\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00068\ \textcolor{comment}{\ \ \ \ \ *\ Writing\ x3\ as\ a\ fraction:}}
+\DoxyCodeLine{00069\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00070\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ ...}}
+\DoxyCodeLine{00071\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ x3\ =\ (3*s*u\string^3-\/(g+s)\string^2)/(3*s*u\string^2)\ ...}}
+\DoxyCodeLine{00072\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ ...}}
+\DoxyCodeLine{00073\ \textcolor{comment}{}}
+\DoxyCodeLine{00074\ \textcolor{comment}{\ \ \ \ \ *\ Overall,\ we\ get:}}
+\DoxyCodeLine{00075\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00076\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ c1\ =\ 0x851695d49a83f8ef919bb86153cbcb16630fb68aed0a766a3ec693d68e6afa40.}}
+\DoxyCodeLine{00077\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ c2\ =\ 0x7ae96a2b657c07106e64479eac3434e99cf0497512f58995c1396c28719501ee.}}
+\DoxyCodeLine{00078\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ u\ =\ 0,\ set\ u\ =\ 1.}}
+\DoxyCodeLine{00079\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ t\ =\ 0,\ set\ s\ =\ 1,\ else\ set\ s\ =\ t\string^2.}}
+\DoxyCodeLine{00080\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ g\ =\ u\string^3+7.}}
+\DoxyCodeLine{00081\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ g+s\ =\ 0,\ set\ s\ =\ 4*s.}}
+\DoxyCodeLine{00082\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ x3\ =\ (3*s*u\string^3-\/(g+s)\string^2)/(3*s*u\string^2)\ is\ a\ valid\ x\ coordinate,\ return\ it.}}
+\DoxyCodeLine{00083\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ x2\ =\ u*(c1*s+c2*g)/(g+s)\ is\ a\ valid\ x\ coordinate,\ return\ it.}}
+\DoxyCodeLine{00084\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Return\ x1\ =\ -\/(x2+u).}}
+\DoxyCodeLine{00085\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00086\ \ \ \ \ secp256k1\_fe\ u1,\ s,\ g,\ p,\ d,\ n,\ l;}
+\DoxyCodeLine{00087\ \ \ \ \ u1\ =\ *u;}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{keywordflow}{if}\ (EXPECT(secp256k1\_fe\_normalizes\_to\_zero\_var(\&u1),\ 0))\ u1\ =\ secp256k1\_fe\_one;}
+\DoxyCodeLine{00089\ \ \ \ \ secp256k1\_fe\_sqr(\&s,\ t);}
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{keywordflow}{if}\ (EXPECT(secp256k1\_fe\_normalizes\_to\_zero\_var(t),\ 0))\ s\ =\ secp256k1\_fe\_one;}
+\DoxyCodeLine{00091\ \ \ \ \ secp256k1\_fe\_sqr(\&l,\ \&u1);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ l\ =\ u\string^2\ */}}
+\DoxyCodeLine{00092\ \ \ \ \ secp256k1\_fe\_mul(\&g,\ \&l,\ \&u1);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ g\ =\ u\string^3\ */}}
+\DoxyCodeLine{00093\ \ \ \ \ secp256k1\_fe\_add\_int(\&g,\ SECP256K1\_B);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ g\ =\ u\string^3\ +\ 7\ */}}
+\DoxyCodeLine{00094\ \ \ \ \ p\ =\ g;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ p\ =\ g\ */}}
+\DoxyCodeLine{00095\ \ \ \ \ secp256k1\_fe\_add(\&p,\ \&s);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ p\ =\ g+s\ */}}
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{keywordflow}{if}\ (EXPECT(secp256k1\_fe\_normalizes\_to\_zero\_var(\&p),\ 0))\ \{}
+\DoxyCodeLine{00097\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul\_int(\&s,\ 4);}
+\DoxyCodeLine{00098\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Recompute\ p\ =\ g+s\ */}}
+\DoxyCodeLine{00099\ \ \ \ \ \ \ \ \ p\ =\ g;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ p\ =\ g\ */}}
+\DoxyCodeLine{00100\ \ \ \ \ \ \ \ \ secp256k1\_fe\_add(\&p,\ \&s);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ p\ =\ g+s\ */}}
+\DoxyCodeLine{00101\ \ \ \ \ \}}
+\DoxyCodeLine{00102\ \ \ \ \ secp256k1\_fe\_mul(\&d,\ \&s,\ \&l);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ d\ =\ s*u\string^2\ */}}
+\DoxyCodeLine{00103\ \ \ \ \ secp256k1\_fe\_mul\_int(\&d,\ 3);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ d\ =\ 3*s*u\string^2\ */}}
+\DoxyCodeLine{00104\ \ \ \ \ secp256k1\_fe\_sqr(\&l,\ \&p);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ l\ =\ (g+s)\string^2\ */}}
+\DoxyCodeLine{00105\ \ \ \ \ secp256k1\_fe\_negate(\&l,\ \&l,\ 1);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ l\ =\ -\/(g+s)\string^2\ */}}
+\DoxyCodeLine{00106\ \ \ \ \ secp256k1\_fe\_mul(\&n,\ \&d,\ \&u1);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ n\ =\ 3*s*u\string^3\ */}}
+\DoxyCodeLine{00107\ \ \ \ \ secp256k1\_fe\_add(\&n,\ \&l);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ n\ =\ 3*s*u\string^3-\/(g+s)\string^2\ */}}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_ge\_x\_frac\_on\_curve\_var(\&n,\ \&d))\ \{}
+\DoxyCodeLine{00109\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Return\ x3\ =\ n/d\ =\ (3*s*u\string^3-\/(g+s)\string^2)/(3*s*u\string^2)\ */}}
+\DoxyCodeLine{00110\ \ \ \ \ \ \ \ \ *xn\ =\ n;}
+\DoxyCodeLine{00111\ \ \ \ \ \ \ \ \ *xd\ =\ d;}
+\DoxyCodeLine{00112\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00113\ \ \ \ \ \}}
+\DoxyCodeLine{00114\ \ \ \ \ *xd\ =\ p;}
+\DoxyCodeLine{00115\ \ \ \ \ secp256k1\_fe\_mul(\&l,\ \&secp256k1\_ellswift\_c1,\ \&s);\ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ l\ =\ c1*s\ */}}
+\DoxyCodeLine{00116\ \ \ \ \ secp256k1\_fe\_mul(\&n,\ \&secp256k1\_ellswift\_c2,\ \&g);\ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ n\ =\ c2*g\ */}}
+\DoxyCodeLine{00117\ \ \ \ \ secp256k1\_fe\_add(\&n,\ \&l);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ n\ =\ c1*s+c2*g\ */}}
+\DoxyCodeLine{00118\ \ \ \ \ secp256k1\_fe\_mul(\&n,\ \&n,\ \&u1);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ n\ =\ u*(c1*s+c2*g)\ */}}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{comment}{/*\ Possible\ optimization:\ in\ the\ invocation\ below,\ p\string^2\ =\ (g+s)\string^2\ is\ computed,}}
+\DoxyCodeLine{00120\ \textcolor{comment}{\ \ \ \ \ *\ which\ we\ already\ have\ computed\ above.\ This\ could\ be\ deduplicated.\ */}}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_ge\_x\_frac\_on\_curve\_var(\&n,\ \&p))\ \{}
+\DoxyCodeLine{00122\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Return\ x2\ =\ n/p\ =\ u*(c1*s+c2*g)/(g+s)\ */}}
+\DoxyCodeLine{00123\ \ \ \ \ \ \ \ \ *xn\ =\ n;}
+\DoxyCodeLine{00124\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return};}
+\DoxyCodeLine{00125\ \ \ \ \ \}}
+\DoxyCodeLine{00126\ \ \ \ \ secp256k1\_fe\_mul(\&l,\ \&p,\ \&u1);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ l\ =\ u*(g+s)\ */}}
+\DoxyCodeLine{00127\ \ \ \ \ secp256k1\_fe\_add(\&n,\ \&l);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ n\ =\ u*(c1*s+c2*g)+u*(g+s)\ */}}
+\DoxyCodeLine{00128\ \ \ \ \ secp256k1\_fe\_negate(xn,\ \&n,\ 2);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ n\ =\ -\/u*(c1*s+c2*g)-\/u*(g+s)\ */}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \ \ \ \ VERIFY\_CHECK(secp256k1\_ge\_x\_frac\_on\_curve\_var(xn,\ \&p));}
+\DoxyCodeLine{00131\ \ \ \ \ \textcolor{comment}{/*\ Return\ x3\ =\ n/p\ =\ -\/(u*(c1*s+c2*g)/(g+s)+u)\ */}}
+\DoxyCodeLine{00132\ \}}
+\DoxyCodeLine{00133\ }
+\DoxyCodeLine{00135\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ellswift\_xswiftec\_var(secp256k1\_fe\ *x,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *u,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *t)\ \{}
+\DoxyCodeLine{00136\ \ \ \ \ secp256k1\_fe\ xn,\ xd;}
+\DoxyCodeLine{00137\ \ \ \ \ secp256k1\_ellswift\_xswiftec\_frac\_var(\&xn,\ \&xd,\ u,\ t);}
+\DoxyCodeLine{00138\ \ \ \ \ secp256k1\_fe\_inv\_var(\&xd,\ \&xd);}
+\DoxyCodeLine{00139\ \ \ \ \ secp256k1\_fe\_mul(x,\ \&xn,\ \&xd);}
+\DoxyCodeLine{00140\ \}}
+\DoxyCodeLine{00141\ }
+\DoxyCodeLine{00143\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ellswift\_swiftec\_var(secp256k1\_ge\ *p,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *u,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *t)\ \{}
+\DoxyCodeLine{00144\ \ \ \ \ secp256k1\_fe\ x;}
+\DoxyCodeLine{00145\ \ \ \ \ secp256k1\_ellswift\_xswiftec\_var(\&x,\ u,\ t);}
+\DoxyCodeLine{00146\ \ \ \ \ secp256k1\_ge\_set\_xo\_var(p,\ \&x,\ secp256k1\_fe\_is\_odd(t));}
+\DoxyCodeLine{00147\ \}}
+\DoxyCodeLine{00148\ }
+\DoxyCodeLine{00149\ \textcolor{comment}{/*\ Try\ to\ complete\ an\ ElligatorSwift\ encoding\ (u,\ t)\ for\ X\ coordinate\ x,\ given\ u\ and\ x.}}
+\DoxyCodeLine{00150\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00151\ \textcolor{comment}{\ *\ There\ may\ be\ up\ to\ 8\ distinct\ t\ values\ such\ that\ (u,\ t)\ decodes\ back\ to\ x,\ but\ also}}
+\DoxyCodeLine{00152\ \textcolor{comment}{\ *\ fewer,\ or\ none\ at\ all.\ Each\ such\ partial\ inverse\ can\ be\ accessed\ individually\ using\ a}}
+\DoxyCodeLine{00153\ \textcolor{comment}{\ *\ distinct\ input\ argument\ c\ (in\ range\ 0-\/7),\ and\ some\ or\ all\ of\ these\ may\ return\ failure.}}
+\DoxyCodeLine{00154\ \textcolor{comment}{\ *\ The\ following\ guarantees\ exist:}}
+\DoxyCodeLine{00155\ \textcolor{comment}{\ *\ -\/\ Given\ (x,\ u),\ no\ two\ distinct\ c\ values\ give\ the\ same\ successful\ result\ t.}}
+\DoxyCodeLine{00156\ \textcolor{comment}{\ *\ -\/\ Every\ successful\ result\ maps\ back\ to\ x\ through\ secp256k1\_ellswift\_xswiftec\_var.}}
+\DoxyCodeLine{00157\ \textcolor{comment}{\ *\ -\/\ Given\ (x,\ u),\ all\ t\ values\ that\ map\ back\ to\ x\ can\ be\ reached\ by\ combining\ the}}
+\DoxyCodeLine{00158\ \textcolor{comment}{\ *\ \ \ successful\ results\ from\ this\ function\ over\ all\ c\ values,\ with\ the\ exception\ of:}}
+\DoxyCodeLine{00159\ \textcolor{comment}{\ *\ \ \ -\/\ this\ function\ cannot\ be\ called\ with\ u=0}}
+\DoxyCodeLine{00160\ \textcolor{comment}{\ *\ \ \ -\/\ no\ result\ with\ t=0\ will\ be\ returned}}
+\DoxyCodeLine{00161\ \textcolor{comment}{\ *\ \ \ -\/\ no\ result\ for\ which\ u\string^3\ +\ t\string^2\ +\ 7\ =\ 0\ will\ be\ returned.}}
+\DoxyCodeLine{00162\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00163\ \textcolor{comment}{\ *\ The\ rather\ unusual\ encoding\ of\ bits\ in\ c\ (a\ large\ "{}if"{}\ based\ on\ the\ middle\ bit,\ and\ then}}
+\DoxyCodeLine{00164\ \textcolor{comment}{\ *\ using\ the\ low\ and\ high\ bits\ to\ pick\ signs\ of\ square\ roots)\ is\ to\ match\ the\ paper's}}
+\DoxyCodeLine{00165\ \textcolor{comment}{\ *\ encoding\ more\ closely:\ c=0\ through\ c=3\ match\ branches\ 1..4\ in\ the\ paper,\ while\ c=4\ through}}
+\DoxyCodeLine{00166\ \textcolor{comment}{\ *\ c=7\ are\ copies\ of\ those\ with\ an\ additional\ negation\ of\ sqrt(w).}}
+\DoxyCodeLine{00167\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00168\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ secp256k1\_ellswift\_xswiftec\_inv\_var(secp256k1\_fe\ *t,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *x\_in,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *u\_in,\ \textcolor{keywordtype}{int}\ c)\ \{}
+\DoxyCodeLine{00169\ \ \ \ \ \textcolor{comment}{/*\ The\ implemented\ algorithm\ is\ this\ (all\ arithmetic,\ except\ involving\ c,\ is\ mod\ p):}}
+\DoxyCodeLine{00170\ \textcolor{comment}{\ \ \ \ \ *}}
+\DoxyCodeLine{00171\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ (c\ \&\ 2)\ =\ 0:}}
+\DoxyCodeLine{00172\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ If\ (-\/x-\/u)\ is\ a\ valid\ X\ coordinate,\ fail.}}
+\DoxyCodeLine{00173\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ s=-\/(u\string^3+7)/(u\string^2+u*x+x\string^2).}}
+\DoxyCodeLine{00174\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ If\ s\ is\ not\ square,\ fail.}}
+\DoxyCodeLine{00175\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ v=x.}}
+\DoxyCodeLine{00176\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ (c\ \&\ 2)\ =\ 2:}}
+\DoxyCodeLine{00177\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ s=x-\/u.}}
+\DoxyCodeLine{00178\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ If\ s\ is\ not\ square,\ fail.}}
+\DoxyCodeLine{00179\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ r=sqrt(-\/s*(4*(u\string^3+7)+3*u\string^2*s));\ fail\ if\ it\ doesn't\ exist.}}
+\DoxyCodeLine{00180\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ If\ (c\ \&\ 1)\ =\ 1\ and\ r\ =\ 0,\ fail.}}
+\DoxyCodeLine{00181\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ If\ s=0,\ fail.}}
+\DoxyCodeLine{00182\ \textcolor{comment}{\ \ \ \ \ *\ \ \ -\/\ Let\ v=(r/s-\/u)/2.}}
+\DoxyCodeLine{00183\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ Let\ w=sqrt(s).}}
+\DoxyCodeLine{00184\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ (c\ \&\ 5)\ =\ 0:\ return\ -\/w*(c3*u\ +\ v).}}
+\DoxyCodeLine{00185\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ (c\ \&\ 5)\ =\ 1:\ return\ \ w*(c4*u\ +\ v).}}
+\DoxyCodeLine{00186\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ (c\ \&\ 5)\ =\ 4:\ return\ \ w*(c3*u\ +\ v).}}
+\DoxyCodeLine{00187\ \textcolor{comment}{\ \ \ \ \ *\ -\/\ If\ (c\ \&\ 5)\ =\ 5:\ return\ -\/w*(c4*u\ +\ v).}}
+\DoxyCodeLine{00188\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00189\ \ \ \ \ secp256k1\_fe\ x\ =\ *x\_in,\ u\ =\ *u\_in,\ g,\ v,\ s,\ m,\ r,\ q;}
+\DoxyCodeLine{00190\ \ \ \ \ \textcolor{keywordtype}{int}\ ret;}
+\DoxyCodeLine{00191\ }
+\DoxyCodeLine{00192\ \ \ \ \ secp256k1\_fe\_normalize\_weak(\&x);}
+\DoxyCodeLine{00193\ \ \ \ \ secp256k1\_fe\_normalize\_weak(\&u);}
+\DoxyCodeLine{00194\ }
+\DoxyCodeLine{00195\ \ \ \ \ VERIFY\_CHECK(c\ >=\ 0\ \&\&\ c\ <\ 8);}
+\DoxyCodeLine{00196\ \ \ \ \ VERIFY\_CHECK(secp256k1\_ge\_x\_on\_curve\_var(\&x));}
+\DoxyCodeLine{00197\ }
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{keywordflow}{if}\ (!(c\ \&\ 2))\ \{}
+\DoxyCodeLine{00199\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ c\ is\ in\ \{0,\ 1,\ 4,\ 5\}.\ In\ this\ case\ we\ look\ for\ an\ inverse\ under\ the\ x1\ (if\ c=0\ or}}
+\DoxyCodeLine{00200\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ c=4)\ formula,\ or\ x2\ (if\ c=1\ or\ c=5)\ formula.\ */}}
+\DoxyCodeLine{00201\ }
+\DoxyCodeLine{00202\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ -\/u-\/x\ is\ a\ valid\ X\ coordinate,\ fail.\ This\ would\ yield\ an\ encoding\ that\ roundtrips}}
+\DoxyCodeLine{00203\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ back\ under\ the\ x3\ formula\ instead\ (which\ has\ priority\ over\ x1\ and\ x2,\ so\ the\ decoding}}
+\DoxyCodeLine{00204\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ would\ not\ match\ x).\ */}}
+\DoxyCodeLine{00205\ \ \ \ \ \ \ \ \ m\ =\ x;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ =\ x\ */}}
+\DoxyCodeLine{00206\ \ \ \ \ \ \ \ \ secp256k1\_fe\_add(\&m,\ \&u);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ =\ u+x\ */}}
+\DoxyCodeLine{00207\ \ \ \ \ \ \ \ \ secp256k1\_fe\_negate(\&m,\ \&m,\ 2);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ =\ -\/u-\/x\ */}}
+\DoxyCodeLine{00208\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Test\ if\ (-\/u-\/x)\ is\ a\ valid\ X\ coordinate.\ If\ so,\ fail.\ */}}
+\DoxyCodeLine{00209\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_ge\_x\_on\_curve\_var(\&m))\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00210\ }
+\DoxyCodeLine{00211\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Let\ s\ =\ -\/(u\string^3\ +\ 7)/(u\string^2\ +\ u*x\ +\ x\string^2)\ [first\ part]\ */}}
+\DoxyCodeLine{00212\ \ \ \ \ \ \ \ \ secp256k1\_fe\_sqr(\&s,\ \&m);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ s\ =\ (u+x)\string^2\ */}}
+\DoxyCodeLine{00213\ \ \ \ \ \ \ \ \ secp256k1\_fe\_negate(\&s,\ \&s,\ 1);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ s\ =\ -\/(u+x)\string^2\ */}}
+\DoxyCodeLine{00214\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&m,\ \&u,\ \&x);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ =\ u*x\ */}}
+\DoxyCodeLine{00215\ \ \ \ \ \ \ \ \ secp256k1\_fe\_add(\&s,\ \&m);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ s\ =\ -\/(u\string^2\ +\ u*x\ +\ x\string^2)\ */}}
+\DoxyCodeLine{00216\ }
+\DoxyCodeLine{00217\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Note\ that\ at\ this\ point,\ s\ =\ 0\ is\ impossible.\ If\ it\ were\ the\ case:}}
+\DoxyCodeLine{00218\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ \ \ \ \ \ \ \ \ \ \ \ \ s\ =\ -\/(u\string^2\ +\ u*x\ +\ x\string^2)\ =\ 0}}
+\DoxyCodeLine{00219\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ =>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ u\string^2\ +\ u*x\ +\ x\string^2\ =\ 0}}
+\DoxyCodeLine{00220\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ =>\ \ \ (u\ +\ 2*x)\ *\ (u\string^2\ +\ u*x\ +\ x\string^2)\ =\ 0}}
+\DoxyCodeLine{00221\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ =>\ 2*x\string^3\ +\ 3*x\string^2*u\ +\ 3*x*u\string^2\ +\ u\string^3\ =\ 0}}
+\DoxyCodeLine{00222\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ =>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (x\ +\ u)\string^3\ +\ x\string^3\ =\ 0}}
+\DoxyCodeLine{00223\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ =>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ x\string^3\ =\ -\/(x\ +\ u)\string^3}}
+\DoxyCodeLine{00224\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ =>\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ x\string^3\ +\ B\ =\ (-\/u\ -\/\ x)\string^3\ +\ B}}
+\DoxyCodeLine{00225\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *}}
+\DoxyCodeLine{00226\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ However,\ we\ know\ x\string^3\ +\ B\ is\ square\ (because\ x\ is\ on\ the\ curve)\ and}}
+\DoxyCodeLine{00227\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ that\ (-\/u-\/x)\string^3\ +\ B\ is\ not\ square\ (the\ secp256k1\_ge\_x\_on\_curve\_var(\&m)}}
+\DoxyCodeLine{00228\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ test\ above\ would\ have\ failed).\ This\ is\ a\ contradiction,\ and\ thus\ the}}
+\DoxyCodeLine{00229\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ assumption\ s=0\ is\ false.\ */}}
+\DoxyCodeLine{00230\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(!secp256k1\_fe\_normalizes\_to\_zero\_var(\&s));}
+\DoxyCodeLine{00231\ }
+\DoxyCodeLine{00232\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ s\ is\ not\ square,\ fail.\ We\ have\ not\ fully\ computed\ s\ yet,\ but\ s\ is\ square\ iff}}
+\DoxyCodeLine{00233\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ -\/(u\string^3+7)*(u\string^2+u*x+x\string^2)\ is\ square\ (because\ a/b\ is\ square\ iff\ a*b\ is\ square\ and\ b\ is}}
+\DoxyCodeLine{00234\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ nonzero).\ */}}
+\DoxyCodeLine{00235\ \ \ \ \ \ \ \ \ secp256k1\_fe\_sqr(\&g,\ \&u);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ g\ =\ u\string^2\ */}}
+\DoxyCodeLine{00236\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&g,\ \&g,\ \&u);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ g\ =\ u\string^3\ */}}
+\DoxyCodeLine{00237\ \ \ \ \ \ \ \ \ secp256k1\_fe\_add\_int(\&g,\ SECP256K1\_B);\ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ g\ =\ u\string^3+7\ */}}
+\DoxyCodeLine{00238\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&m,\ \&s,\ \&g);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ =\ -\/(u\string^3\ +\ 7)*(u\string^2\ +\ u*x\ +\ x\string^2)\ */}}
+\DoxyCodeLine{00239\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_fe\_is\_square\_var(\&m))\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00240\ }
+\DoxyCodeLine{00241\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Let\ s\ =\ -\/(u\string^3\ +\ 7)/(u\string^2\ +\ u*x\ +\ x\string^2)\ [second\ part]\ */}}
+\DoxyCodeLine{00242\ \ \ \ \ \ \ \ \ secp256k1\_fe\_inv\_var(\&s,\ \&s);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ s\ =\ -\/1/(u\string^2\ +\ u*x\ +\ x\string^2)\ [no\ div\ by\ 0]\ */}}
+\DoxyCodeLine{00243\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&s,\ \&s,\ \&g);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ s\ =\ -\/(u\string^3\ +\ 7)/(u\string^2\ +\ u*x\ +\ x\string^2)\ */}}
+\DoxyCodeLine{00244\ }
+\DoxyCodeLine{00245\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Let\ v\ =\ x.\ */}}
+\DoxyCodeLine{00246\ \ \ \ \ \ \ \ \ v\ =\ x;}
+\DoxyCodeLine{00247\ \ \ \ \ \}\ \textcolor{keywordflow}{else}\ \{}
+\DoxyCodeLine{00248\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ c\ is\ in\ \{2,\ 3,\ 6,\ 7\}.\ In\ this\ case\ we\ look\ for\ an\ inverse\ under\ the\ x3\ formula.\ */}}
+\DoxyCodeLine{00249\ }
+\DoxyCodeLine{00250\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Let\ s\ =\ x-\/u.\ */}}
+\DoxyCodeLine{00251\ \ \ \ \ \ \ \ \ secp256k1\_fe\_negate(\&m,\ \&u,\ 1);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ =\ -\/u\ */}}
+\DoxyCodeLine{00252\ \ \ \ \ \ \ \ \ s\ =\ m;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ s\ =\ -\/u\ */}}
+\DoxyCodeLine{00253\ \ \ \ \ \ \ \ \ secp256k1\_fe\_add(\&s,\ \&x);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ s\ =\ x-\/u\ */}}
+\DoxyCodeLine{00254\ }
+\DoxyCodeLine{00255\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ s\ is\ not\ square,\ fail.\ */}}
+\DoxyCodeLine{00256\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_fe\_is\_square\_var(\&s))\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00257\ }
+\DoxyCodeLine{00258\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Let\ r\ =\ sqrt(-\/s*(4*(u\string^3+7)+3*u\string^2*s));\ fail\ if\ it\ doesn't\ exist.\ */}}
+\DoxyCodeLine{00259\ \ \ \ \ \ \ \ \ secp256k1\_fe\_sqr(\&g,\ \&u);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ g\ =\ u\string^2\ */}}
+\DoxyCodeLine{00260\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&q,\ \&s,\ \&g);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ q\ =\ s*u\string^2\ */}}
+\DoxyCodeLine{00261\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul\_int(\&q,\ 3);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ q\ =\ 3*s*u\string^2\ */}}
+\DoxyCodeLine{00262\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&g,\ \&g,\ \&u);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ g\ =\ u\string^3\ */}}
+\DoxyCodeLine{00263\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul\_int(\&g,\ 4);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ g\ =\ 4*u\string^3\ */}}
+\DoxyCodeLine{00264\ \ \ \ \ \ \ \ \ secp256k1\_fe\_add\_int(\&g,\ 4\ *\ SECP256K1\_B);\ \ \ \ \ \ \textcolor{comment}{/*\ g\ =\ 4*(u\string^3+7)\ */}}
+\DoxyCodeLine{00265\ \ \ \ \ \ \ \ \ secp256k1\_fe\_add(\&q,\ \&g);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ q\ =\ 4*(u\string^3+7)+3*s*u\string^2\ */}}
+\DoxyCodeLine{00266\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&q,\ \&q,\ \&s);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ q\ =\ s*(4*(u\string^3+7)+3*u\string^2*s)\ */}}
+\DoxyCodeLine{00267\ \ \ \ \ \ \ \ \ secp256k1\_fe\_negate(\&q,\ \&q,\ 1);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ q\ =\ -\/s*(4*(u\string^3+7)+3*u\string^2*s)\ */}}
+\DoxyCodeLine{00268\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (!secp256k1\_fe\_is\_square\_var(\&q))\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00269\ \ \ \ \ \ \ \ \ ret\ =\ secp256k1\_fe\_sqrt(\&r,\ \&q);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ r\ =\ sqrt(-\/s*(4*(u\string^3+7)+3*u\string^2*s))\ */}}
+\DoxyCodeLine{00270\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00271\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(ret);}
+\DoxyCodeLine{00272\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00273\ \ \ \ \ \ \ \ \ (void)ret;}
+\DoxyCodeLine{00274\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00275\ }
+\DoxyCodeLine{00276\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ (c\ \&\ 1)\ =\ 1\ and\ r\ =\ 0,\ fail.\ */}}
+\DoxyCodeLine{00277\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (EXPECT((c\ \&\ 1)\ \&\&\ secp256k1\_fe\_normalizes\_to\_zero\_var(\&r),\ 0))\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00278\ }
+\DoxyCodeLine{00279\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ s\ =\ 0,\ fail.\ */}}
+\DoxyCodeLine{00280\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (EXPECT(secp256k1\_fe\_normalizes\_to\_zero\_var(\&s),\ 0))\ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00281\ }
+\DoxyCodeLine{00282\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Let\ v\ =\ (r/s-\/u)/2.\ */}}
+\DoxyCodeLine{00283\ \ \ \ \ \ \ \ \ secp256k1\_fe\_inv\_var(\&v,\ \&s);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ v\ =\ 1/s\ [no\ div\ by\ 0]\ */}}
+\DoxyCodeLine{00284\ \ \ \ \ \ \ \ \ secp256k1\_fe\_mul(\&v,\ \&v,\ \&r);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ v\ =\ r/s\ */}}
+\DoxyCodeLine{00285\ \ \ \ \ \ \ \ \ secp256k1\_fe\_add(\&v,\ \&m);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ v\ =\ r/s-\/u\ */}}
+\DoxyCodeLine{00286\ \ \ \ \ \ \ \ \ secp256k1\_fe\_half(\&v);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ v\ =\ (r/s-\/u)/2\ */}}
+\DoxyCodeLine{00287\ \ \ \ \ \}}
+\DoxyCodeLine{00288\ }
+\DoxyCodeLine{00289\ \ \ \ \ \textcolor{comment}{/*\ Let\ w\ =\ sqrt(s).\ */}}
+\DoxyCodeLine{00290\ \ \ \ \ ret\ =\ secp256k1\_fe\_sqrt(\&m,\ \&s);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ =\ sqrt(s)\ =\ w\ */}}
+\DoxyCodeLine{00291\ \ \ \ \ VERIFY\_CHECK(ret);}
+\DoxyCodeLine{00292\ }
+\DoxyCodeLine{00293\ \ \ \ \ \textcolor{comment}{/*\ Return\ logic.\ */}}
+\DoxyCodeLine{00294\ \ \ \ \ \textcolor{keywordflow}{if}\ ((c\ \&\ 5)\ ==\ 0\ ||\ (c\ \&\ 5)\ ==\ 5)\ \{}
+\DoxyCodeLine{00295\ \ \ \ \ \ \ \ \ secp256k1\_fe\_negate(\&m,\ \&m,\ 1);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ m\ =\ -\/w\ */}}
+\DoxyCodeLine{00296\ \ \ \ \ \}}
+\DoxyCodeLine{00297\ \ \ \ \ \textcolor{comment}{/*\ Now\ m\ =\ \{-\/w\ if\ c\&5=0\ or\ c\&5=5;\ w\ otherwise\}.\ */}}
+\DoxyCodeLine{00298\ \ \ \ \ secp256k1\_fe\_mul(\&u,\ \&u,\ c\&1\ ?\ \&secp256k1\_ellswift\_c4\ :\ \&secp256k1\_ellswift\_c3);}
+\DoxyCodeLine{00299\ \ \ \ \ \textcolor{comment}{/*\ u\ =\ \{c4\ if\ c\&1=1;\ c3\ otherwise\}*u\ */}}
+\DoxyCodeLine{00300\ \ \ \ \ secp256k1\_fe\_add(\&u,\ \&v);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ u\ =\ \{c4\ if\ c\&1=1;\ c3\ otherwise\}*u\ +\ v\ */}}
+\DoxyCodeLine{00301\ \ \ \ \ secp256k1\_fe\_mul(t,\ \&m,\ \&u);}
+\DoxyCodeLine{00302\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00303\ \}}
+\DoxyCodeLine{00304\ }
+\DoxyCodeLine{00310\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ellswift\_prng(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ out32,\ \textcolor{keyword}{const}\ secp256k1\_sha256\ *hasher,\ uint32\_t\ cnt)\ \{}
+\DoxyCodeLine{00311\ \ \ \ \ secp256k1\_sha256\ hash\ =\ *hasher;}
+\DoxyCodeLine{00312\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ buf4[4];}
+\DoxyCodeLine{00313\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00314\ \ \ \ \ \textcolor{keywordtype}{size\_t}\ blocks\ =\ hash.bytes\ >>\ 6;}
+\DoxyCodeLine{00315\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00316\ \ \ \ \ buf4[0]\ =\ cnt;}
+\DoxyCodeLine{00317\ \ \ \ \ buf4[1]\ =\ cnt\ >>\ 8;}
+\DoxyCodeLine{00318\ \ \ \ \ buf4[2]\ =\ cnt\ >>\ 16;}
+\DoxyCodeLine{00319\ \ \ \ \ buf4[3]\ =\ cnt\ >>\ 24;}
+\DoxyCodeLine{00320\ \ \ \ \ secp256k1\_sha256\_write(\&hash,\ buf4,\ 4);}
+\DoxyCodeLine{00321\ \ \ \ \ secp256k1\_sha256\_finalize(\&hash,\ out32);}
+\DoxyCodeLine{00322\ }
+\DoxyCodeLine{00323\ \ \ \ \ \textcolor{comment}{/*\ Writing\ and\ finalizing\ together\ should\ trigger\ exactly\ one\ SHA256\ compression.\ */}}
+\DoxyCodeLine{00324\ \ \ \ \ VERIFY\_CHECK(((hash.bytes)\ >>\ 6)\ ==\ (blocks\ +\ 1));}
+\DoxyCodeLine{00325\ \}}
+\DoxyCodeLine{00326\ }
+\DoxyCodeLine{00333\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ellswift\_xelligatorswift\_var(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *u32,\ secp256k1\_fe\ *t,\ \textcolor{keyword}{const}\ secp256k1\_fe\ *x,\ \textcolor{keyword}{const}\ secp256k1\_sha256\ *hasher)\ \{}
+\DoxyCodeLine{00334\ \ \ \ \ \textcolor{comment}{/*\ Pool\ of\ 3-\/bit\ branch\ values.\ */}}
+\DoxyCodeLine{00335\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ branch\_hash[32];}
+\DoxyCodeLine{00336\ \ \ \ \ \textcolor{comment}{/*\ Number\ of\ 3-\/bit\ values\ in\ branch\_hash\ left.\ */}}
+\DoxyCodeLine{00337\ \ \ \ \ \textcolor{keywordtype}{int}\ branches\_left\ =\ 0;}
+\DoxyCodeLine{00338\ \ \ \ \ \textcolor{comment}{/*\ Field\ elements\ u\ and\ branch\ values\ are\ extracted\ from\ RNG\ based\ on\ hasher\ for\ consecutive}}
+\DoxyCodeLine{00339\ \textcolor{comment}{\ \ \ \ \ *\ values\ of\ cnt.\ cnt==0\ is\ first\ used\ to\ populate\ a\ pool\ of\ 64\ 4-\/bit\ branch\ values.\ The\ 64}}
+\DoxyCodeLine{00340\ \textcolor{comment}{\ \ \ \ \ *\ cnt\ values\ that\ follow\ are\ used\ to\ generate\ field\ elements\ u.\ cnt==65\ (and\ multiples}}
+\DoxyCodeLine{00341\ \textcolor{comment}{\ \ \ \ \ *\ thereof)\ are\ used\ to\ repopulate\ the\ pool\ and\ start\ over,\ if\ that\ were\ ever\ necessary.}}
+\DoxyCodeLine{00342\ \textcolor{comment}{\ \ \ \ \ *\ On\ average,\ 4\ iterations\ are\ needed.\ */}}
+\DoxyCodeLine{00343\ \ \ \ \ uint32\_t\ cnt\ =\ 0;}
+\DoxyCodeLine{00344\ \ \ \ \ \textcolor{keywordflow}{while}\ (1)\ \{}
+\DoxyCodeLine{00345\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ branch;}
+\DoxyCodeLine{00346\ \ \ \ \ \ \ \ \ secp256k1\_fe\ u;}
+\DoxyCodeLine{00347\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ If\ the\ pool\ of\ branch\ values\ is\ empty,\ populate\ it.\ */}}
+\DoxyCodeLine{00348\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (branches\_left\ ==\ 0)\ \{}
+\DoxyCodeLine{00349\ \ \ \ \ \ \ \ \ \ \ \ \ secp256k1\_ellswift\_prng(branch\_hash,\ hasher,\ cnt++);}
+\DoxyCodeLine{00350\ \ \ \ \ \ \ \ \ \ \ \ \ branches\_left\ =\ 64;}
+\DoxyCodeLine{00351\ \ \ \ \ \ \ \ \ \}}
+\DoxyCodeLine{00352\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Take\ a\ 3-\/bit\ branch\ value\ from\ the\ branch\ pool\ (top\ bit\ is\ discarded).\ */}}
+\DoxyCodeLine{00353\ \ \ \ \ \ \ \ \ -\/-\/branches\_left;}
+\DoxyCodeLine{00354\ \ \ \ \ \ \ \ \ branch\ =\ (branch\_hash[branches\_left\ >>\ 1]\ >>\ ((branches\_left\ \&\ 1)\ <<\ 2))\ \&\ 7;}
+\DoxyCodeLine{00355\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Compute\ a\ new\ u\ value\ by\ hashing.\ */}}
+\DoxyCodeLine{00356\ \ \ \ \ \ \ \ \ secp256k1\_ellswift\_prng(u32,\ hasher,\ cnt++);}
+\DoxyCodeLine{00357\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ overflow\ is\ not\ a\ problem\ (we\ prefer\ uniform\ u32\ over\ uniform\ u).\ */}}
+\DoxyCodeLine{00358\ \ \ \ \ \ \ \ \ secp256k1\_fe\_set\_b32\_mod(\&u,\ u32);}
+\DoxyCodeLine{00359\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Since\ u\ is\ the\ output\ of\ a\ hash,\ it\ should\ practically\ never\ be\ 0.\ We\ could\ apply\ the}}
+\DoxyCodeLine{00360\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ u=0\ to\ u=1\ correction\ here\ too\ to\ deal\ with\ that\ case\ still,\ but\ it's\ such\ a\ low}}
+\DoxyCodeLine{00361\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ probability\ event\ that\ we\ do\ not\ bother.\ */}}
+\DoxyCodeLine{00362\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(!secp256k1\_fe\_normalizes\_to\_zero\_var(\&u));}
+\DoxyCodeLine{00363\ }
+\DoxyCodeLine{00364\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Find\ a\ remainder\ t,\ and\ return\ it\ if\ found.\ */}}
+\DoxyCodeLine{00365\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{if}\ (EXPECT(secp256k1\_ellswift\_xswiftec\_inv\_var(t,\ x,\ \&u,\ branch),\ 0))\ \textcolor{keywordflow}{break};}
+\DoxyCodeLine{00366\ \ \ \ \ \}}
+\DoxyCodeLine{00367\ \}}
+\DoxyCodeLine{00368\ }
+\DoxyCodeLine{00375\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ellswift\_elligatorswift\_var(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *u32,\ secp256k1\_fe\ *t,\ \textcolor{keyword}{const}\ secp256k1\_ge\ *p,\ \textcolor{keyword}{const}\ secp256k1\_sha256\ *hasher)\ \{}
+\DoxyCodeLine{00376\ \ \ \ \ secp256k1\_ellswift\_xelligatorswift\_var(u32,\ t,\ \&p-\/>x,\ hasher);}
+\DoxyCodeLine{00377\ \ \ \ \ secp256k1\_fe\_normalize\_var(t);}
+\DoxyCodeLine{00378\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_fe\_is\_odd(t)\ !=\ secp256k1\_fe\_is\_odd(\&p-\/>y))\ \{}
+\DoxyCodeLine{00379\ \ \ \ \ \ \ \ \ secp256k1\_fe\_negate(t,\ t,\ 1);}
+\DoxyCodeLine{00380\ \ \ \ \ \ \ \ \ secp256k1\_fe\_normalize\_var(t);}
+\DoxyCodeLine{00381\ \ \ \ \ \}}
+\DoxyCodeLine{00382\ \}}
+\DoxyCodeLine{00383\ }
+\DoxyCodeLine{00385\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ellswift\_sha256\_init\_encode(secp256k1\_sha256*\ hash)\ \{}
+\DoxyCodeLine{00386\ \ \ \ \ secp256k1\_sha256\_initialize(hash);}
+\DoxyCodeLine{00387\ \ \ \ \ hash-\/>s[0]\ =\ 0xd1a6524bul;}
+\DoxyCodeLine{00388\ \ \ \ \ hash-\/>s[1]\ =\ 0x028594b3ul;}
+\DoxyCodeLine{00389\ \ \ \ \ hash-\/>s[2]\ =\ 0x96e42f4eul;}
+\DoxyCodeLine{00390\ \ \ \ \ hash-\/>s[3]\ =\ 0x1037a177ul;}
+\DoxyCodeLine{00391\ \ \ \ \ hash-\/>s[4]\ =\ 0x1b8fcb8bul;}
+\DoxyCodeLine{00392\ \ \ \ \ hash-\/>s[5]\ =\ 0x56023885ul;}
+\DoxyCodeLine{00393\ \ \ \ \ hash-\/>s[6]\ =\ 0x2560ede1ul;}
+\DoxyCodeLine{00394\ \ \ \ \ hash-\/>s[7]\ =\ 0xd626b715ul;}
+\DoxyCodeLine{00395\ }
+\DoxyCodeLine{00396\ \ \ \ \ hash-\/>bytes\ =\ 64;}
+\DoxyCodeLine{00397\ \}}
+\DoxyCodeLine{00398\ }
+\DoxyCodeLine{00399\ \textcolor{keywordtype}{int}\ secp256k1\_ellswift\_encode(\textcolor{keyword}{const}\ secp256k1\_context\ *ctx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell64,\ \textcolor{keyword}{const}\ secp256k1\_pubkey\ *pubkey,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *rnd32)\ \{}
+\DoxyCodeLine{00400\ \ \ \ \ secp256k1\_ge\ p;}
+\DoxyCodeLine{00401\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00402\ \ \ \ \ ARG\_CHECK(ell64\ !=\ NULL);}
+\DoxyCodeLine{00403\ \ \ \ \ ARG\_CHECK(pubkey\ !=\ NULL);}
+\DoxyCodeLine{00404\ \ \ \ \ ARG\_CHECK(rnd32\ !=\ NULL);}
+\DoxyCodeLine{00405\ }
+\DoxyCodeLine{00406\ \ \ \ \ \textcolor{keywordflow}{if}\ (secp256k1\_pubkey\_load(ctx,\ \&p,\ pubkey))\ \{}
+\DoxyCodeLine{00407\ \ \ \ \ \ \ \ \ secp256k1\_fe\ t;}
+\DoxyCodeLine{00408\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ p64[64]\ =\ \{0\};}
+\DoxyCodeLine{00409\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{size\_t}\ ser\_size;}
+\DoxyCodeLine{00410\ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ ser\_ret;}
+\DoxyCodeLine{00411\ \ \ \ \ \ \ \ \ secp256k1\_sha256\ hash;}
+\DoxyCodeLine{00412\ }
+\DoxyCodeLine{00413\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Set\ up\ hasher\ state;\ the\ used\ RNG\ is\ H(pubkey\ ||\ "{}\(\backslash\)x00"{}*31\ ||\ rnd32\ ||\ cnt++),\ using}}
+\DoxyCodeLine{00414\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ *\ BIP340\ tagged\ hash\ with\ tag\ "{}secp256k1\_ellswift\_encode"{}.\ */}}
+\DoxyCodeLine{00415\ \ \ \ \ \ \ \ \ secp256k1\_ellswift\_sha256\_init\_encode(\&hash);}
+\DoxyCodeLine{00416\ \ \ \ \ \ \ \ \ ser\_ret\ =\ secp256k1\_eckey\_pubkey\_serialize(\&p,\ p64,\ \&ser\_size,\ 1);}
+\DoxyCodeLine{00417\ \textcolor{preprocessor}{\#ifdef\ VERIFY}}
+\DoxyCodeLine{00418\ \ \ \ \ \ \ \ \ VERIFY\_CHECK(ser\_ret\ \&\&\ ser\_size\ ==\ 33);}
+\DoxyCodeLine{00419\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00420\ \ \ \ \ \ \ \ \ (void)ser\_ret;}
+\DoxyCodeLine{00421\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00422\ \ \ \ \ \ \ \ \ secp256k1\_sha256\_write(\&hash,\ p64,\ \textcolor{keyword}{sizeof}(p64));}
+\DoxyCodeLine{00423\ \ \ \ \ \ \ \ \ secp256k1\_sha256\_write(\&hash,\ rnd32,\ 32);}
+\DoxyCodeLine{00424\ }
+\DoxyCodeLine{00425\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ Compute\ ElligatorSwift\ encoding\ and\ construct\ output.\ */}}
+\DoxyCodeLine{00426\ \ \ \ \ \ \ \ \ secp256k1\_ellswift\_elligatorswift\_var(ell64,\ \&t,\ \&p,\ \&hash);\ \textcolor{comment}{/*\ puts\ u\ in\ ell64[0..32]\ */}}
+\DoxyCodeLine{00427\ \ \ \ \ \ \ \ \ secp256k1\_fe\_get\_b32(ell64\ +\ 32,\ \&t);\ \textcolor{comment}{/*\ puts\ t\ in\ ell64[32..64]\ */}}
+\DoxyCodeLine{00428\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00429\ \ \ \ \ \}}
+\DoxyCodeLine{00430\ \ \ \ \ \textcolor{comment}{/*\ Only\ reached\ in\ case\ the\ provided\ pubkey\ is\ invalid.\ */}}
+\DoxyCodeLine{00431\ \ \ \ \ memset(ell64,\ 0,\ 64);}
+\DoxyCodeLine{00432\ \ \ \ \ \textcolor{keywordflow}{return}\ 0;}
+\DoxyCodeLine{00433\ \}}
+\DoxyCodeLine{00434\ }
+\DoxyCodeLine{00436\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ellswift\_sha256\_init\_create(secp256k1\_sha256*\ hash)\ \{}
+\DoxyCodeLine{00437\ \ \ \ \ secp256k1\_sha256\_initialize(hash);}
+\DoxyCodeLine{00438\ \ \ \ \ hash-\/>s[0]\ =\ 0xd29e1bf5ul;}
+\DoxyCodeLine{00439\ \ \ \ \ hash-\/>s[1]\ =\ 0xf7025f42ul;}
+\DoxyCodeLine{00440\ \ \ \ \ hash-\/>s[2]\ =\ 0x9b024773ul;}
+\DoxyCodeLine{00441\ \ \ \ \ hash-\/>s[3]\ =\ 0x094cb7d5ul;}
+\DoxyCodeLine{00442\ \ \ \ \ hash-\/>s[4]\ =\ 0xe59ed789ul;}
+\DoxyCodeLine{00443\ \ \ \ \ hash-\/>s[5]\ =\ 0x03bc9786ul;}
+\DoxyCodeLine{00444\ \ \ \ \ hash-\/>s[6]\ =\ 0x68335b35ul;}
+\DoxyCodeLine{00445\ \ \ \ \ hash-\/>s[7]\ =\ 0x4e363b53ul;}
+\DoxyCodeLine{00446\ }
+\DoxyCodeLine{00447\ \ \ \ \ hash-\/>bytes\ =\ 64;}
+\DoxyCodeLine{00448\ \}}
+\DoxyCodeLine{00449\ }
+\DoxyCodeLine{00450\ \textcolor{keywordtype}{int}\ secp256k1\_ellswift\_create(\textcolor{keyword}{const}\ secp256k1\_context\ *ctx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell64,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *seckey32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *auxrnd32)\ \{}
+\DoxyCodeLine{00451\ \ \ \ \ secp256k1\_ge\ p;}
+\DoxyCodeLine{00452\ \ \ \ \ secp256k1\_fe\ t;}
+\DoxyCodeLine{00453\ \ \ \ \ secp256k1\_sha256\ hash;}
+\DoxyCodeLine{00454\ \ \ \ \ secp256k1\_scalar\ seckey\_scalar;}
+\DoxyCodeLine{00455\ \ \ \ \ \textcolor{keywordtype}{int}\ ret;}
+\DoxyCodeLine{00456\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ zero32[32]\ =\ \{0\};}
+\DoxyCodeLine{00457\ }
+\DoxyCodeLine{00458\ \ \ \ \ \textcolor{comment}{/*\ Sanity\ check\ inputs.\ */}}
+\DoxyCodeLine{00459\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00460\ \ \ \ \ ARG\_CHECK(ell64\ !=\ NULL);}
+\DoxyCodeLine{00461\ \ \ \ \ memset(ell64,\ 0,\ 64);}
+\DoxyCodeLine{00462\ \ \ \ \ ARG\_CHECK(secp256k1\_ecmult\_gen\_context\_is\_built(\&ctx-\/>ecmult\_gen\_ctx));}
+\DoxyCodeLine{00463\ \ \ \ \ ARG\_CHECK(seckey32\ !=\ NULL);}
+\DoxyCodeLine{00464\ }
+\DoxyCodeLine{00465\ \ \ \ \ \textcolor{comment}{/*\ Compute\ (affine)\ public\ key\ */}}
+\DoxyCodeLine{00466\ \ \ \ \ ret\ =\ secp256k1\_ec\_pubkey\_create\_helper(\&ctx-\/>ecmult\_gen\_ctx,\ \&seckey\_scalar,\ \&p,\ seckey32);}
+\DoxyCodeLine{00467\ \ \ \ \ secp256k1\_declassify(ctx,\ \&p,\ \textcolor{keyword}{sizeof}(p));\ \textcolor{comment}{/*\ not\ constant\ time\ in\ produced\ pubkey\ */}}
+\DoxyCodeLine{00468\ \ \ \ \ secp256k1\_fe\_normalize\_var(\&p.x);}
+\DoxyCodeLine{00469\ \ \ \ \ secp256k1\_fe\_normalize\_var(\&p.y);}
+\DoxyCodeLine{00470\ }
+\DoxyCodeLine{00471\ \ \ \ \ \textcolor{comment}{/*\ Set\ up\ hasher\ state.\ The\ used\ RNG\ is\ H(privkey\ ||\ "{}\(\backslash\)x00"{}*32\ [||\ auxrnd32]\ ||\ cnt++),}}
+\DoxyCodeLine{00472\ \textcolor{comment}{\ \ \ \ \ *\ using\ BIP340\ tagged\ hash\ with\ tag\ "{}secp256k1\_ellswift\_create"{}.\ */}}
+\DoxyCodeLine{00473\ \ \ \ \ secp256k1\_ellswift\_sha256\_init\_create(\&hash);}
+\DoxyCodeLine{00474\ \ \ \ \ secp256k1\_sha256\_write(\&hash,\ seckey32,\ 32);}
+\DoxyCodeLine{00475\ \ \ \ \ secp256k1\_sha256\_write(\&hash,\ zero32,\ \textcolor{keyword}{sizeof}(zero32));}
+\DoxyCodeLine{00476\ \ \ \ \ secp256k1\_declassify(ctx,\ \&hash,\ \textcolor{keyword}{sizeof}(hash));\ \textcolor{comment}{/*\ private\ key\ is\ hashed\ now\ */}}
+\DoxyCodeLine{00477\ \ \ \ \ \textcolor{keywordflow}{if}\ (auxrnd32)\ secp256k1\_sha256\_write(\&hash,\ auxrnd32,\ 32);}
+\DoxyCodeLine{00478\ }
+\DoxyCodeLine{00479\ \ \ \ \ \textcolor{comment}{/*\ Compute\ ElligatorSwift\ encoding\ and\ construct\ output.\ */}}
+\DoxyCodeLine{00480\ \ \ \ \ secp256k1\_ellswift\_elligatorswift\_var(ell64,\ \&t,\ \&p,\ \&hash);\ \textcolor{comment}{/*\ puts\ u\ in\ ell64[0..32]\ */}}
+\DoxyCodeLine{00481\ \ \ \ \ secp256k1\_fe\_get\_b32(ell64\ +\ 32,\ \&t);\ \textcolor{comment}{/*\ puts\ t\ in\ ell64[32..64]\ */}}
+\DoxyCodeLine{00482\ }
+\DoxyCodeLine{00483\ \ \ \ \ secp256k1\_memczero(ell64,\ 64,\ !ret);}
+\DoxyCodeLine{00484\ \ \ \ \ secp256k1\_scalar\_clear(\&seckey\_scalar);}
+\DoxyCodeLine{00485\ }
+\DoxyCodeLine{00486\ \ \ \ \ \textcolor{keywordflow}{return}\ ret;}
+\DoxyCodeLine{00487\ \}}
+\DoxyCodeLine{00488\ }
+\DoxyCodeLine{00489\ \textcolor{keywordtype}{int}\ secp256k1\_ellswift\_decode(\textcolor{keyword}{const}\ secp256k1\_context\ *ctx,\ secp256k1\_pubkey\ *pubkey,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell64)\ \{}
+\DoxyCodeLine{00490\ \ \ \ \ secp256k1\_fe\ u,\ t;}
+\DoxyCodeLine{00491\ \ \ \ \ secp256k1\_ge\ p;}
+\DoxyCodeLine{00492\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00493\ \ \ \ \ ARG\_CHECK(pubkey\ !=\ NULL);}
+\DoxyCodeLine{00494\ \ \ \ \ ARG\_CHECK(ell64\ !=\ NULL);}
+\DoxyCodeLine{00495\ }
+\DoxyCodeLine{00496\ \ \ \ \ secp256k1\_fe\_set\_b32\_mod(\&u,\ ell64);}
+\DoxyCodeLine{00497\ \ \ \ \ secp256k1\_fe\_set\_b32\_mod(\&t,\ ell64\ +\ 32);}
+\DoxyCodeLine{00498\ \ \ \ \ secp256k1\_fe\_normalize\_var(\&t);}
+\DoxyCodeLine{00499\ \ \ \ \ secp256k1\_ellswift\_swiftec\_var(\&p,\ \&u,\ \&t);}
+\DoxyCodeLine{00500\ \ \ \ \ secp256k1\_pubkey\_save(pubkey,\ \&p);}
+\DoxyCodeLine{00501\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00502\ \}}
+\DoxyCodeLine{00503\ }
+\DoxyCodeLine{00504\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ ellswift\_xdh\_hash\_function\_prefix(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *output,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *x32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell\_a64,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell\_b64,\ \textcolor{keywordtype}{void}\ *data)\ \{}
+\DoxyCodeLine{00505\ \ \ \ \ secp256k1\_sha256\ sha;}
+\DoxyCodeLine{00506\ }
+\DoxyCodeLine{00507\ \ \ \ \ secp256k1\_sha256\_initialize(\&sha);}
+\DoxyCodeLine{00508\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ data,\ 64);}
+\DoxyCodeLine{00509\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ ell\_a64,\ 64);}
+\DoxyCodeLine{00510\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ ell\_b64,\ 64);}
+\DoxyCodeLine{00511\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ x32,\ 32);}
+\DoxyCodeLine{00512\ \ \ \ \ secp256k1\_sha256\_finalize(\&sha,\ output);}
+\DoxyCodeLine{00513\ \ \ \ \ secp256k1\_sha256\_clear(\&sha);}
+\DoxyCodeLine{00514\ }
+\DoxyCodeLine{00515\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00516\ \}}
+\DoxyCodeLine{00517\ }
+\DoxyCodeLine{00519\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{void}\ secp256k1\_ellswift\_sha256\_init\_bip324(secp256k1\_sha256*\ hash)\ \{}
+\DoxyCodeLine{00520\ \ \ \ \ secp256k1\_sha256\_initialize(hash);}
+\DoxyCodeLine{00521\ \ \ \ \ hash-\/>s[0]\ =\ 0x8c12d730ul;}
+\DoxyCodeLine{00522\ \ \ \ \ hash-\/>s[1]\ =\ 0x827bd392ul;}
+\DoxyCodeLine{00523\ \ \ \ \ hash-\/>s[2]\ =\ 0x9e4fb2eeul;}
+\DoxyCodeLine{00524\ \ \ \ \ hash-\/>s[3]\ =\ 0x207b373eul;}
+\DoxyCodeLine{00525\ \ \ \ \ hash-\/>s[4]\ =\ 0x2292bd7aul;}
+\DoxyCodeLine{00526\ \ \ \ \ hash-\/>s[5]\ =\ 0xaa5441bcul;}
+\DoxyCodeLine{00527\ \ \ \ \ hash-\/>s[6]\ =\ 0x15c3779ful;}
+\DoxyCodeLine{00528\ \ \ \ \ hash-\/>s[7]\ =\ 0xcfb52549ul;}
+\DoxyCodeLine{00529\ }
+\DoxyCodeLine{00530\ \ \ \ \ hash-\/>bytes\ =\ 64;}
+\DoxyCodeLine{00531\ \}}
+\DoxyCodeLine{00532\ }
+\DoxyCodeLine{00533\ \textcolor{keyword}{static}\ \textcolor{keywordtype}{int}\ ellswift\_xdh\_hash\_function\_bip324(\textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ output,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *x32,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell\_a64,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell\_b64,\ \textcolor{keywordtype}{void}\ *data)\ \{}
+\DoxyCodeLine{00534\ \ \ \ \ secp256k1\_sha256\ sha;}
+\DoxyCodeLine{00535\ }
+\DoxyCodeLine{00536\ \ \ \ \ (void)data;}
+\DoxyCodeLine{00537\ }
+\DoxyCodeLine{00538\ \ \ \ \ secp256k1\_ellswift\_sha256\_init\_bip324(\&sha);}
+\DoxyCodeLine{00539\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ ell\_a64,\ 64);}
+\DoxyCodeLine{00540\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ ell\_b64,\ 64);}
+\DoxyCodeLine{00541\ \ \ \ \ secp256k1\_sha256\_write(\&sha,\ x32,\ 32);}
+\DoxyCodeLine{00542\ \ \ \ \ secp256k1\_sha256\_finalize(\&sha,\ output);}
+\DoxyCodeLine{00543\ \ \ \ \ secp256k1\_sha256\_clear(\&sha);}
+\DoxyCodeLine{00544\ }
+\DoxyCodeLine{00545\ \ \ \ \ \textcolor{keywordflow}{return}\ 1;}
+\DoxyCodeLine{00546\ \}}
+\DoxyCodeLine{00547\ }
+\DoxyCodeLine{00548\ \textcolor{keyword}{const}\ secp256k1\_ellswift\_xdh\_hash\_function\ secp256k1\_ellswift\_xdh\_hash\_function\_prefix\ =\ ellswift\_xdh\_hash\_function\_prefix;}
+\DoxyCodeLine{00549\ \textcolor{keyword}{const}\ secp256k1\_ellswift\_xdh\_hash\_function\ secp256k1\_ellswift\_xdh\_hash\_function\_bip324\ =\ ellswift\_xdh\_hash\_function\_bip324;}
+\DoxyCodeLine{00550\ }
+\DoxyCodeLine{00551\ \textcolor{keywordtype}{int}\ secp256k1\_ellswift\_xdh(\textcolor{keyword}{const}\ secp256k1\_context\ *ctx,\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *output,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell\_a64,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *ell\_b64,\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ *seckey32,\ \textcolor{keywordtype}{int}\ party,\ secp256k1\_ellswift\_xdh\_hash\_function\ hashfp,\ \textcolor{keywordtype}{void}\ *data)\ \{}
+\DoxyCodeLine{00552\ \ \ \ \ \textcolor{keywordtype}{int}\ ret\ =\ 0;}
+\DoxyCodeLine{00553\ \ \ \ \ \textcolor{keywordtype}{int}\ overflow;}
+\DoxyCodeLine{00554\ \ \ \ \ secp256k1\_scalar\ s;}
+\DoxyCodeLine{00555\ \ \ \ \ secp256k1\_fe\ xn,\ xd,\ px,\ u,\ t;}
+\DoxyCodeLine{00556\ \ \ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ sx[32];}
+\DoxyCodeLine{00557\ \ \ \ \ \textcolor{keyword}{const}\ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}*\ theirs64;}
+\DoxyCodeLine{00558\ }
+\DoxyCodeLine{00559\ \ \ \ \ VERIFY\_CHECK(ctx\ !=\ NULL);}
+\DoxyCodeLine{00560\ \ \ \ \ ARG\_CHECK(output\ !=\ NULL);}
+\DoxyCodeLine{00561\ \ \ \ \ ARG\_CHECK(ell\_a64\ !=\ NULL);}
+\DoxyCodeLine{00562\ \ \ \ \ ARG\_CHECK(ell\_b64\ !=\ NULL);}
+\DoxyCodeLine{00563\ \ \ \ \ ARG\_CHECK(seckey32\ !=\ NULL);}
+\DoxyCodeLine{00564\ \ \ \ \ ARG\_CHECK(hashfp\ !=\ NULL);}
+\DoxyCodeLine{00565\ }
+\DoxyCodeLine{00566\ \ \ \ \ \textcolor{comment}{/*\ Load\ remote\ public\ key\ (as\ fraction).\ */}}
+\DoxyCodeLine{00567\ \ \ \ \ theirs64\ =\ party\ ?\ ell\_a64\ :\ ell\_b64;}
+\DoxyCodeLine{00568\ \ \ \ \ secp256k1\_fe\_set\_b32\_mod(\&u,\ theirs64);}
+\DoxyCodeLine{00569\ \ \ \ \ secp256k1\_fe\_set\_b32\_mod(\&t,\ theirs64\ +\ 32);}
+\DoxyCodeLine{00570\ \ \ \ \ secp256k1\_ellswift\_xswiftec\_frac\_var(\&xn,\ \&xd,\ \&u,\ \&t);}
+\DoxyCodeLine{00571\ }
+\DoxyCodeLine{00572\ \ \ \ \ \textcolor{comment}{/*\ Load\ private\ key\ (using\ one\ if\ invalid).\ */}}
+\DoxyCodeLine{00573\ \ \ \ \ secp256k1\_scalar\_set\_b32(\&s,\ seckey32,\ \&overflow);}
+\DoxyCodeLine{00574\ \ \ \ \ overflow\ =\ secp256k1\_scalar\_is\_zero(\&s);}
+\DoxyCodeLine{00575\ \ \ \ \ secp256k1\_scalar\_cmov(\&s,\ \&secp256k1\_scalar\_one,\ overflow);}
+\DoxyCodeLine{00576\ }
+\DoxyCodeLine{00577\ \ \ \ \ \textcolor{comment}{/*\ Compute\ shared\ X\ coordinate.\ */}}
+\DoxyCodeLine{00578\ \ \ \ \ secp256k1\_ecmult\_const\_xonly(\&px,\ \&xn,\ \&xd,\ \&s,\ 1);}
+\DoxyCodeLine{00579\ \ \ \ \ secp256k1\_fe\_normalize(\&px);}
+\DoxyCodeLine{00580\ \ \ \ \ secp256k1\_fe\_get\_b32(sx,\ \&px);}
+\DoxyCodeLine{00581\ }
+\DoxyCodeLine{00582\ \ \ \ \ \textcolor{comment}{/*\ Invoke\ hasher\ */}}
+\DoxyCodeLine{00583\ \ \ \ \ ret\ =\ hashfp(output,\ sx,\ ell\_a64,\ ell\_b64,\ data);}
+\DoxyCodeLine{00584\ }
+\DoxyCodeLine{00585\ \ \ \ \ secp256k1\_memclear\_explicit(sx,\ \textcolor{keyword}{sizeof}(sx));}
+\DoxyCodeLine{00586\ \ \ \ \ secp256k1\_fe\_clear(\&px);}
+\DoxyCodeLine{00587\ \ \ \ \ secp256k1\_scalar\_clear(\&s);}
+\DoxyCodeLine{00588\ }
+\DoxyCodeLine{00589\ \ \ \ \ \textcolor{keywordflow}{return}\ !!ret\ \&\ !overflow;}
+\DoxyCodeLine{00590\ \}}
+\DoxyCodeLine{00591\ }
+\DoxyCodeLine{00592\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

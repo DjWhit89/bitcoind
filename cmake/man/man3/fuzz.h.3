@@ -1,0 +1,100 @@
+.TH "src/test/fuzz/fuzz.h" 3 "Version 2.8" "bitcoind" \" -*- nroff -*-
+.ad l
+.nh
+.SH NAME
+src/test/fuzz/fuzz.h
+.SH SYNOPSIS
+.br
+.PP
+\fR#include <cstdint>\fP
+.br
+\fR#include <functional>\fP
+.br
+\fR#include <span>\fP
+.br
+\fR#include <string_view>\fP
+.br
+
+.SS "Data Structures"
+
+.in +1c
+.ti -1c
+.RI "struct \fBFuzzTargetOptions\fP"
+.br
+.in -1c
+.SS "Macros"
+
+.in +1c
+.ti -1c
+.RI "#define \fBLIMITED_WHILE\fP(condition,  limit)"
+.br
+.ti -1c
+.RI "#define \fBFUZZ_TARGET\fP(\&.\&.\&.)"
+.br
+.ti -1c
+.RI "#define \fBDETAIL_FUZZ\fP(\fBname\fP, \&.\&.\&.)"
+.br
+.in -1c
+.SS "Typedefs"
+
+.in +1c
+.ti -1c
+.RI "using \fBFuzzBufferType\fP = std::span<const uint8_t>"
+.br
+.ti -1c
+.RI "using \fBTypeTestOneInput\fP = std::function<void(\fBFuzzBufferType\fP)>"
+.br
+.in -1c
+.SS "Functions"
+
+.in +1c
+.ti -1c
+.RI "void \fBFuzzFrameworkRegisterTarget\fP (std::string_view \fBname\fP, \fBTypeTestOneInput\fP target, \fBFuzzTargetOptions\fP opts)"
+.br
+.in -1c
+.SH "Macro Definition Documentation"
+.PP 
+.SS "#define DETAIL_FUZZ( \fBname\fP,  \&.\&.\&.)"
+\fBValue:\fP
+.nf
+    void name##_fuzz_target(FuzzBufferType);                                          \\
+    struct name##_Before_Main {                                                       \\
+        name##_Before_Main()                                                          \\
+        {                                                                             \\
+            FuzzFrameworkRegisterTarget(#name, name##_fuzz_target, {__VA_ARGS__});    \\
+        }                                                                             \\
+    } const static g_##name##_before_main;                                            \\
+    void name##_fuzz_target(FuzzBufferType buffer)
+.PP
+.fi
+
+.SS "#define FUZZ_TARGET( \&.\&.\&.)"
+\fBValue:\fP
+.nf
+DETAIL_FUZZ(__VA_ARGS__)
+.PP
+.fi
+
+.SS "#define LIMITED_WHILE( condition,  limit)"
+\fBValue:\fP
+.nf
+    for (unsigned _count{limit}; (condition) && _count; \-\-_count)
+.PP
+.fi
+Can be used to limit a theoretically unbounded loop\&. This caps the runtime to avoid timeouts or OOMs\&.
+
+.PP
+This can be used in combination with a check in the condition to confirm whether the fuzz engine provided "good" data\&. If the fuzz input contains invalid data, the loop aborts early\&. This will teach the fuzz engine to look for useful data and avoids bloating the fuzz input folder with useless data\&. 
+.SH "Typedef Documentation"
+.PP 
+.SS "using \fBFuzzBufferType\fP = std::span<const uint8_t>"
+
+.SS "using \fBTypeTestOneInput\fP = std::function<void(\fBFuzzBufferType\fP)>"
+
+.SH "Function Documentation"
+.PP 
+.SS "void FuzzFrameworkRegisterTarget (std::string_view name, \fBTypeTestOneInput\fP target, \fBFuzzTargetOptions\fP opts)"
+
+.SH "Author"
+.PP 
+Generated automatically by Doxygen for bitcoind from the source code\&.

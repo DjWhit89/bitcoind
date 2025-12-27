@@ -1,0 +1,95 @@
+\doxysection{net\+\_\+permissions.\+h}
+\label{net__permissions_8h_source}\index{src/net\_permissions.h@{src/net\_permissions.h}}
+\textbf{ Go to the documentation of this file.}
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{//\ Copyright\ (c)\ 2009-\/present\ The\ Bitcoin\ Core\ developers}}
+\DoxyCodeLine{00002\ \textcolor{comment}{//\ Distributed\ under\ the\ MIT\ software\ license,\ see\ the\ accompanying}}
+\DoxyCodeLine{00003\ \textcolor{comment}{//\ file\ COPYING\ or\ http://www.opensource.org/licenses/mit-\/license.php.}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <netaddress.h>}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <netbase.h>}}
+\DoxyCodeLine{00007\ }
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <type\_traits>}}
+\DoxyCodeLine{00010\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#ifndef\ BITCOIN\_NET\_PERMISSIONS\_H}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#define\ BITCOIN\_NET\_PERMISSIONS\_H}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{keyword}{struct\ }bilingual\_str;}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{keyword}{extern}\ \textcolor{keyword}{const}\ std::vector<std::string>\ NET\_PERMISSIONS\_DOC;}
+\DoxyCodeLine{00018\ }
+\DoxyCodeLine{00020\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ DEFAULT\_WHITELISTRELAY\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00022\ \textcolor{keyword}{constexpr}\ \textcolor{keywordtype}{bool}\ DEFAULT\_WHITELISTFORCERELAY\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{enum\ class}\ NetPermissionFlags\ :\ uint32\_t\ \{}
+\DoxyCodeLine{00025\ \ \ \ \ None\ =\ 0,}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{comment}{//\ Can\ query\ bloomfilter\ even\ if\ -\/peerbloomfilters\ is\ false}}
+\DoxyCodeLine{00027\ \ \ \ \ BloomFilter\ =\ (1U\ <<\ 1),}
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{comment}{//\ Relay\ and\ accept\ transactions\ from\ this\ peer,\ even\ if\ -\/blocksonly\ is\ true}}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{comment}{//\ This\ peer\ is\ also\ not\ subject\ to\ limits\ on\ how\ many\ transaction\ INVs\ are\ tracked}}
+\DoxyCodeLine{00030\ \ \ \ \ Relay\ =\ (1U\ <<\ 3),}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{comment}{//\ Always\ relay\ transactions\ from\ this\ peer,\ even\ if\ already\ in\ mempool}}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{comment}{//\ Keep\ parameter\ interaction:\ forcerelay\ implies\ relay}}
+\DoxyCodeLine{00033\ \ \ \ \ ForceRelay\ =\ (1U\ <<\ 2)\ |\ Relay,}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{comment}{//\ Allow\ getheaders\ during\ IBD\ and\ block-\/download\ after\ maxuploadtarget\ limit}}
+\DoxyCodeLine{00035\ \ \ \ \ Download\ =\ (1U\ <<\ 6),}
+\DoxyCodeLine{00036\ \ \ \ \ \textcolor{comment}{//\ Can't\ be\ banned/disconnected/discouraged\ for\ misbehavior}}
+\DoxyCodeLine{00037\ \ \ \ \ NoBan\ =\ (1U\ <<\ 4)\ |\ Download,}
+\DoxyCodeLine{00038\ \ \ \ \ \textcolor{comment}{//\ Can\ query\ the\ mempool}}
+\DoxyCodeLine{00039\ \ \ \ \ Mempool\ =\ (1U\ <<\ 5),}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{comment}{//\ Can\ request\ addrs\ without\ hitting\ a\ privacy-\/preserving\ cache,\ and\ send\ us}}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{comment}{//\ unlimited\ amounts\ of\ addrs.}}
+\DoxyCodeLine{00042\ \ \ \ \ Addr\ =\ (1U\ <<\ 7),}
+\DoxyCodeLine{00043\ }
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{comment}{//\ True\ if\ the\ user\ did\ not\ specifically\ set\ fine-\/grained\ permissions\ with}}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{comment}{//\ the\ -\/whitebind\ or\ -\/whitelist\ configuration\ options.}}
+\DoxyCodeLine{00046\ \ \ \ \ Implicit\ =\ (1U\ <<\ 31),}
+\DoxyCodeLine{00047\ \ \ \ \ All\ =\ BloomFilter\ |\ ForceRelay\ |\ Relay\ |\ NoBan\ |\ Mempool\ |\ Download\ |\ Addr,}
+\DoxyCodeLine{00048\ \};}
+\DoxyCodeLine{00049\ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keyword}{constexpr}\ NetPermissionFlags\ operator|(NetPermissionFlags\ a,\ NetPermissionFlags\ b)}
+\DoxyCodeLine{00050\ \{}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{keyword}{using\ }t\ =\ std::underlying\_type\_t<NetPermissionFlags>;}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{keywordflow}{return}\ \textcolor{keyword}{static\_cast<}NetPermissionFlags\textcolor{keyword}{>}(\textcolor{keyword}{static\_cast<}t\textcolor{keyword}{>}(a)\ |\ \textcolor{keyword}{static\_cast<}t\textcolor{keyword}{>}(b));}
+\DoxyCodeLine{00053\ \}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{class\ }NetPermissions}
+\DoxyCodeLine{00056\ \{}
+\DoxyCodeLine{00057\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00058\ \ \ \ \ NetPermissionFlags\ m\_flags;}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{keyword}{static}\ std::vector<std::string>\ ToStrings(NetPermissionFlags\ flags);}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{bool}\ HasFlag(NetPermissionFlags\ flags,\ NetPermissionFlags\ f)}
+\DoxyCodeLine{00061\ \ \ \ \ \{}
+\DoxyCodeLine{00062\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }t\ =\ std::underlying\_type\_t<NetPermissionFlags>;}
+\DoxyCodeLine{00063\ \ \ \ \ \ \ \ \ \textcolor{keywordflow}{return}\ (\textcolor{keyword}{static\_cast<}t\textcolor{keyword}{>}(flags)\ \&\ \textcolor{keyword}{static\_cast<}t\textcolor{keyword}{>}(f))\ ==\ \textcolor{keyword}{static\_cast<}t\textcolor{keyword}{>}(f);}
+\DoxyCodeLine{00064\ \ \ \ \ \}}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ AddFlag(NetPermissionFlags\&\ flags,\ NetPermissionFlags\ f)}
+\DoxyCodeLine{00066\ \ \ \ \ \{}
+\DoxyCodeLine{00067\ \ \ \ \ \ \ \ \ flags\ =\ flags\ |\ f;}
+\DoxyCodeLine{00068\ \ \ \ \ \}}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keyword}{inline}\ \textcolor{keywordtype}{void}\ ClearFlag(NetPermissionFlags\&\ flags,\ NetPermissionFlags\ f)}
+\DoxyCodeLine{00075\ \ \ \ \ \{}
+\DoxyCodeLine{00076\ \ \ \ \ \ \ \ \ assert(f\ ==\ NetPermissionFlags::Implicit);}
+\DoxyCodeLine{00077\ \ \ \ \ \ \ \ \ \textcolor{keyword}{using\ }t\ =\ std::underlying\_type\_t<NetPermissionFlags>;}
+\DoxyCodeLine{00078\ \ \ \ \ \ \ \ \ flags\ =\ \textcolor{keyword}{static\_cast<}NetPermissionFlags\textcolor{keyword}{>}(\textcolor{keyword}{static\_cast<}t\textcolor{keyword}{>}(flags)\ \&\ \string~static\_cast<t>(f));}
+\DoxyCodeLine{00079\ \ \ \ \ \}}
+\DoxyCodeLine{00080\ \};}
+\DoxyCodeLine{00081\ }
+\DoxyCodeLine{00082\ \textcolor{keyword}{class\ }NetWhitebindPermissions\ :\ \textcolor{keyword}{public}\ NetPermissions}
+\DoxyCodeLine{00083\ \{}
+\DoxyCodeLine{00084\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00085\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ TryParse(\textcolor{keyword}{const}\ std::string\&\ str,\ NetWhitebindPermissions\&\ output,\ bilingual\_str\&\ error);}
+\DoxyCodeLine{00086\ \ \ \ \ CService\ m\_service;}
+\DoxyCodeLine{00087\ \};}
+\DoxyCodeLine{00088\ }
+\DoxyCodeLine{00089\ \textcolor{keyword}{class\ }NetWhitelistPermissions\ :\ \textcolor{keyword}{public}\ NetPermissions}
+\DoxyCodeLine{00090\ \{}
+\DoxyCodeLine{00091\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{keyword}{static}\ \textcolor{keywordtype}{bool}\ TryParse(\textcolor{keyword}{const}\ std::string\&\ str,\ NetWhitelistPermissions\&\ output,\ ConnectionDirection\&\ output\_connection\_direction,\ bilingual\_str\&\ error);}
+\DoxyCodeLine{00093\ \ \ \ \ CSubNet\ m\_subnet;}
+\DoxyCodeLine{00094\ \};}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \textcolor{preprocessor}{\#endif\ }\textcolor{comment}{//\ BITCOIN\_NET\_PERMISSIONS\_H}}
+
+\end{DoxyCode}
